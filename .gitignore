@@ -2,3 +2,5 @@ node_modules/
 # erzeugte Videos, JSON-Dateien und Screenshots (entstehen durch Export und Tests neu)
 output/*
 !output/.gitkeep
+# lokale Claude-Code-Einstellungen (z. B. Vorschau-Server)
+.claude/
