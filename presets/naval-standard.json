@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "name": "Seeschlacht – Standard (60 Minuten, hochkant)",
+  "scenario": "naval",
+  "seed": 42,
+  "params": { "ships": 2, "cannons": 4, "fireRate": 1, "projectileSpeed": 1, "intensity": 0.35, "recycleVisible": true },
+  "video": { "aspect": "9:16", "resolution": 1080, "fps": 30, "durationSec": 3600, "quality": { "crf": 20, "preset": "medium" } },
+  "view": { "hud": true, "camera": true }
+}

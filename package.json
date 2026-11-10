@@ -1,0 +1,24 @@
+{
+  "name": "endless-battle-simulator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Deterministische 2D-Physiksimulation (Seeschlacht) mit automatischem MP4-Export",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "export": "node export.mjs",
+    "export:test": "node export.mjs --duration 20 --seed 42 --out output/test_20s.mp4",
+    "test": "node --test --test-concurrency=1 --test-reporter=spec test/*.test.mjs",
+    "vendor": "node scripts/vendor.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "matter-js": "0.20.0",
+    "pixi.js": "8.22.0"
+  },
+  "devDependencies": {
+    "playwright": "1.60.0"
+  }
+}

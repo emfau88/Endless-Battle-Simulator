@@ -1,0 +1,4 @@
+node_modules/
+# erzeugte Videos, JSON-Dateien und Screenshots (entstehen durch Export und Tests neu)
+output/*
+!output/.gitkeep

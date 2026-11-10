@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "name": "Seeschlacht – Querformat (10 Minuten)",
+  "scenario": "naval",
+  "seed": 2024,
+  "params": { "ships": 2, "cannons": 4, "fireRate": 1.2, "intensity": 0.5 },
+  "video": { "aspect": "16:9", "resolution": 1080, "fps": 30, "durationSec": 600, "quality": { "crf": 20, "preset": "medium" } }
+}

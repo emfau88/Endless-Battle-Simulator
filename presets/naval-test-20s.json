@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "name": "Seeschlacht – Abnahmetest (20 Sekunden)",
+  "scenario": "naval",
+  "seed": 42,
+  "params": { "ships": 2, "cannons": 4, "intensity": 0.35 },
+  "video": { "aspect": "9:16", "resolution": 1080, "fps": 30, "durationSec": 20 }
+}

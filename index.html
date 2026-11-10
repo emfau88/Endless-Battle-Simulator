@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Endless Battle Simulator</title>
+<style>
+  :root {
+    --bg: #060a14; --panel: #0d1424; --panel2: #121b30; --line: #22304b; --text: #e7edf8;
+    --muted: #8796b4; --red: #ff5a4e; --blue: #3fb6ff; --ok: #5ee08a; --warn: #ffc94a;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 14px/1.45 "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif; }
+  #app { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+  #stage { flex: 1; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center;
+    padding: 14px; position: relative; background: radial-gradient(ellipse at 50% 40%, #0e1730 0%, #060a14 70%); }
+  #stage canvas { display: block; border-radius: 12px; box-shadow: 0 12px 50px rgba(0,0,0,.65), 0 0 0 1px #1c2740; }
+  #panel { width: 350px; flex: none; overflow-y: auto; background: var(--panel); border-left: 1px solid var(--line);
+    padding: 16px 16px 24px; }
+  h1 { font-size: 19px; margin: 0; letter-spacing: .5px; }
+  h1 span { color: var(--muted); font-weight: 400; }
+  .sub { color: var(--muted); margin: 2px 0 14px; font-size: 12.5px; }
+  .card { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+  .card h2 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+  .row { display: flex; gap: 8px; }
+  button { font: inherit; color: var(--text); background: #1a2540; border: 1px solid #2a3a5c; border-radius: 8px;
+    padding: 8px 12px; cursor: pointer; transition: background .15s, border-color .15s; }
+  button:hover { background: #223056; border-color: #3a4f7c; }
+  button.primary { background: #2a62ff; border-color: #3f74ff; font-weight: 600; }
+  button.primary:hover { background: #3a70ff; }
+  button.accent { background: linear-gradient(135deg, #ff5a4e, #ff8a3d); border-color: #ff7a52; font-weight: 700; width: 100%; padding: 11px; }
+  button.accent:disabled { opacity: .5; cursor: default; }
+  button.small { padding: 4px 9px; font-size: 12.5px; }
+  .grow { flex: 1; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+  .stat { display: flex; justify-content: space-between; border-bottom: 1px dashed #22304b; padding: 2px 0; }
+  .stat b { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .stat span { color: var(--muted); font-size: 12.5px; }
+  .ctl { margin-bottom: 11px; }
+  .ctl label { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); margin-bottom: 4px; }
+  .ctl label output { color: var(--text); font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: #3f74ff; }
+  select, input[type=number] { width: 100%; font: inherit; color: var(--text); background: #0b1222; border: 1px solid #2a3a5c;
+    border-radius: 7px; padding: 6px 8px; }
+  .seg { display: flex; background: #0b1222; border: 1px solid #2a3a5c; border-radius: 8px; overflow: hidden; }
+  .seg button { flex: 1; border: 0; border-radius: 0; background: transparent; padding: 6px 4px; font-size: 13px; }
+  .seg button.on { background: #2a62ff; font-weight: 600; }
+  .checks { margin-bottom: 10px; }
+  .checks label { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 4px 0; color: var(--text); }
+  .progress { height: 8px; background: #0b1222; border-radius: 6px; overflow: hidden; border: 1px solid #22304b; margin: 10px 0 6px; }
+  .progress > div { height: 100%; width: 0%; background: linear-gradient(90deg, #3f74ff, #3fb6ff); transition: width .3s; }
+  #exportMsg { font-size: 12.5px; color: var(--muted); white-space: pre-wrap; word-break: break-word; }
+  #exportMsg a { color: var(--blue); }
+  #exportMsg code, .hint code { background: #0b1222; padding: 1px 5px; border-radius: 4px; color: #cfe0ff; }
+  .err { color: #ff8a80 !important; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  @media (max-width: 900px) {
+    #app { flex-direction: column; height: auto; overflow: visible; }
+    #stage { height: 72vh; flex: none; padding: 8px; }
+    #panel { width: 100%; border-left: 0; border-top: 1px solid var(--line); }
+  }
+  body.export { overflow: hidden; background: #000; }
+  body.export #panel { display: none; }
+  body.export #stage { padding: 0; background: #000; align-items: flex-start; justify-content: flex-start; }
+  body.export #stage canvas { border-radius: 0; box-shadow: none; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage"></div>
+  <aside id="panel">
+    <h1>Endless Battle <span>Simulator</span></h1>
+    <p class="sub" id="subtitle">deterministisch per Seed</p>
+
+    <div class="card">
+      <div class="row">
+        <button id="btnPlay" class="primary grow">⏸ Pause</button>
+        <button id="btnRestart" class="grow">↻ Neustart</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Live-Werte</h2>
+      <div class="stats" id="stats">
+        <div class="stat"><span>FPS</span><b id="sFps">–</b></div>
+        <div class="stat"><span>Simzeit</span><b id="sTime">–</b></div>
+        <!-- Szenario-Statistiken werden hier eingefügt -->
+      </div>
+      <div id="scenarioNote" class="hint"></div>
+    </div>
+
+    <div class="card">
+      <h2>Simulation</h2>
+      <div class="ctl"><label for="scenario">Szenario</label><select id="scenario"></select></div>
+      <div class="ctl"><label>Simulationsgeschwindigkeit</label><div class="seg" id="segSpeed"></div></div>
+      <div id="scenarioControls"><!-- aus der Szenario-Registrierung erzeugt --></div>
+      <div class="ctl"><label for="seed">Zufalls-Seed</label>
+        <div class="row"><input type="number" id="seed" min="0" step="1"><button id="btnSeed" class="small" title="Neuer Zufalls-Seed">🎲</button></div></div>
+      <div class="checks">
+        <label><input type="checkbox" id="hud"> HUD einblenden</label>
+        <label><input type="checkbox" id="camera"> Kamerabewegung</label>
+      </div>
+      <p class="hint">Strukturwerte (z. B. Schiffe, Kanonen), Format und Seed starten die Simulation neu. Die übrigen Werte wirken sofort.</p>
+    </div>
+
+    <div class="card">
+      <h2>Video</h2>
+      <div class="ctl"><label>Format</label><div class="seg" id="segFormat"></div></div>
+      <div class="ctl"><label for="duration">Videolänge</label><select id="duration"></select></div>
+      <button id="btnExport" class="accent">⬇ Video exportieren</button>
+      <div class="progress" id="exportBar" hidden><div></div></div>
+      <div class="row" id="exportCtl" hidden><button id="btnCancel" class="small">Abbrechen</button></div>
+      <div id="exportMsg"></div>
+    </div>
+  </aside>
+</div>
+
+<!-- Bibliotheken -->
+<script src="vendor/matter.min.js"></script>
+<script src="vendor/pixi.min.js"></script>
+<!-- Kern (Zeit, Zufall, Partikel, Video-Einstellungen, Konfiguration, Szenario-Registry, Export-Schnittstelle) -->
+<script src="src/core.js"></script>
+<!-- Szenarien: jede Datei registriert sich selbst über EBS.registerScenario(...) -->
+<script src="src/scenarios/naval.js"></script>
+<!-- Anwendung (Live-Bedienfeld + Export-Modus) -->
+<script src="src/app.js"></script>
+</body>
+</html>
