@@ -33,6 +33,8 @@ const ASPECTS = {
 };
 const RESOLUTIONS = { 720: '720p', 1080: '1080p', 1440: '1440p', 2160: '4K' }; // kurze Bildseite in Pixeln
 const FPS_OPTIONS = [30, 60];
+// Tempo des Clips: < 1 = Zeitlupe (kleinerer Physik-Zeitschritt, gleich viele Schritte je Frame -> flüssig)
+const TEMPO_OPTIONS = [0.8, 1];
 const X264_PRESETS = ['ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium', 'slow', 'slower', 'veryslow'];
 
 function videoSize(video) {
@@ -65,6 +67,7 @@ function fmtTime(s) {
   return (h ? h + ':' + String(m).padStart(2, '0') : String(m).padStart(2, '0')) + ':' + String(x).padStart(2, '0');
 }
 const fmtInt = (n) => Math.round(n).toLocaleString('de-DE');
+const fmtIntEn = (n) => Math.round(n).toLocaleString('en-US'); // Texte im Video sind englisch
 const isObj = (o) => o && typeof o === 'object' && !Array.isArray(o);
 function deepMerge(a, b) {
   const out = { ...(a || {}) };
@@ -115,13 +118,13 @@ const getScenario = (id) => scenarios.get(id) || scenarios.get(defaultScenario);
 //  {
 //    version: 1, name?, scenario, seed,
 //    params: { ...szenariospezifisch },
-//    video:  { aspect, resolution, fps, durationSec, quality: { crf, preset, bitrate } },
+//    video:  { aspect, resolution, fps, durationSec, tempo, quality: { crf, preset, bitrate } },
 //    view:   { hud, camera }
 //  }
 //  Das flache Phase-A-Format ({ seed, ships, format: 'landscape', hud, ... }) wird weiterhin akzeptiert.
 // =====================================================================
 const CONFIG_VERSION = 1;
-const VIDEO_KEYS = ['aspect', 'resolution', 'fps', 'durationSec'];
+const VIDEO_KEYS = ['aspect', 'resolution', 'fps', 'durationSec', 'tempo'];
 const QUALITY_KEYS = ['crf', 'preset', 'bitrate'];
 const VIEW_KEYS = ['hud', 'camera'];
 const TOP_KEYS = ['version', 'name', 'description', 'scenario', 'seed'];
@@ -171,6 +174,7 @@ function normalizeConfig(input) {
       resolution: RESOLUTIONS[+v.resolution] ? +v.resolution : 1080,
       fps: FPS_OPTIONS.includes(+v.fps) ? +v.fps : 30,
       durationSec: clamp(num(v.durationSec, 3600), 1, 4 * 3600),
+      tempo: TEMPO_OPTIONS.includes(+v.tempo) ? +v.tempo : 1,
       quality: {
         crf: clamp(Math.round(num(q.crf, 20)), 0, 51),
         preset: X264_PRESETS.includes(q.preset) ? q.preset : 'medium',
@@ -337,7 +341,7 @@ class Session {
     if (r.width !== world.w || r.height !== world.h || r.resolution !== this.renderScale) r.resize(world.w, world.h, this.renderScale);
     this.cfg = cfg; this.scenario = sc; this.world = world;
     this.view = { ...cfg.view };
-    this.sim = sc.create({ seed: cfg.seed, params: { ...cfg.params }, world, view: this.view });
+    this.sim = sc.create({ seed: cfg.seed, params: { ...cfg.params }, world, view: this.view, timeScale: cfg.video.tempo });
     this.renderer = sc.createRenderer({ app: this.app, sim: this.sim, view: this.view, world, renderScale: this.renderScale });
     this.app.stage.addChild(this.renderer.root);
     this.render();
@@ -398,10 +402,10 @@ function installExportAPI(session, extra = {}) {
 }
 
 Object.assign(EBS, {
-  PHYS_HZ, DT, DT_MS, CONFIG_VERSION, ASPECTS, RESOLUTIONS, FPS_OPTIONS, X264_PRESETS, FX,
+  PHYS_HZ, DT, DT_MS, CONFIG_VERSION, ASPECTS, RESOLUTIONS, FPS_OPTIONS, TEMPO_OPTIONS, X264_PRESETS, FX,
   videoSize, normalizeConfig, mergeConfig, liftConfig, parseBitrate, deepMerge,
   registerScenario, getScenario, scenarios,
-  util: { clamp, lerp, angleDiff, num, bool, fnv1a, hashSeed, lerpColor, fmtTime, fmtInt },
+  util: { clamp, lerp, angleDiff, num, bool, fnv1a, hashSeed, lerpColor, fmtTime, fmtInt, fmtIntEn },
   RNG, Particles, ParticleView, canvasTex, getParticleTextures,
   createStage, glRendererName, Session, installExportAPI,
 });

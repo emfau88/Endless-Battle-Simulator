@@ -112,3 +112,18 @@ for (const cfg of [
     await page.close();
   });
 }
+
+test('Zeitlupe (tempo 0.8): kleinerer Zeitschritt, Kreislauf bleibt geschlossen, Treffer funktionieren (5 Minuten)', async () => {
+  const page = await sim({ seed: 3, video: { tempo: 0.8 } });
+  assert.equal((await page.evaluate(() => window.exportAPI.config())).video.tempo, 0.8);
+  const s = await run(page, 300);
+  const c = await check(page);
+  assert.ok(c.ok, c.errors.join('; '));
+  assert.equal(s.ballsTotal, s.ballsExpected);
+  assert.equal(s.shots - s.recycled, s.inFlight + s.inRecycle);
+  assert.ok(s.hits > 100 && s.hits / s.shots > 0.3, `Treffer ${s.hits}/${s.shots}`);
+  // 300 s Video entsprechen 240 s Simulationszeit
+  assert.equal(s.step, 300 * 60);
+  assert.ok(Math.abs(s.t - 240) < 1e-6, `Simulationszeit ${s.t}`);
+  await page.close();
+});

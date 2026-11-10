@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 const { DT, DT_MS, RNG, Particles, ParticleView, canvasTex, getParticleTextures, FX } = EBS;
-const { clamp, num, fnv1a, hashSeed, lerpColor, fmtTime, fmtInt } = EBS.util;
+const { clamp, num, fnv1a, hashSeed, lerpColor, fmtTime, fmtInt, fmtIntEn } = EBS.util;
 const { Engine, Bodies, Body, Composite, Common } = Matter;
 
 const TAU = Math.PI * 2, HALF_PI = Math.PI / 2;
@@ -23,8 +23,8 @@ const SEAT = R + 6;                              // Kugelmitte über dem Aufzugs
 const ENTRY = 2 * R + 6;                         // Wartepunkt vor dem Aufzugsschacht
 const NCOL = 6;
 const COLORS = [
-  { name: 'Cyan', hex: 0x1fd6f0 }, { name: 'Blau', hex: 0x3a66ff }, { name: 'Pink', hex: 0xff3f9e },
-  { name: 'Orange', hex: 0xff8418 }, { name: 'Gelb', hex: 0xffd31a }, { name: 'Grün', hex: 0x36dd5c },
+  { name: 'Cyan', hex: 0x1fd6f0 }, { name: 'Blue', hex: 0x3a66ff }, { name: 'Pink', hex: 0xff3f9e },
+  { name: 'Orange', hex: 0xff8418 }, { name: 'Yellow', hex: 0xffd31a }, { name: 'Green', hex: 0x36dd5c },
 ];
 const TUNE = { release: 1.2, belt: 150, lift: 220, entry: 190, G: 1000 };
 
@@ -174,7 +174,9 @@ function liftPos(lf, u, out) {
 //  Simulation
 // =====================================================================
 class MarbleFactory {
-  constructor({ seed, params, world }) {
+  constructor({ seed, params, world, timeScale = 1 }) {
+    // Zeitlupe: jeder Physikschritt deckt timeScale × 1/60 s Simulationszeit ab (1 = unverändert, bitgleich)
+    this.dt = DT * timeScale; this.dtMs = DT_MS * timeScale;
     Common._nextId = 0; Common._seed = 0;                 // Matter-interne Zähler zurücksetzen -> reproduzierbar
     this.cfg = { seed, ...params };
     const L = (this.L = computeLayout(world));
@@ -194,7 +196,7 @@ class MarbleFactory {
     this._buildStatics(); this._buildTracks(); this._buildBalls();
     // Einlaufphase: das Video beginnt mit einer bereits arbeitenden Fabrik
     this.quiet = true;
-    const warm = Math.round(this.cfg.warmup / DT);
+    const warm = Math.round(this.cfg.warmup / this.dt);
     for (let i = 0; i < warm; i++) this._tick();
     this.quiet = false; this._newStats();
     for (const b of this.balls) b.laps = 0;
@@ -260,12 +262,12 @@ class MarbleFactory {
   }
 
   setParam(k, v) { this.cfg[k] = v; }
-  stepOnce() { this._tick(); this.step++; this.t = this.step * DT; }
+  stepOnce() { this._tick(); this.step++; this.t = this.step * this.dt; }
 
   _tick() {
-    this.tick++; this.clock = this.tick * DT;
+    this.tick++; this.clock = this.tick * this.dt;
     this._wheel();
-    Engine.update(this.engine, DT_MS);
+    Engine.update(this.engine, this.dtMs);
     this._agitate();
     this._lift();
     const t = this.tr;
@@ -274,7 +276,7 @@ class MarbleFactory {
     this._advance(t.trough);
     this._controls();
     this._positions();
-    this.particles.update(DT);
+    this.particles.update(this.dt);
   }
 
   _room(tr) { const n = tr.balls.length; return !n || tr.balls[n - 1].s >= 2 * R + tr.gap; }
@@ -282,7 +284,7 @@ class MarbleFactory {
 
   // ---- Zellenrad: nimmt die unterste Kugel aus dem Behälterhals und gibt sie nach einer halben Drehung ins Fallrohr
   _wheel() {
-    const w = this.L.wheel, om = HALF_PI / TUNE.release, feed = this.tr.feed, nextAng = this.wheelAng + om * DT;
+    const w = this.L.wheel, om = HALF_PI / TUNE.release, feed = this.tr.feed, nextAng = this.wheelAng + om * this.dt;
     this.wheelHalt = false;
     for (let k = 0; k < 4; k++) {
       const b = this.pockets[k];
@@ -372,7 +374,7 @@ class MarbleFactory {
 
   // ---- Kettenaufzug
   _lift() {
-    const lf = this.L.lift, top = this.tr.top, dv = TUNE.lift * DT;
+    const lf = this.L.lift, top = this.tr.top, dv = TUNE.lift * this.dt;
     let halt = false;
     for (const c of this.carriers) if (c.ball && lf.bot - mod(this.liftU + c.off + dv, lf.loop) - SEAT <= lf.exitY && !this._room(top)) halt = true;
     this.liftHalt = halt;
@@ -419,13 +421,13 @@ class MarbleFactory {
       else if (b.entering) v = TUNE.entry;
       else {
         pathAt(tr.path, b.s, P0);
-        v += (TUNE.G * P0.ty - tr.drag * v) * DT;
+        v += (TUNE.G * P0.ty - tr.drag * v) * this.dt;
         const vmax = tr.vmaxPre && b.s < this.L.railS0 ? tr.vmaxPre : tr.vmax;
-        if (v > vmax) v = Math.max(vmax, v - 2600 * DT);
+        if (v > vmax) v = Math.max(vmax, v - 2600 * this.dt);
         if (v < tr.vmin) v = tr.vmin;
         if (Math.abs(P0.tx) > 0.08) b.spin = P0.tx > 0 ? 1 : -1;
       }
-      let ns = b.s + v * DT;
+      let ns = b.s + v * this.dt;
       if (ns >= lim) {
         ns = Math.max(b.s, lim);
         if (tr.col !== undefined && v > 160 && ns > b.s) this._clink(b, v);
@@ -455,7 +457,7 @@ class MarbleFactory {
       pathAt(tr.path, tr.len, P0);
       balls.shift(); b.state = 'hopper'; b.tr = null; b.bx = b.by = 0; b.hopT = this.clock;
       Body.setPosition(b.body, { x: sp.x, y: sp.y }); Body.setAngle(b.body, b.rot); Body.setAngularVelocity(b.body, 0);
-      Body.setVelocity(b.body, { x: P0.tx * b.v * DT, y: P0.ty * b.v * DT });
+      Body.setVelocity(b.body, { x: P0.tx * b.v * DT, y: P0.ty * b.v * DT }); // Matter-Geschwindigkeit in px je 1/60 s (unabhängig vom Zeitschritt)
       Composite.add(this.world, b.body);
       b.laps++; this.stats.cycles++;
     } else if (tr === t.feed) { if (this._room(t.belt)) { balls.shift(); this._enter(b, t.belt, 0, TUNE.belt); } }
@@ -489,24 +491,24 @@ class MarbleFactory {
       if (target && !foreign && this._room(col)) want = true;
       if (want && !f.want) this._spark(c.hinge.x - this.L.dir * 28, c.hinge.y, COLORS[i].hex, 5);
       f.want = want;
-      f.open = clamp(f.open + (want ? DT : -DT) / 0.14, 0, 1);
-      f.flash = Math.max(0, f.flash - DT * 1.6);
+      f.open = clamp(f.open + (want ? this.dt : -this.dt) / 0.14, 0, 1);
+      f.flash = Math.max(0, f.flash - this.dt * 1.6);
       // Ventil: hält die Röhre gefüllt und gibt die unterste Kugel frei, sobald mehr als K warten
       const v = this.valves[i];
-      v.cool = Math.max(0, v.cool - DT);
+      v.cool = Math.max(0, v.cool - this.dt);
       let waiting = 0, front = null, passing = false;
       for (const b of cb) { if (b.pass) { if (b.s < col.stopS + 2 * R + 8) passing = true; } else { waiting++; if (!front) front = b; } }
       if (front && waiting > K && !cb[0].pass && v.cool <= 0 && front.s >= col.stopS - 0.5 && this._joinClear(c.joinS, 180, 2 * R + 8)) {
         front.pass = true; v.cool = 0.3; passing = true;
       }
-      v.open = clamp(v.open + (passing ? DT : -DT) / 0.1, 0, 1);
+      v.open = clamp(v.open + (passing ? this.dt : -this.dt) / 0.1, 0, 1);
     }
-    this.scan.a = Math.max(0, this.scan.a - DT * 2.2);
-    if (!this.tr.belt.balls.length || this.tr.belt.balls[0].v > 0) this.beltU += TUNE.belt * DT;
+    this.scan.a = Math.max(0, this.scan.a - this.dt * 2.2);
+    if (!this.tr.belt.balls.length || this.tr.belt.balls[0].v > 0) this.beltU += TUNE.belt * this.dt;
   }
 
   _positions() {
-    const w = this.L.wheel, lf = this.L.lift, k = Math.exp(-DT / 0.06);
+    const w = this.L.wheel, lf = this.L.lift, k = Math.exp(-this.dt / 0.06);
     let mj = this.stats.maxJump;
     for (const b of this.balls) {
       b.bx *= k; b.by *= k;
@@ -515,7 +517,7 @@ class MarbleFactory {
       else if (b.state === 'wheel') {
         const a = this.wheelAng + b.pocket * HALF_PI;
         b.x = w.x + w.rp * Math.cos(a) + b.bx; b.y = w.y + w.rp * Math.sin(a) + b.by;
-        if (!this.wheelHalt) b.rot += (HALF_PI / TUNE.release) * DT;
+        if (!this.wheelHalt) b.rot += (HALF_PI / TUNE.release) * this.dt;
       } else if (b.state === 'slot') { b.x = lf.ballX; b.y = lf.slotY; }
       else { b.x = lf.ballX; b.y = lf.bot - b.carrier.u - SEAT + b.by; }
       if (b.px === b.px) { const j = Math.hypot(b.x - b.px, b.y - b.py); if (j > mj) mj = j; }
@@ -1191,7 +1193,7 @@ class MarbleRenderer {
       t.anchor.set(0, 0.5); t.position.set(x + 46, B.y - 7); this.hud.addChild(t);
       return t;
     });
-    const lab = new PIXI.Text({ text: 'SORTIERT NACH FARBE', style: style(15, '600', 0x8fa0b8, 3) });
+    const lab = new PIXI.Text({ text: 'SORTED BY COLOR', style: style(15, '600', 0x8fa0b8, 3) });
     lab.position.set(x0, B.y + 22); this.hud.addChild(lab);
     this.hCycles = new PIXI.Text({ text: '0', style: style(40, '800', 0xffffff, 1) });
     this.hCycles.anchor.set(1, 0.5); this.hCycles.position.set(B.x + B.w / 2 - 26, B.y - 9);
@@ -1251,12 +1253,13 @@ class MarbleRenderer {
     this.motorLed.alpha = 0.55 + 0.35 * Math.sin(t * 3);
     this.cabLeds.forEach((s, i) => { s.alpha = i === 1 ? (Math.sin(t * 2.6) > 0.2 ? 0.75 : 0.12) : 0.5 + 0.2 * Math.sin(t * (1.3 + i) + i); });
     this.pview.draw();
-    const st = sim.stats, sig = st.cycles + '|' + st.sorted.join() + '|' + Math.floor(sim.t);
+    const st = sim.stats, sig = st.cycles + '|' + st.sorted.join() + '|' + Math.floor(sim.step * DT);
     if (this.hud.visible && sig !== this.hudSig) {
       this.hudSig = sig;
-      st.sorted.forEach((n, i) => { this.hCount[i].text = fmtInt(n); });
-      this.hCycles.text = fmtInt(st.cycles);
-      this.hTime.text = `UMLÄUFE  ·  ${fmtTime(sim.t)}`;
+      // Texte im Video englisch; Uhr = Videozeit (bei Zeitlupe läuft die Simulationszeit langsamer)
+      st.sorted.forEach((n, i) => { this.hCount[i].text = fmtIntEn(n); });
+      this.hCycles.text = fmtIntEn(st.cycles);
+      this.hTime.text = `CYCLES  ·  ${fmtTime(sim.step * DT)}`;
     }
   }
 

@@ -15,7 +15,8 @@ const RESERVED = ['mode', 'cfg', 'paused'];
 // Was das Live-Bedienfeld anbietet (weitere Werte lassen sich hier ergänzen, der Kern kann sie bereits)
 const UI_ASPECTS = ['9:16', '16:9'];
 const UI_DURATIONS = [[20, '20 Sekunden (Test)'], [60, '1 Minute'], [300, '5 Minuten'], [600, '10 Minuten'], [1800, '30 Minuten'], [3600, '60 Minuten']];
-const UI_SPEEDS = [1, 2, 5, 10];
+// Werte < 1 sind Zeitlupe und gelten auch für den Videoexport (cfg.video.tempo), Werte > 1 nur für die Vorschau
+const UI_SPEEDS = [0.8, 1, 2, 5, 10];
 
 // ---------------- Export-Modus ----------------
 async function bootExport() {
@@ -131,7 +132,13 @@ async function bootLive() {
     mark(current);
     return mark;
   };
-  seg('segSpeed', UI_SPEEDS.map((s) => [s, s + '×']), 1, (v) => { speed = v; });
+  // Die Zeitlupe steckt im Physik-Zeitschritt (cfg.video.tempo); speed beschleunigt nur die Vorschau zusätzlich
+  const uiSpeed = () => (cfg().video.tempo < 1 ? cfg().video.tempo : speed);
+  const markSpeed = seg('segSpeed', UI_SPEEDS.map((s) => [s, s + '×']), uiSpeed(), (v) => {
+    const tempo = v < 1 ? v : 1;
+    speed = v / tempo;
+    if (cfg().video.tempo !== tempo) restart({ video: { tempo } });
+  });
   const markAspect = seg('segFormat', UI_ASPECTS.map((k) => [k, `${ASPECTS[k].label} ${ASPECTS[k].w}×${ASPECTS[k].h}`]), cfg().video.aspect,
     (v) => { if (cfg().video.aspect !== v) restart({ video: { aspect: v } }); });
   const dur = $('duration');
@@ -157,7 +164,7 @@ async function bootLive() {
       if (o && ctl.format) o.textContent = ctl.format(+v);
     }
     $('hud').checked = c.view.hud; $('camera').checked = c.view.camera;
-    markAspect(c.video.aspect);
+    markAspect(c.video.aspect); markSpeed(uiSpeed());
     dur.value = String(c.video.durationSec);
     if (!dur.value) { dur.value = '3600'; c.video.durationSec = 3600; }
   }
@@ -168,7 +175,7 @@ async function bootLive() {
   const cliCmd = () => {
     const c = session.cfg;
     const p = Object.entries(c.params).map(([k, v]) => `--param ${k}=${v}`).join(' ');
-    return `npm run export -- --scenario ${c.scenario} --seed ${c.seed} --aspect ${c.video.aspect} --duration ${c.video.durationSec} ${p}${c.view.hud ? '' : ' --no-hud'}${c.view.camera ? '' : ' --no-camera'}`;
+    return `npm run export -- --scenario ${c.scenario} --seed ${c.seed} --aspect ${c.video.aspect} --duration ${c.video.durationSec}${c.video.tempo !== 1 ? ' --tempo ' + c.video.tempo : ''} ${p}${c.view.hud ? '' : ' --no-hud'}${c.view.camera ? '' : ' --no-camera'}`;
   };
   let polling = null;
   const showStatus = (s) => {

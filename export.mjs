@@ -19,6 +19,7 @@ Video
   --aspect <a>           9:16 | 16:9 | 1:1   (alternativ --format portrait|landscape|square)
   --resolution <r>       720 | 1080 | 1440 | 2160 (4k)             (kurze Bildseite, Standard 1080)
   --fps <n>              30 | 60                                   (Standard 30)
+  --tempo <t>            0.8 = Zeitlupe | 1                        (Standard 1)
   --crf <n>              Qualität (kleiner = besser)               (Standard 20)
   --bitrate <b>          feste Bitrate statt CRF, z. B. 12M oder 8000k
   --preset <p>           x264-Preset ultrafast … veryslow          (Standard medium)
@@ -68,6 +69,7 @@ function parseArgs(argv) {
       case '--format': { const f = next(); cfg.video.aspect = f === 'landscape' ? '16:9' : f === 'square' ? '1:1' : f === 'portrait' ? '9:16' : f; break; }
       case '--resolution': { const r = next().toLowerCase(); cfg.video.resolution = r === '4k' ? 2160 : parseInt(r, 10); break; }
       case '--fps': cfg.video.fps = Number(next()); break;
+      case '--tempo': cfg.video.tempo = Number(next()); break;
       case '--crf': cfg.video.quality.crf = Number(next()); break;
       case '--bitrate': cfg.video.quality.bitrate = next(); break;
       case '--preset': cfg.video.quality.preset = next(); break;

@@ -83,6 +83,20 @@ for (const cfg of [
   });
 }
 
+for (const aspect of ['16:9', '9:16']) {
+  test(`Zeitlupe (tempo 0.8) ${aspect}: Kreislauf geschlossen, kein Stillstand (5 Minuten)`, async () => {
+    const page = await sim({ seed: 9, video: { aspect, tempo: 0.8 } });
+    const s = await run(page, 300);
+    const c = await check(page);
+    assert.ok(c.ok, c.errors.join('; '));
+    assert.equal(total(s.counts), s.ballsExpected);
+    assert.ok(s.cycles > 80, `Anlage steht: ${s.cycles} Umläufe`);
+    assert.ok(s.minLaps >= 1, 'eine Kugel hängt fest');
+    assert.ok(Math.abs(s.t - 240) < 1e-6, `Simulationszeit ${s.t}`);
+    await page.close();
+  });
+}
+
 // Regression: Im Hochkantformat ist der Behälter voller (kürzere Wege). Ohne Altkugel-Vorrang blieb dort eine Kugel
 // dauerhaft an der Trichterflanke liegen; bei Seed 1 verkeilten sich später zwei Kugeln über dem Hals (Stillstand).
 for (const seed of [42, 1, 4]) {

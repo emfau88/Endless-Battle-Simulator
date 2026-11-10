@@ -43,7 +43,7 @@ Server (`npm start`). Ohne Server zeigt er den passenden Kommandozeilenbefehl an
 | Bereich | Optionen |
 |---|---|
 | Konfiguration | `--config datei.json` · `--scenario id` · `--seed n` · `--param key=wert` (mehrfach) · `--no-hud` · `--no-camera` |
-| Video | `--duration 20s/5m/1h` · `--aspect 9:16/16:9/1:1` (oder `--format portrait/landscape/square`) · `--resolution 720/1080/1440/2160` · `--fps 30/60` |
+| Video | `--duration 20s/5m/1h` · `--aspect 9:16/16:9/1:1` (oder `--format portrait/landscape/square`) · `--resolution 720/1080/1440/2160` · `--fps 30/60` · `--tempo 0.8` (Zeitlupe) |
 | Qualität | `--crf 20` · `--bitrate 12M` (statt CRF) · `--preset medium` (x264) |
 | Seeschlacht-Kürzel | `--ships` · `--cannons` · `--fire-rate` · `--speed` · `--intensity` · `--no-recycle` |
 | Technik | `--out datei.mp4` · `--gpu` / `--no-gpu` · `--jpeg-quality 0.92` · `--script szenario.js` |
@@ -83,7 +83,7 @@ Alle Browser-Dateien sind klassische Skripte (keine ES-Module), damit `index.htm
   "scenario": "naval",
   "seed": 42,
   "params": { "ships": 2, "cannons": 4, "fireRate": 1, "projectileSpeed": 1, "intensity": 0.35, "recycleVisible": true },
-  "video":  { "aspect": "9:16", "resolution": 1080, "fps": 30, "durationSec": 3600,
+  "video":  { "aspect": "9:16", "resolution": 1080, "fps": 30, "durationSec": 3600, "tempo": 1,
               "quality": { "crf": 20, "preset": "medium", "bitrate": null } },
   "view":   { "hud": true, "camera": true }
 }
@@ -105,6 +105,14 @@ Physikschritte gerechnet (2 bei 30 fps, 1 bei 60 fps), dann wird das Bild gerend
 und direkt per Pipe an FFmpeg gegeben – keine Einzelbilder auf der Platte. Renderdauer, Bildrate und Echtzeit haben
 keinen Einfluss auf die Physik. Alle Zufallswerte kommen aus Seed-basierten Generatoren (Physik / Effekte getrennt),
 Matter.js-interne Zähler werden beim Start zurückgesetzt. Gleicher Seed ⇒ identischer Ablauf.
+
+**Tempo / Zeitlupe.** `video.tempo` (0.8 oder 1, im Bedienfeld „0.8×“ bei der Simulationsgeschwindigkeit) verkleinert
+den Physik-Zeitschritt auf tempo × 1/60 s. Pro Videoframe werden weiterhin gleich viele Schritte gerechnet, der Clip
+läuft also flüssig in Zeitlupe statt mit wiederholten Frames. Die Uhr im HUD zeigt die Videozeit. Bei tempo 1 ist der
+Ablauf bitgleich zu vorher.
+
+**Sprache im Video.** Alle Texte, die im Clip selbst erscheinen (HUD, Teamnamen, Zähler), sind englisch; das
+Bedienfeld bleibt deutsch.
 
 **Geschoss-Kreislauf.** Jedes Schiff besitzt eine feste Anzahl Kugeln (Kanonen × 5). Zustände:
 `Magazin → Flug (Matter.js) → Wasserkontakt → Sinken → Förderband → Aufzug → Magazin`. Kugeln werden nie erzeugt oder

@@ -44,7 +44,7 @@ test('Live-Simulation läuft im Browser, Bedienfeld funktioniert, Screenshot', a
   assert.ok(s.shots > 0 && s.hits > 0, 'keine Schüsse/Treffer');
   assert.ok(Number(await page.textContent('#sFps')) > 0, 'FPS-Anzeige leer');
   assert.notEqual(await page.textContent('#stat-shots'), '–');
-  assert.match(await page.textContent('#scenarioNote'), /ROT .* BLAU/);
+  assert.match(await page.textContent('#scenarioNote'), /RED .* BLUE/);
   // Pause hält die Simulationszeit an
   await page.click('#btnPlay');
   const t1 = await page.evaluate(() => window.EBS.app.sim.t);

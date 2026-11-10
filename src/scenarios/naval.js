@@ -12,17 +12,17 @@
 'use strict';
 const { Engine, Body, Bodies, Composite, Events, Vertices, Common } = Matter;
 const { PHYS_HZ, DT, DT_MS, RNG, Particles, ParticleView, canvasTex, getParticleTextures } = EBS;
-const { clamp, lerp, angleDiff, num, bool, fnv1a, hashSeed, lerpColor, fmtTime, fmtInt } = EBS.util;
+const { clamp, lerp, angleDiff, num, bool, fnv1a, hashSeed, lerpColor, fmtTime, fmtInt, fmtIntEn } = EBS.util;
 const { T_SOFT, T_SPARK, T_SPLINTER, T_DROP, T_RING, T_BUBBLE, F_BUBBLE, F_DROPLET, F_FADEIN } = EBS.FX;
 
 // =====================================================================
 //  Konstanten und Stellschrauben
 // =====================================================================
 const TEAMS = [
-  { name: 'ROT',  color: 0xff5a4e, dark: 0x8f2a22, sail: 0xf3e6cf },
-  { name: 'BLAU', color: 0x3fb6ff, dark: 0x1c5a8a, sail: 0xe4edf6 },
-  { name: 'GRÜN', color: 0x5ee08a, dark: 0x23743f, sail: 0xe8f1e2 },
-  { name: 'GOLD', color: 0xffc94a, dark: 0x93701c, sail: 0xf5ecd6 },
+  { name: 'RED',   color: 0xff5a4e, dark: 0x8f2a22, sail: 0xf3e6cf },
+  { name: 'BLUE',  color: 0x3fb6ff, dark: 0x1c5a8a, sail: 0xe4edf6 },
+  { name: 'GREEN', color: 0x5ee08a, dark: 0x23743f, sail: 0xe8f1e2 },
+  { name: 'GOLD',  color: 0xffc94a, dark: 0x93701c, sail: 0xf5ecd6 },
 ];
 // Stellschrauben für Schaden, Stabilisierung und Recycling
 const TUNING = {
@@ -118,7 +118,9 @@ function polyXRange(poly, y) {
 const flat = (pts) => pts.flatMap((p) => p);
 
 class NavalBattle {
-  constructor({ seed, params, world }) {
+  constructor({ seed, params, world, timeScale = 1 }) {
+    // Zeitlupe: jeder Physikschritt deckt timeScale × 1/60 s Simulationszeit ab (1 = unverändert, bitgleich)
+    this.dt = DT * timeScale; this.dtMs = DT_MS * timeScale;
     const cfg = (this.cfg = { seed, ...params });
     const L = (this.L = computeLayout(world, cfg));
     Common._nextId = 0; Common._seed = 0; // Matter-interne Zähler zurücksetzen -> reproduzierbar
@@ -275,12 +277,12 @@ class NavalBattle {
     const t = this.t;
     this._updateShips(t, false);
     this._updateCannons();
-    Engine.update(this.engine, DT_MS);
-    this.step++; this.t = this.step * DT;
+    Engine.update(this.engine, this.dtMs);
+    this.step++; this.t = this.step * this.dt;
     this._processHits();
     this._updateBalls();
     this._updateShipDamage();
-    this.particles.update(DT, this._surfaceNow);
+    this.particles.update(this.dt, this._surfaceNow);
     this.shake *= 0.9;
   }
 
@@ -306,12 +308,12 @@ class NavalBattle {
   }
 
   _updateCannons() {
-    const maxTurn = 2.2 * DT;
+    const maxTurn = 2.2 * this.dt;
     for (const ship of this.ships) {
       for (const c of ship.cannons) {
-        c.recoil = Math.max(0, c.recoil - DT * 3);
+        c.recoil = Math.max(0, c.recoil - this.dt * 3);
         c.angle += clamp(angleDiff(c.aim, c.angle), -maxTurn, maxTurn);
-        c.timer -= DT * this.cfg.fireRate;
+        c.timer -= this.dt * this.cfg.fireRate;
         if (c.timer <= 0) {
           if (ship.ammo > 0) this._fire(ship, c); else { c.waiting = true; c.timer = 0; }
         }
@@ -330,7 +332,7 @@ class NavalBattle {
     const ang = sol.angle + this.rng.normal() * 0.018;
     const v = sol.v * (1 + this.rng.normal() * 0.03);
     mx = piv.x + Math.cos(ang) * c.len; my = piv.y + Math.sin(ang) * c.len;
-    const b = ball.body, aStep = this.L.g * DT * DT;
+    const b = ball.body, aStep = this.L.g * this.dt * this.dt;
     b.collisionFilter.mask = ball.mask;
     Body.setPosition(b, { x: mx, y: my });
     Body.setAngle(b, 0); Body.setAngularVelocity(b, 0);
@@ -416,7 +418,7 @@ class NavalBattle {
   _updateShipDamage() {
     for (const ship of this.ships) {
       // automatische Stabilisierung: Crew repariert oberhalb der Schwelle
-      if (ship.damage > TUNING.repairStart) ship.damage -= TUNING.repairRate * (ship.damage - TUNING.repairStart) * DT;
+      if (ship.damage > TUNING.repairStart) ship.damage -= TUNING.repairRate * (ship.damage - TUNING.repairStart) * this.dt;
       // Reparatur sichtbar machen: alle 3 s ein Loch flicken, wenn mehr offen sind als der Schaden erklärt
       if (this.t - ship.lastPatch > 3) {
         ship.lastPatch = this.t;
@@ -432,7 +434,7 @@ class NavalBattle {
     for (const ball of this.balls) {
       if (ball.state === 'fly') {
         const b = ball.body, p = b.position;
-        ball.age += DT;
+        ball.age += this.dt;
         if ((this.step & 1) === 0) {
           ball.trail[ball.trailHead * 2] = p.x; ball.trail[ball.trailHead * 2 + 1] = p.y;
           ball.trailHead = (ball.trailHead + 1) % TRAIL_N; ball.trailLen = Math.min(TRAIL_N, ball.trailLen + 1);
@@ -455,16 +457,16 @@ class NavalBattle {
           }
         }
       } else if (ball.state === 'sink') {
-        ball.vx *= Math.exp(-2.2 * DT);
-        ball.vy += (TUNING.sinkAccel * u - TUNING.sinkDrag * ball.vy) * DT;
-        ball.x = clamp(ball.x + ball.vx * DT, -30 * u, W + 30 * u); ball.y += ball.vy * DT;
-        if ((ball.bubbleT -= DT) <= 0) { ball.bubbleT = 0.08 + this.fx.next() * 0.08; this._fxBubble(ball.x, ball.y - ball.r); }
+        ball.vx *= Math.exp(-2.2 * this.dt);
+        ball.vy += (TUNING.sinkAccel * u - TUNING.sinkDrag * ball.vy) * this.dt;
+        ball.x = clamp(ball.x + ball.vx * this.dt, -30 * u, W + 30 * u); ball.y += ball.vy * this.dt;
+        if ((ball.bubbleT -= this.dt) <= 0) { ball.bubbleT = 0.08 + this.fx.next() * 0.08; this._fxBubble(ball.x, ball.y - ball.r); }
         const ship = this.ships[ball.owner];
         if (ball.y >= ship.laneY) this._enterLane(ball, ship);
       }
     }
     // Förderband + Aufzug (Warteschlange je Schiff, Kugeln überholen sich nicht)
-    const step = TUNING.conveyor * u * DT;
+    const step = TUNING.conveyor * u * this.dt;
     for (const ship of this.ships) {
       const lane = ship.lane, gap = 2 * this.L.ballR + 3;
       let prev = -Infinity;
@@ -597,7 +599,7 @@ class NavalBattle {
     const holes = ship.holes;
     if (!holes.length) return;
     const r = this.fx, u = this.L.u, d = ship.damage;
-    ship.smokeAcc += DT * (0.5 + d * 4.5);
+    ship.smokeAcc += this.dt * (0.5 + d * 4.5);
     while (ship.smokeAcc > 0.3) {
       ship.smokeAcc -= 0.3;
       const h = this._recentHole(ship, r.int(0, 4));
@@ -607,7 +609,7 @@ class NavalBattle {
         r.range(0.3, 0.5), lerpColor(0x55555c, 0x26262a, d), T_SOFT, 0, -8 * u, 0.4, 0, F_FADEIN);
     }
     if (d > 0.35) {
-      ship.fireAcc += DT * (d - 0.35) * 40;
+      ship.fireAcc += this.dt * (d - 0.35) * 40;
       while (ship.fireAcc > 1) {
         ship.fireAcc -= 1;
         const h = this._recentHole(ship, r.int(0, 1));
@@ -1131,10 +1133,11 @@ class NavalRenderer {
       g.roundRect(b.x + 3 * u, b.y + 3 * u, Math.max(0, (b.w - 6 * u) * hp), b.h - 6 * u, (b.h - 6 * u) / 2).fill(b.s.team.color);
     }
     if (this.frame % 6 === 1) {
-      this.hSub.text = `${fmtTime(sim.t)}  ·  Schüsse ${fmtInt(st.shots)}  ·  Treffer ${fmtInt(st.hits)}`;
+      // Texte im Video englisch; Uhr = Videozeit (bei Zeitlupe läuft die Simulationszeit langsamer)
+      this.hSub.text = `${fmtTime(sim.step * DT)}  ·  Shots ${fmtIntEn(st.shots)}  ·  Hits ${fmtIntEn(st.hits)}`;
       for (const b of this.hBars) {
-        b.pct.text = `${Math.round((1 - b.s.damage) * 100)} %`;
-        b.ammo.text = b.w < 400 * u ? `Munition ${b.s.ammo}/${b.s.totalBalls}` : `Munition ${b.s.ammo}/${b.s.totalBalls}  ·  Treffer kassiert ${fmtInt(b.s.hitsTaken)}`;
+        b.pct.text = `${Math.round((1 - b.s.damage) * 100)}%`;
+        b.ammo.text = b.w < 400 * u ? `Ammo ${b.s.ammo}/${b.s.totalBalls}` : `Ammo ${b.s.ammo}/${b.s.totalBalls}  ·  Hits taken ${fmtIntEn(b.s.hitsTaken)}`;
       }
     }
   }
