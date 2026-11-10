@@ -7,6 +7,9 @@ geschlossenen, sichtbaren Kreislauf zurück ins Magazin.
 Phase A ist abgeschlossen. Die Architektur ist bereits für weitere Szenarien und Videoformate vorbereitet
 (siehe [Erweiterbarkeit](#erweiterbarkeit)).
 
+Zweites Szenario (visueller Prototyp V0.1): **Endless Marble Factory** – eine Kugelfabrik mit geschlossenem Kreislauf,
+deren Grafik vollständig im Code entsteht (siehe [Endless Marble Factory](#endless-marble-factory-prototyp-v01)).
+
 ## Voraussetzungen
 
 | Werkzeug | Version (getestet) | Hinweis |
@@ -27,7 +30,9 @@ npm run export:test         # Abnahmetest: 20-s-MP4 -> output/test_20s.mp4 (inkl
 npm run export -- --config presets/naval-standard.json          # 60 Minuten hochkant (Standard laut Auftrag)
 npm run export -- --config presets/naval-landscape-10min.json   # 10 Minuten 1920×1080
 npm run export -- --duration 5m --seed 7 --aspect 1:1 --resolution 1440 --fps 60 --bitrate 12M
-npm test                    # alle automatisierten Tests (≈ 3 min)
+npm test                    # alle automatisierten Tests (≈ 4 min; jeder Test wird nach 2 min automatisch abgebrochen)
+npm run marble:test         # Kugelfabrik: 8-s-Testvideo 720p30 -> output/marble_test_8s_720p.mp4
+node scripts/screenshot.mjs --scenario marble --aspect 16:9 --at 9 --out output/marble_16x9.png   # Einzelbild (PNG)
 ```
 
 `index.html` kann auch direkt per Doppelklick geöffnet werden; der Button **Video exportieren** braucht aber den
@@ -54,6 +59,8 @@ index.html                 Oberfläche (HTML/CSS) + Einbindung der Skripte
 src/core.js                Kern: Physik-Takt, Video-Einstellungen, Konfigurationsschema, Szenario-Registry,
                            Zufall, Partikel, Session (Szenario <-> Bühne), Export-Schnittstelle window.exportAPI
 src/scenarios/naval.js     Szenario „Endless Naval Battle“ (Simulation + Renderer + Registrierung)
+src/scenarios/marble.js    Szenario „Endless Marble Factory“ (Bahnen, Simulation, Canvas-Grafik, Renderer)
+scripts/screenshot.mjs     Einzelbild der laufenden Simulation als PNG (gleiche Seite wie der Export)
 src/app.js                 Live-Bedienfeld und Export-Modus – kennt keine Schiffe, nur die Registrierung
 lib/exporter.mjs           Export-Pipeline: Playwright rendert Frames -> Pipe -> FFmpeg (H.264) -> ffprobe-Prüfung
 lib/browser.mjs            Chromium-Start (GPU mit automatischem Software-Fallback), Export-Seite öffnen
@@ -134,6 +141,67 @@ Schlagseite und dunklerer Rumpf. Gemessener Verlauf bei 35 %: **1 min ≈ 3 % ·
 3. Eine `<script>`-Zeile in `index.html` ergänzen – oder ohne Änderung testen: `node export.mjs --script <datei> --scenario <id>`.
 
 Kern, Partikelpool, Bühne, Export-Pipeline, Server und CLI bleiben dabei unverändert.
+
+## Endless Marble Factory (Prototyp V0.1)
+
+Auswahl in der Oberfläche über **Szenario**, per Kommandozeile mit `--scenario marble`. Regler: Anzahl der Kugeln
+(20–35, Standard 35) und Kugeln je Farbröhre (1–3, Standard 2).
+
+**Kreislauf.** `Glasbehälter → Zellenrad → Fallrohr → Förderband → Scanner → Sortierrohr mit Klappen → Farbröhre mit
+Ventil → Sammelschiene → Kettenaufzug → Rücklaufrohr → Glasbehälter`. Kugeln werden nie erzeugt oder gelöscht.
+
+**Physik nur dort, wo man sie sieht.** Im Glasbehälter rechnet Matter.js (Haufen, Nachrutschen). Alle anderen Wege
+sind Bahnen mit Bogenlängen-Parametrisierung: Rollbeschleunigung aus der Bahnneigung, Rollwiderstand, Mindest- und
+Höchsttempo je Abschnitt sowie Stau-Logik (keine Überlappung, Warten vor Klappen, Ventilen und Aufzug). Übergänge
+zwischen Stationen liegen exakt aufeinander; ein Test prüft, dass keine Kugel pro Physikschritt mehr als 20 Einheiten
+springt (gemessen ≈ 13).
+
+**Mechanik ist gekoppelt, nicht dekorativ.** Der Zahnradzug (12/22/30/10 Zähne, Modul 6) hängt an der Welle der
+Bandtrommel; Drehwinkel und Zahnphasen folgen aus dem Bandweg und den Zähneverhältnissen. Bandstollen, Trommeln,
+Stützrollen, Kettenräder, Kettenglieder und Träger des Aufzugs bewegen sich mit derselben Geschwindigkeit wie die
+Kugeln, die sie tragen. Klappen öffnen nur für die passende Farbe, Ventile halten den Puffer je Röhre.
+
+**Zwei Layouts, eine Simulation.** `computeLayout()` ordnet die Baugruppen für 16:9 (Kreislauf im Uhrzeigersinn,
+lange Sammelschiene) und 9:16 (Zickzack von oben nach unten, U-Bogen vor dem Sortierer) unterschiedlich an und
+erzeugt daraus die Bahnen. Simulation, Renderer und Tests sind für beide identisch. 1:1 nutzt das Querformat-Layout
+verkleinert (nicht eigens gestaltet).
+
+**Einlaufphase.** Die Simulation rechnet beim Start 30 s vor (`warmup`), damit ein Video mit laufender Anlage beginnt.
+
+**Grafik ausschließlich per Code** (Canvas 2D → PixiJS-Texturen, keine Bilddateien):
+
+| Baugruppe | Umsetzung |
+|---|---|
+| Halle | Wandplatten, Träger, ferne Rohre, Boden mit Warnstreifen, warme Lichtbänder mit Lichtkegeln, Vignette |
+| Glaskugeln | Radialverlauf je Farbe, Kaustik-Aufhellung, rotierendes „Katzenauge“, feststehender Glanzpunkt, additiver Farbschein, Kontaktschatten auf Band und Schiene |
+| Glasrohre | Rückseite (Tönung, Wandschatten) + Vorderseite (versetzte Lichtreflexe, auf das Rohrinnere beschnitten; helle Glaskante), Stahl-/Messingmanschetten |
+| Glasbehälter | getöntes Glas, Reflexbänder, Stahldeckel, Messingkragen |
+| Zellenrad | rotierender Rotor mit vier Taschen hinter Glasdeckel, Stahlring mit Schrauben, Messingnabe |
+| Förderband | Bandschleife mit umlaufenden Stollen, Trommeln, Stützrollen, Seitenwange, LED-Leiste |
+| Zahnräder | Zahnprofil, Drehriefen, vertiefter Steg, Messingnabe; darüber feststehender Glanzkeil (wirkt metallisch, während sich das Rad darunter dreht) |
+| Sortierer | Gehäuse, Scanner mit Farbblitz, sechs Messingklappen, Farbröhren mit Leuchtring, Ventilstifte, Funken und Lichtsäule beim Einsortieren |
+| Aufzug | Kette aus Einzelgliedern, Kettenräder, Messingträger, Glasschacht |
+| Sammelschiene | zwei Rundstäbe mit Messingklemmen und Stützen |
+| Antrieb / Schaltschrank | Motorgehäuse mit Kühlrippen, Manometer, pulsierende Kontrollleuchten |
+| Anzeige | Leuchtschrift, Zähler je Farbe, Umläufe, Zeit (über „HUD einblenden“ abschaltbar) |
+
+**Gemessen (Kugelfabrik, AMD Radeon iGPU):** Live-Ansicht 1920×1080 60 FPS · Export-Frame (2 Physikschritte + Rendern
++ JPEG) 1080p quer 20,8 ms (≈ 48 Frames/s), 1080p hochkant 28,0 ms (≈ 36 Frames/s), 720p 10,4 ms (≈ 96 Frames/s) ·
+8-s-Testvideo 720p30 komplett in 7 s (≈ 35 Frames/s inkl. Browserstart und Encoder) · reine Simulation: 10 Minuten
+Simzeit in 2–3,5 s · JS-Heap nach 30 Minuten Simzeit unverändert ≈ 11 MB.
+
+**Bekannte Schwächen des Prototyps**
+
+- Im Trichter des Glasbehälters verkeilen sich gelegentlich zwei Kugeln über dem Hals. Ein Brückenbrecher löst das
+  meist unsichtbar; hält der Stau länger als 3 s, rüttelt der Behälter sichtbar (gemessen 2–28× in 10 Minuten, längste
+  Pause ohne zurückkehrende Kugel 3–9 s). Dadurch liegt der Durchsatz bei 440–477 statt theoretisch 500 Umläufen je
+  10 Minuten.
+- Am Trichterrand entsteht eine tote Zone – im Hochkantformat ausgeprägter, weil dort die Wege kürzer sind und der
+  Behälter voller ist (kein Koordinatenfehler; die Behältergeometrie ist in beiden Layouts identisch). Kugeln, die
+  länger als 15 s liegen, erhalten deshalb Vorrang; die längste gemessene Verweildauer beträgt 48–85 s.
+- Die grüne Farbe hat bei 35 Kugeln nur 5 statt 6 Kugeln und wird entsprechend seltener sortiert.
+- 1:1 ist nicht eigens gestaltet (verkleinertes Querformat-Layout). Kein Ton.
+- Die Messingmanschette unter dem Zellenrad sitzt schräg im Rohrbogen (unsauberer Übergang zum Fallrohr).
 
 ## Gemessene Leistung (dieser Rechner, AMD Radeon iGPU)
 
