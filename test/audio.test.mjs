@@ -5,7 +5,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { INDEX, launchBrowser } from '../lib/browser.mjs';
+import { INDEX, ROOT, launchBrowser } from '../lib/browser.mjs';
 import { exportVideo, verifyResult } from '../lib/exporter.mjs';
 import { SAMPLE_RATE, buildVoices, decodeSample, loadSamples, mixToWav } from '../lib/audio.mjs';
 
@@ -88,10 +88,20 @@ test('Ton ist reproduzierbar und beeinflusst die Simulation nicht; Stummoption l
   assert.equal(JSON.parse(readFileSync(mute.sidecar, 'utf8')).config.video.audio, false, 'Stummoption steht nicht in der Konfiguration');
 });
 
-test('Szenario ohne Klangtabelle (Seeschlacht) exportiert weiterhin ohne Tonspur', async () => {
-  const r = await exportVideo({ seed: 5, video: { resolution: 720, durationSec: 1 } }, { out: join(dir, 'naval.mp4'), ...fast });
+test('Seeschlacht: Tonspur aus Schuss, Treffer und Platscher; Dichtebegrenzung hält die Stimmenzahl klein', async () => {
+  const r = await exportVideo({ seed: 5, video: { resolution: 720, durationSec: 4 } }, { out: join(dir, 'naval.mp4'), ...fast });
   assert.deepEqual(verifyResult(r), []);
-  assert.deepEqual([r.cfg.scenario, r.cfg.video.audio, r.audio, r.audioStream], ['naval', true, null, null]);
+  assert.deepEqual([r.cfg.scenario, r.audioStream.codec, r.audioStream.channels], ['naval', 'aac', 2]);
+  assert.ok(r.audio.voices > 5 && r.audio.voices < r.audio.events, `Stimmen ${r.audio.voices} bei ${r.audio.events} Ereignissen`);
+  assert.ok(r.audio.voices / 4 < 12, `zu dichter Ton: ${(r.audio.voices / 4).toFixed(1)} Stimmen je Sekunde`);
+  assert.ok(r.audio.peakOutDb < -0.3, `Spitzenpegel ${r.audio.peakOutDb} dBFS`);
+});
+
+test('Szenario ohne Klangtabelle exportiert ohne Tonspur', async () => {
+  const r = await exportVideo({ scenario: 'dummy', seed: 2, video: { aspect: '16:9', resolution: 720, durationSec: 1 } },
+    { out: join(dir, 'dummy.mp4'), scripts: [join(ROOT, 'test', 'fixtures', 'dummy-scenario.js')], ...fast });
+  assert.deepEqual(verifyResult(r), []);
+  assert.deepEqual([r.cfg.scenario, r.audio, r.audioStream], ['dummy', null, null]);
 });
 
 let browser;
@@ -104,7 +114,7 @@ test('Oberfläche: Ton-Schalter nur bei Szenarien mit Ton, Einstellung bleibt ge
   const ready = () => page.waitForFunction(() => window.EBS && window.EBS.app && window.EBS.app.sim, null, { timeout: 30000 });
   const state = () => page.evaluate(() => ({ dis: document.querySelector('#audio').disabled, on: document.querySelector('#audio').checked, cfg: window.EBS.app.cfg.video.audio }));
   await page.goto(pathToFileURL(INDEX).href); await ready();
-  assert.deepEqual(await state(), { dis: true, on: false, cfg: true }, 'Seeschlacht hat keinen Ton');
+  assert.deepEqual(await state(), { dis: false, on: true, cfg: true }, 'Seeschlacht hat Ton');
   await page.selectOption('#scenario', 'marble');
   assert.deepEqual(await state(), { dis: false, on: true, cfg: true });
   await page.uncheck('#audio');

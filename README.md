@@ -237,7 +237,9 @@ Simzeit in 2–3,5 s · JS-Heap nach 30 Minuten Simzeit unverändert ≈ 11 MB.
 
 ## Ton
 
-Die Kugelfabrik exportiert mit Tonspur (AAC, 48 kHz, Stereo); die Seeschlacht hat noch keinen Ton. Abschalten:
+Beide Szenarien exportieren mit Tonspur (AAC, 48 kHz, Stereo). Die Seeschlacht nutzt bewusst nur drei Klänge:
+Kanonenschuss und Platscher (im Code erzeugt) und Holzaufschlag für Treffer; eine Dichtebegrenzung je Klang verhindert
+Ton-Chaos. Abschalten:
 `--no-audio`, `"video": { "audio": false }` oder der Schalter „Ton im exportierten Video“. Die Vorschau im Browser
 bleibt stumm.
 

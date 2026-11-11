@@ -518,7 +518,8 @@ class NavalBattle {
   }
 
   _event(type, x, y, p) {
-    this.events[this.eventSeq % this.events.length] = { seq: this.eventSeq, t: this.t, type, x, y, p };
+    // step = Physikschritt (60 je Videosekunde, auch in Zeitlupe) – daraus entsteht die Tonspur
+    this.events[this.eventSeq % this.events.length] = { seq: this.eventSeq, step: this.step + 1, t: this.t, type, x, y, p, c: -1 };
     this.eventSeq++;
   }
 
@@ -1224,5 +1225,15 @@ EBS.registerScenario({
     ];
   },
   panelNote: (sim) => sim.snapshot().summary,
+  // Tonspur – bewusst nur drei Klänge: Schuss (im Code erzeugt), Treffer (Holz), Platscher (im Code erzeugt, leise).
+  // minGap begrenzt die Dichte je Klang, damit bei knapp drei Schüssen pro Sekunde kein Ton-Chaos entsteht.
+  audio: {
+    master: 0.8,
+    events: {
+      shot: { samples: ['synth:cannon'], gain: 0.34, detune: 1.5, minGap: 0.07 },
+      hit: { samples: ['impactWood_medium_000', 'impactWood_medium_001', 'impactWood_heavy_000'], gain: 0.40, detune: 1.5, minGap: 0.05 },
+      splash: { samples: ['synth:splash'], gain: 0.11, detune: 2, minGap: 0.22 },
+    },
+  },
 });
 })();

@@ -14,5 +14,10 @@ Alle Dateien stammen unverändert aus **Kenney – Impact Sounds (1.0)**, www.ke
 | `impactSoft_medium_000.ogg` | Kugel landet auf dem Förderband (`belt`) |
 | `impactTin_medium_000.ogg` | Kugel fällt auf die Sammelschiene (`rail`) |
 
-Die Zuordnung steht in der Klangtabelle des Szenarios (`audio` in `src/scenarios/marble.js`). Motor- und
+| `impactWood_medium_000.ogg`, `_001`, `impactWood_heavy_000.ogg` | Seeschlacht: Treffer am Schiff (`hit`) |
+
+Zwei Klänge der Seeschlacht stammen nicht aus Dateien, sondern werden in `lib/audio.mjs` erzeugt:
+`synth:cannon` (dumpfer Kanonenschuss) und `synth:splash` (Platscher).
+
+Die Zuordnung steht in der Klangtabelle des Szenarios (`audio` in `src/scenarios/marble.js` und `src/scenarios/naval.js`). Motor- und
 Rollgeräusche enthält das Paket nicht; sie fehlen vorerst.
