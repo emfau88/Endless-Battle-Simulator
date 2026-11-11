@@ -194,6 +194,7 @@ async function bootLive() {
   $('seed').addEventListener('change', () => restart({ seed: Math.abs(Math.floor(+$('seed').value || 0)) }));
   $('btnSeed').addEventListener('click', () => restart({ seed: Math.floor(Math.random() * 1e6) }));
   for (const k of ['hud', 'camera']) $(k).addEventListener('change', () => { session.setView(k, $(k).checked); save(); });
+  $('audio').addEventListener('change', () => { session.cfg.video.audio = $('audio').checked; save(); });
   const playBtn = $('btnPlay');
   const setRun = (r) => { running = r; playBtn.textContent = r ? '⏸ Pause' : '▶ Start'; };
   setRun(running);
@@ -211,6 +212,10 @@ async function bootLive() {
       if (o && ctl.format) o.textContent = ctl.format(+v);
     }
     $('hud').checked = c.view.hud; $('camera').checked = c.view.camera;
+    // Ton gibt es nur für Szenarien mit Klangtabelle; die Vorschau selbst bleibt stumm
+    const hasAudio = !!session.scenario.audio;
+    $('audio').checked = hasAudio && c.video.audio; $('audio').disabled = !hasAudio;
+    $('audioLabel').title = hasAudio ? 'Die Vorschau ist stumm; der Ton entsteht beim Export.' : 'Dieses Szenario hat noch keinen Ton.';
     markAspect(c.video.aspect); markSpeed(uiSpeed());
     showDuration();
   }
@@ -221,7 +226,7 @@ async function bootLive() {
   const cliCmd = () => {
     const c = session.cfg;
     const p = Object.entries(c.params).map(([k, v]) => `--param ${k}=${v}`).join(' ');
-    return `npm run export -- --scenario ${c.scenario} --seed ${c.seed} --aspect ${c.video.aspect} --duration ${c.video.durationSec}${c.video.tempo !== 1 ? ' --tempo ' + c.video.tempo : ''} ${p}${c.view.hud ? '' : ' --no-hud'}${c.view.camera ? '' : ' --no-camera'}`;
+    return `npm run export -- --scenario ${c.scenario} --seed ${c.seed} --aspect ${c.video.aspect} --duration ${c.video.durationSec}${c.video.tempo !== 1 ? ' --tempo ' + c.video.tempo : ''} ${p}${c.view.hud ? '' : ' --no-hud'}${c.view.camera ? '' : ' --no-camera'}${c.video.audio ? '' : ' --no-audio'}`;
   };
   let polling = null;
   const showStatus = (s) => {

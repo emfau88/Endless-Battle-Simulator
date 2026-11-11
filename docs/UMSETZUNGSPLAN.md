@@ -115,18 +115,19 @@ mindestens 470 Umläufe je 10 Minuten, keine Kugel mit null Umläufen, größter
 **Nachweise:** Messtabelle, je ein 8–12-s-Clip hochkant und quer, Testprotokoll, Commit.
 **Ergebnis:** [SCHRITT_2_MARBLE_TRICHTER.md](SCHRITT_2_MARBLE_TRICHTER.md) – alle Zielwerte erreicht: Rütteln 1× in 32 Läufen, 494–501 Umläufe, Verweildauer höchstens 19 s; 55 von 55 Tests bestanden.
 
-### Schritt 3 · Marble: Ton (B05, zunächst nur Marble) · mittel
+### Schritt 3 · Marble: Ton (B05, zunächst nur Marble) · mittel · technisch erledigt am 11.11.2026, Hörprobe offen
 
-- [ ] Ereignisprotokoll in Marble ergänzen: Aufnahme am Zellenrad, Landung auf dem Band, Scanner, Klappe, Aufprall in
+- [x] Ereignisprotokoll in Marble ergänzen: Aufnahme am Zellenrad, Landung auf dem Band, Scanner, Klappe, Aufprall in
       der Röhre, Ventil, Aufnahme im Aufzug, Fall in den Behälter – ohne die Simulation zu verändern.
-- [ ] 6–10 Kenney-Dateien auswählen; Dateinamen und CC0-Nachweis in `docs/` festhalten.
-- [ ] Tonspur aus den Ereignissen in Node mischen (WAV), Lautstärke nach Aufprallstärke, leichte Tonhöhenvariation,
+- [x] 6–10 Kenney-Dateien auswählen; Dateinamen und CC0-Nachweis in `docs/` festhalten.
+- [x] Tonspur aus den Ereignissen in Node mischen (WAV), Lautstärke nach Aufprallstärke, leichte Tonhöhenvariation,
       Begrenzer gegen Übersteuern; anschließend mit FFmpeg ins MP4 muxen.
-- [ ] Stummoption; Synchronität bei Tempo 1 und 0,8 prüfen.
-- [ ] Entscheiden, ob Motor- und Rollgeräusch synthetisch entstehen oder entfallen.
+- [x] Stummoption; Synchronität bei Tempo 1 und 0,8 prüfen.
+- [x] Entscheiden, ob Motor- und Rollgeräusch synthetisch entstehen oder entfallen.
 
 **Abnahme:** 8–15-s-Clips in beiden Formaten mit sauberem, synchronem Ton; gleicher Seed ergibt dieselbe Tonspur; Hashes unverändert.
 **Nachweise:** zwei kurze MP4, `ffprobe`-Daten (Audiostream, Spitzenpegel), Lizenzliste, Commit.
+**Ergebnis:** [SCHRITT_3_MARBLE_TON.md](SCHRITT_3_MARBLE_TON.md) – Tonspur synchron (höchstens 20 ms), nicht übersteuert, reproduzierbar, Hashes unverändert; 61 von 61 Tests bestanden. Motor- und Rollgeräusch entfallen vorerst. **Offen: Hörprobe durch dich.**
 
 ### Schritt 4 · Erstes Short (B06) · klein bis mittel
 

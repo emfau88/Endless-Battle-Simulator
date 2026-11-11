@@ -13,6 +13,7 @@ Konfiguration
   --seed <n>             Zufalls-Seed                              (Standard 42)
   --param key=wert       Szenario-Parameter, mehrfach möglich      (z. B. --param ships=3)
   --no-hud | --no-camera HUD bzw. Kamerabewegung ausschalten
+  --no-audio             ohne Tonspur exportieren (Ton gibt es derzeit für die Kugelfabrik)
 
 Video
   --duration <t>         Länge: 20 | 20s | 5m | 1h                 (Standard 20s ohne Vorlage)
@@ -75,6 +76,7 @@ function parseArgs(argv) {
       case '--preset': cfg.video.quality.preset = next(); break;
       case '--no-hud': cfg.view.hud = false; break;
       case '--no-camera': cfg.view.camera = false; break;
+      case '--no-audio': cfg.video.audio = false; break;
       case '--ships': cfg.params.ships = Number(next()); break;
       case '--cannons': cfg.params.cannons = Number(next()); break;
       case '--fire-rate': cfg.params.fireRate = Number(next()); break;
@@ -140,6 +142,9 @@ async function main() {
     console.log(`\nFertig in ${fmt(r.elapsedSec)} (${(r.expectedFrames / r.elapsedSec).toFixed(1)} Frames/s)`);
     console.log(`  Datei:      ${r.file}`);
     console.log(`  Video:      ${r.codec} (${r.profile}, ${r.pixFmt}) ${r.width}×${r.height} @ ${r.fps} fps · ${r.bitrateKbps} kbit/s`);
+    console.log(r.audio
+      ? `  Ton:        ${r.audioStream.codec} ${r.audioStream.sampleRate} Hz, ${r.audioStream.channels} Kanäle · ${r.audio.events} Ereignisse · Spitze ${r.audio.peakOutDb} dBFS${r.audio.limited ? ' (Begrenzer aktiv)' : ''}`
+      : '  Ton:        keiner');
     console.log(`  Dauer:      ${r.duration.toFixed(3)} s · ${r.frames} Frames · ${(r.sizeBytes / 1048576).toFixed(1)} MB`);
     console.log(`  Szenario:   ${r.cfg.scenario} · Seed ${r.cfg.seed} · Zustand-Hash ${r.stateHash}`);
     if (r.snapshot.summary) console.log(`  Stand:      ${r.snapshot.summary}`);

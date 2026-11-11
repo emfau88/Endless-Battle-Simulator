@@ -67,6 +67,8 @@ docs/                      Umsetzungsplan, Ausgangsbasis und Referenzbilder
 src/app.js                 Live-Bedienfeld und Export-Modus – kennt keine Schiffe, nur die Registrierung
 lib/exporter.mjs           Export-Pipeline: Playwright rendert Frames -> Pipe -> FFmpeg (H.264) -> ffprobe-Prüfung
 lib/browser.mjs            Chromium-Start (GPU mit automatischem Software-Fallback), Export-Seite öffnen
+lib/audio.mjs              Tonspur: Samples dekodieren, Ereignisse deterministisch mischen, WAV schreiben
+assets/audio/              Sounds (Kenney Impact Sounds, CC0) mit Zuordnung und Lizenznachweis
 export.mjs                 Kommandozeile
 server.mjs                 Statischer Server + Export-API für den Button (/api/export, /api/export/cancel, /api/health)
 presets/*.json             Konfigurationsvorlagen
@@ -215,7 +217,26 @@ Simzeit in 2–3,5 s · JS-Heap nach 30 Minuten Simzeit unverändert ≈ 11 MB.
   liegende Kugeln und Rütteln bleiben als Sicherung erhalten; der Brückenbrecher greift weiterhin 240–480× je
   10 Minuten kurz ein (kleiner Schubs, wenn der Hals länger als 0,5 s leer bleibt).
 - Die grüne Farbe hat bei 35 Kugeln nur 5 statt 6 Kugeln und wird entsprechend seltener sortiert.
-- 1:1 ist nicht eigens gestaltet (verkleinertes Querformat-Layout). Kein Ton.
+- 1:1 ist nicht eigens gestaltet (verkleinertes Querformat-Layout).
+
+## Ton
+
+Die Kugelfabrik exportiert mit Tonspur (AAC, 48 kHz, Stereo); die Seeschlacht hat noch keinen Ton. Abschalten:
+`--no-audio`, `"video": { "audio": false }` oder der Schalter „Ton im exportierten Video“. Die Vorschau im Browser
+bleibt stumm.
+
+- **Ereignisse statt Aufnahme:** Die Simulation protokolliert, was passiert (Aufnahme am Zellenrad, Landung auf dem
+  Band, Klappe, Aufprall in der Röhre, Ventil, Sammelschiene, Aufzug, Fall in den Behälter, Stöße im Behälter).
+  Das Protokoll beobachtet nur – die Referenz-Hashes der Simulation sind mit und ohne Ton identisch.
+- **Mischung:** `lib/audio.mjs` setzt je Ereignis ein Sample auf den Abtastwert genau (Physikschritt ÷ 60 s, auch in
+  Zeitlupe), mit Lautstärke nach Aufprallstärke, Stereoposition nach Bildposition und leichter Verstimmung. Jede
+  Farbröhre hat eine eigene Tonhöhe. Ein weicher Begrenzer hält die Spitze unter −0,45 dBFS.
+- **Reproduzierbar:** Gleiche Konfiguration ergibt dieselbe Tonspur (Prüfsumme in der JSON-Datei neben dem Video).
+- **Einbindung:** WAV wird blockweise geschrieben und ohne Neukodierung des Bildes ins MP4 eingebunden.
+- **Sounds:** zehn Dateien aus Kenney Impact Sounds (CC0), siehe `assets/audio/README.md`.
+
+Gemessen an zwei 12-s-Clips: Spitze −0,9 bis −1,8 dBFS, Lautheit etwa −24 bis −25 LUFS (leiser als YouTubes Ziel von
+−14 LUFS; YouTube hebt leise Videos nicht an). Motor- und Rollgeräusche fehlen.
 
 ## Gemessene Leistung (dieser Rechner, AMD Radeon iGPU)
 

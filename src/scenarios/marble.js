@@ -13,7 +13,7 @@
 'use strict';
 const { DT, DT_MS, RNG, Particles, ParticleView, canvasTex, getParticleTextures, FX } = EBS;
 const { clamp, num, fnv1a, hashSeed, lerpColor, fmtTime, fmtInt, fmtIntEn } = EBS.util;
-const { Engine, Bodies, Body, Composite, Common } = Matter;
+const { Engine, Bodies, Body, Composite, Common, Events } = Matter;
 
 const TAU = Math.PI * 2, HALF_PI = Math.PI / 2;
 const mod = (v, m) => ((v % m) + m) % m;
@@ -194,6 +194,9 @@ class MarbleFactory {
     this.flaps = L.cols.map(() => ({ open: 0, want: false, flash: 0 }));
     this.valves = L.cols.map(() => ({ open: 0, cool: 0 }));
     this.scan = { a: 0, color: 0 };
+    // Ereignisprotokoll für die Tonspur (Ringpuffer). Rein beobachtend: kein Zufall, kein Einfluss auf die Simulation.
+    this.events = new Array(512); this.eventSeq = 0; this.lastTickEv = -9;
+    Events.on(this.engine, 'collisionStart', (e) => this._onCollision(e));
     this.lastKick = 0; this.lastCapture = 0; this.lastShake = 0; this.neckT = 0;
     this._newStats();
     this._buildStatics(); this._buildTracks(); this._buildBalls();
@@ -266,6 +269,24 @@ class MarbleFactory {
   setParam(k, v) { this.cfg[k] = v; }
   stepOnce() { this._tick(); this.step++; this.t = this.step * this.dt; }
 
+  /** Ereignis für die Tonspur: step = Physikschritt (60 je Videosekunde, auch in Zeitlupe), p = Stärke, c = Farbe. */
+  _event(type, x, y, p = 1, c = -1) {
+    if (this.quiet) return;
+    this.events[this.eventSeq % this.events.length] = { seq: this.eventSeq, step: this.step + 1, t: (this.step + 1) * this.dt, type, x, y, p, c };
+    this.eventSeq++;
+  }
+  /** Kugeln stoßen im Behälter aneinander oder an die Glaswand (höchstens ein Ereignis je 3 Schritte). */
+  _onCollision(e) {
+    if (this.quiet || this.tick - this.lastTickEv < 3) return;
+    let best = 0, bx = 0, by = 0;
+    for (const pr of e.pairs) {
+      const a = pr.bodyA, b = pr.bodyB, v = Math.hypot(a.velocity.x - b.velocity.x, a.velocity.y - b.velocity.y);
+      if (v > best) { best = v; const q = a.isStatic ? b : a; bx = q.position.x; by = q.position.y; }
+    }
+    if (best < 1.6) return;
+    this.lastTickEv = this.tick; this._event('tick', bx, by, best * 60);
+  }
+
   _tick() {
     this.tick++; this.clock = this.tick * this.dt;
     this._wheel();
@@ -313,6 +334,7 @@ class MarbleFactory {
       Composite.remove(this.world, best.body);
       best.state = 'wheel'; best.pocket = k; this.pockets[k] = best;
       this.stats.released++; this.lastCapture = this.clock;
+      this._event('pick', w.x, w.y - w.r, 1, best.color);
     }
   }
   /**
@@ -389,6 +411,7 @@ class MarbleFactory {
       } else if (this.slotBall && sy <= lf.slotY && sy > lf.slotY - 2 * dv - 1e-6) {
         const sb = this.slotBall; this.slotBall = null; c.ball = sb; sb.state = 'lift'; sb.carrier = c; sb.by = lf.slotY - sy; sb.bx = 0;
         this._spark(lf.ballX, lf.slotY + R, 0xffe2a0, 3);
+        this._event('lift', lf.ballX, lf.slotY, 1, sb.color);
       }
     }
   }
@@ -432,7 +455,10 @@ class MarbleFactory {
       if (ns >= lim) {
         ns = Math.max(b.s, lim);
         if (tr.col !== undefined && v > 160 && ns > b.s) this._clink(b, v);
+        const v0 = v;
         v = i ? Math.min(v, balls[i - 1].v) : 0;
+        // Ton: nur echte Aufpralle (nachfallende Kugeln würden sonst in jedem Schritt klirren)
+        if (tr.col !== undefined && v0 - v > 140 && ns > b.s) { pathAt(tr.path, ns, P1); this._event('clink', P1.x, P1.y, v0 - v, b.color); }
       }
       const ds = ns - b.s;
       if (tr === t.rail && b.s < this.L.scanS && ns >= this.L.scanS) { this.scan.a = 1; this.scan.color = b.color; }
@@ -461,7 +487,8 @@ class MarbleFactory {
       Body.setVelocity(b.body, { x: P0.tx * b.v * DT, y: P0.ty * b.v * DT }); // Matter-Geschwindigkeit in px je 1/60 s (unabhängig vom Zeitschritt)
       Composite.add(this.world, b.body);
       b.laps++; this.stats.cycles++;
-    } else if (tr === t.feed) { if (this._room(t.belt)) { balls.shift(); this._enter(b, t.belt, 0, TUNE.belt); } }
+      this._event('hopper', sp.x, sp.y, b.v, b.color);
+    } else if (tr === t.feed) { if (this._room(t.belt)) { balls.shift(); this._event('belt', b.x, b.y, b.v, b.color); this._enter(b, t.belt, 0, TUNE.belt); } }
     else if (tr === t.belt) { if (this._room(t.rail)) { balls.shift(); this._enter(b, t.rail, 0, TUNE.belt); } }
     else if (tr === t.trough) { balls.shift(); b.state = 'slot'; b.tr = null; b.entering = false; this.slotBall = b; }
     else if (tr.col !== undefined) {
@@ -472,6 +499,7 @@ class MarbleFactory {
       while (k < tb.length && tb[k].s > js) k++;
       b.state = 'track'; b.tr = t.trough; b.s = js; b.v = Math.max(t.trough.vmin, b.v * 0.6); b.pass = false;
       tb.splice(k, 0, b);
+      this._event('rail', b.x, b.y, b.v, b.color);
     }
   }
   _joinClear(js, up, down) {
@@ -490,7 +518,7 @@ class MarbleFactory {
         else if (b.s > c.divS - 34 && b.s < c.divS + 66) foreign = true;
       }
       if (target && !foreign && this._room(col)) want = true;
-      if (want && !f.want) this._spark(c.hinge.x - this.L.dir * 28, c.hinge.y, COLORS[i].hex, 5);
+      if (want && !f.want) { this._spark(c.hinge.x - this.L.dir * 28, c.hinge.y, COLORS[i].hex, 5); this._event('flap', c.hinge.x, c.hinge.y, 1, i); }
       f.want = want;
       f.open = clamp(f.open + (want ? this.dt : -this.dt) / 0.14, 0, 1);
       f.flash = Math.max(0, f.flash - this.dt * 1.6);
@@ -500,7 +528,7 @@ class MarbleFactory {
       let waiting = 0, front = null, passing = false;
       for (const b of cb) { if (b.pass) { if (b.s < col.stopS + 2 * R + 8) passing = true; } else { waiting++; if (!front) front = b; } }
       if (front && waiting > K && !cb[0].pass && v.cool <= 0 && front.s >= col.stopS - 0.5 && this._joinClear(c.joinS, 180, 2 * R + 8)) {
-        front.pass = true; v.cool = 0.3; passing = true;
+        front.pass = true; v.cool = 0.3; passing = true; this._event('valve', c.x, c.valveY, 1, i);
       }
       v.open = clamp(v.open + (passing ? this.dt : -this.dt) / 0.1, 0, 1);
     }
@@ -594,7 +622,7 @@ class MarbleFactory {
     for (const b of this.balls) s += `${b.id}${b.state[0]}${f(b.x)},${f(b.y)},${f(b.s)};`;
     return fnv1a(s + this.rng.s + '|' + this.fx.s).toString(16).padStart(8, '0');
   }
-  destroy() { Composite.clear(this.world, false); Engine.clear(this.engine); }
+  destroy() { Events.off(this.engine); Composite.clear(this.world, false); Engine.clear(this.engine); }
 }
 
 // =====================================================================
@@ -1307,5 +1335,21 @@ EBS.registerScenario({
     ];
   },
   panelNote: (sim) => sim.snapshot().summary,
+  // Tonspur: Ereignistyp -> Samples (assets/audio), Lautstärke, optional Stärkebezug (ref), Verstimmung in Halbtönen
+  // (detune = zufällige Streuung, semis = fester Versatz, scale = Versatz je Farbe -> jede Farbröhre klingt anders)
+  audio: {
+    master: 0.8,
+    events: {
+      hopper: { samples: ['impactGlass_medium_000', 'impactGlass_medium_001'], gain: 0.40, detune: 1 },
+      tick: { samples: ['impactGlass_light_000', 'impactGlass_light_001', 'impactGlass_light_002'], gain: 0.15, ref: 240, detune: 2 },
+      pick: { samples: ['impactMetal_light_000'], gain: 0.20, detune: 0.6 },
+      belt: { samples: ['impactSoft_medium_000'], gain: 0.28, detune: 1 },
+      flap: { samples: ['impactPlate_light_000'], gain: 0.18, detune: 0.5 },
+      clink: { samples: ['impactGlass_medium_000', 'impactGlass_medium_001'], gain: 0.55, ref: 420, detune: 0.3, scale: [0, 2, 4, 7, 9, 12] },
+      valve: { samples: ['impactMetal_light_001'], gain: 0.16, detune: 0.6 },
+      rail: { samples: ['impactTin_medium_000'], gain: 0.24, detune: 1 },
+      lift: { samples: ['impactMetal_light_001'], gain: 0.18, detune: 0.6, semis: -5 },
+    },
+  },
 });
 })();

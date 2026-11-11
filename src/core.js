@@ -124,7 +124,7 @@ const getScenario = (id) => scenarios.get(id) || scenarios.get(defaultScenario);
 //  Das flache Phase-A-Format ({ seed, ships, format: 'landscape', hud, ... }) wird weiterhin akzeptiert.
 // =====================================================================
 const CONFIG_VERSION = 1;
-const VIDEO_KEYS = ['aspect', 'resolution', 'fps', 'durationSec', 'tempo'];
+const VIDEO_KEYS = ['aspect', 'resolution', 'fps', 'durationSec', 'tempo', 'audio'];
 const QUALITY_KEYS = ['crf', 'preset', 'bitrate'];
 const VIEW_KEYS = ['hud', 'camera'];
 const TOP_KEYS = ['version', 'name', 'description', 'scenario', 'seed'];
@@ -184,6 +184,7 @@ function normalizeConfig(input) {
       fps: FPS_OPTIONS.includes(+v.fps) ? +v.fps : 30,
       durationSec: clamp(num(v.durationSec, DEFAULT_DURATION), 1, MAX_DURATION),
       tempo: TEMPO_OPTIONS.includes(+v.tempo) ? +v.tempo : 1,
+      audio: bool(v.audio, true),      // Tonspur, sofern das Szenario eine Klangtabelle mitbringt
       quality: {
         crf: clamp(Math.round(num(q.crf, 20)), 0, 51),
         preset: X264_PRESETS.includes(q.preset) ? q.preset : 'medium',
@@ -380,6 +381,7 @@ function installExportAPI(session, extra = {}) {
       const vs = videoSize(session.cfg.video);
       return {
         cfg: session.cfg, scenario: session.cfg.scenario, scenarioTitle: session.scenario.title,
+        audio: session.scenario.audio || null, world: session.world,
         width: session.app.canvas.width, height: session.app.canvas.height, expected: vs,
         fps: session.cfg.video.fps, physHz: PHYS_HZ, pixi: PIXI.VERSION, matter: global.Matter ? Matter.version : null,
         renderer: session.app.renderer.name, glRenderer: glRendererName(session.app),
