@@ -6,11 +6,11 @@ Simulation, Renderer und Export unverändert.
 
 ## W1 · Playlink und Handybedienung
 
-**Adresse:** https://emfau88.github.io/Endless-Battle-Simulator/ (GitHub Pages aus `main`, Wurzelverzeichnis).
+**Adresse:** https://emfau88.github.io/Endless-Battle-Simulator/ (GitHub Pages über GitHub Actions; der Workflow `.github/workflows/pages.yml` liefert bei jedem Push auf `main` nur `index.html`, `src/` und `vendor/` aus).
 
 | Punkt | Umsetzung |
 |---|---|
-| Öffentlicher Vorschau-Link | GitHub Pages eingeschaltet; die Seite läuft unter dem Unterpfad des Repositorys, weil alle Pfade relativ sind |
+| Öffentlicher Vorschau-Link | GitHub Pages war bereits auf „GitHub Actions“ gestellt; ein Workflow liefert die Seite aus; die Seite läuft unter dem Unterpfad des Repositorys, weil alle Pfade relativ sind |
 | Export online | Ohne Export-Server heißt der Knopf „Export nur am eigenen PC – Befehl anzeigen“; ein Hinweis erklärt, dass Vorschau und Regler hier funktionieren und das Video am eigenen PC entsteht. Ein Klick zeigt `start.bat` und den passenden Kommandozeilenbefehl |
 | Handyoberfläche | Bedienfeld unter der Vorschau, kein seitliches Scrollen, Bedienflächen mindestens 44 px hoch, 16 px Schrift in Eingabefeldern (verhindert das automatische Hineinzoomen am iPhone) |
 | Teilen-Link | „Einstellungen teilen“ zeigt einen Link mit Szenario, Seed, Reglern, Format, Dauer, Tempo, Ton, HUD und Kamera; ein frischer Browser stellt daraus dieselbe Szene her |
@@ -64,6 +64,6 @@ Neu geprüft: statische Auslieferung unter einem Unterpfad ohne Export-Server, T
 ## Offen
 
 - **Geschwindigkeit auf einem echten Handy ist unbekannt.** Die Vorschau rechnet in voller Auflösung (1080×1920).
-- **Die Seite ist öffentlich** und enthält das gesamte Repository (auch `docs/`).
+- **Die Seite ist öffentlich.** Ausgeliefert werden nur `index.html`, `src/` und `vendor/`.
 - Ein Export vom Handy aus auf dem eigenen PC ist nicht Teil dieses Schritts.
 - Der Link enthält alle Werte im Klartext; er wird lang, ist aber lesbar.
