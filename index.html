@@ -42,6 +42,9 @@
   .ctl label { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); margin-bottom: 4px; }
   .ctl label output { color: var(--text); font-variant-numeric: tabular-nums; }
   input[type=range] { width: 100%; accent-color: #3f74ff; }
+  input[type=range]:disabled { opacity: .4; }
+  .ctl.off label { opacity: .5; }
+  .subhead { font-size: 11.5px; color: var(--muted); margin: 4px 0 8px; border-top: 1px dashed #22304b; padding-top: 8px; }
   select, input[type=number], input[type=text] { width: 100%; font: inherit; color: var(--text); background: #0b1222; border: 1px solid #2a3a5c;
     border-radius: 7px; padding: 6px 8px; }
   .seg { display: flex; background: #0b1222; border: 1px solid #2a3a5c; border-radius: 8px; overflow: hidden; }
@@ -115,6 +118,14 @@
       <p class="hint">Strukturwerte (z. B. Schiffe, Kanonen), Format und Seed starten die Simulation neu. Die übrigen Werte wirken sofort. 0.64× und 0.8× sind Zeitlupe und gelten auch für das exportierte Video (Neustart); 2×–10× beschleunigen nur die Vorschau.</p>
     </div>
 
+    <div class="card" id="audioCard">
+      <h2>Ton</h2>
+      <div class="checks"><label id="audioLabel"><input type="checkbox" id="audio"> Ton im exportierten Video</label></div>
+      <div id="volumeControls"><!-- Gesamtlautstärke + ein Regler je Klang, aus der Klangtabelle des Szenarios erzeugt --></div>
+      <div class="row" id="volumeReset"><button id="btnVolumeReset" class="small">Alle auf 100 %</button></div>
+      <p class="hint" id="audioHint">Die Vorschau ist stumm. Die Regler gelten für den Ton im exportierten Video, im Hoch- wie im Querformat.</p>
+    </div>
+
     <div class="card">
       <h2>Video</h2>
       <div class="ctl"><label>Format</label><div class="seg" id="segFormat"></div></div>
@@ -125,7 +136,6 @@
         <div class="row"><input type="text" id="durationText" autocomplete="off" spellcheck="false" aria-describedby="durationHint">
           <select id="duration" aria-label="Schnellwahl der Videolänge"></select></div>
         <div class="hint" id="durationHint">Frei wählbar von 1 s bis 4 h – z. B. 45, 45s, 5m, 1h.</div></div>
-      <div class="checks"><label id="audioLabel"><input type="checkbox" id="audio"> Ton im exportierten Video</label></div>
       <button id="btnExport" class="accent">⬇ Video exportieren</button>
       <div class="progress" id="exportBar" hidden><div></div></div>
       <div class="row" id="exportCtl" hidden><button id="btnCancel" class="small">Abbrechen</button></div>

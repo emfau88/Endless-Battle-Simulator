@@ -243,6 +243,12 @@ Ton-Chaos. Abschalten:
 `--no-audio`, `"video": { "audio": false }` oder der Schalter „Ton im exportierten Video“. Die Vorschau im Browser
 bleibt stumm.
 
+**Lautstärke regeln:** In der Karte „Ton“ gibt es einen Gesamtregler und einen Regler je Klang (Seeschlacht:
+Kanonenschuss, Treffer, Platscher; Kugelfabrik: neun Klänge), jeweils 0–100 %. Die Werte gelten für jedes Format
+(Hoch- und Querformat), werden gespeichert und stehen im Teilen-Link (`vol.splash=40`) und in der JSON-Datei
+(`"video": { "volume": { "master": 80, "splash": 40 } }`). Per Kommandozeile: `--volume master=80 --volume splash=40`.
+0 % schaltet einen Klang ganz ab; 100 % entspricht der bisherigen Mischung. Die Simulation bleibt davon unberührt.
+
 - **Ereignisse statt Aufnahme:** Die Simulation protokolliert, was passiert (Aufnahme am Zellenrad, Landung auf dem
   Band, Klappe, Aufprall in der Röhre, Ventil, Sammelschiene, Aufzug, Fall in den Behälter, Stöße im Behälter).
   Das Protokoll beobachtet nur – die Referenz-Hashes der Simulation sind mit und ohne Ton identisch.
@@ -274,8 +280,7 @@ Gemessen an zwei 12-s-Clips: Spitze −0,9 bis −1,8 dBFS, Lautheit etwa −24 
   Wasser mit sichtbarer Recycling-Mechanik, HUD mit Rumpfzustand – auf dem Handy gut lesbar.
 - Schiffe sind einfache Vektorgrafik; Segel blähen sich nur leicht, Masten brechen nicht. Treffer auf Masten erscheinen
   als Löcher in den Segeln.
-- Noch kein Ton (Phase B). Die Simulation protokolliert aber bereits alle Ereignisse (`shot`, `hit`, `splash`,
-  `clink`, `reload`), aus denen sich später eine Tonspur erzeugen lässt.
+- Ton gibt es nur im exportierten Video; die Vorschau im Browser ist stumm (siehe „Ton“).
 - Physik ist deterministisch; die Pixel können sich zwischen GPU- und Software-Renderer minimal unterscheiden.
 - Bei 3–4 Schiffen werden die Schiffe kleiner und das Bild voller.
 - Ein vollständiger 60-Minuten-**Videoexport** wurde noch nicht durchgeführt; die 60-Minuten-**Simulation** ist getestet.

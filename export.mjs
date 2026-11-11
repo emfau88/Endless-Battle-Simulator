@@ -13,7 +13,10 @@ Konfiguration
   --seed <n>             Zufalls-Seed                              (Standard 42)
   --param key=wert       Szenario-Parameter, mehrfach möglich      (z. B. --param ships=3)
   --no-hud | --no-camera HUD bzw. Kamerabewegung ausschalten
-  --no-audio             ohne Tonspur exportieren (Ton gibt es derzeit für die Kugelfabrik)
+  --no-audio             ohne Tonspur exportieren (Ton gibt es für Seeschlacht und Kugelfabrik)
+  --volume klang=prozent Lautstärke 0–100, mehrfach möglich        (z. B. --volume master=80 --volume splash=40)
+                         Klänge Seeschlacht: shot, hit, splash · Kugelfabrik: hopper, tick, pick, belt, flap,
+                         clink, valve, rail, lift · master = Gesamtlautstärke
 
 Video
   --duration <t>         Länge: 20 | 20s | 5m | 1h                 (Standard 20s ohne Vorlage)
@@ -77,6 +80,12 @@ function parseArgs(argv) {
       case '--no-hud': cfg.view.hud = false; break;
       case '--no-camera': cfg.view.camera = false; break;
       case '--no-audio': cfg.video.audio = false; break;
+      case '--volume': {
+        const [k, v, extra] = next().split('=');
+        if (!k || v === undefined || extra !== undefined || v.trim() === '' || !Number.isFinite(+v)) throw new Error('--volume erwartet klang=prozent, z. B. master=80');
+        (cfg.video.volume ||= {})[k] = +v;
+        break;
+      }
       case '--ships': cfg.params.ships = Number(next()); break;
       case '--cannons': cfg.params.cannons = Number(next()); break;
       case '--fire-rate': cfg.params.fireRate = Number(next()); break;

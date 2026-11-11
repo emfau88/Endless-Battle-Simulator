@@ -1337,18 +1337,19 @@ EBS.registerScenario({
   panelNote: (sim) => sim.snapshot().summary,
   // Tonspur: Ereignistyp -> Samples (assets/audio), Lautstärke, optional Stärkebezug (ref), Verstimmung in Halbtönen
   // (detune = zufällige Streuung, semis = fester Versatz, scale = Versatz je Farbe -> jede Farbröhre klingt anders)
+  // label = Name des Lautstärkereglers in der Oberfläche (video.volume.<Klang> in Prozent)
   audio: {
     master: 0.8,
     events: {
-      hopper: { samples: ['impactGlass_medium_000', 'impactGlass_medium_001'], gain: 0.40, detune: 1 },
-      tick: { samples: ['impactGlass_light_000', 'impactGlass_light_001', 'impactGlass_light_002'], gain: 0.15, ref: 240, detune: 2 },
-      pick: { samples: ['impactMetal_light_000'], gain: 0.20, detune: 0.6 },
-      belt: { samples: ['impactSoft_medium_000'], gain: 0.28, detune: 1 },
-      flap: { samples: ['impactPlate_light_000'], gain: 0.18, detune: 0.5 },
-      clink: { samples: ['impactGlass_medium_000', 'impactGlass_medium_001'], gain: 0.55, ref: 420, detune: 0.3, scale: [0, 2, 4, 7, 9, 12] },
-      valve: { samples: ['impactMetal_light_001'], gain: 0.16, detune: 0.6 },
-      rail: { samples: ['impactTin_medium_000'], gain: 0.24, detune: 1 },
-      lift: { samples: ['impactMetal_light_001'], gain: 0.18, detune: 0.6, semis: -5 },
+      hopper: { label: 'Fall in den Behälter', samples: ['impactGlass_medium_000', 'impactGlass_medium_001'], gain: 0.40, detune: 1 },
+      tick: { label: 'Stöße im Behälter', samples: ['impactGlass_light_000', 'impactGlass_light_001', 'impactGlass_light_002'], gain: 0.15, ref: 240, detune: 2 },
+      pick: { label: 'Zellenrad', samples: ['impactMetal_light_000'], gain: 0.20, detune: 0.6 },
+      belt: { label: 'Förderband', samples: ['impactSoft_medium_000'], gain: 0.28, detune: 1 },
+      flap: { label: 'Klappe', samples: ['impactPlate_light_000'], gain: 0.18, detune: 0.5 },
+      clink: { label: 'Aufprall in der Farbröhre', samples: ['impactGlass_medium_000', 'impactGlass_medium_001'], gain: 0.55, ref: 420, detune: 0.3, scale: [0, 2, 4, 7, 9, 12] },
+      valve: { label: 'Ventil', samples: ['impactMetal_light_001'], gain: 0.16, detune: 0.6 },
+      rail: { label: 'Sammelschiene', samples: ['impactTin_medium_000'], gain: 0.24, detune: 1 },
+      lift: { label: 'Aufzug', samples: ['impactMetal_light_001'], gain: 0.18, detune: 0.6, semis: -5 },
     },
   },
 });

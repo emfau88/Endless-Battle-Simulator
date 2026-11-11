@@ -118,13 +118,16 @@ const getScenario = (id) => scenarios.get(id) || scenarios.get(defaultScenario);
 //  {
 //    version: 1, name?, scenario, seed,
 //    params: { ...szenariospezifisch },
-//    video:  { aspect, resolution, fps, durationSec, tempo, quality: { crf, preset, bitrate } },
+//    video:  { aspect, resolution, fps, durationSec, tempo, audio, volume: { master, <Klang>… } (Prozent),
+//              quality: { crf, preset, bitrate } },
 //    view:   { hud, camera }
 //  }
 //  Das flache Phase-A-Format ({ seed, ships, format: 'landscape', hud, ... }) wird weiterhin akzeptiert.
 // =====================================================================
 const CONFIG_VERSION = 1;
 const VIDEO_KEYS = ['aspect', 'resolution', 'fps', 'durationSec', 'tempo', 'audio'];
+// Lautstärke flach (Teilen-Link): vol.master=80, vol.splash=50 … -> video.volume
+const VOLUME_PREFIX = 'vol.';
 const QUALITY_KEYS = ['crf', 'preset', 'bitrate'];
 const VIEW_KEYS = ['hud', 'camera'];
 const TOP_KEYS = ['version', 'name', 'description', 'scenario', 'seed'];
@@ -134,12 +137,14 @@ function liftConfig(o) {
   o = o || {};
   const out = {
     params: { ...(o.params || {}) },
-    video: { ...(o.video || {}), quality: { ...((o.video && o.video.quality) || {}) } },
+    video: { ...(o.video || {}), quality: { ...((o.video && o.video.quality) || {}) },
+      volume: { ...(isObj(o.video && o.video.volume) ? o.video.volume : {}) } },
     view: { ...(o.view || {}) },
   };
   for (const [k, v] of Object.entries(o)) {
     if (k === 'params' || k === 'video' || k === 'view') continue;
     if (TOP_KEYS.includes(k)) out[k] = v;
+    else if (k.startsWith(VOLUME_PREFIX)) out.video.volume[k.slice(VOLUME_PREFIX.length)] = v;
     else if (k === 'format') out.video.aspect = v === 'landscape' ? '16:9' : v === 'square' ? '1:1' : '9:16';
     else if (VIDEO_KEYS.includes(k)) out.video[k] = v;
     else if (QUALITY_KEYS.includes(k)) out.video.quality[k] = v;
@@ -160,6 +165,16 @@ function parseBitrate(v) {
 
 // Videolänge: kurzer Standard (schützt vor versehentlich gestarteten Langexporten), frei wählbar bis 4 Stunden
 const DEFAULT_DURATION = 45, MAX_DURATION = 4 * 3600;
+
+/**
+ * Lautstärke der Tonspur in Prozent (0–100): Gesamtregler "master" plus je Klang der Klangtabelle des Szenarios.
+ * Fehlende Werte = 100 %, unbekannte Klänge fallen weg. Gilt für jedes Format (Hoch-, Querformat, Quadrat).
+ */
+function normalizeVolume(vol, sc) {
+  const keys = ['master', ...Object.keys((sc.audio && sc.audio.events) || {})], out = {};
+  for (const k of keys) out[k] = clamp(Math.round(num(vol && vol[k], 100)), 0, 100);
+  return out;
+}
 
 function normalizeConfig(input) {
   const o = liftConfig(input);
@@ -185,6 +200,7 @@ function normalizeConfig(input) {
       durationSec: clamp(num(v.durationSec, DEFAULT_DURATION), 1, MAX_DURATION),
       tempo: TEMPO_OPTIONS.includes(+v.tempo) ? +v.tempo : 1,
       audio: bool(v.audio, true),      // Tonspur, sofern das Szenario eine Klangtabelle mitbringt
+      volume: normalizeVolume(v.volume, sc),
       quality: {
         crf: clamp(Math.round(num(q.crf, 20)), 0, 51),
         preset: X264_PRESETS.includes(q.preset) ? q.preset : 'medium',
@@ -413,7 +429,7 @@ function installExportAPI(session, extra = {}) {
 }
 
 Object.assign(EBS, {
-  PHYS_HZ, DT, DT_MS, CONFIG_VERSION, DEFAULT_DURATION, MAX_DURATION, ASPECTS, RESOLUTIONS, FPS_OPTIONS, TEMPO_OPTIONS, X264_PRESETS, FX,
+  PHYS_HZ, DT, DT_MS, CONFIG_VERSION, VOLUME_PREFIX, DEFAULT_DURATION, MAX_DURATION, ASPECTS, RESOLUTIONS, FPS_OPTIONS, TEMPO_OPTIONS, X264_PRESETS, FX,
   videoSize, normalizeConfig, mergeConfig, liftConfig, parseBitrate, deepMerge,
   registerScenario, getScenario, scenarios,
   util: { clamp, lerp, angleDiff, num, bool, fnv1a, hashSeed, lerpColor, fmtTime, fmtInt, fmtIntEn },

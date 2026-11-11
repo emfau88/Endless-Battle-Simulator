@@ -132,6 +132,7 @@ async function bootLive() {
       el.addEventListener('change', () => { if (c.restart) onParam(c, +el.value); });
     }
     if (checks.children.length) box.appendChild(checks);
+    buildVolumeUi();
     // Statistikzeilen
     const stats = $('stats');
     stats.querySelectorAll('.stat.sc').forEach((n) => n.remove());
@@ -141,6 +142,46 @@ async function bootLive() {
       stats.appendChild(d);
     }
   }
+  // ---- Lautstärke: Gesamtregler + je Klang der Klangtabelle (Prozent, nur für den Export; wirkt ohne Neustart)
+  function buildVolumeUi() {
+    const sc = session.scenario, box = $('volumeControls'), events = (sc.audio && sc.audio.events) || {};
+    box.innerHTML = '';
+    const row = (key, label) => {
+      const d = document.createElement('div'); d.className = 'ctl';
+      d.innerHTML = `<label for="vol-${key}">${label} <output id="vo-${key}"></output></label>`;
+      const el = document.createElement('input');
+      Object.assign(el, { type: 'range', id: 'vol-' + key, min: 0, max: 100, step: 5 });
+      el.dataset.key = key;
+      el.addEventListener('input', () => {
+        session.cfg.video.volume[key] = +el.value; $('vo-' + key).textContent = el.value + ' %'; save();
+      });
+      d.appendChild(el); box.appendChild(d);
+    };
+    if (!sc.audio) return;
+    row('master', 'Gesamtlautstärke');
+    const sub = document.createElement('div'); sub.className = 'subhead'; sub.textContent = 'Einzelne Klänge';
+    box.appendChild(sub);
+    for (const [key, def] of Object.entries(events)) row(key, def.label || key);
+  }
+  function syncVolumeUi() {
+    const c = session.cfg, hasAudio = !!session.scenario.audio, on = hasAudio && c.video.audio;
+    $('volumeReset').hidden = !hasAudio;
+    for (const el of $('volumeControls').querySelectorAll('input[type=range]')) {
+      const v = c.video.volume[el.dataset.key] ?? 100;
+      el.value = String(v); el.disabled = !on;
+      el.closest('.ctl').classList.toggle('off', !on);
+      $('vo-' + el.dataset.key).textContent = v + ' %';
+    }
+    $('btnVolumeReset').disabled = !on;
+    $('audioHint').textContent = !hasAudio ? 'Dieses Szenario hat noch keinen Ton.'
+      : on ? 'Die Vorschau ist stumm. Die Regler gelten für den Ton im exportierten Video, im Hoch- wie im Querformat.'
+        : 'Ton ist ausgeschaltet – das Video wird ohne Tonspur exportiert.';
+  }
+  $('btnVolumeReset').addEventListener('click', () => {
+    for (const k of Object.keys(session.cfg.video.volume)) session.cfg.video.volume[k] = 100;
+    save(); syncVolumeUi();
+  });
+
   function onParam(c, v) {
     if (c.restart) restart({ params: { [c.key]: v } });
     else { session.setParam(c.key, v); save(); }
@@ -200,7 +241,7 @@ async function bootLive() {
   $('seed').addEventListener('change', () => restart({ seed: Math.abs(Math.floor(+$('seed').value || 0)) }));
   $('btnSeed').addEventListener('click', () => restart({ seed: Math.floor(Math.random() * 1e6) }));
   for (const k of ['hud', 'camera']) $(k).addEventListener('change', () => { session.setView(k, $(k).checked); save(); });
-  $('audio').addEventListener('change', () => { session.cfg.video.audio = $('audio').checked; save(); });
+  $('audio').addEventListener('change', () => { session.cfg.video.audio = $('audio').checked; save(); syncVolumeUi(); });
   const playBtn = $('btnPlay');
   const setRun = (r) => { running = r; playBtn.textContent = r ? '⏸ Pause' : '▶ Start'; };
   setRun(running);
@@ -222,6 +263,7 @@ async function bootLive() {
     const hasAudio = !!session.scenario.audio;
     $('audio').checked = hasAudio && c.video.audio; $('audio').disabled = !hasAudio;
     $('audioLabel').title = hasAudio ? 'Die Vorschau ist stumm; der Ton entsteht beim Export.' : 'Dieses Szenario hat noch keinen Ton.';
+    syncVolumeUi();
     markAspect(c.video.aspect); markSpeed(uiSpeed());
     resSel.value = String(c.video.resolution); markFps(c.video.fps); showSize();
     showDuration();
@@ -233,7 +275,8 @@ async function bootLive() {
   const cliCmd = () => {
     const c = session.cfg;
     const p = Object.entries(c.params).map(([k, v]) => `--param ${k}=${v}`).join(' ');
-    return `npm run export -- --scenario ${c.scenario} --seed ${c.seed} --aspect ${c.video.aspect} --resolution ${c.video.resolution} --fps ${c.video.fps} --duration ${c.video.durationSec}${c.video.tempo !== 1 ? ' --tempo ' + c.video.tempo : ''} ${p}${c.view.hud ? '' : ' --no-hud'}${c.view.camera ? '' : ' --no-camera'}${c.video.audio ? '' : ' --no-audio'}`;
+    const vol = c.video.audio ? Object.entries(c.video.volume).filter(([, v]) => v !== 100).map(([k, v]) => ` --volume ${k}=${v}`).join('') : '';
+    return `npm run export -- --scenario ${c.scenario} --seed ${c.seed} --aspect ${c.video.aspect} --resolution ${c.video.resolution} --fps ${c.video.fps} --duration ${c.video.durationSec}${c.video.tempo !== 1 ? ' --tempo ' + c.video.tempo : ''} ${p}${c.view.hud ? '' : ' --no-hud'}${c.view.camera ? '' : ' --no-camera'}${c.video.audio ? vol : ' --no-audio'}`;
   };
   // Gibt es den lokalen Export-Server? (null = noch unbekannt; false z. B. beim Öffnen als Datei oder über GitHub Pages)
   let hasServer = location.protocol === 'file:' ? false : null;
@@ -292,6 +335,7 @@ async function bootLive() {
     put('scenario', c.scenario); put('seed', c.seed);
     for (const [k, v] of Object.entries(c.params)) put(k, v);
     for (const k of ['aspect', 'resolution', 'fps', 'durationSec', 'tempo', 'audio']) put(k, c.video[k]);
+    for (const [k, v] of Object.entries(c.video.volume)) put(EBS.VOLUME_PREFIX + k, v);
     put('hud', c.view.hud); put('camera', c.view.camera);
     return location.href.split(/[?#]/)[0] + '?' + q.toString();
   };

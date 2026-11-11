@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { INDEX, ROOT, launchBrowser } from '../lib/browser.mjs';
 import { exportVideo, verifyResult } from '../lib/exporter.mjs';
-import { SAMPLE_RATE, buildVoices, decodeSample, loadSamples, mixToWav } from '../lib/audio.mjs';
+import { SAMPLE_RATE, buildVoices, decodeSample, loadSamples, masterGain, mixToWav } from '../lib/audio.mjs';
 
 const dir = mkdtempSync(join(tmpdir(), 'ebs-audio-'));
 process.on('exit', () => rmSync(dir, { recursive: true, force: true }));
@@ -40,6 +40,26 @@ test('Mischer: Ereignisse landen abtastgenau, WAV ist korrekt, Ergebnis ist repr
   // Begrenzer: Eingang übersteuert, Ausgang bleibt unter 0 dBFS
   assert.ok(r1.peakInDb > 0 && r1.limited, `Begrenzer nicht geprüft (Eingang ${r1.peakInDb} dB)`);
   assert.ok(r1.peakOutDb < 0 && peak < 32767, `Ausgang übersteuert: ${r1.peakOutDb} dBFS`);
+});
+
+test('Lautstärke: 100 % ändert nichts, 50 % halbiert den Klang, 0 % macht ihn stumm, Gesamtregler senkt um 6 dB', async () => {
+  const audio = { master: 0.8, events: { a: { samples: ['impactGlass_light_000'], gain: 0.5 }, b: { samples: ['impactGlass_medium_000'], gain: 0.4 } } };
+  const samples = await loadSamples(audio);
+  const events = [{ seq: 0, step: 30, type: 'a', x: 500, p: 1, c: -1 }, { seq: 1, step: 60, type: 'b', x: 1400, p: 1, c: -1 }, { seq: 2, step: 90, type: 'a', x: 960, p: 1, c: -1 }];
+  const base = buildVoices(events, audio, samples);
+  assert.deepEqual(buildVoices(events, audio, samples, { volume: { master: 100, a: 100, b: 100 } }), base, '100 % verändert den Klang');
+  const half = buildVoices(events, audio, samples, { volume: { a: 50 } });
+  assert.equal(half.length, 3);
+  half.forEach((v, i) => {
+    const f = v.type === 'a' ? 0.5 : 1;
+    assert.ok(Math.abs(v.gl - base[i].gl * f) < 1e-12 && Math.abs(v.gr - base[i].gr * f) < 1e-12, `Stimme ${i} (${v.type}) falsch skaliert`);
+  });
+  assert.deepEqual(buildVoices(events, audio, samples, { volume: { b: 0 } }).map((v) => v.type), ['a', 'a'], '0 % muss den Klang entfernen');
+  assert.deepEqual([masterGain(audio, null), masterGain(audio, { master: 100 }), masterGain(audio, { master: 50 }), masterGain(audio, { master: 0 })], [0.8, 0.8, 0.4, 0]);
+  const total = 2 * SAMPLE_RATE;
+  const r100 = mixToWav(base, total, join(dir, 'v100.wav'), { master: masterGain(audio, { master: 100 }) });
+  const r50 = mixToWav(base, total, join(dir, 'v50.wav'), { master: masterGain(audio, { master: 50 }) });
+  assert.ok(Math.abs(r100.peakInDb - r50.peakInDb - 6.02) < 0.02, `Gesamtregler 50 %: ${r100.peakInDb} -> ${r50.peakInDb} dBFS`);
 });
 
 /** Versatz (in 5-ms-Schritten) zwischen Ereigniszeiten und dem Lautstärkeverlauf der Tonspur per Kreuzkorrelation. */
@@ -97,6 +117,21 @@ test('Seeschlacht: Tonspur aus Schuss, Treffer und Platscher; Dichtebegrenzung h
   assert.ok(r.audio.peakOutDb < -0.3, `Spitzenpegel ${r.audio.peakOutDb} dBFS`);
 });
 
+for (const aspect of ['9:16', '16:9']) {
+  test(`Seeschlacht ${aspect}: Lautstärkeregler wirken auf die Tonspur, nicht auf die Simulation`, async () => {
+    const video = { aspect, resolution: 720, durationSec: 3 }, tag = aspect.replace(':', 'x');
+    const full = await exportVideo({ seed: 5, video }, { out: join(dir, `naval_full_${tag}.mp4`), ...fast });
+    const quiet = await exportVideo({ seed: 5, video: { ...video, volume: { master: 50, splash: 0 } } }, { out: join(dir, `naval_quiet_${tag}.mp4`), ...fast });
+    assert.deepEqual(verifyResult(quiet), []);
+    assert.equal(quiet.stateHash, full.stateHash, 'Lautstärke verändert die Simulation');
+    assert.equal(quiet.audio.events, full.audio.events);
+    assert.ok(quiet.audio.voices < full.audio.voices, `Platscher nicht stumm: ${quiet.audio.voices} von ${full.audio.voices} Stimmen`);
+    assert.ok(quiet.audio.peakInDb <= full.audio.peakInDb - 5, `Gesamtregler 50 %: Spitze ${full.audio.peakInDb} -> ${quiet.audio.peakInDb} dBFS`);
+    assert.notEqual(quiet.audio.digest, full.audio.digest);
+    assert.deepEqual(JSON.parse(readFileSync(quiet.sidecar, 'utf8')).config.video.volume, { master: 50, shot: 100, hit: 100, splash: 0 });
+  });
+}
+
 test('Szenario ohne Klangtabelle exportiert ohne Tonspur', async () => {
   const r = await exportVideo({ scenario: 'dummy', seed: 2, video: { aspect: '16:9', resolution: 720, durationSec: 1 } },
     { out: join(dir, 'dummy.mp4'), scripts: [join(ROOT, 'test', 'fixtures', 'dummy-scenario.js')], ...fast });
@@ -121,6 +156,48 @@ test('Oberfläche: Ton-Schalter nur bei Szenarien mit Ton, Einstellung bleibt ge
   assert.equal((await state()).cfg, false);
   await page.reload(); await ready();
   assert.deepEqual(await state(), { dis: false, on: false, cfg: false }, 'Stummoption nach Neuladen');
+  assert.deepEqual(errors, []);
+  await ctx.close();
+});
+
+test('Oberfläche: Lautstärkeregler gesamt und je Klang, gelten in Hoch- und Querformat und bleiben gespeichert', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } }), page = await ctx.newPage(), errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  const ready = () => page.waitForFunction(() => window.EBS && window.EBS.app && window.EBS.app.sim, null, { timeout: 30000 });
+  const vol = () => page.evaluate(() => window.EBS.app.cfg.video.volume);
+  const slide = async (k, v) => { await page.fill('#vol-' + k, String(v)); await page.dispatchEvent('#vol-' + k, 'input'); };
+  const sliders = () => page.evaluate(() => [...document.querySelectorAll('#volumeControls .ctl')].map((d) => ({
+    label: d.querySelector('label').textContent.trim(), dis: d.querySelector('input').disabled })));
+  await page.goto(pathToFileURL(INDEX).href); await ready();
+  // Normalisierung: 0–100 %, ganze Zahlen, fehlend = 100, unbekannte Klänge fallen weg; flache Form aus dem Teilen-Link
+  assert.deepEqual(await page.evaluate(() => [
+    EBS.normalizeConfig({ video: { volume: { master: 140, shot: -5, hit: '55.4', foo: 30 } } }).video.volume,
+    EBS.normalizeConfig({ 'vol.splash': '20' }).video.volume,
+    EBS.normalizeConfig({ scenario: 'marble', video: { volume: { master: 60, shot: 10 } } }).video.volume.shot,
+  ]), [{ master: 100, shot: 0, hit: 55, splash: 100 }, { master: 100, shot: 100, hit: 100, splash: 20 }, undefined]);
+  assert.deepEqual(await sliders(), [['Gesamtlautstärke', false], ['Kanonenschuss', false], ['Treffer', false], ['Platscher', false]]
+    .map(([l, dis]) => ({ label: l + ' 100 %', dis })));
+  await slide('master', 70); await slide('splash', 25);
+  assert.deepEqual(await vol(), { master: 70, shot: 100, hit: 100, splash: 25 });
+  assert.equal(await page.textContent('#vo-splash'), '25 %');
+  await page.click('#segFormat button[data-v="16:9"]');
+  assert.equal(await page.evaluate(() => window.EBS.app.cfg.video.aspect), '16:9');
+  assert.deepEqual(await vol(), { master: 70, shot: 100, hit: 100, splash: 25 }, 'Querformat setzt die Lautstärke zurück');
+  await page.reload(); await ready();
+  assert.deepEqual(await vol(), { master: 70, shot: 100, hit: 100, splash: 25 }, 'Lautstärke nach Neuladen');
+  assert.equal(await page.inputValue('#vol-splash'), '25');
+  await page.click('#segFormat button[data-v="9:16"]');
+  assert.deepEqual(await vol(), { master: 70, shot: 100, hit: 100, splash: 25 }, 'Hochformat setzt die Lautstärke zurück');
+  // ohne Ton gesperrt; „Alle auf 100 %“ setzt zurück
+  await page.uncheck('#audio');
+  assert.ok((await sliders()).every((s) => s.dis), 'Regler bei ausgeschaltetem Ton nicht gesperrt');
+  await page.check('#audio');
+  await page.click('#btnVolumeReset');
+  assert.deepEqual(await vol(), { master: 100, shot: 100, hit: 100, splash: 100 });
+  // Kugelfabrik: eigene Klänge
+  await page.selectOption('#scenario', 'marble');
+  assert.equal((await sliders()).length, 10);
+  assert.deepEqual(Object.keys(await vol()), ['master', 'hopper', 'tick', 'pick', 'belt', 'flap', 'clink', 'valve', 'rail', 'lift']);
   assert.deepEqual(errors, []);
   await ctx.close();
 });
