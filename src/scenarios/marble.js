@@ -1175,14 +1175,14 @@ class MarbleRenderer {
       dropShadow: glow ? { color: glow, alpha: 0.9, blur: 18, distance: 0, angle: 0 } : { color: 0x000000, alpha: 0.8, blur: 6, distance: 0, angle: 0 },
     });
     const g = new PIXI.Graphics();
-    const tw = L.land ? 820 : 960, th = T.size + 44;
+    const a = new PIXI.Text({ text: 'ENDLESS MARBLE ', style: style(T.size, '800', 0xeafcff, 4, 0x22d3ee) });
+    const b = new PIXI.Text({ text: 'FACTORY', style: style(T.size, '800', 0xffe1f1, 4, 0xff3f9e) });
+    // Rahmenbreite folgt der tatsächlichen Schriftbreite (die Schrift ragte im Querformat über den festen Rahmen hinaus)
+    const total = a.width + b.width, tw = Math.max(L.land ? 820 : 960, total + 64), th = T.size + 44;
     g.roundRect(T.x - tw / 2, T.y - th / 2, tw, th, 16).fill({ color: 0x0a0e15, alpha: 0.82 }).stroke({ width: 2, color: 0x4a5767, alpha: 0.9 });
     g.roundRect(T.x - tw / 2 + 8, T.y - th / 2 + 8, tw - 16, th - 16, 10).stroke({ width: 1.5, color: 0x22d3ee, alpha: 0.35 });
     g.roundRect(B.x - B.w / 2, B.y - 52, B.w, 104, 14).fill({ color: 0x0a0e15, alpha: 0.78 }).stroke({ width: 2, color: 0x3a4554, alpha: 0.9 });
     this.hud.addChild(g);
-    const a = new PIXI.Text({ text: 'ENDLESS MARBLE ', style: style(T.size, '800', 0xeafcff, 4, 0x22d3ee) });
-    const b = new PIXI.Text({ text: 'FACTORY', style: style(T.size, '800', 0xffe1f1, 4, 0xff3f9e) });
-    const total = a.width + b.width;
     a.anchor.set(0, 0.5); b.anchor.set(0, 0.5); a.position.set(T.x - total / 2, T.y + 2); b.position.set(T.x - total / 2 + a.width, T.y + 2);
     this.hud.addChild(a, b);
     const cw = (B.w - 250) / NCOL, x0 = B.x - B.w / 2 + 24;
