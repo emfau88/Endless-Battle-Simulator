@@ -1,5 +1,11 @@
 # Endless Battle Simulator – Phase A (MVP)
 
+### ▶ [Jetzt im Browser öffnen: emfau88.github.io/Endless-Battle-Simulator](https://emfau88.github.io/Endless-Battle-Simulator/)
+
+Direkt zur Kugelfabrik: [hochkant](https://emfau88.github.io/Endless-Battle-Simulator/?scenario=marble) ·
+[Querformat](https://emfau88.github.io/Endless-Battle-Simulator/?scenario=marble&aspect=16:9) –
+Vorschau und Regler laufen im Browser, auch am Handy. Videos entstehen am eigenen PC (`start.bat`).
+
 Deterministische 2D-Physiksimulation im Stil von Algodoo-/„Satisfying Physics“-Videos mit automatischem MP4-Export.
 Erstes Szenario: **Endless Naval Battle** – zwei Schiffe beschießen sich endlos, jede Kanonenkugel läuft in einem
 geschlossenen, sichtbaren Kreislauf zurück ins Magazin.
