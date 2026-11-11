@@ -93,6 +93,19 @@ test('Button „Video exportieren“ erzeugt über die Oberfläche ein 20-s-MP4'
   await page.close();
 });
 
+test('Export-API lehnt ein unbekanntes Szenario mit verständlicher Meldung ab', async () => {
+  const res = await fetch(BASE + '/api/export', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ scenario: 'gibtsnicht', durationSec: 1 }) });
+  assert.equal(res.status, 202);
+  let s;
+  for (let i = 0; i < 120; i++) {
+    s = await (await fetch(BASE + '/api/export')).json();
+    if (s.state !== 'running') break;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  assert.equal(s.state, 'error');
+  assert.match(s.error, /Unbekanntes Szenario "gibtsnicht"\. Verfügbar: naval, marble/);
+});
+
 test('Export per Button-API erzeugt ein abspielbares MP4', async () => {
   const res = await fetch(BASE + '/api/export', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ seed: 11, durationSec: 2, format: 'portrait' }) });
   assert.equal(res.status, 202);

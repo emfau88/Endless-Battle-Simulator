@@ -85,18 +85,19 @@ Jeder Schritt ist ein eigener Auftrag mit eigenem Commit. Danach anhalten und ab
 **Nachweise:** Testprotokoll, Hash-Datei, vier Bilder, Messtabelle, Commit. Keine Exporte über 20 s.
 **Ergebnis:** [AUSGANGSBASIS_2026-11-11.md](AUSGANGSBASIS_2026-11-11.md) – 47 von 47 Tests bestanden, 32 Referenz-Hashes, vier Bilder, Messwerte für beide Tempi.
 
-### Schritt 1 · Bedienfehler schließen (Rest von B00) · klein
+### Schritt 1 · Bedienfehler schließen (Rest von B00) · klein · erledigt am 11.11.2026
 
-- [ ] Freie Dauer als Eingabe (Sekunden oder `45s`, `5m`), Grenzen 1 s bis 4 h sichtbar; Schnellwahl bleibt.
-- [ ] Gültige Dauer außerhalb der Schnellwahl bleibt beim Laden, Szenariowechsel und Neustart erhalten.
-- [ ] Kurzen Standard festlegen (Vorschlag 45 s) – Kern, Kerntest und `presets/naval-standard.json` gemeinsam anpassen.
-- [ ] Ausdrücklich unbekannte Szenario-ID: verständliche Fehlermeldung in CLI, Server und Export-Seite.
-- [ ] Live-Ansicht: veraltete gespeicherte Konfiguration meldet sich sichtbar und startet das Standard-Szenario.
-- [ ] Tests ergänzen: eigene Dauer, unbekanntes Szenario, gespeicherte Konfiguration.
-- [ ] Hinweis zu 0,8× und 2×–10× nur kontrollieren (ist bereits vorhanden).
+- [x] Freie Dauer als Eingabe (Sekunden oder `45s`, `5m`), Grenzen 1 s bis 4 h sichtbar; Schnellwahl bleibt.
+- [x] Gültige Dauer außerhalb der Schnellwahl bleibt beim Laden, Szenariowechsel und Neustart erhalten.
+- [x] Kurzen Standard festlegen (Vorschlag 45 s) – Kern, Kerntest und `presets/naval-standard.json` gemeinsam anpassen.
+- [x] Ausdrücklich unbekannte Szenario-ID: verständliche Fehlermeldung in CLI, Server und Export-Seite.
+- [x] Live-Ansicht: veraltete gespeicherte Konfiguration meldet sich sichtbar und startet das Standard-Szenario.
+- [x] Tests ergänzen: eigene Dauer, unbekanntes Szenario, gespeicherte Konfiguration.
+- [x] Hinweis zu 0,8× und 2×–10× nur kontrollieren (ist bereits vorhanden).
 
 **Abnahme:** 45 s bleibt 45 s; Fehlkonfiguration ist sichtbar; Referenz-Hashes aus Schritt 0 unverändert.
 **Nachweise:** Testprotokoll, zwei Bildschirmfotos des Bedienfelds, Commit.
+**Ergebnis:** [SCHRITT_1_BEDIENFEHLER.md](SCHRITT_1_BEDIENFEHLER.md) – 55 von 55 Tests bestanden, Referenz-Hashes unverändert, drei Bildschirmfotos.
 
 ### Schritt 2 · Marble: Trichterstau konstruktiv entschärfen (B02) · mittel
 
@@ -191,10 +192,12 @@ mindestens 470 Umläufe je 10 Minuten, keine Kugel mit null Umläufen, größter
       Maschinenablauf ohne Sieger. Beides aus derselben Maschine ergibt den Vergleich, den die Ergänzung vorschlägt.
 - [ ] **B – Variante für das lange Video:** Überlastungsprobe, Sortierduell oder Wachsende Maschine. Empfehlung:
       Wachsende Maschine, weil sie die fünf Minuten am natürlichsten füllt.
-- [ ] **C – Kenney-Sounds verwenden?** Empfehlung: ja, mit Dateiliste und CC0-Nachweis.
+- [x] **C – Kenney-Sounds verwenden?** Entschieden am 11.11.2026: ja, die Impact Sounds dürfen für alle Szenarien
+      verwendet werden (auch künftige). Dateiliste und CC0-Nachweis bleiben Pflicht.
 - [ ] **D – GitHub Pages einschalten?** Die Vorschau wird damit öffentlich erreichbar.
-- [ ] **E – Kurzer Standard für die Dauer:** Vorschlag 45 s.
-- [ ] **F – Referenzbilder ins Repository?** Empfehlung: ja, in 720p unter `docs/reference/` (rund 1 MB je Bild).
+- [x] **E – Kurzer Standard für die Dauer:** in Schritt 1 mit 45 s umgesetzt (Empfehlung übernommen, nicht eigens
+      bestätigt; ein Wert in `src/core.js`, `DEFAULT_DURATION`).
+- [x] **F – Referenzbilder ins Repository?** In Schritt 0 so umgesetzt (Empfehlung übernommen, nicht eigens bestätigt).
 
 ## 5 · Regeln für jeden Auftrag
 

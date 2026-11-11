@@ -158,9 +158,18 @@ function parseBitrate(v) {
   return n > 0 ? clamp(Math.round(n), 300, 200000) : null;
 }
 
+// Videolänge: kurzer Standard (schützt vor versehentlich gestarteten Langexporten), frei wählbar bis 4 Stunden
+const DEFAULT_DURATION = 45, MAX_DURATION = 4 * 3600;
+
 function normalizeConfig(input) {
   const o = liftConfig(input);
-  const sc = getScenario(o.scenario);
+  // Fehlende Angabe -> Standard-Szenario. Ausdrücklich genannte, aber unbekannte ID -> Fehler (kein stiller Rückfall).
+  const wanted = o.scenario === undefined || o.scenario === null || o.scenario === '' ? null : String(o.scenario);
+  if (wanted !== null && !scenarios.has(wanted)) {
+    throw Object.assign(new Error(`Unbekanntes Szenario "${wanted}". Verfügbar: ${[...scenarios.keys()].join(', ') || 'keines'}`),
+      { code: 'UNKNOWN_SCENARIO', scenario: wanted });
+  }
+  const sc = getScenario(wanted);
   if (!sc) throw new Error('Kein Szenario registriert.');
   const v = o.video, q = v.quality;
   return {
@@ -173,7 +182,7 @@ function normalizeConfig(input) {
       aspect: ASPECTS[v.aspect] ? v.aspect : '9:16',
       resolution: RESOLUTIONS[+v.resolution] ? +v.resolution : 1080,
       fps: FPS_OPTIONS.includes(+v.fps) ? +v.fps : 30,
-      durationSec: clamp(num(v.durationSec, 3600), 1, 4 * 3600),
+      durationSec: clamp(num(v.durationSec, DEFAULT_DURATION), 1, MAX_DURATION),
       tempo: TEMPO_OPTIONS.includes(+v.tempo) ? +v.tempo : 1,
       quality: {
         crf: clamp(Math.round(num(q.crf, 20)), 0, 51),
@@ -402,7 +411,7 @@ function installExportAPI(session, extra = {}) {
 }
 
 Object.assign(EBS, {
-  PHYS_HZ, DT, DT_MS, CONFIG_VERSION, ASPECTS, RESOLUTIONS, FPS_OPTIONS, TEMPO_OPTIONS, X264_PRESETS, FX,
+  PHYS_HZ, DT, DT_MS, CONFIG_VERSION, DEFAULT_DURATION, MAX_DURATION, ASPECTS, RESOLUTIONS, FPS_OPTIONS, TEMPO_OPTIONS, X264_PRESETS, FX,
   videoSize, normalizeConfig, mergeConfig, liftConfig, parseBitrate, deepMerge,
   registerScenario, getScenario, scenarios,
   util: { clamp, lerp, angleDiff, num, bool, fnv1a, hashSeed, lerpColor, fmtTime, fmtInt, fmtIntEn },

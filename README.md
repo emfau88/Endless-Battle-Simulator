@@ -27,7 +27,7 @@ Bibliotheken (fest gepinnt): **PixiJS 8.22.0** (Grafik), **Matter.js 0.20.0** (P
 npm install                 # Abhängigkeiten (Playwright, PixiJS, Matter.js)
 npm start                   # Server + Oberfläche: http://localhost:8080
 npm run export:test         # Abnahmetest: 20-s-MP4 -> output/test_20s.mp4 (inkl. ffprobe-Prüfung)
-npm run export -- --config presets/naval-standard.json          # 60 Minuten hochkant (Standard laut Auftrag)
+npm run export -- --config presets/naval-standard.json          # 60 Minuten hochkant (Vorlage für die Langfassung)
 npm run export -- --config presets/naval-landscape-10min.json   # 10 Minuten 1920×1080
 npm run export -- --duration 5m --seed 7 --aspect 1:1 --resolution 1440 --fps 60 --bitrate 12M
 npm test                    # alle automatisierten Tests (≈ 4 min; jeder Test wird nach 2 min automatisch abgebrochen)
@@ -86,7 +86,7 @@ Alle Browser-Dateien sind klassische Skripte (keine ES-Module), damit `index.htm
   "scenario": "naval",
   "seed": 42,
   "params": { "ships": 2, "cannons": 4, "fireRate": 1, "projectileSpeed": 1, "intensity": 0.35, "recycleVisible": true },
-  "video":  { "aspect": "9:16", "resolution": 1080, "fps": 30, "durationSec": 3600, "tempo": 1,
+  "video":  { "aspect": "9:16", "resolution": 1080, "fps": 30, "durationSec": 45, "tempo": 1,
               "quality": { "crf": 20, "preset": "medium", "bitrate": null } },
   "view":   { "hud": true, "camera": true }
 }
@@ -95,6 +95,11 @@ Alle Browser-Dateien sind klassische Skripte (keine ES-Module), damit `index.htm
 - `params` gehört dem Szenario (es normalisiert und begrenzt seine Werte selbst), `video` und `view` dem Kern.
 - Fehlende oder ungültige Werte werden auf Standardwerte bzw. Grenzen gesetzt; die Seite ist die einzige Stelle, die das
   entscheidet (CLI, Server und Oberfläche reichen Konfigurationen nur weiter).
+- **Videolänge:** Standard 45 Sekunden, frei wählbar von 1 s bis 4 h. In der Oberfläche als Eingabe (`45`, `45s`, `5m`,
+  `1h`) mit Schnellwahl; die Kommandozeile nimmt ohne Vorlage weiterhin 20 s.
+- **Szenario:** Fehlt die Angabe, startet das Standard-Szenario. Eine ausdrücklich genannte, aber unbekannte ID wird
+  abgelehnt (`Unbekanntes Szenario "…". Verfügbar: naval, marble`) – in Kommandozeile, Export-API und Export-Seite.
+  Die Live-Ansicht zeigt in diesem Fall eine Meldung und startet das Standard-Szenario.
 - Das flache Phase-A-Format (`{ "seed": 42, "format": "landscape", "ships": 3 }`) wird weiterhin akzeptiert.
 
 ## Wie es funktioniert
@@ -137,7 +142,7 @@ Schlagseite und dunklerer Rumpf. Gemessener Verlauf bei 35 %: **1 min ≈ 3 % ·
 | 30 und 60 FPS | Kern + CLI fertig, getestet | `EBS.FPS_OPTIONS`; Physik bleibt bei 60 Hz |
 | 9:16, 16:9, 1:1 | 9:16 und 16:9 in der Oberfläche; 1:1 in Kern + CLI, getestet | `EBS.ASPECTS`; Oberfläche: `UI_ASPECTS` in `src/app.js` |
 | Videoqualität / Bitrate | CRF, x264-Preset, feste Bitrate in CLI und Schema | `video.quality`; `encoderArgs()` in `lib/exporter.mjs` |
-| Frei wählbare Dauer | CLI/Schema frei (1 s – 4 h); Oberfläche mit fester Auswahl | `UI_DURATIONS` in `src/app.js` |
+| Frei wählbare Dauer | CLI, Schema und Oberfläche frei (1 s – 4 h); Oberfläche zusätzlich mit Schnellwahl | `UI_DURATIONS`, `parseDuration()` in `src/app.js` |
 | Vorlagen und Seeds speichern | `presets/*.json`, `--config`, JSON neben jedem Video; Oberfläche merkt sich die letzte Konfiguration | Verwaltung in der Oberfläche noch offen |
 | Modulare Szenarien | Registry + Schnittstelle fertig; Bedienfeld, Statistiken, Export und Tests arbeiten szenariounabhängig | `EBS.registerScenario(...)` |
 

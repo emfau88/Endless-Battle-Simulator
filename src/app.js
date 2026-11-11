@@ -14,9 +14,18 @@ const EXPORT = params.get('mode') === 'export';
 const RESERVED = ['mode', 'cfg', 'paused'];
 // Was das Live-Bedienfeld anbietet (weitere Werte lassen sich hier ergänzen, der Kern kann sie bereits)
 const UI_ASPECTS = ['9:16', '16:9'];
-const UI_DURATIONS = [[20, '20 Sekunden (Test)'], [60, '1 Minute'], [300, '5 Minuten'], [600, '10 Minuten'], [1800, '30 Minuten'], [3600, '60 Minuten']];
+const UI_DURATIONS = [[20, '20 Sekunden (Test)'], [45, '45 Sekunden (Short)'], [60, '1 Minute'], [300, '5 Minuten'], [600, '10 Minuten'], [1800, '30 Minuten'], [3600, '60 Minuten']];
 // Werte < 1 sind Zeitlupe und gelten auch für den Videoexport (cfg.video.tempo), Werte > 1 nur für die Vorschau
 const UI_SPEEDS = [0.8, 1, 2, 5, 10];
+
+// Videolänge als Text: "45", "45s", "5m", "1h" -> Sekunden (null = ungültig) und zurück
+function parseDuration(text) {
+  const m = String(text).trim().toLowerCase().replace(',', '.').match(/^(\d+(?:\.\d+)?)\s*(h|std|m|min|s|sek)?\.?$/);
+  if (!m) return null;
+  const sec = Math.round(parseFloat(m[1]) * (m[2] === 'h' || m[2] === 'std' ? 3600 : m[2] === 'm' || m[2] === 'min' ? 60 : 1));
+  return sec > 0 ? sec : null;
+}
+const fmtDuration = (s) => (s % 3600 === 0 ? s / 3600 + 'h' : s % 60 === 0 ? s / 60 + 'm' : s + 's');
 
 // ---------------- Export-Modus ----------------
 async function bootExport() {
@@ -31,7 +40,9 @@ async function bootExport() {
     api.ready = true;
   } catch (e) {
     console.error(e);
-    api.error = String((e && e.stack) || e);
+    // Konfigurationsfehler (z. B. unbekanntes Szenario) als klare Meldung, alles andere mit Aufrufliste
+    api.errorCode = (e && e.code) || null;
+    api.error = api.errorCode ? e.message : String((e && e.stack) || e);
   }
 }
 
@@ -42,13 +53,29 @@ async function bootLive() {
   try { saved = JSON.parse(localStorage.getItem('ebs.cfg') || '{}'); } catch { /* privat/blockiert */ }
   const fromUrl = {};
   for (const [k, v] of params) if (!RESERVED.includes(k)) fromUrl[k] = v;
-  const initial = mergeConfig(saved, fromUrl);
+  // Unbekanntes Szenario im Link oder in der gespeicherten Konfiguration: sichtbar melden, Standard-Szenario starten
+  const notices = [];
+  let initial, staleSaved = false;
+  for (;;) {
+    try { initial = mergeConfig(saved, fromUrl); break; } catch (e) {
+      if (e.code !== 'UNKNOWN_SCENARIO') throw e;
+      const fromLink = fromUrl.scenario !== undefined;
+      notices.push(`${fromLink ? 'Der Link' : 'Die gespeicherte Konfiguration'} nennt das unbekannte Szenario „${e.scenario}“.`);
+      if (fromLink) delete fromUrl.scenario; else { delete saved.scenario; staleSaved = true; }
+    }
+  }
   const a0 = ASPECTS[initial.video.aspect];
   const app = await createStage({ w: a0.w, h: a0.h }, { renderScale: 1 });
   $('stage').appendChild(app.canvas);
   const session = new Session(app, { renderScale: 1 }).start(initial);
   const cfg = () => session.cfg;
   const save = () => { try { localStorage.setItem('ebs.cfg', JSON.stringify(session.cfg)); } catch { /* egal */ } };
+  if (notices.length) {
+    const n = $('notice');
+    n.textContent = `${notices.join(' ')} Gestartet wurde „${session.scenario.title}“. Verfügbar: ${[...scenarios.values()].map((s) => s.id).join(', ')}.`;
+    n.hidden = false;
+    if (staleSaved) save();   // veralteten Eintrag ersetzen, damit die Meldung nicht bei jedem Start wiederkommt
+  }
 
   let running = !params.has('paused'), speed = 1, acc = 0, last = performance.now(), fpsN = 0, fpsT = last, fps = 0, uiT = 0;
   const fit = () => {
@@ -141,9 +168,29 @@ async function bootLive() {
   });
   const markAspect = seg('segFormat', UI_ASPECTS.map((k) => [k, `${ASPECTS[k].label} ${ASPECTS[k].w}×${ASPECTS[k].h}`]), cfg().video.aspect,
     (v) => { if (cfg().video.aspect !== v) restart({ video: { aspect: v } }); });
-  const dur = $('duration');
+  // Videolänge: freie Eingabe (1 s bis 4 h) plus Schnellwahl; beide zeigen stets den Wert der Konfiguration
+  const dur = $('duration'), durText = $('durationText'), durHint = $('durationHint'), DUR_HINT = durHint.textContent;
+  dur.add(new Option('Eigene Dauer', ''));
   for (const [v, t] of UI_DURATIONS) dur.add(new Option(t, v));
-  dur.addEventListener('change', () => { session.cfg.video.durationSec = +dur.value; save(); });
+  const showDuration = (note, isError) => {
+    const d = cfg().video.durationSec;
+    if (!isError) durText.value = fmtDuration(d);
+    durText.classList.toggle('bad', !!isError);
+    $('durationOut').textContent = fmtTime(d);
+    dur.value = UI_DURATIONS.some(([v]) => v === d) ? String(d) : '';
+    durHint.textContent = note || DUR_HINT; durHint.classList.toggle('err', !!isError);
+  };
+  const setDuration = (sec, note) => { session.cfg.video.durationSec = sec; save(); showDuration(note); };
+  dur.addEventListener('change', () => { if (dur.value) setDuration(+dur.value); else showDuration(); });
+  durText.addEventListener('change', () => {
+    const sec = parseDuration(durText.value);
+    if (sec === null) {
+      showDuration(`„${durText.value}“ ist keine gültige Dauer (Beispiele: 45, 45s, 5m, 1h). Es gilt weiterhin ${fmtDuration(cfg().video.durationSec)}.`, true);
+      return;
+    }
+    const ok = Math.min(EBS.MAX_DURATION, sec);
+    setDuration(ok, ok !== sec ? `Auf ${fmtDuration(ok)} begrenzt – erlaubt sind 1 s bis 4 h.` : '');
+  });
   $('seed').addEventListener('change', () => restart({ seed: Math.abs(Math.floor(+$('seed').value || 0)) }));
   $('btnSeed').addEventListener('click', () => restart({ seed: Math.floor(Math.random() * 1e6) }));
   for (const k of ['hud', 'camera']) $(k).addEventListener('change', () => { session.setView(k, $(k).checked); save(); });
@@ -165,8 +212,7 @@ async function bootLive() {
     }
     $('hud').checked = c.view.hud; $('camera').checked = c.view.camera;
     markAspect(c.video.aspect); markSpeed(uiSpeed());
-    dur.value = String(c.video.durationSec);
-    if (!dur.value) { dur.value = '3600'; c.video.durationSec = 3600; }
+    showDuration();
   }
   buildScenarioUi(); syncUi(); fit();
 

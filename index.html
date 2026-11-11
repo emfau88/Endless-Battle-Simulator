@@ -42,7 +42,7 @@
   .ctl label { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); margin-bottom: 4px; }
   .ctl label output { color: var(--text); font-variant-numeric: tabular-nums; }
   input[type=range] { width: 100%; accent-color: #3f74ff; }
-  select, input[type=number] { width: 100%; font: inherit; color: var(--text); background: #0b1222; border: 1px solid #2a3a5c;
+  select, input[type=number], input[type=text] { width: 100%; font: inherit; color: var(--text); background: #0b1222; border: 1px solid #2a3a5c;
     border-radius: 7px; padding: 6px 8px; }
   .seg { display: flex; background: #0b1222; border: 1px solid #2a3a5c; border-radius: 8px; overflow: hidden; }
   .seg button { flex: 1; border: 0; border-radius: 0; background: transparent; padding: 6px 4px; font-size: 13px; }
@@ -55,6 +55,9 @@
   #exportMsg a { color: var(--blue); }
   #exportMsg code, .hint code { background: #0b1222; padding: 1px 5px; border-radius: 4px; color: #cfe0ff; }
   .err { color: #ff8a80 !important; }
+  input.bad { border-color: #ff8a80; }
+  .notice { background: #33260f; border: 1px solid #a8741a; color: #ffd58a; border-radius: 8px; padding: 8px 10px;
+    font-size: 12.5px; margin-bottom: 12px; }
   .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
   @media (max-width: 900px) {
     #app { flex-direction: column; height: auto; overflow: visible; }
@@ -73,6 +76,7 @@
   <aside id="panel">
     <h1>Endless Battle <span>Simulator</span></h1>
     <p class="sub" id="subtitle">deterministisch per Seed</p>
+    <div id="notice" class="notice" role="alert" hidden></div>
 
     <div class="card">
       <div class="row">
@@ -108,7 +112,10 @@
     <div class="card">
       <h2>Video</h2>
       <div class="ctl"><label>Format</label><div class="seg" id="segFormat"></div></div>
-      <div class="ctl"><label for="duration">Videolänge</label><select id="duration"></select></div>
+      <div class="ctl"><label for="durationText">Videolänge <output id="durationOut"></output></label>
+        <div class="row"><input type="text" id="durationText" autocomplete="off" spellcheck="false" aria-describedby="durationHint">
+          <select id="duration" aria-label="Schnellwahl der Videolänge"></select></div>
+        <div class="hint" id="durationHint">Frei wählbar von 1 s bis 4 h – z. B. 45, 45s, 5m, 1h.</div></div>
       <button id="btnExport" class="accent">⬇ Video exportieren</button>
       <div class="progress" id="exportBar" hidden><div></div></div>
       <div class="row" id="exportCtl" hidden><button id="btnCancel" class="small">Abbrechen</button></div>
