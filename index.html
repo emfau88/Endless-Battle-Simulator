@@ -62,7 +62,13 @@
   @media (max-width: 900px) {
     #app { flex-direction: column; height: auto; overflow: visible; }
     #stage { height: 72vh; flex: none; padding: 8px; }
-    #panel { width: 100%; border-left: 0; border-top: 1px solid var(--line); }
+    #panel { width: 100%; border-left: 0; border-top: 1px solid var(--line); padding-bottom: 40px; }
+    /* Fingerbedienung: größere Ziele; 16 px Schrift verhindert das automatische Hineinzoomen auf dem iPhone */
+    button, select, input[type=text], input[type=number] { min-height: 44px; font-size: 16px; }
+    button.small { min-height: 44px; min-width: 44px; }
+    input[type=range] { height: 34px; }
+    .checks label { min-height: 36px; }
+    .checks input[type=checkbox] { width: 22px; height: 22px; }
   }
   body.export { overflow: hidden; background: #000; }
   body.export #panel { display: none; }
@@ -120,7 +126,17 @@
       <button id="btnExport" class="accent">⬇ Video exportieren</button>
       <div class="progress" id="exportBar" hidden><div></div></div>
       <div class="row" id="exportCtl" hidden><button id="btnCancel" class="small">Abbrechen</button></div>
+      <div class="hint" id="exportHint" hidden></div>
       <div id="exportMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Einstellungen teilen</h2>
+      <div class="row"><input type="text" id="shareLink" readonly aria-label="Link mit den aktuellen Einstellungen">
+        <button id="btnCopy" class="small">Kopieren</button></div>
+      <div class="row" style="margin-top:8px"><button id="btnSaveCfg" class="grow">⬇ JSON speichern</button><button id="btnLoadCfg" class="grow">⬆ JSON laden</button></div>
+      <input type="file" id="cfgFile" accept="application/json,.json" hidden>
+      <div class="hint" id="shareMsg">Der Link öffnet diese Szene mit denselben Einstellungen. Die JSON-Datei passt auch zu <code>npm run export -- --config</code>.</div>
     </div>
   </aside>
 </div>

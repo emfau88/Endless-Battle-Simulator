@@ -228,6 +228,16 @@ async function bootLive() {
     const p = Object.entries(c.params).map(([k, v]) => `--param ${k}=${v}`).join(' ');
     return `npm run export -- --scenario ${c.scenario} --seed ${c.seed} --aspect ${c.video.aspect} --duration ${c.video.durationSec}${c.video.tempo !== 1 ? ' --tempo ' + c.video.tempo : ''} ${p}${c.view.hud ? '' : ' --no-hud'}${c.view.camera ? '' : ' --no-camera'}${c.video.audio ? '' : ' --no-audio'}`;
   };
+  // Gibt es den lokalen Export-Server? (null = noch unbekannt; false z. B. beim Öffnen als Datei oder über GitHub Pages)
+  let hasServer = location.protocol === 'file:' ? false : null;
+  const showOffline = () => {
+    btnExp.textContent = '⬇ Export nur am eigenen PC – Befehl anzeigen';
+    const h = $('exportHint');
+    h.textContent = 'Vorschau ohne Export-Server: Regler und Vorschau funktionieren hier, das Video entsteht am eigenen PC (Node.js, Chromium, FFmpeg). Einstellungen per Link oder JSON mitnehmen.';
+    h.hidden = false;
+  };
+  if (hasServer === false) showOffline();
+  else fetch('/api/health').then((r) => r.json()).then((j) => { hasServer = !!(j && j.ok); }).catch(() => { hasServer = false; }).then(() => { if (!hasServer) showOffline(); });
   let polling = null;
   const showStatus = (s) => {
     if (!s || s.state === 'idle') return;
@@ -248,8 +258,8 @@ async function bootLive() {
   const poll = async () => { try { showStatus(await (await fetch('/api/export')).json()); } catch { /* Server weg */ } };
   btnExp.addEventListener('click', async () => {
     msg.classList.remove('err');
-    if (location.protocol === 'file:') {
-      msg.innerHTML = `Der Export braucht den lokalen Server. Im Projektordner <code>npm start</code> ausführen und <code>http://localhost:8080</code> öffnen.\nOder direkt per Kommandozeile:\n<code>${cliCmd()}</code>`;
+    if (hasServer === false) {
+      msg.innerHTML = `Der Export läuft am eigenen PC. Im Projektordner <code>start.bat</code> doppelklicken (oder <code>npm start</code>) und <code>http://localhost:8080</code> öffnen.\nOder direkt per Kommandozeile:\n<code>${cliCmd()}</code>`;
       return;
     }
     try {
@@ -267,6 +277,46 @@ async function bootLive() {
   if (location.protocol !== 'file:') {
     fetch('/api/export').then((r) => r.json()).then((s) => { showStatus(s); if (s.state === 'running') polling = setInterval(poll, 1000); }).catch(() => {});
   }
+
+  // ---- Einstellungen teilen: Link mit allen Werten, JSON speichern und laden
+  const shareUrl = () => {
+    const c = session.cfg, q = new URLSearchParams();
+    const put = (k, v) => q.set(k, String(v));
+    put('scenario', c.scenario); put('seed', c.seed);
+    for (const [k, v] of Object.entries(c.params)) put(k, v);
+    for (const k of ['aspect', 'resolution', 'fps', 'durationSec', 'tempo', 'audio']) put(k, c.video[k]);
+    put('hud', c.view.hud); put('camera', c.view.camera);
+    return location.href.split(/[?#]/)[0] + '?' + q.toString();
+  };
+  const shareMsg = $('shareMsg');
+  const sayShare = (text, isError) => { shareMsg.textContent = text; shareMsg.classList.toggle('err', !!isError); };
+  $('btnCopy').addEventListener('click', async () => {
+    const link = $('shareLink'); link.value = shareUrl(); link.select();
+    try { await navigator.clipboard.writeText(link.value); sayShare('Link kopiert.'); }
+    catch { sayShare('Link ist markiert – bitte mit Strg+C bzw. „Kopieren“ übernehmen.'); }
+  });
+  $('btnSaveCfg').addEventListener('click', () => {
+    const c = session.cfg, a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(c, null, 2) + '\n'], { type: 'application/json' }));
+    a.download = `${c.scenario}_seed${c.seed}_${c.video.aspect.replace(':', 'x')}.json`;
+    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    sayShare(`Gespeichert als ${a.download}.`);
+  });
+  $('btnLoadCfg').addEventListener('click', () => $('cfgFile').click());
+  $('cfgFile').addEventListener('change', async () => {
+    const file = $('cfgFile').files[0];
+    $('cfgFile').value = '';
+    if (!file) return;
+    try {
+      const j = JSON.parse(await file.text());
+      // sowohl gespeicherte Einstellungen als auch die JSON-Datei neben einem Video ("config") werden akzeptiert
+      session.start(normalizeConfig(j && typeof j.config === 'object' && j.config ? j.config : j));
+      acc = 0; fit(); save(); buildScenarioUi(); syncUi();
+      sayShare(`Einstellungen aus ${file.name} geladen.`);
+    } catch (e) { sayShare(`${file.name} konnte nicht geladen werden: ${e.message}`, true); }
+  });
+  const refreshShare = () => { const l = $('shareLink'); if (document.activeElement !== l) l.value = shareUrl(); };
+  refreshShare();
 
   // ---- Hauptschleife: feste Physikschritte, Rendering entkoppelt
   function frame(now) {
@@ -286,6 +336,7 @@ async function bootLive() {
       const sc = session.scenario;
       if (sc.panelStats) for (const s of sc.panelStats(session.sim)) { const el = $('stat-' + s.key); if (el) el.textContent = s.value; }
       $('scenarioNote').textContent = sc.panelNote ? sc.panelNote(session.sim) : '';
+      refreshShare();
     }
     requestAnimationFrame(frame);
   }

@@ -10,6 +10,15 @@ Phase A ist abgeschlossen. Die Architektur ist bereits für weitere Szenarien un
 Zweites Szenario (visueller Prototyp V0.1): **Endless Marble Factory** – eine Kugelfabrik mit geschlossenem Kreislauf,
 deren Grafik vollständig im Code entsteht (siehe [Endless Marble Factory](#endless-marble-factory-prototyp-v01)).
 
+## Schnellstart
+
+- **Online-Vorschau (ohne Installation):** https://emfau88.github.io/Endless-Battle-Simulator/ – Vorschau und Regler
+  laufen im Browser, auch am Handy. Ein Video entsteht dort nicht; der Export braucht den eigenen PC.
+- **Am PC:** `start.bat` doppelklicken. Der Server startet, der Browser öffnet `http://localhost:8080`, und der Knopf
+  „Video exportieren“ funktioniert. Das Fenster offen lassen; Schließen beendet den Server.
+- **Einstellungen mitnehmen:** Im Bedienfeld unter „Einstellungen teilen“ den Link kopieren oder eine JSON-Datei
+  speichern und am PC wieder laden (auch als `--config` für die Kommandozeile).
+
 ## Voraussetzungen
 
 | Werkzeug | Version (getestet) | Hinweis |
@@ -71,6 +80,7 @@ lib/audio.mjs              Tonspur: Samples dekodieren, Ereignisse deterministis
 assets/audio/              Sounds (Kenney Impact Sounds, CC0) mit Zuordnung und Lizenznachweis
 export.mjs                 Kommandozeile
 server.mjs                 Statischer Server + Export-API für den Button (/api/export, /api/export/cancel, /api/health)
+start.bat                  Start per Doppelklick unter Windows (prüft Node.js und FFmpeg, startet Server und Browser)
 presets/*.json             Konfigurationsvorlagen
 test/*.test.mjs            Kern-, Simulations-, Export- und Browsertests (node:test)
 test/fixtures/             Minimales Testszenario (beweist, dass Kern und Export szenariounabhängig sind)

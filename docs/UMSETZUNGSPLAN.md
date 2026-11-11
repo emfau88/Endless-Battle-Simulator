@@ -140,22 +140,24 @@ mindestens 470 Umläufe je 10 Minuten, keine Kugel mit null Umläufen, größter
 **Abnahme:** ein uploadfertiges Short mit Bild, Ton und erkennbarer Dramaturgie.
 **Ergebnis:** [SCHRITT_4_ERSTES_SHORT.md](SCHRITT_4_ERSTES_SHORT.md) – zwei technisch geprüfte Fassungen liegen unter `output/`. Offen: Hörprobe, Sichtung am Handy, Auswahl der Fassung.
 
-### Schritt W1 · Playlink und Handybedienung · klein (eigener Auftrag, nach Schritt 1)
+### Schritt W1 · Playlink und Handybedienung · klein (eigener Auftrag, nach Schritt 1) · erledigt am 11.11.2026
 
-- [ ] GitHub Pages aus `main` einschalten (öffentliche Veröffentlichung – nur nach deiner Freigabe).
-- [ ] Online zeigt der Exportknopf klar: Export nur am eigenen PC; Vorschau und Regler funktionieren.
-- [ ] Bedienfeld auf dem Handy prüfen und nachbessern (Layout unter 900 px existiert bereits).
-- [ ] Teilen-Link: aktuelle Einstellungen als Adresse; Einstellungen als JSON laden und speichern.
-- [ ] Geschwindigkeit am echten Gerät prüfen (deine Aufgabe; ich liefere eine Prüfliste).
+- [x] GitHub Pages aus `main` einschalten (öffentliche Veröffentlichung – nur nach deiner Freigabe).
+- [x] Online zeigt der Exportknopf klar: Export nur am eigenen PC; Vorschau und Regler funktionieren.
+- [x] Bedienfeld auf dem Handy prüfen und nachbessern (Layout unter 900 px existiert bereits).
+- [x] Teilen-Link: aktuelle Einstellungen als Adresse; Einstellungen als JSON laden und speichern.
+- [ ] Geschwindigkeit am echten Gerät prüfen (deine Aufgabe; Prüfliste im Bericht).
 
 **Abnahme:** Link öffnet auf PC und Handy die laufende Vorschau; ein geteilter Link stellt dieselbe Szene her.
 
-### Schritt W2 · Start per Doppelklick · sehr klein (eigener Auftrag)
+### Schritt W2 · Start per Doppelklick · sehr klein (eigener Auftrag) · erledigt am 11.11.2026
 
-- [ ] `start.bat`: Server starten, Browser öffnen, fehlendes Node oder FFmpeg verständlich melden.
-- [ ] Kurzer Abschnitt in der README.
+- [x] `start.bat`: Server starten, Browser öffnen, fehlendes Node oder FFmpeg verständlich melden.
+- [x] Kurzer Abschnitt in der README.
 
 **Abnahme:** Doppelklick öffnet die Oberfläche, Export per Knopf funktioniert, kein Terminalbefehl nötig.
+
+**Ergebnis W1 und W2:** [W1_W2_PLAYLINK_START.md](W1_W2_PLAYLINK_START.md) – Vorschau unter https://emfau88.github.io/Endless-Battle-Simulator/, 65 von 65 Tests bestanden. Offen: Prüfung am echten Handy, echter Doppelklick.
 
 ### Schritt 5 · Marble: Entwicklung statt reiner Schleife (Kern von B07) · groß
 
@@ -198,7 +200,7 @@ mindestens 470 Umläufe je 10 Minuten, keine Kugel mit null Umläufen, größter
       Wachsende Maschine, weil sie die fünf Minuten am natürlichsten füllt.
 - [x] **C – Kenney-Sounds verwenden?** Entschieden am 11.11.2026: ja, die Impact Sounds dürfen für alle Szenarien
       verwendet werden (auch künftige). Dateiliste und CC0-Nachweis bleiben Pflicht.
-- [ ] **D – GitHub Pages einschalten?** Die Vorschau wird damit öffentlich erreichbar.
+- [x] **D – GitHub Pages einschalten?** Freigegeben und eingeschaltet am 11.11.2026.
 - [x] **E – Kurzer Standard für die Dauer:** in Schritt 1 mit 45 s umgesetzt (Empfehlung übernommen, nicht eigens
       bestätigt; ein Wert in `src/core.js`, `DEFAULT_DURATION`).
 - [x] **F – Referenzbilder ins Repository?** In Schritt 0 so umgesetzt (Empfehlung übernommen, nicht eigens bestätigt).
