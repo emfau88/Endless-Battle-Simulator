@@ -34,7 +34,7 @@ const ASPECTS = {
 const RESOLUTIONS = { 720: '720p', 1080: '1080p', 1440: '1440p', 2160: '4K' }; // kurze Bildseite in Pixeln
 const FPS_OPTIONS = [30, 60];
 // Tempo des Clips: < 1 = Zeitlupe (kleinerer Physik-Zeitschritt, gleich viele Schritte je Frame -> flüssig)
-const TEMPO_OPTIONS = [0.8, 1];
+const TEMPO_OPTIONS = [0.64, 0.8, 1];
 const X264_PRESETS = ['ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium', 'slow', 'slower', 'veryslow'];
 
 function videoSize(video) {

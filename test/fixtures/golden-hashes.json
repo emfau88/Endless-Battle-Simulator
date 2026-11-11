@@ -1,7 +1,7 @@
 {
   "note": "Referenz-Hashes der Simulation. Nur nach gewollter Verhaltensänderung neu schreiben: node scripts/golden-hashes.mjs --write",
   "createdAt": "2026-11-11",
-  "commit": "Naval 9:16: 0f13787 · Naval 16:9: Querformat-Layout (Duell) · Marble: Schritt 2 (einseitiger Behälter)",
+  "commit": "Naval 9:16: 0f13787 · Naval 16:9: Querformat-Layout (Duell) · Marble: Schritt 2 · Tempo 0,64 ergänzt",
   "versions": {
     "playwright": "1.60.0",
     "chromium": "148.0.7778.96",
@@ -21,6 +21,10 @@
       "1200": "1a290e1b",
       "7200": "29de72a5"
     },
+    "naval 9:16 seed42 tempo0.64": {
+      "1200": "1111d8a1",
+      "7200": "cb8e3ddd"
+    },
     "naval 9:16 seed7 tempo1": {
       "1200": "57e40cb3",
       "7200": "cb83911b"
@@ -28,6 +32,10 @@
     "naval 9:16 seed7 tempo0.8": {
       "1200": "a2be6fa6",
       "7200": "1a7362c3"
+    },
+    "naval 9:16 seed7 tempo0.64": {
+      "1200": "3904d165",
+      "7200": "d19f6998"
     },
     "naval 16:9 seed42 tempo1": {
       "1200": "cc087834",
@@ -37,6 +45,10 @@
       "1200": "e6f462bb",
       "7200": "c80632b1"
     },
+    "naval 16:9 seed42 tempo0.64": {
+      "1200": "d740d08e",
+      "7200": "ba505da3"
+    },
     "naval 16:9 seed7 tempo1": {
       "1200": "dbf374e0",
       "7200": "360658b4"
@@ -44,6 +56,10 @@
     "naval 16:9 seed7 tempo0.8": {
       "1200": "9615f226",
       "7200": "62e12c11"
+    },
+    "naval 16:9 seed7 tempo0.64": {
+      "1200": "851c6115",
+      "7200": "bf8eb61e"
     },
     "marble 9:16 seed42 tempo1": {
       "1200": "36c5153d",
@@ -53,6 +69,10 @@
       "1200": "fab5b1cc",
       "7200": "59412ba1"
     },
+    "marble 9:16 seed42 tempo0.64": {
+      "1200": "67911ed7",
+      "7200": "b40add5b"
+    },
     "marble 9:16 seed7 tempo1": {
       "1200": "f55e9194",
       "7200": "ad8ce188"
@@ -60,6 +80,10 @@
     "marble 9:16 seed7 tempo0.8": {
       "1200": "48b6cdae",
       "7200": "e9d16fcd"
+    },
+    "marble 9:16 seed7 tempo0.64": {
+      "1200": "09197de3",
+      "7200": "d5c0326f"
     },
     "marble 16:9 seed42 tempo1": {
       "1200": "f40bc52a",
@@ -69,6 +93,10 @@
       "1200": "4f1fdd5c",
       "7200": "458752da"
     },
+    "marble 16:9 seed42 tempo0.64": {
+      "1200": "2ad76adc",
+      "7200": "08b9e4a5"
+    },
     "marble 16:9 seed7 tempo1": {
       "1200": "3f54e02f",
       "7200": "c7471468"
@@ -76,6 +104,10 @@
     "marble 16:9 seed7 tempo0.8": {
       "1200": "a0cdb665",
       "7200": "eac2b754"
+    },
+    "marble 16:9 seed7 tempo0.64": {
+      "1200": "75e39dd4",
+      "7200": "aa2c19d9"
     }
   }
 }

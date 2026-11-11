@@ -20,13 +20,13 @@ Video
   --aspect <a>           9:16 | 16:9 | 1:1   (alternativ --format portrait|landscape|square)
   --resolution <r>       720 | 1080 | 1440 | 2160 (4k)             (kurze Bildseite, Standard 1080)
   --fps <n>              30 | 60                                   (Standard 30)
-  --tempo <t>            0.8 = Zeitlupe | 1                        (Standard 1)
+  --tempo <t>            0.64 | 0.8 = Zeitlupe | 1                 (Standard 1)
   --crf <n>              Qualität (kleiner = besser)               (Standard 20)
   --bitrate <b>          feste Bitrate statt CRF, z. B. 12M oder 8000k
   --preset <p>           x264-Preset ultrafast … veryslow          (Standard medium)
 
 Abkürzungen für das Szenario "naval"
-  --ships 2–4  --cannons 1–6  --fire-rate 0.25–3  --speed 0.8–1.6  --intensity 0–1 (oder 0–100)  --no-recycle
+  --ships 2–4  --cannons 1–6  --fire-rate 0.2–3  --speed 0.64–1.6  --intensity 0–1 (oder 0–100)  --no-recycle
 
 Technik
   --out <datei.mp4>      Ausgabe (Standard output/<szenario>_seed<n>_<format>_<auflösung>_<dauer>.mp4)

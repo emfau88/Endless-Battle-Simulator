@@ -1181,8 +1181,8 @@ EBS.registerScenario({
   controls: [
     { key: 'ships', label: 'Anzahl der Schiffe', type: 'select', restart: true, options: [[2, '2 Schiffe'], [3, '3 Schiffe'], [4, '4 Schiffe']] },
     { key: 'cannons', label: 'Kanonen pro Schiff', type: 'range', restart: true, min: 1, max: 6, step: 1, format: (v) => String(v) },
-    { key: 'fireRate', label: 'Feuergeschwindigkeit', type: 'range', min: 0.25, max: 3, step: 0.05, format: (v) => v.toFixed(2) + '×' },
-    { key: 'projectileSpeed', label: 'Geschossgeschwindigkeit', type: 'range', min: 0.8, max: 1.6, step: 0.05, format: (v) => v.toFixed(2) + '×' },
+    { key: 'fireRate', label: 'Feuergeschwindigkeit', type: 'range', min: 0.2, max: 3, step: 0.05, format: (v) => v.toFixed(2) + '×' },
+    { key: 'projectileSpeed', label: 'Geschossgeschwindigkeit', type: 'range', min: 0.64, max: 1.6, step: 0.02, format: (v) => v.toFixed(2) + '×' },
     { key: 'intensity', label: 'Zerstörungsintensität', type: 'range', min: 0, max: 1, step: 0.01, format: (v) => Math.round(v * 100) + ' %' },
     { key: 'recycleVisible', label: 'Recycling sichtbar', type: 'check' },
   ],
@@ -1190,8 +1190,8 @@ EBS.registerScenario({
     return {
       ships: clamp(Math.round(num(p.ships, 2)), 2, 4),
       cannons: clamp(Math.round(num(p.cannons, 4)), 1, 6),
-      fireRate: clamp(num(p.fireRate, 1), 0.25, 3),
-      projectileSpeed: clamp(num(p.projectileSpeed, 1), 0.8, 1.6),
+      fireRate: clamp(num(p.fireRate, 1), 0.2, 3),
+      projectileSpeed: clamp(num(p.projectileSpeed, 1), 0.64, 1.6),
       intensity: clamp(num(p.intensity, 0.35), 0, 1),
       ballsPerCannon: clamp(Math.round(num(p.ballsPerCannon, 5)), 2, 10),
       recycleVisible: bool(p.recycleVisible, true),

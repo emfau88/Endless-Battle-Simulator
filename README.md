@@ -132,7 +132,7 @@ und direkt per Pipe an FFmpeg gegeben – keine Einzelbilder auf der Platte. Ren
 keinen Einfluss auf die Physik. Alle Zufallswerte kommen aus Seed-basierten Generatoren (Physik / Effekte getrennt),
 Matter.js-interne Zähler werden beim Start zurückgesetzt. Gleicher Seed ⇒ identischer Ablauf.
 
-**Tempo / Zeitlupe.** `video.tempo` (0.8 oder 1, im Bedienfeld „0.8×“ bei der Simulationsgeschwindigkeit) verkleinert
+**Tempo / Zeitlupe.** `video.tempo` (0.64, 0.8 oder 1, im Bedienfeld „0.64×“ und „0.8×“ bei der Simulationsgeschwindigkeit) verkleinert
 den Physik-Zeitschritt auf tempo × 1/60 s. Pro Videoframe werden weiterhin gleich viele Schritte gerechnet, der Clip
 läuft also flüssig in Zeitlupe statt mit wiederholten Frames. Die Uhr im HUD zeigt die Videozeit. Bei tempo 1 ist der
 Ablauf bitgleich zu vorher.

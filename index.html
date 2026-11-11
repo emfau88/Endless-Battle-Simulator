@@ -45,7 +45,7 @@
   select, input[type=number], input[type=text] { width: 100%; font: inherit; color: var(--text); background: #0b1222; border: 1px solid #2a3a5c;
     border-radius: 7px; padding: 6px 8px; }
   .seg { display: flex; background: #0b1222; border: 1px solid #2a3a5c; border-radius: 8px; overflow: hidden; }
-  .seg button { flex: 1; border: 0; border-radius: 0; background: transparent; padding: 6px 4px; font-size: 13px; }
+  .seg button { flex: 1; min-width: 0; border: 0; border-radius: 0; background: transparent; padding: 6px 2px; font-size: 13px; }
   .seg button.on { background: #2a62ff; font-weight: 600; }
   .checks { margin-bottom: 10px; }
   .checks label { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 4px 0; color: var(--text); }
@@ -112,12 +112,15 @@
         <label><input type="checkbox" id="hud"> HUD einblenden</label>
         <label><input type="checkbox" id="camera"> Kamerabewegung</label>
       </div>
-      <p class="hint">Strukturwerte (z. B. Schiffe, Kanonen), Format und Seed starten die Simulation neu. Die übrigen Werte wirken sofort. 0.8× ist Zeitlupe und gilt auch für das exportierte Video (Neustart); 2×–10× beschleunigen nur die Vorschau.</p>
+      <p class="hint">Strukturwerte (z. B. Schiffe, Kanonen), Format und Seed starten die Simulation neu. Die übrigen Werte wirken sofort. 0.64× und 0.8× sind Zeitlupe und gelten auch für das exportierte Video (Neustart); 2×–10× beschleunigen nur die Vorschau.</p>
     </div>
 
     <div class="card">
       <h2>Video</h2>
       <div class="ctl"><label>Format</label><div class="seg" id="segFormat"></div></div>
+      <div class="ctl"><label for="resolution">Auflösung und Bildrate <output id="resolutionOut"></output></label>
+        <div class="row"><select id="resolution" aria-label="Auflösung des exportierten Videos"></select>
+          <div class="seg" id="segFps" style="flex:0 0 42%"></div></div></div>
       <div class="ctl"><label for="durationText">Videolänge <output id="durationOut"></output></label>
         <div class="row"><input type="text" id="durationText" autocomplete="off" spellcheck="false" aria-describedby="durationHint">
           <select id="duration" aria-label="Schnellwahl der Videolänge"></select></div>

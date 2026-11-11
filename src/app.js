@@ -16,7 +16,7 @@ const RESERVED = ['mode', 'cfg', 'paused'];
 const UI_ASPECTS = ['9:16', '16:9'];
 const UI_DURATIONS = [[20, '20 Sekunden (Test)'], [45, '45 Sekunden (Short)'], [60, '1 Minute'], [300, '5 Minuten'], [600, '10 Minuten'], [1800, '30 Minuten'], [3600, '60 Minuten']];
 // Werte < 1 sind Zeitlupe und gelten auch für den Videoexport (cfg.video.tempo), Werte > 1 nur für die Vorschau
-const UI_SPEEDS = [0.8, 1, 2, 5, 10];
+const UI_SPEEDS = [0.64, 0.8, 1, 2, 5, 10];
 
 // Videolänge als Text: "45", "45s", "5m", "1h" -> Sekunden (null = ungültig) und zurück
 function parseDuration(text) {
@@ -168,6 +168,12 @@ async function bootLive() {
   });
   const markAspect = seg('segFormat', UI_ASPECTS.map((k) => [k, `${ASPECTS[k].label} ${ASPECTS[k].w}×${ASPECTS[k].h}`]), cfg().video.aspect,
     (v) => { if (cfg().video.aspect !== v) restart({ video: { aspect: v } }); });
+  // Auflösung und Bildrate des exportierten Videos (die Vorschau bleibt bei 1080p und der Bildrate des Bildschirms)
+  const resSel = $('resolution');
+  for (const [v, t] of Object.entries(EBS.RESOLUTIONS)) resSel.add(new Option(t, v));
+  const showSize = () => { const vs = videoSize(cfg().video); $('resolutionOut').textContent = `${vs.width}×${vs.height}`; };
+  resSel.addEventListener('change', () => { session.cfg.video.resolution = +resSel.value; save(); showSize(); });
+  const markFps = seg('segFps', EBS.FPS_OPTIONS.map((f) => [f, f + ' fps']), cfg().video.fps, (v) => { session.cfg.video.fps = v; save(); });
   // Videolänge: freie Eingabe (1 s bis 4 h) plus Schnellwahl; beide zeigen stets den Wert der Konfiguration
   const dur = $('duration'), durText = $('durationText'), durHint = $('durationHint'), DUR_HINT = durHint.textContent;
   dur.add(new Option('Eigene Dauer', ''));
@@ -217,6 +223,7 @@ async function bootLive() {
     $('audio').checked = hasAudio && c.video.audio; $('audio').disabled = !hasAudio;
     $('audioLabel').title = hasAudio ? 'Die Vorschau ist stumm; der Ton entsteht beim Export.' : 'Dieses Szenario hat noch keinen Ton.';
     markAspect(c.video.aspect); markSpeed(uiSpeed());
+    resSel.value = String(c.video.resolution); markFps(c.video.fps); showSize();
     showDuration();
   }
   buildScenarioUi(); syncUi(); fit();
@@ -226,7 +233,7 @@ async function bootLive() {
   const cliCmd = () => {
     const c = session.cfg;
     const p = Object.entries(c.params).map(([k, v]) => `--param ${k}=${v}`).join(' ');
-    return `npm run export -- --scenario ${c.scenario} --seed ${c.seed} --aspect ${c.video.aspect} --duration ${c.video.durationSec}${c.video.tempo !== 1 ? ' --tempo ' + c.video.tempo : ''} ${p}${c.view.hud ? '' : ' --no-hud'}${c.view.camera ? '' : ' --no-camera'}${c.video.audio ? '' : ' --no-audio'}`;
+    return `npm run export -- --scenario ${c.scenario} --seed ${c.seed} --aspect ${c.video.aspect} --resolution ${c.video.resolution} --fps ${c.video.fps} --duration ${c.video.durationSec}${c.video.tempo !== 1 ? ' --tempo ' + c.video.tempo : ''} ${p}${c.view.hud ? '' : ' --no-hud'}${c.view.camera ? '' : ' --no-camera'}${c.video.audio ? '' : ' --no-audio'}`;
   };
   // Gibt es den lokalen Export-Server? (null = noch unbekannt; false z. B. beim Öffnen als Datei oder über GitHub Pages)
   let hasServer = location.protocol === 'file:' ? false : null;
