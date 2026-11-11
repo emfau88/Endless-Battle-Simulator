@@ -1112,14 +1112,20 @@ class NavalRenderer {
     // ---- Sammelrinne: ein offener Metalltrog über die ganze Breite, darin eine Spur je Schiff
     let top = 1e9, bot = -1e9;
     for (const s of sim.ships) { top = Math.min(top, s.laneY - r - 5 * u); bot = Math.max(bot, s.laneY + r + 3 * u); }
-    const x0 = -60 * u, x1 = L.W + 60 * u;
-    for (let x = 90 * u; x < L.W; x += 260 * u) g.rect(x - 5 * u, bot + 6 * u, 10 * u, L.H - bot).fill({ color: 0x1b2733, alpha: 0.95 });
+    // Die Rinne reicht genau von Rohrfuß zu Rohrfuß und schließt dort an die Einlaufgehäuse an (läuft nicht aus dem Bild)
+    const end = r + 14 * u;
+    let x0 = 1e9, x1 = -1e9;
+    for (const s of sim.ships) { x0 = Math.min(x0, s.liftX - end); x1 = Math.max(x1, s.liftX + end); }
+    const feet = Math.max(2, Math.round((x1 - x0) / (260 * u)));
+    for (let k = 0; k <= feet; k++) { const x = x0 + 14 * u + ((x1 - x0 - 28 * u) * k) / feet; g.rect(x - 5 * u, bot + 6 * u, 10 * u, L.H - bot).fill({ color: 0x1b2733, alpha: 0.95 }); }
     g.rect(x0, top, x1 - x0, bot - top).fill({ color: DARK, alpha: 0.9 });
     g.rect(x0, bot, x1 - x0, 8 * u).fill({ color: 0x2b3a49, alpha: 1 });
     g.moveTo(x0, bot).lineTo(x1, bot).stroke({ width: 1.6 * u, color: STEEL, alpha: 0.7 });
     g.moveTo(x0, bot + 8 * u).lineTo(x1, bot + 8 * u).stroke({ width: 1.5 * u, color: 0x000000, alpha: 0.55 });
     g.moveTo(x0, top).lineTo(x1, top).stroke({ width: 2.2 * u, color: STEEL, alpha: 0.6 });
     g.moveTo(x0, top + 2.4 * u).lineTo(x1, top + 2.4 * u).stroke({ width: 1 * u, color: 0x000000, alpha: 0.4 });
+    // Stirnplatten an beiden Enden
+    for (const x of [x0, x1]) g.rect(x - 3 * u, top - 3 * u, 6 * u, bot - top + 11 * u).fill({ color: 0x2b3a49, alpha: 1 }).stroke({ width: 1.2 * u, color: STEEL, alpha: 0.6 });
     for (let i = 1; i < sim.ships.length; i++) {          // dezente Trennleiste zwischen den Spuren
       const y = (sim.ships[i - 1].laneY + sim.ships[i].laneY) / 2;
       g.moveTo(x0, y).lineTo(x1, y).stroke({ width: 1 * u, color: STEEL, alpha: 0.16 });
