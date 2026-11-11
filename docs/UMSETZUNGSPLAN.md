@@ -183,7 +183,7 @@ mindestens 470 Umläufe je 10 Minuten, keine Kugel mit null Umläufen, größter
 
 ### Zurückgestellt
 
-- [ ] **B01 Naval-Recycling beruhigen** – vor dem ersten Naval-Upload; setzt die Hashes aus Schritt 0 voraus.
+- [x] **B01 Naval-Recycling beruhigen** – erledigt am 11.11.2026, siehe [B01_NAVAL_RECYCLING.md](B01_NAVAL_RECYCLING.md): ruhige Rinne statt wandernder Pfeile, Naval-Hashes unverändert. Bildaufbau für Shorts nur geprüft (gehört zu B08).
 - [ ] **B08 Naval-Zuschauerführung** – nach B01.
 - [ ] **B03 30 gegen 60 FPS** – kurzer Vergleich, kann vor Schritt 4 eingeschoben werden, verzögert ihn aber nicht.
 - [ ] **B04 Grafik-Playbook** – reine Dokumentation, jederzeit möglich; spätestens vor einem neuen Szenario.

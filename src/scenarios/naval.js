@@ -1086,41 +1086,58 @@ class NavalRenderer {
     }
   }
 
+  /**
+   * Recycling unter Wasser – bewusst ruhig gezeichnet: dunkle Rinne mit wenigen Stützrollen, feste Richtungsmarken,
+   * gedämpfte Teamfarbe. Nichts wandert im Tempo des Förderbands; die einzige Bewegung sind die Kugeln selbst und
+   * ein langsam umlaufender Punkt je Rolle (feste Bildgeschwindigkeit, unabhängig von TUNING.conveyor).
+   * Reine Darstellung: Kugelbewegung und Munitionsbilanz liegen in der Simulation und bleiben unberührt.
+   */
   _drawRecycling(t) {
     const sim = this.sim, L = this.L, u = L.u, g = this.gRec, r = L.ballR;
     g.clear();
     if (!sim.cfg.recycleVisible) return;
-    const spacing = 44 * u, off = (t * TUNING.conveyor * u) % spacing;
+    const rollGap = 150 * u, markGap = 300 * u, spin = t * 0.9;
     for (const s of sim.ships) {
-      const c = s.team.color, ry = s.laneY + r + 3 * u;
-      // Förderband
-      g.rect(-60 * u, ry - 1 * u, L.W + 120 * u, 9 * u).fill({ color: 0x0a1620, alpha: 0.85 });
-      g.moveTo(-60 * u, ry).lineTo(L.W + 60 * u, ry).stroke({ width: 3 * u, color: c, alpha: 0.75 });
-      g.moveTo(-60 * u, ry + 7 * u).lineTo(L.W + 60 * u, ry + 7 * u).stroke({ width: 2 * u, color: c, alpha: 0.3 });
+      const c = s.team.color, ry = s.laneY + r + 3 * u, x0 = -60 * u, x1 = L.W + 60 * u;
+      // Rinne: dunkles Bett, darüber eine dünne Kante in gedämpfter Teamfarbe
+      g.rect(x0, ry - 2 * u, x1 - x0, 11 * u).fill({ color: 0x0b1822, alpha: 0.92 });
+      g.moveTo(x0, ry - 2 * u).lineTo(x1, ry - 2 * u).stroke({ width: 2 * u, color: c, alpha: 0.32 });
+      g.moveTo(x0, ry + 9 * u).lineTo(x1, ry + 9 * u).stroke({ width: 1.5 * u, color: 0x000000, alpha: 0.5 });
+      // Stützrollen in festem Abstand, vom Aufzug aus gezählt
       for (let side = -1; side <= 1; side += 2) {
-        for (let d = spacing - off; d < L.W + 120 * u; d += spacing) {
+        for (let d = rollGap * 0.5; d < L.W + 120 * u; d += rollGap) {
+          const x = s.liftX + side * d;
+          if (x < -40 * u || x > L.W + 40 * u) continue;
+          g.circle(x, ry + 3.5 * u, 4.6 * u).fill({ color: 0x1c2c39, alpha: 1 }).stroke({ width: 1.2 * u, color: 0x4a6072, alpha: 0.7 });
+          g.circle(x + Math.cos(spin * -side) * 2.4 * u, ry + 3.5 * u + Math.sin(spin * -side) * 2.4 * u, 1 * u).fill({ color: 0x9fb4c6, alpha: 0.7 });
+        }
+      }
+      // feste Richtungsmarken (zum Aufzug hin), dezent
+      for (let side = -1; side <= 1; side += 2) {
+        for (let d = markGap; d < L.W + 120 * u; d += markGap) {
           const x = s.liftX + side * d;
           if (x < -40 * u || x > L.W + 40 * u) continue;
           const tip = -side * 5 * u;
-          g.moveTo(x - tip, ry - 4 * u).lineTo(x + tip, ry).lineTo(x - tip, ry + 4 * u);
+          g.moveTo(x - tip, ry - 9 * u).lineTo(x + tip, ry - 5.5 * u).lineTo(x - tip, ry - 2 * u);
         }
       }
-      g.stroke({ width: 2.5 * u, color: c, alpha: 0.9 });
-      // Aufzugsrohr
-      const x0 = s.liftX, y0 = s.laneY + r, x1 = s.liftTopX, y1 = s.liftTopY;
-      const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy), nx = -dy / len, ny = dx / len, w = r + 5 * u;
-      g.moveTo(x0, y0).lineTo(x1, y1).stroke({ width: 2 * w, color: c, alpha: 0.12 });
-      g.moveTo(x0 + nx * w, y0 + ny * w).lineTo(x1 + nx * w, y1 + ny * w)
-        .moveTo(x0 - nx * w, y0 - ny * w).lineTo(x1 - nx * w, y1 - ny * w).stroke({ width: 2 * u, color: c, alpha: 0.55 });
-      const cs = 34 * u, coff = (t * TUNING.conveyor * u) % cs;
-      for (let d = coff; d < len; d += cs) {
-        const px = x0 + (dx * d) / len, py = y0 + (dy * d) / len;
-        g.moveTo(px - nx * w * 0.8, py - ny * w * 0.8).lineTo(px + nx * w * 0.8, py + ny * w * 0.8);
+      g.stroke({ width: 1.8 * u, color: c, alpha: 0.38 });
+      // Aufzugsrohr: dunkles Glas mit gedämpften Kanten und wenigen festen Manschetten
+      const lx = s.liftX, ly = s.laneY + r, tx = s.liftTopX, ty = s.liftTopY;
+      const dx = tx - lx, dy = ty - ly, len = Math.hypot(dx, dy), nx = -dy / len, ny = dx / len, w = r + 5 * u;
+      g.moveTo(lx, ly).lineTo(tx, ty).stroke({ width: 2 * w, color: 0x0b1822, alpha: 0.5 });
+      g.moveTo(lx, ly).lineTo(tx, ty).stroke({ width: 2 * w, color: c, alpha: 0.06 });
+      g.moveTo(lx + nx * w, ly + ny * w).lineTo(tx + nx * w, ty + ny * w)
+        .moveTo(lx - nx * w, ly - ny * w).lineTo(tx - nx * w, ty - ny * w).stroke({ width: 1.8 * u, color: c, alpha: 0.34 });
+      const cuffs = Math.max(2, Math.round(len / (190 * u)));
+      for (let k = 1; k < cuffs; k++) {
+        const px = lx + (dx * k) / cuffs, py = ly + (dy * k) / cuffs;
+        g.moveTo(px - nx * (w + 2 * u), py - ny * (w + 2 * u)).lineTo(px + nx * (w + 2 * u), py + ny * (w + 2 * u));
       }
-      g.stroke({ width: 1.5 * u, color: c, alpha: 0.35 });
-      g.circle(x0, s.laneY, w * 1.15).stroke({ width: 3 * u, color: c, alpha: 0.5 });
-      g.poly([x1 - nx * w * 1.6, y1 - 4 * u, x1 + nx * w * 1.6, y1 - 4 * u, x1 + nx * w, y1 + 10 * u, x1 - nx * w, y1 + 10 * u])
-        .fill({ color: 0x2a1a10, alpha: 0.9 }).stroke({ width: 2 * u, color: c, alpha: 0.8 });
+      g.stroke({ width: 4 * u, color: 0x33475a, alpha: 0.85 });
+      g.circle(lx, s.laneY, w * 1.15).fill({ color: 0x0b1822, alpha: 0.6 }).stroke({ width: 2.5 * u, color: c, alpha: 0.4 });
+      g.poly([tx - nx * w * 1.6, ty - 4 * u, tx + nx * w * 1.6, ty - 4 * u, tx + nx * w, ty + 10 * u, tx - nx * w, ty + 10 * u])
+        .fill({ color: 0x2a1a10, alpha: 0.9 }).stroke({ width: 2 * u, color: c, alpha: 0.55 });
     }
   }
 
