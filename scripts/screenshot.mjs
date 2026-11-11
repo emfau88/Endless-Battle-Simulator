@@ -18,6 +18,8 @@ try {
   const { page, errors, info } = await openExportPage(browser, cfg);
   const t0 = Date.now();
   await page.evaluate((s) => window.exportAPI.simulate(s), at);
+  // Vorlauf: einige Frames rendern, damit Anzeigen aktuell sind (das Naval-HUD aktualisiert sich nur jeden 6. Frame)
+  await page.evaluate(() => { window.exportAPI.renderFrames(12, 0.1); });
   const [png] = await page.evaluate(() => window.exportAPI.renderFrames(1, 1, 'image/png'));
   const check = await page.evaluate(() => window.exportAPI.check());
   if (errors.length) throw errors[0];

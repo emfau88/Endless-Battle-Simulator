@@ -9,6 +9,8 @@
     "export": "node export.mjs",
     "export:test": "node export.mjs --duration 20 --seed 42 --out output/test_20s.mp4",
     "marble:test": "node export.mjs --scenario marble --seed 42 --aspect 16:9 --resolution 720 --fps 30 --duration 8 --out output/marble_test_8s_720p.mp4",
+    "golden": "node scripts/golden-hashes.mjs",
+    "golden:write": "node scripts/golden-hashes.mjs --write",
     "test": "node --test --test-concurrency=1 --test-timeout=120000 --test-reporter=spec test/*.test.mjs",
     "vendor": "node scripts/vendor.mjs"
   },
