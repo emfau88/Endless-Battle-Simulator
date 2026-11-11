@@ -32,7 +32,9 @@ for (const aspect of ['16:9', '9:16']) {
       assert.ok(s.maxJump < 20, `Kugel springt ${s.maxJump.toFixed(1)} Einheiten in einem Schritt (Teleport)`);
     }
     // Durchsatz: das Zellenrad gibt alle 1,2 s eine Kugel frei; jede Kugel hat die Anlage mehrfach durchlaufen
-    assert.ok(s.cycles > 400, `zu wenige Umläufe: ${s.cycles}`);
+    // Seit dem einseitigen Behälter (Schritt 2) läuft die Anlage fast am theoretischen Maximum von 500 Umläufen
+    assert.ok(s.cycles >= 470, `zu wenige Umläufe: ${s.cycles}`);
+    assert.ok(s.shakes <= 2, `Behälter rüttelt zu oft: ${s.shakes}× in 10 Minuten`);
     assert.ok(s.minLaps >= 6, `eine Kugel hängt fest (nur ${s.minLaps} Umläufe)`);
     assert.ok(Math.abs(s.released - s.cycles) <= 35, 'Bilanz Freigabe/Rücklauf stimmt nicht');
     // 35 Kugeln = 5 Farben × 6 + 1 Farbe × 5; zwei Kugeln je Farbe stehen als Puffer in der Röhre

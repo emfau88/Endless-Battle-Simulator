@@ -27,16 +27,16 @@ try {
       return { tempo: EBS.app.cfg.video.tempo, cycles: st.cycles, min: Math.min(...laps), max: Math.max(...laps), shakes: st.shakes, kicks: st.kicks, maxAge, pause: Math.max(pause, sim.t - lastT), jump: st.maxJump, ok: c.ok };
     }, minutes * 60);
     if (r.tempo !== tempo) throw new Error(`Tempo ${tempo} wurde nicht übernommen`);
-    rows.push(`| ${aspect} | ${seed} | ${r.cycles} | ${r.min}–${r.max} | ${r.shakes} | ${r.maxAge.toFixed(0)} | ${r.pause.toFixed(1)} | ${r.jump.toFixed(1)} | ${r.ok ? 'OK' : 'FEHLER'} |`);
-    const s = (sum[aspect] = sum[aspect] || { cycles: [], shakes: [], age: [], pause: [], minLaps: [] });
-    s.cycles.push(r.cycles); s.shakes.push(r.shakes); s.age.push(r.maxAge); s.pause.push(r.pause); s.minLaps.push(r.min);
+    rows.push(`| ${aspect} | ${seed} | ${r.cycles} | ${r.min}–${r.max} | ${r.shakes} | ${r.kicks} | ${r.maxAge.toFixed(0)} | ${r.pause.toFixed(1)} | ${r.jump.toFixed(1)} | ${r.ok ? 'OK' : 'FEHLER'} |`);
+    const s = (sum[aspect] = sum[aspect] || { cycles: [], shakes: [], kicks: [], age: [], pause: [], minLaps: [] });
+    s.cycles.push(r.cycles); s.shakes.push(r.shakes); s.kicks.push(r.kicks); s.age.push(r.maxAge); s.pause.push(r.pause); s.minLaps.push(r.min);
   }
   const rng = (a, d = 0) => `${Math.min(...a).toFixed(d)}–${Math.max(...a).toFixed(d)}`, avg = (a) => (a.reduce((x, y) => x + y, 0) / a.length).toFixed(1);
   console.log(`Kugelfabrik: ${minutes} Minuten Simulationszeit je Lauf, Tempo ${tempo}, Seeds ${seeds.join(', ')}\n`);
-  console.log('| Format | Seed | Umläufe | Umläufe je Kugel | Rütteln | längste Verweildauer im Behälter (s) | längste Pause (s) | größter Schritt | Prüfung |');
-  console.log('|---|---|---|---|---|---|---|---|---|');
+  console.log('| Format | Seed | Umläufe | Umläufe je Kugel | Rütteln | Brückenbrecher | längste Verweildauer im Behälter (s) | längste Pause (s) | größter Schritt | Prüfung |');
+  console.log('|---|---|---|---|---|---|---|---|---|---|');
   console.log(rows.join('\n'));
-  console.log('\n| Format | Umläufe | Rütteln (Spanne / Mittel) | Verweildauer (s) | längste Pause (s) | wenigste Umläufe einer Kugel |');
-  console.log('|---|---|---|---|---|---|');
-  for (const [a, s] of Object.entries(sum)) console.log(`| ${a} | ${rng(s.cycles)} | ${rng(s.shakes)} / ${avg(s.shakes)} | ${rng(s.age)} | ${rng(s.pause, 1)} | ${Math.min(...s.minLaps)} |`);
+  console.log('\n| Format | Umläufe | Rütteln (Spanne / Mittel) | Brückenbrecher (Spanne / Mittel) | Verweildauer (s) | längste Pause (s) | wenigste Umläufe einer Kugel |');
+  console.log('|---|---|---|---|---|---|---|');
+  for (const [a, s] of Object.entries(sum)) console.log(`| ${a} | ${rng(s.cycles)} | ${rng(s.shakes)} / ${avg(s.shakes)} | ${rng(s.kicks)} / ${avg(s.kicks)} | ${rng(s.age)} | ${rng(s.pause, 1)} | ${Math.min(...s.minLaps)} |`);
 } finally { await browser.close(); }

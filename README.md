@@ -191,7 +191,7 @@ verkleinert (nicht eigens gestaltet).
 | Halle | Wandplatten, Träger, ferne Rohre, Boden mit Warnstreifen, warme Lichtbänder mit Lichtkegeln, Vignette |
 | Glaskugeln | Radialverlauf je Farbe, Kaustik-Aufhellung, rotierendes „Katzenauge“, feststehender Glanzpunkt, additiver Farbschein, Kontaktschatten auf Band und Schiene |
 | Glasrohre | Rückseite (Tönung, Wandschatten) + Vorderseite (versetzte Lichtreflexe, auf das Rohrinnere beschnitten; helle Glaskante), Stahl-/Messingmanschetten |
-| Glasbehälter | getöntes Glas, Reflexbänder, Stahldeckel, Messingkragen |
+| Glasbehälter | einseitig geneigter Boden mit senkrechter Wand über dem Hals; getöntes Glas, Reflexbänder, Stahldeckel, Messingkragen |
 | Zellenrad | rotierender Rotor mit vier Taschen hinter Glasdeckel, Stahlring mit Schrauben, Messingnabe |
 | Förderband | Bandschleife mit umlaufenden Stollen, Trommeln, Stützrollen, Seitenwange, LED-Leiste |
 | Zahnräder | Zahnprofil, Drehriefen, vertiefter Steg, Messingnabe; darüber feststehender Glanzkeil (wirkt metallisch, während sich das Rad darunter dreht) |
@@ -208,16 +208,14 @@ Simzeit in 2–3,5 s · JS-Heap nach 30 Minuten Simzeit unverändert ≈ 11 MB.
 
 **Bekannte Schwächen des Prototyps**
 
-- Im Trichter des Glasbehälters verkeilen sich gelegentlich zwei Kugeln über dem Hals. Ein Brückenbrecher löst das
-  meist unsichtbar; hält der Stau länger als 3 s, rüttelt der Behälter sichtbar (gemessen 2–28× in 10 Minuten, längste
-  Pause ohne zurückkehrende Kugel 3–9 s). Dadurch liegt der Durchsatz bei 440–477 statt theoretisch 500 Umläufen je
-  10 Minuten.
-- Am Trichterrand entsteht eine tote Zone – im Hochkantformat ausgeprägter, weil dort die Wege kürzer sind und der
-  Behälter voller ist (kein Koordinatenfehler; die Behältergeometrie ist in beiden Layouts identisch). Kugeln, die
-  länger als 15 s liegen, erhalten deshalb Vorrang; die längste gemessene Verweildauer beträgt 48–85 s.
+- **Behälter (seit Schritt 2 entschärft):** Der frühere symmetrische Trichter ließ zwei Kugeln über dem Hals
+  verkeilen und hatte eine tote Zone an der Flanke gegenüber dem Einlauf. Jetzt fällt der Boden einseitig zum Hals.
+  Gemessen über 16 Läufe von je 10 Minuten: Rütteln insgesamt 1× (vorher 4–62× je Lauf), 494–501 von 500 möglichen
+  Umläufen (vorher 430–475), längste Verweildauer 11–19 s (vorher 40–72 s). Brückenbrecher, Vorrang für lange
+  liegende Kugeln und Rütteln bleiben als Sicherung erhalten; der Brückenbrecher greift weiterhin 240–480× je
+  10 Minuten kurz ein (kleiner Schubs, wenn der Hals länger als 0,5 s leer bleibt).
 - Die grüne Farbe hat bei 35 Kugeln nur 5 statt 6 Kugeln und wird entsprechend seltener sortiert.
 - 1:1 ist nicht eigens gestaltet (verkleinertes Querformat-Layout). Kein Ton.
-- Die Messingmanschette unter dem Zellenrad sitzt schräg im Rohrbogen (unsauberer Übergang zum Fallrohr).
 
 ## Gemessene Leistung (dieser Rechner, AMD Radeon iGPU)
 

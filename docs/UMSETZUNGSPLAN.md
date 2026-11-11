@@ -99,20 +99,21 @@ Jeder Schritt ist ein eigener Auftrag mit eigenem Commit. Danach anhalten und ab
 **Nachweise:** Testprotokoll, zwei Bildschirmfotos des Bedienfelds, Commit.
 **Ergebnis:** [SCHRITT_1_BEDIENFEHLER.md](SCHRITT_1_BEDIENFEHLER.md) – 55 von 55 Tests bestanden, Referenz-Hashes unverändert, drei Bildschirmfotos.
 
-### Schritt 2 · Marble: Trichterstau konstruktiv entschärfen (B02) · mittel
+### Schritt 2 · Marble: Trichterstau konstruktiv entschärfen (B02) · mittel · erledigt am 11.11.2026
 
-- [ ] Stau und tote Zone mit festen Seeds nachstellen und dokumentieren (Ort, Häufigkeit, Format).
-- [ ] Eine konstruktive Änderung wählen und umsetzen, z. B. einseitig geneigter Behälterboden mit Einzelzuführung
+- [x] Stau und tote Zone mit festen Seeds nachstellen und dokumentieren (Ort, Häufigkeit, Format).
+- [x] Eine konstruktive Änderung wählen und umsetzen, z. B. einseitig geneigter Behälterboden mit Einzelzuführung
       oder mittiger Einlauf – nicht die Rüttelstärke erhöhen.
-- [ ] Rüttler und Vorrang als seltene Sicherung behalten und weiter zählen.
-- [ ] Vorher/Nachher mit denselben Seeds messen: Rütteln, Verweildauer, Umläufe, längste Pause.
-- [ ] Messingmanschette unter dem Zellenrad gerade setzen.
-- [ ] Ausgewogene Farbverteilung nur prüfen (36 Kugeln = 6 × 6 läge knapp über der bisherigen Obergrenze 35).
+- [x] Rüttler und Vorrang als seltene Sicherung behalten und weiter zählen.
+- [x] Vorher/Nachher mit denselben Seeds messen: Rütteln, Verweildauer, Umläufe, längste Pause.
+- [x] Messingmanschette unter dem Zellenrad gerade setzen.
+- [x] Ausgewogene Farbverteilung nur prüfen (36 Kugeln = 6 × 6 läge knapp über der bisherigen Obergrenze 35).
 
 **Zielwerte (Vorschlag):** Rütteln höchstens 2× je 10 Minuten in beiden Formaten, Verweildauer unter 40 s,
 mindestens 470 Umläufe je 10 Minuten, keine Kugel mit null Umläufen, größter Schritt weiter unter 20 Einheiten.
 **Abnahme:** Zielwerte über 8 Seeds je Format erreicht oder Abweichung offen benannt; Marble-Hashes werden bewusst neu gesetzt, Naval-Hashes bleiben gleich.
 **Nachweise:** Messtabelle, je ein 8–12-s-Clip hochkant und quer, Testprotokoll, Commit.
+**Ergebnis:** [SCHRITT_2_MARBLE_TRICHTER.md](SCHRITT_2_MARBLE_TRICHTER.md) – alle Zielwerte erreicht: Rütteln 1× in 32 Läufen, 494–501 Umläufe, Verweildauer höchstens 19 s; 55 von 55 Tests bestanden.
 
 ### Schritt 3 · Marble: Ton (B05, zunächst nur Marble) · mittel
 

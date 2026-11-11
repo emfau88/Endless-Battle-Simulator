@@ -1,7 +1,7 @@
 {
   "note": "Referenz-Hashes der Simulation. Nur nach gewollter Verhaltensänderung neu schreiben: node scripts/golden-hashes.mjs --write",
   "createdAt": "2026-11-11",
-  "commit": "0f13787",
+  "commit": "Naval: 0f13787 · Marble: Schritt 2 (einseitiger Behälter)",
   "versions": {
     "playwright": "1.60.0",
     "chromium": "148.0.7778.96",
@@ -46,36 +46,36 @@
       "7200": "885aa56a"
     },
     "marble 9:16 seed42 tempo1": {
-      "1200": "381ab20f",
-      "7200": "b51f80e1"
+      "1200": "36c5153d",
+      "7200": "a7a6ea63"
     },
     "marble 9:16 seed42 tempo0.8": {
-      "1200": "7f698018",
-      "7200": "84ea837d"
+      "1200": "fab5b1cc",
+      "7200": "59412ba1"
     },
     "marble 9:16 seed7 tempo1": {
-      "1200": "abf4a615",
-      "7200": "2208faa2"
+      "1200": "f55e9194",
+      "7200": "ad8ce188"
     },
     "marble 9:16 seed7 tempo0.8": {
-      "1200": "04d7d352",
-      "7200": "500e1687"
+      "1200": "48b6cdae",
+      "7200": "e9d16fcd"
     },
     "marble 16:9 seed42 tempo1": {
-      "1200": "d8d6918c",
-      "7200": "e6dd62df"
+      "1200": "f40bc52a",
+      "7200": "40039d69"
     },
     "marble 16:9 seed42 tempo0.8": {
-      "1200": "f4a08af9",
-      "7200": "1e98b1e2"
+      "1200": "4f1fdd5c",
+      "7200": "458752da"
     },
     "marble 16:9 seed7 tempo1": {
-      "1200": "adb5deea",
-      "7200": "1b932bcd"
+      "1200": "3f54e02f",
+      "7200": "c7471468"
     },
     "marble 16:9 seed7 tempo0.8": {
-      "1200": "2aa6d741",
-      "7200": "4f315b6a"
+      "1200": "a0cdb665",
+      "7200": "eac2b754"
     }
   }
 }

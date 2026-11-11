@@ -109,10 +109,13 @@ function computeLayout(world) {
   lf.runX = lf.cx + lf.rs; lf.ballX = lf.runX + 32; lf.run = lf.bot - lf.top;
   lf.loop = 2 * lf.run + TAU * lf.rs; lf.n = Math.round(lf.loop / 185); lf.spacing = lf.loop / lf.n;
   // --- Behälter + Zellenrad
-  const hp = (L.hop = { ...d.hop, hw: 150, neckHw: 27 });
+  // Einseitiger Behälter: Der Boden fällt vom Einlauf (links) zum Hals, rechts steht die Wand senkrecht über dem Hals.
+  // So liegt immer nur eine Kugel über der Öffnung – zwei Kugeln können sich nicht mehr gegenseitig abstützen.
+  const hp = (L.hop = { ...d.hop, neckHw: 27 });
+  hp.xl = hp.x - 230; hp.xr = hp.x + hp.neckHw;
   hp.shoulder = hp.rim + 95; hp.neckTop = hp.shoulder + 86; hp.neckBot = hp.neckTop + 30;
   const wh = (L.wheel = { x: hp.x, y: hp.neckBot + 62, r: 62, rp: 42 });
-  L.spawn = { x: hp.x - hp.hw + 44, y: hp.rim + 30 };
+  L.spawn = { x: hp.xl + 44, y: hp.rim + 30 };
   // --- Bahnen
   const P = (L.paths = {});
   P.shaft = buildPath([[lf.ballX, lf.slotY + 36], [lf.ballX, lf.exitY]]);
@@ -191,7 +194,7 @@ class MarbleFactory {
     this.flaps = L.cols.map(() => ({ open: 0, want: false, flash: 0 }));
     this.valves = L.cols.map(() => ({ open: 0, cool: 0 }));
     this.scan = { a: 0, color: 0 };
-    this.lastKick = 0; this.lastCapture = 0; this.lastShake = 0;
+    this.lastKick = 0; this.lastCapture = 0; this.lastShake = 0; this.neckT = 0;
     this._newStats();
     this._buildStatics(); this._buildTracks(); this._buildBalls();
     // Einlaufphase: das Video beginnt mit einer bereits arbeitenden Fabrik
@@ -201,7 +204,7 @@ class MarbleFactory {
     this.quiet = false; this._newStats();
     for (const b of this.balls) b.laps = 0;
   }
-  _newStats() { this.stats = { released: 0, cycles: 0, sorted: [0, 0, 0, 0, 0, 0], missorted: 0, kicks: 0, shakes: 0, maxJump: 0 }; }
+  _newStats() { this.stats = { released: 0, cycles: 0, sorted: [0, 0, 0, 0, 0, 0], missorted: 0, kicks: 0, shakes: 0, priority: 0, maxJump: 0 }; }
 
   _buildStatics() {
     const { hop: h, wheel: w } = this.L, opt = { isStatic: true, friction: 0.004, frictionStatic: 0, restitution: 0.15 };
@@ -212,12 +215,11 @@ class MarbleFactory {
       if (nx * ix + ny * iy > 0) { nx = -nx; ny = -ny; }
       return Bodies.rectangle(mx + nx * th / 2, my + ny * th / 2, Math.hypot(x2 - x1, y2 - y1) + 2, th, { ...opt, angle: a });
     };
-    const st = [wall(h.x - h.hw, h.rim, h.x + h.hw, h.rim), Bodies.circle(w.x, w.y, w.r, opt)];
-    for (const s of [-1, 1]) {
-      st.push(wall(h.x + s * h.hw, h.rim - 10, h.x + s * h.hw, h.shoulder));
-      st.push(wall(h.x + s * h.hw, h.shoulder, h.x + s * h.neckHw, h.neckTop));
-      st.push(wall(h.x + s * h.neckHw, h.neckTop, h.x + s * h.neckHw, w.y));
-    }
+    const st = [
+      wall(h.xl, h.rim, h.xr, h.rim), Bodies.circle(w.x, w.y, w.r, opt),
+      wall(h.xl, h.rim - 10, h.xl, h.shoulder), wall(h.xl, h.shoulder, h.x - h.neckHw, h.neckTop),
+      wall(h.x - h.neckHw, h.neckTop, h.x - h.neckHw, w.y), wall(h.xr, h.rim - 10, h.xr, w.y),
+    ];
     this.statics = st.length;
     Composite.add(this.world, st);
   }
@@ -249,7 +251,7 @@ class MarbleFactory {
     for (const b of this.balls) {
       if (inHop < 10) {
         const row = Math.floor(inHop / 5), k = inHop % 5;
-        Body.setPosition(b.body, { x: h.x + (k - 2) * 50 + this.rng.range(-2, 2), y: h.rim + 76 - row * 48 });
+        Body.setPosition(b.body, { x: h.xl + 36 + k * 46 + this.rng.range(-2, 2), y: h.rim + 76 - row * 48 });
         Composite.add(this.world, b.body); inHop++;
       } else if (inCol[b.color] < 3) {
         const tr = this.cols[b.color];
@@ -314,35 +316,42 @@ class MarbleFactory {
     }
   }
   /**
-   * Brückenbrecher: Liegt keine Kugel im Hals, obwohl Kugeln im Trichter sind (zwei Kugeln verkeilen sich über
-   * der Öffnung), wird die unterste sanft zur Mitte geschoben und ihre Nachbarin leicht angehoben.
+   * Sicherungen für den Behälter (greifen nur noch selten, seit der Boden einseitig zum Hals fällt):
+   *  1. Brückenbrecher – bleibt der Hals länger als 0,5 s leer, obwohl Kugeln davor liegen, wird die unterste Kugel
+   *     sanft zur Öffnung geschoben; ihre Nachbarinnen weichen ein Stück zurück. (Sofortiges Eingreifen störte das
+   *     normale Nachrutschen und kostete Durchsatz; die Kugel über der Öffnung zu wählen verschlimmerte Staus.)
+   *  2. Vorrang für Kugeln, die länger als 15 s im Behälter liegen.
+   *  3. Rütteln – erst wenn 3 s lang keine Kugel aufgenommen wurde und auch keine im Hals bereitliegt.
    */
   _agitate() {
     const h = this.L.hop, w = this.L.wheel;
-    // Stau-Eskalation: nimmt das Zellenrad länger als 3 s keine Kugel auf, obwohl der Behälter gefüllt ist (zwei Kugeln
-    // haben sich über dem Hals verkeilt), rüttelt der Behälter mit wachsender Stärke, bis der Fluss wieder läuft.
+    let n = 0, inNeck = false, pick = null, old = null;
+    for (const b of this.balls) {
+      if (b.state !== 'hopper') continue;
+      n++;
+      if (!old || b.hopT < old.hopT) old = b;
+      const p = b.body.position;
+      if (p.y > h.neckTop - 4 && Math.abs(p.x - w.x) < 14) inNeck = true;
+      else if (p.y > h.neckTop - 2.4 * R && (!pick || p.y > pick.body.position.y)) pick = b;
+    }
+    if (!n) { this.lastCapture = this.neckT = this.clock; return; }     // leerer Behälter ist kein Stau
+    if (inNeck) this.neckT = this.clock;
     const jam = this.clock - this.lastCapture;
-    if (jam > 3 && this.clock - this.lastShake >= 0.4) {
+    if (jam > (inNeck ? 6 : 3) && this.clock - this.lastShake >= 0.4) {
       const a = Math.min(7, 2 + (jam - 3) * 0.8);
-      let any = false;
       for (const b of this.balls) {
         if (b.state !== 'hopper') continue;
-        any = true;
         const v = b.body.velocity;
         Body.setVelocity(b.body, { x: v.x + this.rng.range(-0.5, 0.5) * a, y: v.y - this.rng.range(0.5, 1) * a });
       }
-      this.lastShake = this.clock;
-      if (any) this.stats.shakes++; else this.lastCapture = this.clock;
+      this.lastShake = this.clock; this.stats.shakes++;
       return;
     }
-    // Vorrang für Altkugeln: wer länger als 15 s im Behälter liegt (tote Zone am Trichterrand), wird zum Hals
-    // gezogen, jüngere Kugeln in seinem Weg weichen leicht aus. So durchläuft jede Kugel die ganze Anlage.
-    let old = null;
-    for (const b of this.balls) if (b.state === 'hopper' && (!old || b.hopT < old.hopT)) old = b;
-    if (old && this.clock - old.hopT > 15) {
+    if (this.clock - old.hopT > 15) {
       const op = old.body.position, ov = old.body.velocity, tx = w.x - op.x, ty = h.neckTop - R - op.y, d = Math.hypot(tx, ty) || 1;
       const f = clamp(1 + (this.clock - old.hopT - 15) / 30, 1, 3);      // je länger sie wartet, desto stärker der Zug
       if (!(op.y > h.neckTop - 4 && Math.abs(tx) < 14)) {
+        this.stats.priority++;
         Body.setVelocity(old.body, { x: ov.x + (tx / d) * 0.07 * f, y: ov.y + (ty / d) * 0.07 * f });
         for (const b of this.balls) {
           if (b.state !== 'hopper' || b === old) continue;
@@ -351,20 +360,12 @@ class MarbleFactory {
         }
       }
     }
-    if (this.clock - this.lastKick < 0.12) return;
-    let low = null, inNeck = false;
-    for (const b of this.balls) {
-      if (b.state !== 'hopper') continue;
-      const p = b.body.position;
-      if (p.y > h.neckTop - 4 && Math.abs(p.x - w.x) < 14) { inNeck = true; break; }
-      if (p.y > h.neckTop - 2.4 * R && (!low || p.y > low.body.position.y)) low = b;
-    }
-    if (inNeck || !low) return;
+    if (inNeck || !pick || this.clock - this.neckT < 0.5 || this.clock - this.lastKick < 0.12) return;
     this.lastKick = this.clock; this.stats.kicks++;
-    const lp = low.body.position, lv = low.body.velocity;
-    Body.setVelocity(low.body, { x: lv.x + clamp((w.x - lp.x) * 0.05, -1.2, 1.2), y: lv.y + 0.4 });
+    const lp = pick.body.position, lv = pick.body.velocity;
+    Body.setVelocity(pick.body, { x: lv.x + clamp((w.x - lp.x) * 0.05, -1.2, 1.2), y: lv.y + 0.4 });
     for (const b of this.balls) {
-      if (b.state !== 'hopper' || b === low) continue;
+      if (b.state !== 'hopper' || b === pick) continue;
       const p = b.body.position, v = b.body.velocity;
       if (p.y > h.neckTop - 3.2 * R && Math.hypot(p.x - lp.x, p.y - lp.y) < 2 * R + 6) {
         Body.setVelocity(b.body, { x: v.x + (p.x >= lp.x ? 0.9 : -0.9), y: v.y - 1.1 });
@@ -779,9 +780,9 @@ function drawCabinet(g, L) {
 
 // ---- Behälter
 function hopperPath(g, h, open = false) {
-  g.beginPath(); g.moveTo(h.x - h.hw, h.rim); g.lineTo(h.x - h.hw, h.shoulder); g.lineTo(h.x - h.neckHw, h.neckTop); g.lineTo(h.x - h.neckHw, h.neckBot + 8);
+  g.beginPath(); g.moveTo(h.xl, h.rim); g.lineTo(h.xl, h.shoulder); g.lineTo(h.x - h.neckHw, h.neckTop); g.lineTo(h.x - h.neckHw, h.neckBot + 8);
   if (open) g.moveTo(h.x + h.neckHw, h.neckBot + 8); else g.lineTo(h.x + h.neckHw, h.neckBot + 8);
-  g.lineTo(h.x + h.neckHw, h.neckTop); g.lineTo(h.x + h.hw, h.shoulder); g.lineTo(h.x + h.hw, h.rim);
+  g.lineTo(h.xr, h.rim);
   if (!open) g.closePath();
 }
 
@@ -792,11 +793,12 @@ function drawBack(g, L) {
   const { lift: lf, hop: h, wheel: w, conv: cv, paths: P, sorter: so, motor: mo } = L, fy = L.floorY;
   drawHall(g, L);
   // --- Tragwerk
-  for (const s of [-1, 1]) post(g, h.x + s * (h.hw + 26), h.shoulder - 30, fy + 12, 20);
+  const pl = h.xl - 26, pr = h.x + 176;            // Stützen links neben dem Behälter und rechts neben dem Zellenrad
+  for (const x of [pl, pr]) post(g, x, h.shoulder - 30, fy + 12, 20);
   g.save(); g.strokeStyle = 'rgba(70,82,96,.55)'; g.lineWidth = 7; g.lineCap = 'round'; shadow(g, 8, 4, 4, 0.4);
-  const by0 = w.y + 150, by1 = Math.min(fy - 60, by0 + 240), bx = h.hw + 26;
-  g.beginPath(); g.moveTo(h.x - bx, by0); g.lineTo(h.x + bx, by1); g.moveTo(h.x + bx, by0); g.lineTo(h.x - bx, by1); g.stroke(); g.restore();
-  plate(g, h.x - bx - 16, h.shoulder - 44, 2 * bx + 32, 16, 4, { stops: STEEL_DARK });
+  const by0 = w.y + 150, by1 = Math.min(fy - 60, by0 + 240);
+  g.beginPath(); g.moveTo(pl, by0); g.lineTo(pr, by1); g.moveTo(pr, by0); g.lineTo(pl, by1); g.stroke(); g.restore();
+  plate(g, pl - 16, h.shoulder - 44, pr - pl + 32, 16, 4, { stops: STEEL_DARK });
   for (const x of [cv.x0 + 40, cv.x1 - 40]) post(g, x, cv.cy + 6, fy + 12, 18);
   for (const x of [so.x + 26, so.x + so.w - 26]) post(g, x, so.y + so.h - 12, fy + 12, 20);
   g.save(); g.strokeStyle = '#11151a'; g.lineWidth = 11; g.lineCap = 'round'; shadow(g, 8, 4, 5, 0.5);
@@ -860,8 +862,8 @@ function drawBack(g, L) {
   // --- Behälter (Rückseite) + Radgehäuse
   g.save(); shadow(g, 22, 8, 14, 0.5); hopperPath(g, h); g.fillStyle = 'rgba(8,15,24,.80)'; g.fill(); g.restore();
   g.save(); hopperPath(g, h); g.clip();
-  g.fillStyle = lin(g, h.x - h.hw, 0, h.x + h.hw, 0, [[0, 'rgba(120,180,220,.10)'], [0.3, 'rgba(120,180,220,.02)'], [0.8, 'rgba(120,180,220,.03)'], [1, 'rgba(120,180,220,.12)']]);
-  g.fillRect(h.x - h.hw, h.rim, 2 * h.hw, h.neckBot - h.rim + 10); g.restore();
+  g.fillStyle = lin(g, h.xl, 0, h.xr, 0, [[0, 'rgba(120,180,220,.10)'], [0.3, 'rgba(120,180,220,.02)'], [0.8, 'rgba(120,180,220,.03)'], [1, 'rgba(120,180,220,.12)']]);
+  g.fillRect(h.xl, h.rim, h.xr - h.xl, h.neckBot - h.rim + 10); g.restore();
   g.save(); shadow(g, 18, 6, 10, 0.55); circ(g, w.x, w.y, w.r + 15); g.fillStyle = '#12171e'; g.fill(); g.restore();
   circ(g, w.x, w.y, w.r + 2); g.fillStyle = rad(g, w.x, w.y, 10, w.x, w.y, w.r, [[0, '#0d1117'], [1, '#05070a']]); g.fill();
 }
@@ -882,24 +884,28 @@ function drawFront(g, L) {
   // --- Glasrohre (Vorderseite) + Manschetten
   tubesFront(g, L.tubes);
   for (const c of L.collars) collar(g, c.p, c.s, c.len, c.extra, c.brass ? BRASS_CYL : CYL);
+  // Messingmanschette am Übergang Zellenrad -> Fallrohr: waagerecht direkt unter dem Gehäusering (nicht dem Bogen folgend)
+  pathAt(P.feed, sAtAxis(P.feed, 'y', w.y + w.r + 24), P1);
+  band(g, P1.x, w.y + w.r + 24, 13, TUBE_OUT + 7, HALF_PI, BRASS_CYL);
   // --- Behälterglas
   onLayer(g, (t) => {
     t.fillStyle = 'rgba(255,255,255,.085)';
-    for (const [o, wd] of [[-h.hw * 0.72, 46], [-h.hw * 0.32, 16], [h.hw * 0.5, 30]]) {
-      t.beginPath(); t.moveTo(h.x + o + 60, h.rim); t.lineTo(h.x + o + 60 + wd, h.rim); t.lineTo(h.x + o + wd - 70, h.neckBot); t.lineTo(h.x + o - 70, h.neckBot); t.fill();
+    const mid = (h.xl + h.xr) / 2, bw = (h.xr - h.xl) / 2;
+    for (const [o, wd] of [[-bw * 0.72, 46], [-bw * 0.32, 16], [bw * 0.5, 30]]) {
+      t.beginPath(); t.moveTo(mid + o + 60, h.rim); t.lineTo(mid + o + 60 + wd, h.rim); t.lineTo(mid + o + wd - 70, h.neckBot); t.lineTo(mid + o - 70, h.neckBot); t.fill();
     }
     t.strokeStyle = 'rgba(255,255,255,.55)'; t.lineWidth = 3; t.lineCap = 'round';
-    t.beginPath(); t.moveTo(h.x - h.hw + 9, h.rim + 16); t.lineTo(h.x - h.hw + 9, h.shoulder - 6); t.lineTo(h.x - h.neckHw + 2, h.neckTop - 14); t.stroke();
+    t.beginPath(); t.moveTo(h.xl + 9, h.rim + 16); t.lineTo(h.xl + 9, h.shoulder - 6); t.lineTo(h.x - h.neckHw + 2, h.neckTop - 14); t.stroke();
     t.strokeStyle = 'rgba(150,210,255,.20)'; t.lineWidth = 5;
-    t.beginPath(); t.moveTo(h.x + h.hw - 10, h.rim + 20); t.lineTo(h.x + h.hw - 10, h.shoulder - 4); t.lineTo(h.x + h.neckHw + 4, h.neckTop - 10); t.stroke();
+    t.beginPath(); t.moveTo(h.xr - 9, h.rim + 20); t.lineTo(h.xr - 9, h.neckTop - 6); t.stroke();
     t.globalCompositeOperation = 'destination-in'; hopperPath(t, h); t.fillStyle = '#000'; t.fill();
   });
   g.save(); g.lineJoin = 'round';
   hopperPath(g, h, true); g.lineWidth = 8; g.strokeStyle = 'rgba(3,7,12,.8)'; g.stroke();
   hopperPath(g, h, true); g.lineWidth = 4; g.strokeStyle = 'rgba(176,220,246,.66)'; g.stroke(); g.restore();
-  plate(g, h.x - h.hw - 14, h.rim - 24, 2 * h.hw + 28, 28, 7, { blur: 12 });
-  for (let x = h.x - h.hw + 4; x <= h.x + h.hw - 4; x += (2 * h.hw - 8) / 6) if (Math.abs(x - (L.spawn.x - 14)) > 50) bolt(g, x, h.rim - 10, 4.2);
-  rr(g, h.x - 30, h.rim - 34, 60, 12, 5); g.fillStyle = lin(g, 0, h.rim - 34, 0, h.rim - 22, BRASS); g.fill(); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1.2; g.stroke();
+  plate(g, h.xl - 14, h.rim - 24, h.xr - h.xl + 28, 28, 7, { blur: 12 });
+  for (let x = h.xl + 4; x <= h.xr - 3; x += (h.xr - h.xl - 8) / 6) if (Math.abs(x - (L.spawn.x - 14)) > 50) bolt(g, x, h.rim - 10, 4.2);
+  rr(g, (h.xl + h.xr) / 2 - 30, h.rim - 34, 60, 12, 5); g.fillStyle = lin(g, 0, h.rim - 34, 0, h.rim - 22, BRASS); g.fill(); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1.2; g.stroke();
   band(g, h.x, h.neckTop + 4, 12, h.neckHw + 12, HALF_PI, BRASS_CYL);
   // --- Zellenrad-Gehäuse: Stahlring, Glasdeckel, Messingnabe
   g.save(); shadow(g, 10, 3, 6, 0.5);
@@ -1162,7 +1168,7 @@ class MarbleRenderer {
     const C = (L.collars = []);
     C.push({ p: P.shaft, s: 8, len: 16, extra: 7 }, { p: P.top, s: 6, len: 12, extra: 6, brass: true }, { p: P.top, s: P.top.len * 0.52, len: 12, extra: 5 }, { p: P.top, s: P.top.len - 40, len: 14, extra: 7 });
     for (let s = 230; s < P.shaft.len - 120; s += 250) C.push({ p: P.shaft, s, len: 10, extra: 4 });
-    C.push({ p: P.feed, s: L.wheel.r + 24 - L.wheel.rp, len: 14, extra: 7, brass: true }, { p: P.feed, s: P.feed.len - 42, len: 14, extra: 7 });
+    C.push({ p: P.feed, s: P.feed.len - 42, len: 14, extra: 7 });
     C.push({ p: P.sort, s: 30, len: 14, extra: 7, brass: true });
     if (!L.land) C.push({ p: P.sort, s: sAtAxis(P.sort, 'y', 1040), len: 12, extra: 5 });
     for (const c of L.cols) C.push({ p: c.path, s: c.outS - 7, len: 14, extra: 6 });
