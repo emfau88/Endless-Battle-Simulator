@@ -961,7 +961,8 @@ class NavalRenderer {
     const depthS = new PIXI.Sprite(depth); depthS.position.set(-M, L.waterY + 10 * u); depthS.width = W + 2 * M; depthS.height = H - L.waterY + M;
     this.world.addChild(depthS);
     // Recycling-Mechanik + Kugeln im Wasser (über dem Wasserfilm, damit am Handy gut sichtbar)
-    this.world.addChild(this.gRec); this.world.addChild(this.recBalls);
+    this.recGlow = new PIXI.Container();
+    this.world.addChild(this.gRec); this.world.addChild(this.recGlow); this.world.addChild(this.recBalls);
     this.gFoam = new PIXI.Graphics(); this.world.addChild(this.gFoam);
     // Flugbahnen + fliegende Kugeln
     this.gTrails = new PIXI.Graphics(); this.world.addChild(this.gTrails);
@@ -973,8 +974,11 @@ class NavalRenderer {
       const glow = new PIXI.Sprite(getParticleTextures()[T_SOFT]); glow.anchor.set(0.5); glow.blendMode = 'add'; glow.tint = team.color;
       glow.scale.set((b.r * 5) / 64); glow.alpha = 0.55; glow.visible = false;
       const rec = new PIXI.Sprite(getBallTexture()); rec.anchor.set(0.5); rec.scale.set(sc); rec.visible = false;
-      this.flyLayer.addChild(fly); this.flyGlow.addChild(glow); this.recBalls.addChild(rec);
-      return { fly, glow, rec };
+      // Schimmer in Teamfarbe: zeigt unter Wasser, zu welchem Schiff die Kugel zurückläuft
+      const tag = new PIXI.Sprite(getParticleTextures()[T_SOFT]); tag.anchor.set(0.5); tag.blendMode = 'add'; tag.tint = team.color;
+      tag.scale.set((b.r * 3.6) / 64); tag.visible = false;
+      this.flyLayer.addChild(fly); this.flyGlow.addChild(glow); this.recBalls.addChild(rec); this.recGlow.addChild(tag);
+      return { fly, glow, rec, tag };
     });
     // Partikel (Kern-Komponente, zwei Schichten: normal + additiv)
     this.pview = new ParticleView(sim.particles);
@@ -1056,12 +1060,12 @@ class NavalRenderer {
       const v = this.ballViews[i];
       if (b.state === 'fly') {
         const p = b.body.position;
-        v.fly.visible = v.glow.visible = true; v.rec.visible = false;
+        v.fly.visible = v.glow.visible = true; v.rec.visible = v.tag.visible = false;
         v.fly.position.set(p.x, p.y); v.glow.position.set(p.x, p.y);
         this._drawTrail(gt, b, sim.ships[b.owner].team.color);
       } else {
         v.fly.visible = v.glow.visible = false;
-        if (b.state === 'mag') { v.rec.visible = false; return; }
+        if (b.state === 'mag') { v.rec.visible = v.tag.visible = false; return; }
         const pos = b.state === 'sink' ? b : sim.lanePos(b);
         const depth = pos.y - sim.surfaceY(pos.x, t);
         if (!cfg.recycleVisible) {
@@ -1070,6 +1074,9 @@ class NavalRenderer {
         } else { v.rec.visible = true; v.rec.alpha = 1; }
         v.rec.position.set(pos.x, pos.y);
         v.rec.tint = depth > b.r ? 0x9cc8e0 : 0xffffff;
+        if (b.state === 'lane') v.rec.rotation = (b.dist / b.r) * (pos.lift ? 1 : -(b.dir || 1));   // rollt sichtbar
+        v.tag.visible = v.rec.visible && depth > b.r; v.tag.position.set(pos.x, pos.y);
+        v.tag.alpha = 0.6 * v.rec.alpha * clamp(depth / (60 * u), 0, 1);
       }
     });
     this.pview.draw();
@@ -1091,57 +1098,63 @@ class NavalRenderer {
   }
 
   /**
-   * Recycling unter Wasser – bewusst ruhig gezeichnet: dunkle Rinne mit wenigen Stützrollen, feste Richtungsmarken,
-   * gedämpfte Teamfarbe. Nichts wandert im Tempo des Förderbands; die einzige Bewegung sind die Kugeln selbst und
-   * ein langsam umlaufender Punkt je Rolle (feste Bildgeschwindigkeit, unabhängig von TUNING.conveyor).
-   * Reine Darstellung: Kugelbewegung und Munitionsbilanz liegen in der Simulation und bleiben unberührt.
+   * Recycling unter Wasser: eine gemeinsame Sammelrinne am Grund und je Schiff ein gläsernes Aufzugsrohr.
+   * Die Rinne selbst ist neutral; die Teamfarbe tragen die Kugeln (Farbschimmer) und der Einlauf am Rohrfuß –
+   * so ist sofort zu sehen, welche Kugel wohin rollt. Nichts wandert außer den Kugeln.
+   * Reine Darstellung: Die getrennten Bahnen je Schiff, Kugelbewegung und Munitionsbilanz bleiben in der Simulation.
    */
   _drawRecycling(t) {
     const sim = this.sim, L = this.L, u = L.u, g = this.gRec, r = L.ballR;
     g.clear();
     if (!sim.cfg.recycleVisible) return;
-    const rollGap = 150 * u, markGap = 300 * u, spin = t * 0.9;
+    const STEEL = 0x8fa3b5, DARK = 0x0a151e, GLASS = 0xb6dcf4;
+    // ---- Sammelrinne: ein offener Metalltrog über die ganze Breite, darin eine Spur je Schiff
+    let top = 1e9, bot = -1e9;
+    for (const s of sim.ships) { top = Math.min(top, s.laneY - r - 5 * u); bot = Math.max(bot, s.laneY + r + 3 * u); }
+    const x0 = -60 * u, x1 = L.W + 60 * u;
+    for (let x = 90 * u; x < L.W; x += 260 * u) g.rect(x - 5 * u, bot + 6 * u, 10 * u, L.H - bot).fill({ color: 0x1b2733, alpha: 0.95 });
+    g.rect(x0, top, x1 - x0, bot - top).fill({ color: DARK, alpha: 0.9 });
+    g.rect(x0, bot, x1 - x0, 8 * u).fill({ color: 0x2b3a49, alpha: 1 });
+    g.moveTo(x0, bot).lineTo(x1, bot).stroke({ width: 1.6 * u, color: STEEL, alpha: 0.7 });
+    g.moveTo(x0, bot + 8 * u).lineTo(x1, bot + 8 * u).stroke({ width: 1.5 * u, color: 0x000000, alpha: 0.55 });
+    g.moveTo(x0, top).lineTo(x1, top).stroke({ width: 2.2 * u, color: STEEL, alpha: 0.6 });
+    g.moveTo(x0, top + 2.4 * u).lineTo(x1, top + 2.4 * u).stroke({ width: 1 * u, color: 0x000000, alpha: 0.4 });
+    for (let i = 1; i < sim.ships.length; i++) {          // dezente Trennleiste zwischen den Spuren
+      const y = (sim.ships[i - 1].laneY + sim.ships[i].laneY) / 2;
+      g.moveTo(x0, y).lineTo(x1, y).stroke({ width: 1 * u, color: STEEL, alpha: 0.16 });
+    }
+    // ---- je Schiff: Glasrohr vom Rinnenboden zum Schiff, Einlauf und Auswurf in Teamfarbe
     for (const s of sim.ships) {
-      const c = s.team.color, ry = s.laneY + r + 3 * u, x0 = -60 * u, x1 = L.W + 60 * u;
-      // Rinne: dunkles Bett, darüber eine dünne Kante in gedämpfter Teamfarbe
-      g.rect(x0, ry - 2 * u, x1 - x0, 11 * u).fill({ color: 0x0b1822, alpha: 0.92 });
-      g.moveTo(x0, ry - 2 * u).lineTo(x1, ry - 2 * u).stroke({ width: 2 * u, color: c, alpha: 0.32 });
-      g.moveTo(x0, ry + 9 * u).lineTo(x1, ry + 9 * u).stroke({ width: 1.5 * u, color: 0x000000, alpha: 0.5 });
-      // Stützrollen in festem Abstand, vom Aufzug aus gezählt
-      for (let side = -1; side <= 1; side += 2) {
-        for (let d = rollGap * 0.5; d < L.W + 120 * u; d += rollGap) {
-          const x = s.liftX + side * d;
-          if (x < -40 * u || x > L.W + 40 * u) continue;
-          g.circle(x, ry + 3.5 * u, 4.6 * u).fill({ color: 0x1c2c39, alpha: 1 }).stroke({ width: 1.2 * u, color: 0x4a6072, alpha: 0.7 });
-          g.circle(x + Math.cos(spin * -side) * 2.4 * u, ry + 3.5 * u + Math.sin(spin * -side) * 2.4 * u, 1 * u).fill({ color: 0x9fb4c6, alpha: 0.7 });
-        }
-      }
-      // feste Richtungsmarken (zum Aufzug hin), dezent
-      for (let side = -1; side <= 1; side += 2) {
-        for (let d = markGap; d < L.W + 120 * u; d += markGap) {
-          const x = s.liftX + side * d;
-          if (x < -40 * u || x > L.W + 40 * u) continue;
-          const tip = -side * 5 * u;
-          g.moveTo(x - tip, ry - 9 * u).lineTo(x + tip, ry - 5.5 * u).lineTo(x - tip, ry - 2 * u);
-        }
-      }
-      g.stroke({ width: 1.8 * u, color: c, alpha: 0.38 });
-      // Aufzugsrohr: dunkles Glas mit gedämpften Kanten und wenigen festen Manschetten
-      const lx = s.liftX, ly = s.laneY + r, tx = s.liftTopX, ty = s.liftTopY;
+      const c = s.team.color, lx = s.liftX, ly = s.laneY, tx = s.liftTopX, ty = s.liftTopY;
       const dx = tx - lx, dy = ty - ly, len = Math.hypot(dx, dy), nx = -dy / len, ny = dx / len, w = r + 5 * u;
-      g.moveTo(lx, ly).lineTo(tx, ty).stroke({ width: 2 * w, color: 0x0b1822, alpha: 0.5 });
-      g.moveTo(lx, ly).lineTo(tx, ty).stroke({ width: 2 * w, color: c, alpha: 0.06 });
-      g.moveTo(lx + nx * w, ly + ny * w).lineTo(tx + nx * w, ty + ny * w)
-        .moveTo(lx - nx * w, ly - ny * w).lineTo(tx - nx * w, ty - ny * w).stroke({ width: 1.8 * u, color: c, alpha: 0.34 });
-      const cuffs = Math.max(2, Math.round(len / (190 * u)));
-      for (let k = 1; k < cuffs; k++) {
-        const px = lx + (dx * k) / cuffs, py = ly + (dy * k) / cuffs;
-        g.moveTo(px - nx * (w + 2 * u), py - ny * (w + 2 * u)).lineTo(px + nx * (w + 2 * u), py + ny * (w + 2 * u));
+      const hx = nx * w, hy = ny * w, side = nx < 0 ? 1 : -1;          // Lichtkante auf der linken Rohrseite
+      // Kugel kurz vor oder im Einlauf? -> Ring leuchtet auf
+      let near = 0;
+      for (const b of s.lane) { const d = Math.abs(b.dist - s.liftLen); if (d < 30 * u) near = Math.max(near, 1 - d / (30 * u)); }
+      // Rohrkörper: dunkles, leicht getöntes Glas
+      g.moveTo(lx, ly).lineTo(tx, ty).stroke({ width: 2 * w, color: 0x07111a, alpha: 0.62 });
+      g.moveTo(lx, ly).lineTo(tx, ty).stroke({ width: 2 * w - 4 * u, color: 0x6fa8d0, alpha: 0.07 });
+      // Glaskanten + Lichtreflex
+      g.moveTo(lx + hx, ly + hy).lineTo(tx + hx, ty + hy).moveTo(lx - hx, ly - hy).lineTo(tx - hx, ty - hy).stroke({ width: 1.8 * u, color: GLASS, alpha: 0.5 });
+      const k = 0.55 * side;
+      g.moveTo(lx + hx * k, ly + hy * k + 14 * u * Math.sign(dy)).lineTo(tx + hx * k, ty + hy * k - 14 * u * Math.sign(dy)).stroke({ width: 2.2 * u, color: 0xffffff, alpha: 0.32 });
+      g.moveTo(lx - hx * k * 1.1, ly - hy * k * 1.1).lineTo(tx - hx * k * 1.1, ty - hy * k * 1.1).stroke({ width: 3 * u, color: 0x8fc8f0, alpha: 0.08 });
+      // Stahlmanschetten
+      const cuffs = Math.max(2, Math.round(len / (210 * u)));
+      for (let q = 1; q < cuffs; q++) {
+        const px = lx + (dx * q) / cuffs, py = ly + (dy * q) / cuffs, e = w + 3 * u;
+        g.moveTo(px - nx * e, py - ny * e).lineTo(px + nx * e, py + ny * e).stroke({ width: 7 * u, color: 0x26333f, alpha: 1 });
+        g.moveTo(px - nx * e, py - ny * e - 1.6 * u).lineTo(px + nx * e, py + ny * e - 1.6 * u).stroke({ width: 1.6 * u, color: 0xb8c6d4, alpha: 0.75 });
       }
-      g.stroke({ width: 4 * u, color: 0x33475a, alpha: 0.85 });
-      g.circle(lx, s.laneY, w * 1.15).fill({ color: 0x0b1822, alpha: 0.6 }).stroke({ width: 2.5 * u, color: c, alpha: 0.4 });
+      // Einlauf am Rohrfuß: Stahlgehäuse mit Leuchtring in Teamfarbe
+      const bw = w + 9 * u;
+      g.roundRect(lx - bw, ly - r - 9 * u, 2 * bw, 2 * r + 15 * u, 6 * u).fill({ color: 0x1c2935, alpha: 0.96 }).stroke({ width: 1.6 * u, color: STEEL, alpha: 0.75 });
+      g.circle(lx, ly, r + 3.5 * u).fill({ color: 0x050b11, alpha: 0.9 });
+      g.circle(lx, ly, r + 3.5 * u).stroke({ width: (2.4 + 1.6 * near) * u, color: c, alpha: 0.55 + 0.45 * near });
+      g.circle(lx, ly, r + 7 * u).stroke({ width: 5 * u, color: c, alpha: 0.10 + 0.25 * near });
+      // Auswurf am Schiff
       g.poly([tx - nx * w * 1.6, ty - 4 * u, tx + nx * w * 1.6, ty - 4 * u, tx + nx * w, ty + 10 * u, tx - nx * w, ty + 10 * u])
-        .fill({ color: 0x2a1a10, alpha: 0.9 }).stroke({ width: 2 * u, color: c, alpha: 0.55 });
+        .fill({ color: 0x2a1a10, alpha: 0.92 }).stroke({ width: 2 * u, color: c, alpha: 0.6 });
     }
   }
 
