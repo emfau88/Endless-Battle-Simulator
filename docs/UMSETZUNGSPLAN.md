@@ -129,15 +129,16 @@ mindestens 470 Umläufe je 10 Minuten, keine Kugel mit null Umläufen, größter
 **Nachweise:** zwei kurze MP4, `ffprobe`-Daten (Audiostream, Spitzenpegel), Lizenzliste, Commit.
 **Ergebnis:** [SCHRITT_3_MARBLE_TON.md](SCHRITT_3_MARBLE_TON.md) – Tonspur synchron (höchstens 20 ms), nicht übersteuert, reproduzierbar, Hashes unverändert; 61 von 61 Tests bestanden. Motor- und Rollgeräusch entfallen vorerst. **Offen: Hörprobe durch dich.**
 
-### Schritt 4 · Erstes Short (B06) · klein bis mittel
+### Schritt 4 · Erstes Short (B06) · klein bis mittel · gerendert am 11.11.2026, Sichtung am Handy offen
 
-- [ ] Eine Idee festlegen (siehe Abschnitt 4, Entscheidung A).
-- [ ] 9:16-Bildaufbau, englische Texte, Lesbarkeit im mobilen Sichtfeld, klarer Anfang und Abschluss.
-- [ ] 30–45 s in 1080p rendern (30 FPS, solange B03 nichts anderes ergibt) und am Handy ansehen.
-- [ ] Zwei Fassungen für Startbild und Titel vorbereiten; höchstens zwei bewusst unterschiedliche Varianten.
+- [x] Eine Idee festlegen: 30 Sekunden laufende Kugelfabrik (ruhige Variante, ohne Sieger).
+- [x] 9:16-Bildaufbau und englische Texte geprüft; Sichtbereich mit angenommenen Shorts-Bedienflächen geprüft.
+- [x] 30 s in 1080×1920 mit 60 fps und Ton gerendert (zwei Fassungen).
+- [ ] Am Handy ansehen und anhören (deine Aufgabe).
+- [x] Zwei Titel, Beschreibung und zwei Startbilder vorbereitet.
 
 **Abnahme:** ein uploadfertiges Short mit Bild, Ton und erkennbarer Dramaturgie.
-**Nachweise:** MP4, Startbild, Titelvorschläge, aktive Arbeitszeit und Renderzeit notiert.
+**Ergebnis:** [SCHRITT_4_ERSTES_SHORT.md](SCHRITT_4_ERSTES_SHORT.md) – zwei technisch geprüfte Fassungen liegen unter `output/`. Offen: Hörprobe, Sichtung am Handy, Auswahl der Fassung.
 
 ### Schritt W1 · Playlink und Handybedienung · klein (eigener Auftrag, nach Schritt 1)
 
@@ -189,7 +190,8 @@ mindestens 470 Umläufe je 10 Minuten, keine Kugel mit null Umläufen, größter
 
 ## 4 · Entscheidungen, die du treffen musst
 
-- [ ] **A – Idee für das erste Short.** Empfehlung: Farbrennen mit der vorhandenen Technik („Which color reaches 10
+- [x] **A – Idee für das erste Short.** Entschieden am 11.11.2026: einfacher 30-Sekunden-Clip der laufenden Anlage.
+      Ursprüngliche Empfehlung zum Vergleich: Empfehlung: Farbrennen mit der vorhandenen Technik („Which color reaches 10
       first?“ – Zähler und Sortierung existieren, es fehlen nur Ziel, Abschluss und Einblendung). Alternative: ruhiger
       Maschinenablauf ohne Sieger. Beides aus derselben Maschine ergibt den Vergleich, den die Ergänzung vorschlägt.
 - [ ] **B – Variante für das lange Video:** Überlastungsprobe, Sortierduell oder Wachsende Maschine. Empfehlung:
