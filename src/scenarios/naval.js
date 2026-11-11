@@ -43,21 +43,25 @@ const TRAIL_N = 12;
 // Layout aus der logischen Weltgröße (9:16, 16:9 oder 1:1 – kurze Seite 1080)
 function computeLayout(world, cfg) {
   const W = world.w, H = world.h, portrait = H > W * 1.2, wide = W > H * 1.2, u = Math.min(W, H) / 1080, n = cfg.ships;
-  const span = (wide ? 0.46 : 0.54) + (n > 2 ? 0.14 : 0);
+  // Querformat mit zwei Schiffen (Vollbild-Video): Schiffe weit auseinander, damit die Flugbahnen gut zu verfolgen sind,
+  // etwas kleinere Rümpfe und eine tiefere Wasserlinie, damit über den Masten Platz für die Bögen bleibt.
+  const duel = wide && n === 2;
+  const span = (duel ? 0.62 : wide ? 0.46 : 0.54) + (n > 2 ? 0.14 : 0);
   const xs = [];
   for (let i = 0; i < n; i++) xs.push(W * (0.5 + (i / (n - 1) - 0.5) * span));
   const spacing = W * span / (n - 1);
-  const baseHull = (wide ? 430 : 335) * u;
+  const baseHull = (duel ? 400 : wide ? 430 : 335) * u;
   const hull = Math.min(baseHull, spacing * 0.62);
   const sc = hull / baseHull;
   const g = 470 * u;
   return {
     W, H, portrait, wide, u, n, xs, spacing, hull, sc, g,
     ballR: Math.max(7, 10.5 * u * Math.max(0.75, sc)),
-    waterY: Math.round(H * (portrait ? 0.565 : 0.6)),
+    waterY: Math.round(H * (portrait ? 0.565 : duel ? 0.66 : 0.6)),
     floorY: Math.round(H - (portrait ? 92 : 64) * u),
     waveAmp: u,
-    v0: Math.sqrt(g * spacing) * TUNING.shotSpeedFactor * (portrait ? 1 : 0.95), // Querformat: flachere Bögen, bleiben im Bild
+    // Querformat: flachere Bögen, bleiben im Bild (im Duell wegen des größeren Abstands noch etwas flacher)
+    v0: Math.sqrt(g * spacing) * TUNING.shotSpeedFactor * (portrait ? 1 : duel ? 0.90 : 0.95),
   };
 }
 

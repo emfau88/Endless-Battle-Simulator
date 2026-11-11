@@ -1,7 +1,7 @@
 {
   "note": "Referenz-Hashes der Simulation. Nur nach gewollter Verhaltensänderung neu schreiben: node scripts/golden-hashes.mjs --write",
   "createdAt": "2026-11-11",
-  "commit": "Naval: 0f13787 · Marble: Schritt 2 (einseitiger Behälter)",
+  "commit": "Naval 9:16: 0f13787 · Naval 16:9: Querformat-Layout (Duell) · Marble: Schritt 2 (einseitiger Behälter)",
   "versions": {
     "playwright": "1.60.0",
     "chromium": "148.0.7778.96",
@@ -30,20 +30,20 @@
       "7200": "1a7362c3"
     },
     "naval 16:9 seed42 tempo1": {
-      "1200": "313d5686",
-      "7200": "c21bd0f2"
+      "1200": "cc087834",
+      "7200": "69671c7b"
     },
     "naval 16:9 seed42 tempo0.8": {
-      "1200": "2ee5ba92",
-      "7200": "6a59049a"
+      "1200": "e6f462bb",
+      "7200": "c80632b1"
     },
     "naval 16:9 seed7 tempo1": {
-      "1200": "d2607880",
-      "7200": "69774468"
+      "1200": "dbf374e0",
+      "7200": "360658b4"
     },
     "naval 16:9 seed7 tempo0.8": {
-      "1200": "8d5de36b",
-      "7200": "885aa56a"
+      "1200": "9615f226",
+      "7200": "62e12c11"
     },
     "marble 9:16 seed42 tempo1": {
       "1200": "36c5153d",
