@@ -5,19 +5,22 @@ GitHub-`main` entsprach bei dieser Abfrage dem Commit. Die Roadmap wurde anschli
 Die nun ausdrücklich beauftragte Produktionsabsicherung baut auf diesem Stand im Branch `codex/production-safety`
 auf; Nachweise stehen im [Produktionsbericht](PRODUKTIONSSICHERUNG_2026-11-12.md). Arbeitsverzeichnis jeweils zu Beginn
 sauber; keine anwendbare `AGENTS.md` im Repository oder in den übergeordneten Verzeichnissen gefunden.
+Die anschließend beauftragte Scrap-Integration startet an `0dfde76` im Branch `codex/scrap-wars`;
+GitHub-`main` wurde erneut mit `0f87887` abgeglichen. Aktueller Anschluss- und Prüfstand:
+[Scrap-Bericht](SCRAP_WARS_INTEGRATION_2026-11-12.md). Kein Push oder Merge ausgeführt.
 
 **Zweck:** Dies bleibt die **einzige aktive Aufgabenliste**. Erledigtes steht im [CHANGELOG](CHANGELOG.md).
 Berichte dokumentieren ihren damaligen Stand und werden nicht nachträglich als aktuelle Prüfung umgeschrieben.
-Neue Marble-/Szenarioideen bleiben Vorschläge für eine Integration. Auf spätere Anfrage wurde ein isolierter
-lokaler Marble-Versuch erstellt, siehe Produktionsbericht. Die Produktionsabsicherung wurde separat implementiert;
-eine neue Filmabnahme oder ein neuer Langexport gehört nicht dazu.
+Die Marble-Erweiterung bleibt auf ausdrücklichen Wunsch als isolierter lokaler Prototyp stehen.
+Scrap Wars wurde dagegen anschließend zur Integration beauftragt. Produktionsabsicherung und
+Scrap-Integration sind separate Änderungen; ein Video-Langexport wurde nicht beauftragt.
 
 **Projektziel:** SimCascade soll regelmäßig eigenständige, gut lesbare Simulationsvideos mit sauberem Ton und
 reproduzierbarem MP4-Export ermöglichen: Shorts in 9:16 und längere Videos in 16:9. Inhaltsidee, Zuschauerreaktion
 und Produktionsaufwand bestimmen die Länge. Der bereits laufende Kanalpilot R04 wird parallel fortgesetzt.
 
-**Reihenfolge:** Produktionsabsicherung abschließen → Marble-Inhaltsidee entscheiden bzw. Scrap Arena als
-Szenario 3 mit der notwendigen gemeinsamen Anbindung → Hex Dominion V0.3 als Territory Wars.
+**Reihenfolge:** Scrap Wars als Szenario 3 technisch integrieren und kurze Filmproben beurteilen →
+Hex Dominion V0.3 als Territory Wars. Der erste GitHub-CI-Lauf bleibt nach autorisiertem Push offen.
 Naval hat nach dem gemeldeten Short und 10-Minuten-Upload keinen Vorrang; offene Abnahmen und R21 bleiben erhalten.
 Allgemeiner Engine-Umbau, zusätzliche Spielmechaniken, 4K-Optimierung und 60-Minuten-Produktion haben keinen Vorrang.
 
@@ -29,14 +32,15 @@ Frühere B-/Schritt-Bezeichnungen sind Herkunftsverweise, keine zweite Aufgabenl
 
 ### Verfügbare Projektquellen
 
-Die folgenden externen Dateien wurden unter `C:/Users/madde/Downloads/` gesichtet; sie liegen nicht im Repository.
+Die folgenden externen Dateien wurden unter `C:/Users/madde/Downloads/` gesichtet; Scrap wurde anschließend
+unverändert unter `docs/reference/` gesichert, die anderen externen Quellen liegen weiterhin außerhalb des Repositorys.
 Ihre früheren Startanweisungen und Prioritäten sind historische Planungsgrundlagen, keine neu auszuführenden Aufträge.
 
 | Quelle | Einordnung |
 |---|---|
 | `SimCascade_Endless_Battle_Roadmap_V1.2_2026-11-10(1).md` | V1.2 vom 10.11.2026 gefunden und gelesen; ihr Codebezug `0f13787` ist älter. Freie GUI-Dauer, Ton, Teilen und Naval-Recycling sind inzwischen umgesetzt. |
 | `02-SimCascade_Kanalstart_Planergaenzung_2026-11-10.md` | Kanalziel, begrenzter Pilot und eigenständige Episodenideen bleiben Grundlage. Die damalige Ausgangslage „kein Video veröffentlicht“ ist laut aktuellem CHANGELOG überholt. Markt- und Monetarisierungsangaben wurden hier nicht neu verifiziert und begründen keine technischen Abnahmen. |
-| `04-scrap-arena.html` | Maßgeblicher Scrap-Prototyp, ohne ausgewiesene Versionsnummer. Identisch zu `scrap-arena.html` (SHA-256 beginnt mit `38e2c7d28c96`). |
+| `04-scrap-arena.html` | Maßgeblicher Scrap-Prototyp, ohne ausgewiesene Versionsnummer. Identisch zu `scrap-arena.html` (SHA-256 beginnt mit `38e2c7d28c96`). Bytegenaue Kopie und Herkunft: [SCRAP_SOURCE](reference/SCRAP_SOURCE.md). |
 | `07-Territory_Wars_Hex_Dominion_V0.3.html` | Maßgeblicher Kandidat für R17. Identisch zur unpräfixierten V0.3-Datei (SHA-256 beginnt mit `4bdee96025a2`). |
 | `Territory_Wars_Hex_Dominion_V0.2.html`, `Territory_Wars_Hex_Dominion.html` | Ältere Vergleichsdateien vorhanden; keine Grundlage für aktuelle Funktions- oder Rundendauerbehauptungen. |
 | Crystal Front | **Quelle fehlt:** im Repository und unter den gesichteten Download-Quellen nicht gefunden. Bleibt Referenz/Variante innerhalb R17, ohne zugeschriebene Funktionen oder Prüfergebnisse. |
@@ -60,7 +64,7 @@ Standbilder, Hashes und Lautheitswerte ersetzen diese Abnahme nicht.
 |---|---|---|---|
 | Naval | Integriert: 2–4 Schiffe, Mulden, Lifte, Beuteprinzip im Duell; Tink/Tock und sämtliche R19-Effekte einschließlich goldener Kugel. | Bestehende Tests und historische Berichte; aktuelle gezielte Zustandsproben zeigen eine Prüflücke, siehe R21. | Frühere Bild-/Vorschaufreigaben gelten für die dortigen Fassungen. Laufende Gesamtfassung samt aktuellem Ton in beiden Formaten noch offen. Schiffsoptik bleibt R01. |
 | Marble | Integriert: Kugelfabrik, konstruktiv entschärfter Trichter, Ereigniston, Lautstärkeregler und MP4-Export. | Historische Kreislauf-, Export- und Lautheitsprüfungen; in diesem Auftrag keine neue Laufzeitabnahme. | Aktuelle Hörprobe, tatsächliche Handyprüfung und einzelne Bewegungsdetails offen. Dramaturgie bleibt R03/E1. |
-| Scrap Arena | Nur Prototyp: vier Roboter, zerstörbare Deckung, Waffenaufnahme, eigene Simulation, Canvas-Renderer samt HUD/Ergebnis, Browserklänge und WebM-Aufnahme in 1080×1080. | Zwei reine Simulationsläufe mit Seed 42 endeten identisch nach ca. 52,71 s, Hash `d3baa468`, End-Invarianten erfüllt. Keine Exportprüfung. | Keine neue Sicht-/Hörabnahme; noch kein Simulator-MP4. |
+| Scrap Wars / Scrap Arena | Integriert als `scrap`: ursprüngliche Kampfregeln und Arena, Hoch-/Querformat-HUD, Ergebnis, Offline-Audio, deterministische Folgerunden und Punktestand. | Drei gesicherte Original-Seeds; vollständiger erster Rundenzustand unverändert. Konfiguration, 30/60 fps, alle Tempi, kurze MP4s, Ausschnitt-/Audiovergleich und 20-min-Simulation geprüft; Einzelheiten im Scrap-Bericht. | Exportierte Einzelbilder betrachtet; kurze MP4s für laufende Sicht-/Hörabnahme bereit. Persönliche Film-/Klangbeurteilung und echtes Handy bleiben offen. |
 | Hex Dominion V0.3 | Nur Prototyp: vier Reiche, beide Ausgabeformate, getrennte Kartenformen, Auto-Framing, Filmtempo 0,25–2×, vier Regelparameter, drei Profile, Garnisons-/Marsch-/Routenanzeigen. WebGL2-Renderer mit Canvas-Fallback. | Je zwei reine 20-s-Simulationsläufe mit Seed 42 und Profil `balanced` pro Kartenform identisch (`2e9531d1` hochkant, `4d38cf6c` quer). Keine Kamera-, Audio- oder Exportprüfung. | Keine neue Sicht-/Hörabnahme; kein MP4-/Audiopfad im Prototyp nachgewiesen. |
 
 **Teststände nicht vermischen:** Der Audit an `20ea040` meldet **72/72**, der Lift-Bericht zur Änderung `33f8eb1`
@@ -69,6 +73,8 @@ Quellcodelektüre und isolierte Node-Simulationsproben. Für die anschließende 
 79 bestehenden Tests als Ausgangsbasis geprüft und weitere Regressionen ergänzt. Aktueller Gesamtlauf,
 Umgebung, kurze Exporte und Grenzen sind im [Produktionsbericht](PRODUKTIONSSICHERUNG_2026-11-12.md) festgehalten.
 Die Golden-Fälle bleiben 24 Fälle × 2 Prüfpunkte; Referenzen wurden nicht neu geschrieben.
+Die anschließenden Scrap- und Ausschnittsprüfungen einschließlich vollständigem Gesamtlauf werden separat
+im [Scrap-Bericht](SCRAP_WARS_INTEGRATION_2026-11-12.md) geführt.
 
 ### Befunde entlang des Produktionswegs
 
@@ -77,7 +83,7 @@ Die Golden-Fälle bleiben 24 Fälle × 2 Prüfpunkte; Referenzen wurden nicht ne
 | [core.js](../src/core.js): `normalizeConfig`, `TEMPO_OPTIONS`; [app.js](../src/app.js): Format-/Tempo-Regler | Konfiguration, JSON, Teilen-Link, freie Dauer und 0,64/0,8/1× bestehen bereits. Die Probe bestätigt: **0,75 und 2 werden auf 1 normalisiert**. Der Formatregler startet die Simulation neu; beides passt noch nicht zum Hex-Vertrag. |
 | [core.js](../src/core.js): `Session.start`, `advanceFrame`, `installExportAPI`; [app.js](../src/app.js): `bootExport` | Registry und Offline-Modus existieren. Session erwartet derzeit eine Pixi-Root; Capture liest ausschließlich `app.canvas`. Externe Canvas-/WebGL-Renderer, zusätzliche Labels und DOM-Anzeigen sind damit noch nicht vollständig angeschlossen. |
 | [naval.js](../src/scenarios/naval.js): `_enterLane`, `checkInvariants`, `stateHash`; [sim.test.mjs](../test/sim.test.mjs) | Besitzwechsel und Warteschlangen sind implementiert, Verteilung/Kugelzahlen werden bereits geprüft. Der Hash enthält jedoch weder Kugelbesitzer noch die Reihenfolge in `magBalls`/`lane`. In isolierten Proben blieben **Hash und Invariantenprüfung trotz Besitzeränderung einer fliegenden Kugel bzw. umgedrehter Magazin-/Recyclingreihenfolge unverändert**. Das belegt eine Prüflücke, keinen beobachteten Fehler im normalen Ablauf. |
-| Scrap: `_event`, `_effect`, `soundEvents`; Hex: `_event`, `_arrive`, `frame`, `HexPrototype` | Scrap hält nur zehn Meldungen; Schussklänge kommen aus kurzlebigen Effekten. Hex hält 36 Meldungen und drosselt Eroberungsmeldungen. Diese UI-Listen sind keine vollständigen Exportereignisse. Scrap bleibt am Rundenende stehen; Hex startet nach neun Echtzeitsekunden mit Zufallsseed neu. |
+| Scrap: `episode.js`; Hex: `_event`, `_arrive`, `frame`, `HexPrototype` | Scrap besitzt jetzt ein separates vollständiges Ereignisprotokoll, begrenzten Puffer, globale Sequenzen und deterministische Rundenpausen/Folgeseeds. Die zehn Quell-UI-Meldungen bleiben unverändert. Bei Hex sind die 36 UI-Meldungen und der Echtzeit-Autoloop weiterhin keine geeignete Exportanbindung. |
 | [audio.mjs](../lib/audio.mjs): `buildVoices`; [exporter.mjs](../lib/exporter.mjs): Ereignisabholung | Der vorhandene Mischer setzt Audio über `step / 60` in Videozeit. Neue Szenarien brauchen eine ausdrückliche Zuordnung von Simulation, Filmtempo, Runde und Videozeit sowie lückenlose Sequenzen. Vorhandene Verlustprüfung erhalten. |
 | [exporter.mjs](../lib/exporter.mjs), [provenance.mjs](../lib/provenance.mjs): Exportrezept | R08 geschlossen: wirksame Encoderwerte sind Teil der normalisierten Konfiguration; JPEG-/Rendererwahl, Git-Status, Laufzeitversionen und Skriptprüfsummen werden gespeichert. Die CLI übernimmt Capturewerte; die Oberfläche lädt nur die Szenario-/Videoeinstellungen. Ein geänderter Quellstand wird kenntlich gemacht, aber nicht archiviert. |
 | [exporter.mjs](../lib/exporter.mjs), [audio-job.mjs](../lib/audio-job.mjs), [output.mjs](../lib/output.mjs); [server.mjs](../server.mjs) | R11 A/B/C geschlossen: Phasenfortschritt, Audiomix im Worker, abbrechbare Kindprozesse und Prüfung vor Dateiübernahme. Vorhandene Ergebnisse werden bei gewöhnlichen Fehlern/Abbruch wiederhergestellt. Regressionen und Grenzen (u. a. kein Stromausfallschutz) im Produktionsbericht. |
@@ -100,9 +106,13 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
 
 ## 3 · Neue Szenarien: zuerst anschließen, dann ausbauen
 
-- [ ] **R06 · Die benötigte gemeinsame Szenario-Anbindung zusammen mit R20 entwickeln.**
+- [x] **R06 · Für Scrap benötigte Szenario-Anbindung technisch umgesetzt.**
   **Ziel:** vorhandene Simulationen und Renderer durch den gemeinsamen Produktionsweg führen.
   **Abhängigkeit:** erster konkreter Bedarf aus Scrap; R17 prüft anschließend denselben Vertrag an Hex.
+  **Umgesetzt:** [Canvas-Adapter](../src/canvas-scene.js), Scrap-Episodensteuerung, vollständige Ereignisse,
+  Konfiguration und kurzer Ausschnitt über den gemeinsamen Exporter. Keine neue Physik-Engine.
+  Nachweise: [Scrap-Bericht](SCRAP_WARS_INTEGRATION_2026-11-12.md). Die folgende Beschreibung bleibt
+  der Anschlussvertrag für weitere Szenarien; Hex ist damit noch nicht integriert.
   **Umfang in kleinen Schritten:** Capture-/Renderer-Adapter, Zeit-/Rundenvertrag, Ereignis-/Konfigurationsvertrag.
   Bestehende Canvas-, Pixi- und WebGL-Renderer weiterverwenden; keine neue Engine und keine allgemeine Matter.js-Pflicht.
   Erforderlich sind:
@@ -121,13 +131,14 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   denselben Videozeitpunkten; Rendern verändert den Simulationszustand nicht. JSON/Teilen-Link bewahren alle Werte,
   alle vorgesehenen Bildebenen erscheinen im kurzen MP4, Naval-/Marble-Regressionen bleiben abgesichert.
 
-  **Späterer Ausschnittsexport:** Episodendauer, Startversatz und Cliplänge getrennt behandeln; Vorlauf behält Regeln,
-  Seed und Fahrplan der gewählten Episode. Audio wird passend zum Startversatz ausgeschnitten. Bei Naval darf eine
+  **Ausschnittsexport (zunächst Scrap):** Episodendauer, Startversatz und Cliplänge sind getrennt; Vorlauf behält Regeln,
+  Seed und Fahrplan der gewählten Episode. Die vollständige Episodenmischung wird passend zum Startversatz
+  ausgeschnitten; Frames und Ton werden gegen den kontinuierlichen Abschnitt geprüft. Andere Szenarien müssen
+  nach Prüfung ihres Darstellungszustands ausdrücklich freigegeben werden (`supportsClips`). Bei Naval darf eine
   kürzere Cliplänge `eventPlan`/`skyProgress` nicht neu planen. Ein Ausschnitt ist mit demselben Abschnitt eines
-  durchgehend simulierten Ablaufs zu vergleichen. Dafür keinen Timeline-Editor bauen; ein früher benötigter
-  Abnahmehelfer muss denselben Vertrag einhalten.
+  durchgehend simulierten Ablaufs zu vergleichen. Dafür keinen Timeline-Editor bauen.
 
-- [ ] **R20 · Scrap Wars / Scrap Arena als erstes neues Szenario integrieren.**
+- [ ] **R20 · Scrap Wars ist integriert – kurze Film-/Hörabnahme abschließen.**
   **Ziel:** ein vollständiger Durchlauf Konfiguration → Vorschau → MP4 mit Ton und lesbarem Ergebnis.
   **Abhängigkeit:** Produktionsabsicherung aus Abschnitt 2; R06 entsteht gemeinsam mit dieser Integration.
   **Quelle:** `04-scrap-arena.html` / identisches `scrap-arena.html`; eigenständiges Arenaszenario, getrennt von R16.
@@ -138,15 +149,15 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   Das vorhandene Rundenende einschließlich Unentschieden übernehmen; nach der Endpause folgt die nächste Runde,
   statt für den Rest eines langen Videos ein Standbild auszugeben. Zusätzliche Spielmechaniken folgen erst nach Abnahme.
 
-  **Konkreter Anschlussplan (noch nicht implementiert):**
+  **Anschlussplan umgesetzt; Stand je Paket:**
 
   | Paket | Ergebnis vor dem nächsten Paket |
   |---|---|
-  | 1 · Prototyp als Referenz sichern | Maßgebliche HTML-Quelle mit SHA-256 festhalten; Regeln, Waffen, Deckung, Sieger/Unentschieden und deterministische Ausgangs-Seeds dokumentieren. Simulation vom Echtzeit-/DOM-/Recorder-Start trennen, Verhalten dabei erhalten. |
-  | 2 · Ein Durchlauf im Simulator | Szenario registrieren, Konfiguration/Neustart anschließen und den vorhandenen Canvas-Renderer über den kleinsten nötigen R06-Adapter erfassen. Vorschau und kurzer stummer MP4-Export liefern denselben Zustand. |
-  | 3 · Bild und Ton vollständig | Welt, Canvas-HUD und Ergebnis gemeinsam in 9:16 und 16:9 gestalten. Vollständige sequenzierte Schuss-/Treffer-/Deckungs-/Waffenereignisse an den Offline-Mischer anbinden; UI-Meldungsliste nicht als Audioprotokoll benutzen. |
-  | 4 · Wiederholbare Episoden | Rundenende, lesbare Endpause und aus dem Start-Seed abgeleitete Folgerunden einführen. Runde, Filmtempo und Audiozeit eindeutig zuordnen; keine Echtzeit-/Zufallsneustarts. |
-  | 5 · Abnahme | ≤20-s-Proben von Start, dichter Aktion und Rundenübergang ansehen/anhören; Einstellungen wiederholen, Zustände/Ereignisse vergleichen und Abbruch/Dateiübernahme über den gemeinsamen Exportweg prüfen. Danach erst über zusätzliche Mechaniken entscheiden. |
+  | 1 · Prototyp als Referenz sichern | Erledigt in `3808ebe`: unveränderte Quelle mit SHA-256, extrahierte Simulation/Renderer, drei Ausgangs-Seeds samt vollständigem Zustandsnachweis. |
+  | 2 · Ein Durchlauf im Simulator | Erledigt: `scrap` in Registry, Regeln/Neustart/Teilen/JSON, kleiner Canvas-Adapter. Vorschau, reine Simulation und kurzer stummer MP4-Export liefern denselben Zustand. |
+  | 3 · Bild und Ton vollständig | Erledigt: bewusstes 9:16-/16:9-HUD, vergrößertes Quell-Ergebnisbanner, vollständige semantische Ereignisse und Offline-Klänge mit Reglern. |
+  | 4 · Wiederholbare Episoden | Erledigt: feste 120-Hz-Simulation, Tempo genau einmal, 2–8 s Ergebnis-Pause in Videozeit, stabile Folgeseeds und Siegzähler. |
+  | 5 · Abnahme | Technische Prüfungen und kurze MP4s vorhanden: Bild-/Audioabschnitt, Wiederholung, Konfiguration, Abbruch und 20 Minuten reine Simulation. Einzelbilder betrachtet. Laufende Sicht-/Hörbeurteilung durch den Nutzer bleibt offen; zusätzliche Mechaniken folgen erst danach. |
 
   **Abnahme:** kurze tatsächlich betrachtete und gehörte MP4-Proben beider Formate mit vollständigem HUD/Ergebnis und
   synchronem Ton; Konfiguration erneut laden und reproduzieren. Rundenende, Endpause und Folgerunde gezielt prüfen,
@@ -239,7 +250,8 @@ aufgreifen; R21 spätestens vor Änderungen an Besitz-/Recyclingmechanik schlie�
   Ein isolierter lokaler Konzeptversuch „Marble Foundry“ ist vorhanden und im Produktionsbericht beschrieben;
   er ist kein integriertes Szenario und noch kein Nachweis für eine 10–20-Minuten-Episode.
 - [ ] **R14 · Grafik-Playbook (früher B04).** Ziel: vorhandene Grafikqualität nachvollziehbar wiederverwenden.
-  Abhängigkeit: tatsächlicher Marble-/Szenariocode; spätestens bei Vorbereitung von R20 klein dokumentieren.
+  Abhängigkeit: tatsächlicher Marble-/Szenariocode. Der für R20 benötigte Canvas-/Capture- und Layoutweg ist
+  im [Scrap-Bericht](SCRAP_WARS_INTEGRATION_2026-11-12.md) dokumentiert; das breitere Playbook bleibt offen.
   Umfang: Layer, Canvas-Texturen, Material/Licht, mechanische Anschlüsse, Handy-Lesbarkeit und Capture-Regeln.
   Abnahme: konkrete Codebeispiele und kurze Renderer-Checkliste; kein vorgezogener Grafikframework-Umbau.
 
@@ -284,14 +296,13 @@ Getroffene Entscheidungen einschließlich E2 und der Umsetzung von R19 stehen im
 
 ## 7 · Die nächsten drei Schritte
 
-1. **R02 – CI abnehmen:** nach autorisiertem Push den neuen Workflow auf einem sauberen GitHub-Runner prüfen.
+1. **R20 – kurze Scrap-Filmproben beurteilen:** Inhalt, Lesbarkeit auf dem Handy, Ergebnis-Pause und Klang prüfen.
+   Die Integration einschließlich Rundenfolge ist vorhanden; erst aus der Beurteilung konkrete Nacharbeit ableiten.
+   Die Marble-Erweiterung bleibt ausdrücklich isolierter Prototyp und ist kein paralleler Ausbauauftrag.
+2. **R02 – CI abnehmen:** nach autorisiertem Push den neuen Workflow auf einem sauberen GitHub-Runner prüfen.
    R08 und R11 A/B/C sind bereits implementiert; nur tatsächlich neue Befunde als Nacharbeit verfolgen.
-2. **E1 – Marble-Inhaltsidee auswählen:** Wachsende Fabrik mit materialabhängigen Produktionsstufen ist die aktuelle
-   Empfehlung. Den inzwischen erbetenen isolierten Versuch ansehen; danach Entwicklung, Meilensteine und Ende
-   einer 10-Minuten-Episode festlegen oder die Idee vormerken. Eine Integration ist noch nicht beauftragt.
-3. **R06/R20 – Scrap als nächstes eigenständiges Szenario vorbereiten:** bei einem Integrationsauftrag zuerst den
-   kleinsten vollständigen Weg von Start bis Ergebnis samt Ton und MP4 anschließen. Hex V0.3 folgt danach mit seinem
-   eigenen Zeit-/Karten-/Capturevertrag. R03 wäre die Alternative, wenn die Marble-Idee für den nächsten Inhalt gewählt wird.
+3. **R17 – Hex Dominion V0.3 vorbereiten:** den vorhandenen R06-Vertrag am eigenen WebGL-/Canvas-Renderer,
+   Kartenformat, Tempo und Rundenende prüfen. Keine Scrap-Spielregeln auf Hex übertragen.
 
 R04 läuft mit den vorhandenen Uploads weiter. Naval wird gezielt bei Bedarf verbessert; aus einer offenen
 Abnahme oder Prüflücke folgt kein pauschaler Vorrang vor allen weiteren Szenarien.

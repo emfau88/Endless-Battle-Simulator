@@ -11,7 +11,11 @@ Erstes Szenario: **Endless Naval Battle** – zwei Schiffe beschießen sich endl
 geschlossenen, sichtbaren Kreislauf zurück ins Magazin.
 
 Zweites Szenario: **Endless Marble Factory** – eine Kugelfabrik mit geschlossenem Kreislauf, deren Grafik vollständig
-im Code entsteht (siehe [Endless Marble Factory](#endless-marble-factory)). Beide Szenarien exportieren mit Ton,
+im Code entsteht (siehe [Endless Marble Factory](#endless-marble-factory)).
+
+Drittes Szenario: **Scrap Wars** – vier Roboter, zerstörbare Deckung, Waffenaufnahme und deterministische
+Folgerunden mit Punktestand. Die Arena aus dem bereitgestellten Scrap-Prototyp nutzt den gemeinsamen
+Konfigurations-, Vorschau- und MP4-Weg. Alle drei Szenarien exportieren mit Ton,
 eingemessen auf YouTube-Lautheit (siehe [Ton](#ton)).
 
 Die Architektur ist für weitere Szenarien und Videoformate vorbereitet (siehe [Erweiterbarkeit](#erweiterbarkeit));
@@ -52,6 +56,8 @@ npm run export -- --duration 5m --seed 7 --aspect 1:1 --resolution 1440 --fps 60
 npm test                    # gesamte Suite inkl. Golden-Referenzen; Zeitlimit 10 min je Testdatei
 npm run golden              # Referenz-Hashes der Simulation prüfen (≈ 1 min)
 npm run marble:test         # Kugelfabrik: 8-s-Testvideo 720p30 -> output/marble_test_8s_720p.mp4
+npm run export -- --config presets/scrap-portrait.json         # Scrap: 20-s-Kurzprobe mit Ton
+npm run export -- --config presets/scrap-landscape.json        # gleiche Arena im Querformat
 node scripts/screenshot.mjs --scenario marble --aspect 16:9 --at 9 --out output/marble_16x9.png   # Einzelbild (PNG)
 ```
 
@@ -64,6 +70,7 @@ Server (`npm start`). Ohne Server zeigt er den passenden Kommandozeilenbefehl an
 |---|---|
 | Konfiguration | `--config datei.json` · `--scenario id` · `--seed n` · `--param key=wert` (mehrfach) · `--no-hud` · `--no-camera` |
 | Video | `--duration 20s/5m/1h` · `--aspect 9:16/16:9/1:1` (oder `--format portrait/landscape/square`) · `--resolution 720/1080/1440/2160` · `--fps 30/60` · `--tempo 0.64/0.8` (Zeitlupe) |
+| Ausschnitt (zunächst Scrap) | `--clip-start 50 --clip-duration 8` · `--duration` bleibt die Dauer der zugrunde liegenden Episode |
 | Ton | `--no-audio` · `--volume klang=prozent` (0–200, mehrfach; `master` = Gesamt, z. B. `--volume splash=150`) |
 | Qualität | `--crf 20` · `--bitrate 12M` (statt CRF) · `--preset medium` (x264) |
 | Seeschlacht-Kürzel | `--ships` · `--cannons` · `--fire-rate` · `--speed` · `--intensity` · `--no-recycle` · `--no-golden` · `--no-sky` · `--no-meteors` · `--no-whales` |
@@ -81,6 +88,44 @@ führt selbst keine Skripte aus und bestimmt keinen Ausgabepfad. Alte Vorlagen b
 die Defaults des aktuellen Programmstands. Die Oberfläche lädt weiterhin die Szenario-/Videoeinstellungen;
 für die Wiederholung einschließlich JPEG-/Rendererwahl die CLI verwenden. Gleiche Pixel über verschiedene
 Renderer oder Programmversionen hinweg sind damit nicht zugesichert.
+
+### Scrap Wars
+
+In der Szenarioauswahl **Scrap Wars** wählen oder lokal
+`http://localhost:8080/?scenario=scrap` öffnen. Vier Roboter starten mit Blastern und je 125 Lebenspunkten.
+Leere Waffen werden abgeworfen, neue aufgesammelt; Raketen zerstören auch Deckung und öffnen Wege.
+Die ursprünglichen Kampfregeln bleiben erhalten. Nach höchstens 90 Simulationssekunden endet eine Runde.
+Ein alleiniger Überlebender gewinnt; mehrere Überlebende am Zeitlimit ergeben ein Unentschieden.
+
+Standardmäßig folgt nach drei **Videosekunden** Ergebnisanzeige eine neue Runde mit reproduzierbar abgeleitetem
+Seed. Siege werden über die Episode gezählt. `repeatRounds=false` hält das Ergebnis der ersten Runde;
+`endPauseSec=2…8` steuert die Endpause. Beide Regler starten die Episode neu. Filmtempo 1/0,8/0,64 verändert
+die Zuordnung zur Videozeit, nicht die festen 120-Hz-Physikschritte. Runde und Rundenzeit stehen zusätzlich
+zur gesamten Simulationszeit im Bedienfeld. Gleiche Arena und Regeln gelten für Hoch-, Quer- und Quadratformat.
+
+Der Canvas-Renderer liefert Welt, Roboterdaten und vergrößertes Ergebnisbanner an die gemeinsame Pixi-Capturebühne.
+Die Vorschau ist wie bei den anderen Szenarien stumm; die MP4-Tonspur enthält Blaster, Raketen, Treffer,
+Deckung, Waffenwechsel und KOs. Klänge lassen sich einzeln regeln. Herkunft: [gesicherte Quelle](docs/reference/SCRAP_SOURCE.md),
+[Klangzuordnung](assets/audio/README.md). Technische Nachweise und offene Filmabnahme:
+[Scrap-Integration](docs/SCRAP_WARS_INTEGRATION_2026-11-12.md).
+
+Für einen kurzen Rundenwechsel-Clip wird die Originalepisode vorgerechnet:
+
+```bash
+node export.mjs --scenario scrap --seed 42 --aspect 16:9 --resolution 720 --duration 60 --clip-start 50 --clip-duration 8 --out output/scrap-transition.mp4
+```
+
+Das rendert **acht Sekunden Video** aus einer 60-Sekunden-Episode. Vor- und gegebenenfalls Nachlauf werden
+ohne Videoaufzeichnung simuliert. Der Ton wird für die gesamte Episode gemischt und normalisiert, anschließend
+einschließlich überhängender Klänge ausgeschnitten. Die LUFS-/Stimmenangaben im Sidecar beziehen sich deshalb
+auf die ganze Mischung, nicht auf die Lautheit des Ausschnitts. Die Clipgrenzen müssen auf Videobildgrenzen liegen.
+JSON und CLI bewahren den Versatz; beim Laden in die Oberfläche werden nur die Episodeneinstellungen übernommen.
+Ohne `--out` erhält ein Ausschnitt einen eigenen Dateinamen und ersetzt nicht die gleichnamige volle Episode.
+
+Der Ausschnittspfad ist zunächst nur für Scrap freigegeben: dessen Frames wurden mit einem kontinuierlich
+gerenderten Abschnitt verglichen. Naval hält noch Darstellungszustand über Renderaufrufe hinweg; eine bloße
+Simulationsvorspule wäre dafür keine zugesicherte Bildwiederholung. Die vorhandenen Naval-/Marble-Exporte
+bleiben unverändert. Die separate Marble-Foundry-Idee bleibt ein isolierter lokaler Prototyp.
 
 Oberfläche und CLI zeigen Start, Bilder, Encoderabschluss, Klänge laden, Audiomix, Muxen, Prüfung und Speichern
 getrennt. Der Audiomix läuft im Worker; der Server bleibt für Status und Abbruch erreichbar. Strg+C bzw. „Abbrechen“
@@ -104,6 +149,9 @@ src/core.js                Kern: Physik-Takt, Video-Einstellungen, Konfiguration
                            Zufall, Partikel, Session (Szenario <-> Bühne), Export-Schnittstelle window.exportAPI
 src/scenarios/naval.js     Szenario „Endless Naval Battle“ (Simulation + Renderer + Registrierung)
 src/scenarios/marble.js    Szenario „Endless Marble Factory“ (Bahnen, Simulation, Canvas-Grafik, Renderer)
+src/scenarios/scrap.js     Scrap-Registrierung, Hoch-/Querformat-HUD und Offline-Klangtabelle
+src/scenarios/scrap/       Gesicherte Simulation/Renderer, Quellenmanifest und Episodenadapter
+src/canvas-scene.js        Canvas2D als vollständiger Frame auf der gemeinsamen Pixi-Capturebühne
 scripts/screenshot.mjs     Einzelbild der laufenden Simulation als PNG (gleiche Seite wie der Export)
 scripts/golden-hashes.mjs  Referenz-Hashes der Simulation prüfen (npm run golden) oder neu schreiben (npm run golden:write)
 scripts/marble-metrics.mjs Messwerte der Kugelfabrik (Umläufe, Rütteln, Verweildauer) als Markdown-Tabelle
