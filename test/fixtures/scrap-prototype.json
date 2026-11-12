@@ -1,0 +1,822 @@
+{
+  "sourceSha256": "38e2c7d28c96a78235a44a5d63943666d11c0ee18025065bcfdd6939e18bc130",
+  "note": "Unmodified supplied simulation, 1/60 outer steps with original 1/120 substeps; first round, no playback loop.",
+  "cases": [
+    {
+      "seed": 42,
+      "checkpoints": [
+        {
+          "requestedSeconds": 20,
+          "stateHash": "c9893f87",
+          "completeStateSha256": "4caa13c0fa635da14cc413cd0395c22c70a7734c3f5efdaccc9f790fcb059082",
+          "snapshot": {
+            "seed": 42,
+            "t": 19.999999999999506,
+            "duration": 90,
+            "remaining": 70.0000000000005,
+            "phase": "running",
+            "winner": null,
+            "alive": 4,
+            "stats": {
+              "destroyed": 7,
+              "shots": 72,
+              "pickups": 6,
+              "drops": 9
+            },
+            "robots": [
+              {
+                "id": 0,
+                "name": "EMBER",
+                "color": "#f26b59",
+                "x": 346.35931435965864,
+                "y": 812.7752580463973,
+                "hp": 77,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": null,
+                "kills": 0,
+                "damage": 81
+              },
+              {
+                "id": 1,
+                "name": "AZURE",
+                "color": "#54d6dc",
+                "x": 482.7969708626022,
+                "y": 371.67642206644814,
+                "hp": 71,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": null,
+                "kills": 0,
+                "damage": 60
+              },
+              {
+                "id": 2,
+                "name": "AMBER",
+                "color": "#f3c65d",
+                "x": 401.2540443389045,
+                "y": 329.4249830826961,
+                "hp": 65,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": {
+                  "kind": "blaster",
+                  "ammo": 6,
+                  "maxAmmo": 9
+                },
+                "kills": 0,
+                "damage": 63
+              },
+              {
+                "id": 3,
+                "name": "MOSS",
+                "color": "#a5d66f",
+                "x": 503.8091653813896,
+                "y": 625.1526219380634,
+                "hp": 35,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": null,
+                "kills": 0,
+                "damage": 48
+              }
+            ],
+            "blocksAlive": 7,
+            "weaponsOnFloor": 1,
+            "projectiles": 0,
+            "summary": "4 Roboter · 7 Deckungen zerstört"
+          },
+          "invariants": {
+            "ok": true,
+            "errors": [],
+            "robots": 4,
+            "projectiles": 0,
+            "weapons": 2
+          }
+        },
+        {
+          "requestedSeconds": 40,
+          "stateHash": "d7fdd5ff",
+          "completeStateSha256": "b0868430e36eb6440e7856f76d574652f9b0b4e4553d44a6d3c1a19d50fb8bd0",
+          "snapshot": {
+            "seed": 42,
+            "t": 39.99999999999837,
+            "duration": 90,
+            "remaining": 50.00000000000163,
+            "phase": "running",
+            "winner": null,
+            "alive": 3,
+            "stats": {
+              "destroyed": 14,
+              "shots": 105,
+              "pickups": 11,
+              "drops": 15
+            },
+            "robots": [
+              {
+                "id": 0,
+                "name": "EMBER",
+                "color": "#f26b59",
+                "x": 428.1586819582102,
+                "y": 356.1482971101135,
+                "hp": 29,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": null,
+                "kills": 0,
+                "damage": 96
+              },
+              {
+                "id": 1,
+                "name": "AZURE",
+                "color": "#54d6dc",
+                "x": 193.88576905867316,
+                "y": 507.77430086614794,
+                "hp": 47,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": null,
+                "kills": 1,
+                "damage": 140
+              },
+              {
+                "id": 2,
+                "name": "AMBER",
+                "color": "#f3c65d",
+                "x": 313.99868751014253,
+                "y": 487.10813850674657,
+                "hp": 17,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": null,
+                "kills": 0,
+                "damage": 123
+              },
+              {
+                "id": 3,
+                "name": "MOSS",
+                "color": "#a5d66f",
+                "x": 476.29457553033575,
+                "y": 321.9139285149011,
+                "hp": 0,
+                "maxHp": 125,
+                "alive": false,
+                "weapon": null,
+                "kills": 0,
+                "damage": 48
+              }
+            ],
+            "blocksAlive": 0,
+            "weaponsOnFloor": 1,
+            "projectiles": 0,
+            "summary": "3 Roboter · 14 Deckungen zerstört"
+          },
+          "invariants": {
+            "ok": true,
+            "errors": [],
+            "robots": 4,
+            "projectiles": 0,
+            "weapons": 1
+          }
+        },
+        {
+          "requestedSeconds": 90,
+          "stateHash": "d3baa468",
+          "completeStateSha256": "c834aadb52177974ec06c3324be308967fce320c89463958ed30d72cbd8ca2bc",
+          "snapshot": {
+            "seed": 42,
+            "t": 52.708333333330984,
+            "duration": 90,
+            "remaining": 37.291666666669016,
+            "phase": "ended",
+            "winner": 0,
+            "alive": 1,
+            "stats": {
+              "destroyed": 14,
+              "shots": 119,
+              "pickups": 14,
+              "drops": 18
+            },
+            "robots": [
+              {
+                "id": 0,
+                "name": "EMBER",
+                "color": "#f26b59",
+                "x": 368.2315353188352,
+                "y": 252.66815027813925,
+                "hp": 14,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": null,
+                "kills": 1,
+                "damage": 149
+              },
+              {
+                "id": 1,
+                "name": "AZURE",
+                "color": "#54d6dc",
+                "x": 449.01515983538303,
+                "y": 644.9487087995844,
+                "hp": 0,
+                "maxHp": 125,
+                "alive": false,
+                "weapon": null,
+                "kills": 1,
+                "damage": 140
+              },
+              {
+                "id": 2,
+                "name": "AMBER",
+                "color": "#f3c65d",
+                "x": 520.7446227816425,
+                "y": 760.1106650119829,
+                "hp": 0,
+                "maxHp": 125,
+                "alive": false,
+                "weapon": null,
+                "kills": 1,
+                "damage": 149
+              },
+              {
+                "id": 3,
+                "name": "MOSS",
+                "color": "#a5d66f",
+                "x": 476.29457553033575,
+                "y": 321.9139285149011,
+                "hp": 0,
+                "maxHp": 125,
+                "alive": false,
+                "weapon": null,
+                "kills": 0,
+                "damage": 48
+              }
+            ],
+            "blocksAlive": 0,
+            "weaponsOnFloor": 2,
+            "projectiles": 1,
+            "summary": "EMBER gewinnt"
+          },
+          "invariants": {
+            "ok": true,
+            "errors": [],
+            "robots": 4,
+            "projectiles": 1,
+            "weapons": 2
+          }
+        }
+      ]
+    },
+    {
+      "seed": 7,
+      "checkpoints": [
+        {
+          "requestedSeconds": 20,
+          "stateHash": "66b5a782",
+          "completeStateSha256": "e871fffbaf2b892f160568a0fec611f0bf53d21936162524b6072a9ffcbb8a9f",
+          "snapshot": {
+            "seed": 7,
+            "t": 19.999999999999506,
+            "duration": 90,
+            "remaining": 70.0000000000005,
+            "phase": "running",
+            "winner": null,
+            "alive": 4,
+            "stats": {
+              "destroyed": 9,
+              "shots": 76,
+              "pickups": 7,
+              "drops": 9
+            },
+            "robots": [
+              {
+                "id": 0,
+                "name": "EMBER",
+                "color": "#f26b59",
+                "x": 267.50787571229296,
+                "y": 53.68522933060489,
+                "hp": 73.86374629382729,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": {
+                  "kind": "rocket",
+                  "ammo": 1,
+                  "maxAmmo": 3
+                },
+                "kills": 0,
+                "damage": 51
+              },
+              {
+                "id": 1,
+                "name": "AZURE",
+                "color": "#54d6dc",
+                "x": 765.380126224706,
+                "y": 630.2951057004377,
+                "hp": 68,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": null,
+                "kills": 0,
+                "damage": 74.45862116318963
+              },
+              {
+                "id": 2,
+                "name": "AMBER",
+                "color": "#f3c65d",
+                "x": 724.3587345898281,
+                "y": 846.2400316282747,
+                "hp": 47.54137883681038,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": {
+                  "kind": "blaster",
+                  "ammo": 4,
+                  "maxAmmo": 9
+                },
+                "kills": 0,
+                "damage": 60
+              },
+              {
+                "id": 3,
+                "name": "MOSS",
+                "color": "#a5d66f",
+                "x": 334.41720120148807,
+                "y": 207.04048669335575,
+                "hp": 77,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": null,
+                "kills": 0,
+                "damage": 48.13625370617272
+              }
+            ],
+            "blocksAlive": 5,
+            "weaponsOnFloor": 1,
+            "projectiles": 1,
+            "summary": "4 Roboter · 9 Deckungen zerstört"
+          },
+          "invariants": {
+            "ok": true,
+            "errors": [],
+            "robots": 4,
+            "projectiles": 1,
+            "weapons": 3
+          }
+        },
+        {
+          "requestedSeconds": 40,
+          "stateHash": "70766505",
+          "completeStateSha256": "aa580781b7accc21a9d124f58005974f191cd3b1d90ef3519cde8a6e4657212e",
+          "snapshot": {
+            "seed": 7,
+            "t": 39.99999999999837,
+            "duration": 90,
+            "remaining": 50.00000000000163,
+            "phase": "running",
+            "winner": null,
+            "alive": 3,
+            "stats": {
+              "destroyed": 10,
+              "shots": 110,
+              "pickups": 13,
+              "drops": 15
+            },
+            "robots": [
+              {
+                "id": 0,
+                "name": "EMBER",
+                "color": "#f26b59",
+                "x": 460.67425154020845,
+                "y": 128.24197066147403,
+                "hp": 0,
+                "maxHp": 125,
+                "alive": false,
+                "weapon": null,
+                "kills": 0,
+                "damage": 51
+              },
+              {
+                "id": 1,
+                "name": "AZURE",
+                "color": "#54d6dc",
+                "x": 464.5299045687018,
+                "y": 752.5223571521593,
+                "hp": 2,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": null,
+                "kills": 0,
+                "damage": 101.45862116318963
+              },
+              {
+                "id": 2,
+                "name": "AMBER",
+                "color": "#f3c65d",
+                "x": 657.4334823603178,
+                "y": 710.9854979237992,
+                "hp": 20.54137883681038,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": {
+                  "kind": "blaster",
+                  "ammo": 6,
+                  "maxAmmo": 9
+                },
+                "kills": 0,
+                "damage": 108
+              },
+              {
+                "id": 3,
+                "name": "MOSS",
+                "color": "#a5d66f",
+                "x": 570.3181729572545,
+                "y": 364.7905075879382,
+                "hp": 77,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": {
+                  "kind": "rocket",
+                  "ammo": 1,
+                  "maxAmmo": 3
+                },
+                "kills": 1,
+                "damage": 140
+              }
+            ],
+            "blocksAlive": 4,
+            "weaponsOnFloor": 0,
+            "projectiles": 2,
+            "summary": "3 Roboter · 10 Deckungen zerstört"
+          },
+          "invariants": {
+            "ok": true,
+            "errors": [],
+            "robots": 4,
+            "projectiles": 2,
+            "weapons": 2
+          }
+        },
+        {
+          "requestedSeconds": 90,
+          "stateHash": "930b4fb4",
+          "completeStateSha256": "f03ae52d850e7ab072d87847234d2ca4f470f9f2195eaacfd82979369f6755a2",
+          "snapshot": {
+            "seed": 7,
+            "t": 77.30833333334093,
+            "duration": 90,
+            "remaining": 12.691666666659074,
+            "phase": "ended",
+            "winner": 2,
+            "alive": 1,
+            "stats": {
+              "destroyed": 11,
+              "shots": 154,
+              "pickups": 20,
+              "drops": 23
+            },
+            "robots": [
+              {
+                "id": 0,
+                "name": "EMBER",
+                "color": "#f26b59",
+                "x": 460.67425154020845,
+                "y": 128.24197066147403,
+                "hp": 0,
+                "maxHp": 125,
+                "alive": false,
+                "weapon": null,
+                "kills": 0,
+                "damage": 51
+              },
+              {
+                "id": 1,
+                "name": "AZURE",
+                "color": "#54d6dc",
+                "x": 452.31069569273313,
+                "y": 781.540077671305,
+                "hp": 0,
+                "maxHp": 125,
+                "alive": false,
+                "weapon": null,
+                "kills": 0,
+                "damage": 101.45862116318963
+              },
+              {
+                "id": 2,
+                "name": "AMBER",
+                "color": "#f3c65d",
+                "x": 461.1113566821618,
+                "y": 786.0367502329034,
+                "hp": 0.38137883681038076,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": {
+                  "kind": "blaster",
+                  "ammo": 8,
+                  "maxAmmo": 9
+                },
+                "kills": 2,
+                "damage": 187
+              },
+              {
+                "id": 3,
+                "name": "MOSS",
+                "color": "#a5d66f",
+                "x": 510.276286623696,
+                "y": 651.0214278582004,
+                "hp": 0,
+                "maxHp": 125,
+                "alive": false,
+                "weapon": null,
+                "kills": 1,
+                "damage": 160.16
+              }
+            ],
+            "blocksAlive": 3,
+            "weaponsOnFloor": 0,
+            "projectiles": 0,
+            "summary": "AMBER gewinnt"
+          },
+          "invariants": {
+            "ok": true,
+            "errors": [],
+            "robots": 4,
+            "projectiles": 0,
+            "weapons": 1
+          }
+        }
+      ]
+    },
+    {
+      "seed": 314,
+      "checkpoints": [
+        {
+          "requestedSeconds": 20,
+          "stateHash": "2ebfd11c",
+          "completeStateSha256": "90d92691a744a248dc4b9d2ad176350407b37d4430dd56675208b74c95688264",
+          "snapshot": {
+            "seed": 314,
+            "t": 19.999999999999506,
+            "duration": 90,
+            "remaining": 70.0000000000005,
+            "phase": "running",
+            "winner": null,
+            "alive": 4,
+            "stats": {
+              "destroyed": 6,
+              "shots": 69,
+              "pickups": 5,
+              "drops": 9
+            },
+            "robots": [
+              {
+                "id": 0,
+                "name": "EMBER",
+                "color": "#f26b59",
+                "x": 758.5814516655437,
+                "y": 641.5718627635978,
+                "hp": 92,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": null,
+                "kills": 0,
+                "damage": 81.46056455985614
+              },
+              {
+                "id": 1,
+                "name": "AZURE",
+                "color": "#54d6dc",
+                "x": 489.8368886701747,
+                "y": 758.9286311976635,
+                "hp": 61.05059566283927,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": null,
+                "kills": 0,
+                "damage": 42
+              },
+              {
+                "id": 2,
+                "name": "AMBER",
+                "color": "#f3c65d",
+                "x": 680.0427499726272,
+                "y": 568.3575055824291,
+                "hp": 59,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": null,
+                "kills": 0,
+                "damage": 54.94940433716072
+              },
+              {
+                "id": 3,
+                "name": "MOSS",
+                "color": "#a5d66f",
+                "x": 622.6265411456005,
+                "y": 338.7036921518391,
+                "hp": 61.53943544014386,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": null,
+                "kills": 0,
+                "damage": 48
+              }
+            ],
+            "blocksAlive": 8,
+            "weaponsOnFloor": 2,
+            "projectiles": 0,
+            "summary": "4 Roboter · 6 Deckungen zerstört"
+          },
+          "invariants": {
+            "ok": true,
+            "errors": [],
+            "robots": 4,
+            "projectiles": 0,
+            "weapons": 2
+          }
+        },
+        {
+          "requestedSeconds": 40,
+          "stateHash": "85728f6e",
+          "completeStateSha256": "a65605595f864c5edd4e6f370b864ade682b4e00e90dcbb923dcbf17ea0df062",
+          "snapshot": {
+            "seed": 314,
+            "t": 39.99999999999837,
+            "duration": 90,
+            "remaining": 50.00000000000163,
+            "phase": "running",
+            "winner": null,
+            "alive": 3,
+            "stats": {
+              "destroyed": 11,
+              "shots": 108,
+              "pickups": 12,
+              "drops": 14
+            },
+            "robots": [
+              {
+                "id": 0,
+                "name": "EMBER",
+                "color": "#f26b59",
+                "x": 508.35977011305954,
+                "y": 538.7079710499017,
+                "hp": 62,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": null,
+                "kills": 1,
+                "damage": 104.46056455985614
+              },
+              {
+                "id": 1,
+                "name": "AZURE",
+                "color": "#54d6dc",
+                "x": 291.8969501076591,
+                "y": 794.3345373136318,
+                "hp": 29.402695280883393,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": {
+                  "kind": "blaster",
+                  "ammo": 5,
+                  "maxAmmo": 9
+                },
+                "kills": 0,
+                "damage": 87
+              },
+              {
+                "id": 2,
+                "name": "AMBER",
+                "color": "#f3c65d",
+                "x": 435.62368257878865,
+                "y": 772.1410759757221,
+                "hp": 0,
+                "maxHp": 125,
+                "alive": false,
+                "weapon": null,
+                "kills": 0,
+                "damage": 69.94940433716073
+              },
+              {
+                "id": 3,
+                "name": "MOSS",
+                "color": "#a5d66f",
+                "x": 600.5173835602003,
+                "y": 316.73231904318743,
+                "hp": 34.53943544014386,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": {
+                  "kind": "rocket",
+                  "ammo": 1,
+                  "maxAmmo": 3
+                },
+                "kills": 0,
+                "damage": 112.64790038195588
+              }
+            ],
+            "blocksAlive": 3,
+            "weaponsOnFloor": 0,
+            "projectiles": 3,
+            "summary": "3 Roboter · 11 Deckungen zerstört"
+          },
+          "invariants": {
+            "ok": true,
+            "errors": [],
+            "robots": 4,
+            "projectiles": 3,
+            "weapons": 2
+          }
+        },
+        {
+          "requestedSeconds": 90,
+          "stateHash": "9d4fc0ca",
+          "completeStateSha256": "52fd2f714aee71f6257d08083c985c36b545d753c9ad2b80f2be4d10f3b14997",
+          "snapshot": {
+            "seed": 314,
+            "t": 67.43333333333307,
+            "duration": 90,
+            "remaining": 22.566666666666933,
+            "phase": "ended",
+            "winner": 0,
+            "alive": 1,
+            "stats": {
+              "destroyed": 11,
+              "shots": 139,
+              "pickups": 17,
+              "drops": 20
+            },
+            "robots": [
+              {
+                "id": 0,
+                "name": "EMBER",
+                "color": "#f26b59",
+                "x": 459.61491623425115,
+                "y": 776.7892607981142,
+                "hp": 29,
+                "maxHp": 125,
+                "alive": true,
+                "weapon": {
+                  "kind": "blaster",
+                  "ammo": 8,
+                  "maxAmmo": 9
+                },
+                "kills": 2,
+                "damage": 157
+              },
+              {
+                "id": 1,
+                "name": "AZURE",
+                "color": "#54d6dc",
+                "x": 447.5138978542896,
+                "y": 765.4340756778092,
+                "hp": 0,
+                "maxHp": 125,
+                "alive": false,
+                "weapon": null,
+                "kills": 0,
+                "damage": 102
+              },
+              {
+                "id": 2,
+                "name": "AMBER",
+                "color": "#f3c65d",
+                "x": 435.62368257878865,
+                "y": 772.1410759757221,
+                "hp": 0,
+                "maxHp": 125,
+                "alive": false,
+                "weapon": null,
+                "kills": 0,
+                "damage": 69.94940433716073
+              },
+              {
+                "id": 3,
+                "name": "MOSS",
+                "color": "#a5d66f",
+                "x": 463.6802483465444,
+                "y": 658.1424902517017,
+                "hp": 0,
+                "maxHp": 125,
+                "alive": false,
+                "weapon": null,
+                "kills": 1,
+                "damage": 142.05059566283927
+              }
+            ],
+            "blocksAlive": 3,
+            "weaponsOnFloor": 1,
+            "projectiles": 0,
+            "summary": "EMBER gewinnt"
+          },
+          "invariants": {
+            "ok": true,
+            "errors": [],
+            "robots": 4,
+            "projectiles": 0,
+            "weapons": 2
+          }
+        }
+      ]
+    }
+  ]
+}
