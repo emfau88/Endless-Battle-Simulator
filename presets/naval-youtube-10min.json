@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "name": "Seeschlacht – YouTube (10 Minuten, quer, 2560×1440, 60 fps, ruhig, mit Ton)",
+  "description": "Ruhige Fassung fürs lange Video: 2 Kanonen je Schiff, ≈ 1 Schuss pro Sekunde, langsame Geschosse, Tempo 0,8. Seed 314: Wal bei ≈ 1:19, 3:51 und 6:27, acht Sternschnuppen, Morgengrauen zum Schluss. 1440p, weil YouTube ab 1440p den besseren VP9-Codec vergibt.",
+  "scenario": "naval",
+  "seed": 314,
+  "params": { "ships": 2, "cannons": 2, "fireRate": 0.9, "projectileSpeed": 0.72, "intensity": 0.35 },
+  "video": { "aspect": "16:9", "resolution": 1440, "fps": 60, "durationSec": 600, "tempo": 0.8, "audio": true,
+             "quality": { "crf": 16, "preset": "medium" } },
+  "view": { "hud": true, "camera": true }
+}

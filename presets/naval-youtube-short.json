@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "name": "Seeschlacht – YouTube-Short (20 s, hochkant, 1440×2560, 60 fps, ruhig, mit Ton)",
+  "description": "Ruhige Fassung fürs Short: 2 Kanonen je Schiff, ≈ 1 Schuss pro Sekunde, langsame Geschosse, Tempo 0,8. Seed 28: goldene Kugel fliegt bei 1 s und 13 s, Sternschnuppe bei knapp 8 s. 1440p, weil YouTube ab 1440p den besseren VP9-Codec vergibt.",
+  "scenario": "naval",
+  "seed": 28,
+  "params": { "ships": 2, "cannons": 2, "fireRate": 0.9, "projectileSpeed": 0.72, "intensity": 0.35 },
+  "video": { "aspect": "9:16", "resolution": 1440, "fps": 60, "durationSec": 20, "tempo": 0.8, "audio": true,
+             "quality": { "crf": 14, "preset": "slow" } },
+  "view": { "hud": true, "camera": true }
+}
