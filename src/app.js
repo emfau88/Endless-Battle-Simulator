@@ -124,12 +124,13 @@ async function bootLive() {
         Object.assign(el, { min: c.min, max: c.max, step: c.step });
       }
       el.id = id; d.appendChild(el); box.appendChild(d);
+      const value = () => c.type === 'select' ? c.options.find(([v]) => String(v) === el.value)[0] : +el.value;
       el.addEventListener('input', () => {
-        const v = +el.value;
+        const v = value();
         if (c.format) $('o-' + c.key).textContent = c.format(v);
         if (!c.restart) onParam(c, v);
       });
-      el.addEventListener('change', () => { if (c.restart) onParam(c, +el.value); });
+      el.addEventListener('change', () => { if (c.restart) onParam(c, value()); });
     }
     if (checks.children.length) box.appendChild(checks);
     buildVolumeUi();

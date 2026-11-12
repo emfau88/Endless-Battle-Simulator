@@ -149,8 +149,9 @@
   EBS.registerScenario({
     id: 'scrap', title: 'Scrap Wars',
     supportsClips: true,
-    defaults: { repeatRounds: true, endPauseSec: 3 },
+    defaults: { rulesVersion: 'classic', repeatRounds: true, endPauseSec: 3 },
     controls: [
+      { key: 'rulesVersion', label: 'Kampfregeln', type: 'select', options: [['classic', 'Original'], ['v2', 'Flüssiger Kampf (empfohlen)']], restart: true },
       { key: 'repeatRounds', label: 'Weitere Runden spielen', type: 'check', restart: true },
       { key: 'endPauseSec', label: 'Ergebnis zeigen', type: 'range', min: 2, max: 8, step: 1, restart: true, format: v => `${v} s` },
     ],

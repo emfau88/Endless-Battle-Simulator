@@ -6,7 +6,7 @@ import vm from 'node:vm';
 
 const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const context = vm.createContext({}); context.window = context;
-for (const path of ['core.js', 'canvas-scene.js', 'scenarios/scrap/simulation.js', 'scenarios/scrap/renderer.js', 'scenarios/scrap/episode.js', 'scenarios/scrap.js']) {
+for (const path of ['core.js', 'canvas-scene.js', 'scenarios/scrap/simulation.js', 'scenarios/scrap/renderer.js', 'scenarios/scrap/rules.js', 'scenarios/scrap/episode.js', 'scenarios/scrap.js']) {
   vm.runInContext(read('src/' + path), context, { filename: path });
 }
 const { EBS } = context;
@@ -120,5 +120,23 @@ test('Scrap: Parameter normalisieren und kollidieren nicht mit Video-/Tonwerten'
   assert.equal(cfg.params.repeatRounds, false); assert.equal(cfg.params.endPauseSec, 7);
   assert.equal(cfg.video.volume.rocket, 130);
   assert.deepEqual(plain(EBS.normalizeConfig(plain(cfg))), plain(cfg));
-  assert.deepEqual(plain(EBS.Scrap.normalizeParams({ endPauseSec: 99, repeatRounds: 'false' })), { repeatRounds: false, endPauseSec: 8 });
+  assert.deepEqual(plain(EBS.Scrap.normalizeParams({ endPauseSec: 99, repeatRounds: 'false' })), { rulesVersion: 'classic', repeatRounds: false, endPauseSec: 8 });
+});
+
+test('Scrap v2: drei Prüfseeds ohne lange Feuerpausen, reproduzierbar bei Zeitlupe', () => {
+  for (const seed of [42, 7, 314]) {
+    const s = make({ seed, params: { rulesVersion: 'v2', repeatRounds: false } });
+    let shots = 0, last = 0, longest = 0;
+    while (s.phase === 'running') {
+      s.stepOnce();
+      if (s.roundSim.stats.shots !== shots) {
+        longest = Math.max(longest, s.t - last); last = s.t; shots = s.roundSim.stats.shots;
+      }
+    }
+    assert.ok(Math.max(longest, s.t - last) < 3, `Seed ${seed}: Feuerpause`);
+    assert.equal(s.checkInvariants().ok, true);
+    const slow = make({ seed, params: s.cfg, timeScale: .64 });
+    while (slow.phase === 'running') slow.stepOnce();
+    assert.equal(JSON.stringify(s.roundSim), JSON.stringify(slow.roundSim));
+  }
 });

@@ -7,6 +7,7 @@
   const { clamp, num, bool, hashSeed, fnv1a } = EBS.util;
   const EVENT_LIMIT = 4096;
   const normalizeParams = (p = {}) => ({
+    rulesVersion: p.rulesVersion === 'v2' ? 'v2' : 'classic',
     repeatRounds: bool(p.repeatRounds, true),
     endPauseSec: clamp(Math.round(num(p.endPauseSec, 3)), 2, 8),
   });
@@ -17,7 +18,7 @@
   }
 
   // Observe successful rule actions, never infer audio from transient particles.
-  class ObservedRound extends ScrapArena.Sim {
+  const observe = Base => class extends Base {
     _shoot(r) {
       const shots = this.stats.shots, kind = r.weapon?.kind;
       super._shoot(r);
@@ -54,7 +55,8 @@
       this.emit?.('weapon_spawn', p.x, p.y, { id: p.id, kind: p.kind, ammo: p.ammo });
       return p;
     }
-  }
+  };
+  const ObservedRound = observe(ScrapArena.Sim), ImprovedRound = observe(EBS.ScrapRules.Round);
 
   class Episode {
     constructor({ seed, params, world, timeScale = 1 }) {
@@ -80,7 +82,8 @@
     _startRound() {
       this.roundNumber++;
       this.roundSeed = this.roundNumber === 1 ? this.seed : hashSeed('scrap-round-v1', this.seed, this.roundNumber);
-      this.roundSim = new ObservedRound({ seed: this.roundSeed });
+      const Round = this.cfg.rulesVersion === 'classic' ? ObservedRound : ImprovedRound;
+      this.roundSim = new Round({ seed: this.roundSeed, rulesVersion: this.cfg.rulesVersion });
       // Non-enumerable: JSON of the round stays byte-identical to the source.
       Object.defineProperty(this.roundSim, 'emit', { value: (...args) => this._event(...args) });
       this.phase = 'running'; this.pauseUntil = 0; this.accumulator = 0;
