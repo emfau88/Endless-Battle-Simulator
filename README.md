@@ -49,7 +49,7 @@ npm run export -- --config presets/naval-landscape-10min.json   # 10 Minuten 192
 npm run export -- --config presets/naval-youtube-short.json     # YouTube-Short: 20 s, 1440×2560, 60 fps, mit Ton
 npm run export -- --config presets/naval-youtube-10min.json     # YouTube: 10 Minuten, 2560×1440, 60 fps, mit Ton
 npm run export -- --duration 5m --seed 7 --aspect 1:1 --resolution 1440 --fps 60 --bitrate 12M
-npm test                    # alle automatisierten Tests (79 Tests, ≈ 7 min; jeder Test wird nach 2 min abgebrochen)
+npm test                    # gesamte Suite inkl. Golden-Referenzen; Zeitlimit 10 min je Testdatei
 npm run golden              # Referenz-Hashes der Simulation prüfen (≈ 1 min)
 npm run marble:test         # Kugelfabrik: 8-s-Testvideo 720p30 -> output/marble_test_8s_720p.mp4
 node scripts/screenshot.mjs --scenario marble --aspect 16:9 --at 9 --out output/marble_16x9.png   # Einzelbild (PNG)
@@ -69,9 +69,32 @@ Server (`npm start`). Ohne Server zeigt er den passenden Kommandozeilenbefehl an
 | Seeschlacht-Kürzel | `--ships` · `--cannons` · `--fire-rate` · `--speed` · `--intensity` · `--no-recycle` · `--no-golden` · `--no-sky` · `--no-meteors` · `--no-whales` |
 | Technik | `--out datei.mp4` · `--gpu` / `--no-gpu` · `--jpeg-quality 0.92` · `--script szenario.js` |
 
-Neben jedes Video schreibt der Export eine **JSON-Datei mit der vollständigen Konfiguration** (inkl. Seed und
-Zustand-Hash). `node export.mjs --config output/<video>.json` erzeugt dasselbe Video erneut. Strg+C bricht einen Export
-sauber ab (FFmpeg wird beendet, die Teildatei gelöscht).
+Neben jedes Video schreibt der Export eine **JSON-Datei als Wiederholungsrezept**: normalisierte Konfiguration
+inklusive tatsächlich verwendeter Encoderwerte, JPEG-Qualität und Rendererwahl, Zustand-Hash, Audioereignis-Hash
+und Audioprüfsumme. Dazu kommen Git-Commit/Branch und Arbeitsverzeichnisstatus (`clean`, `dirty`, `unavailable`),
+Node-, Playwright-, Chromium-, Pixi-, Matter-, FFmpeg- und ffprobe-Version. Zusatzskripte werden mit Pfad und SHA-256
+verzeichnet. Ein `dirty`-Stand enthält Änderungen außerhalb des Commits; die JSON archiviert deren Inhalt nicht.
+
+`node export.mjs --config output/<video>.json` übernimmt Konfiguration und Capturewerte. Explizite CLI-Optionen
+überschreiben diese Werte. Zusatzskripte müssen nach Prüfung erneut mit `--script` angegeben werden; eine JSON
+führt selbst keine Skripte aus und bestimmt keinen Ausgabepfad. Alte Vorlagen bleiben lesbar; fehlen Werte, gelten
+die Defaults des aktuellen Programmstands. Die Oberfläche lädt weiterhin die Szenario-/Videoeinstellungen;
+für die Wiederholung einschließlich JPEG-/Rendererwahl die CLI verwenden. Gleiche Pixel über verschiedene
+Renderer oder Programmversionen hinweg sind damit nicht zugesichert.
+
+Oberfläche und CLI zeigen Start, Bilder, Encoderabschluss, Klänge laden, Audiomix, Muxen, Prüfung und Speichern
+getrennt. Der Audiomix läuft im Worker; der Server bleibt für Status und Abbruch erreichbar. Strg+C bzw. „Abbrechen“
+beendet aktive Prozesse/Worker und räumt temporäre Dateien auf. Erst nach ffprobe- und Simulationsprüfung werden
+MP4 und JSON übernommen. Bei gewöhnlichen Fehlern oder Abbruch werden vorhandene Zieldateien wiederhergestellt.
+Ein Stromausfall oder erzwungenes Prozessende während der Dateiumbenennungen ist nicht durch eine
+atomare Transaktion über beide Dateien abgesichert. Scheitert die Wiederherstellung selbst, bleiben die Sicherungen
+im gemeldeten `.ebs-export-*`-Ordner zur manuellen Wiederherstellung erhalten.
+
+Der Workflow [Production checks](.github/workflows/ci.yml) installiert Node 22.17.1, die per Lockfile gebundene
+Playwright-/Chromium-Fassung und FFmpeg auf Ubuntu 24.04. Er führt bei Push/PR die vollständige Suite mit
+Software-Rendering (`EBS_GPU=0`) aus und bewahrt Versions- und Testprotokolle auf. Die Golden-Prüfung ist Teil
+der Suite; Referenzen werden dabei nicht neu geschrieben. Der erste GitHub-Runnerlauf bleibt bis zum Push offen.
+Aktueller Prüfstand und Grenzen: [Produktionsabsicherung](docs/PRODUKTIONSSICHERUNG_2026-11-12.md).
 
 ## Aufbau
 
@@ -91,6 +114,10 @@ src/app.js                 Live-Bedienfeld und Export-Modus – kennt keine Schi
 lib/exporter.mjs           Export-Pipeline: Playwright rendert Frames -> Pipe -> FFmpeg (H.264) -> ffprobe-Prüfung
 lib/browser.mjs            Chromium-Start (GPU mit automatischem Software-Fallback), Export-Seite öffnen
 lib/audio.mjs              Tonspur: Samples dekodieren, Ereignisse deterministisch mischen, WAV schreiben
+lib/audio-job.mjs          Abbrechbarer Audiomix im Worker (audio-worker.mjs)
+lib/process.mjs            Abbrechbare Kindprozesse, Rückgabe erst nach Prozessende
+lib/output.mjs             Geprüfte Dateien übernehmen und bei Fehlern zurückrollen
+lib/provenance.mjs         Programmstand, Skriptprüfsummen und sichere Wiederholungsoptionen
 assets/audio/              Sounds (Kenney Impact Sounds, CC0) mit Zuordnung und Lizenznachweis
 export.mjs                 Kommandozeile
 server.mjs                 Statischer Server + Export-API für den Button (/api/export, /api/export/cancel, /api/health)

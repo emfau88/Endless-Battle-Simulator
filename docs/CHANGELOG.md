@@ -6,6 +6,8 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Was | Commit | Bericht |
 |---|---|---|
+| R08 abgeschlossen: tatsächliche Encoder-/Capturewerte, Git-/Laufzeitnachweis, Skript- und Audioereignisprüfsummen im Wiederholungsrezept. R11 A/B/C abgeschlossen: abbrechbare Prozesse und Audio-Worker, Phasenstatus, Prüfung vor MP4-/JSON-Übernahme und Wiederherstellung vorhandener Ausgaben. 97 Fälle erfolgreich abgedeckt (Gesamtlauf plus gezielte Live-Wiederholung); Referenzen unverändert. | `4676d3b` | [Produktionsabsicherung](PRODUKTIONSSICHERUNG_2026-11-12.md) |
+| R02 vorbereitet: CI für Push/PR, gebundene Node-/Playwright-Versionen, FFmpeg, Software-Rendering, Golden-Prüfung und Protokolle. Lokale Fehlersignalisierung geprüft; erster GitHub-Runnerlauf noch offen. | `79f4295` | [Produktionsabsicherung](PRODUKTIONSSICHERUNG_2026-11-12.md) |
 | Seeschlacht: Himmelsverlauf (Morgengrauen am Videoende, mind. 10 min), Sternschnuppen (≈ alle 75 s, jedes Video mindestens eine), Wal am Horizont (≈ alle 3½ min), goldene Kugel mit Zähler „GOLDEN BALL · fired n×“; alles einzeln schalt- und einstellbar, reine Darstellung, Referenz-Hashes unverändert; Vorlagen für YouTube-Short und 10-Minuten-Video (R19 erledigt) | `8c0d9fd` | README, „Seeschlacht: Himmel, seltene Ereignisse und goldene Kugel“ |
 | Seeschlacht: Mondlicht (Mond über der Lücke zwischen den Schiffen, Glitzerbahn, Lichtbahnen unter Wasser), Mündungsfeuer beleuchtet kurz Segel und Rumpf, Schaum am Rumpf; reine Darstellung, Referenz-Hashes unverändert (R19, Teil) | `c886008` | README, „Bewertung und bekannte Schwächen“ |
 | Seeschlacht: „Tock“, wenn eine Kugel am Grund aufsetzt, „Tink“, wenn sie im Regal ankommt; zwei neue Lautstärkeregler; Klänge nach Kennwerten ausgewählt, noch nicht angehört (R19, Teil) | `4a7347c` | README, Abschnitt „Ton“ |
@@ -48,6 +50,7 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Datum | Entscheidung |
 |---|---|
+| 12.11.2026 | Nach gemeldetem Naval-Short und 10-Minuten-Video hat Naval keinen Vorrang vor neuer Inhaltsentwicklung. Produktionsabsicherung ausdrücklich beauftragt und umgesetzt. Marble zunächst als isolierten lokalen Versuch ansehen; noch keine Entscheidung für die Integration. Scrap Arena bleibt der nächste Kandidat für ein eigenständiges Szenario, Hex V0.3 folgt danach. |
 | 12.11.2026 | Short: 3 Kanonen statt 2 gegen die Action-Pause am Anfang (vorher 3,3 s ohne Schuss, jetzt höchstens 1,7 s); Feuerrate 0,7 je Kanone und Geschosse 0,8 halten es ruhig (≈ 1,3 statt 1 Schuss pro Sekunde). Das lange Video bleibt bei 2 Kanonen. |
 | 12.11.2026 | Himmelsverlauf, Sternschnuppe und Wal nach Vorschau freigegeben („so einbauen“), Himmel an die Videolänge gekoppelt; goldene Kugel für Short und langes Video; alles mit Schaltern, Standard = Empfehlung. Uploads in 1440p60 (YouTube vergibt ab 1440p den besseren VP9-Codec), Festlegung ohne eigene Rückfrage. |
 | 12.11.2026 | **E2** – Aus R19 werden zuerst „Tink“/„Tock“, Mondlicht sowie Mündungsfeuer-Licht und Schaum umgesetzt; Mondlicht und Licht nach Vorher/Nachher-Bildern freigegeben („so perfekt“). Goldene Kugel als eigener Schritt, Himmelsverlauf und seltene Ereignisse zurückgestellt (Empfehlung übernommen, nicht eigens bestätigt). |
