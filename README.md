@@ -112,7 +112,7 @@ Alle Browser-Dateien sind klassische Skripte (keine ES-Module), damit `index.htm
   "seed": 42,
   "params": { "ships": 2, "cannons": 4, "fireRate": 1, "projectileSpeed": 1, "intensity": 0.35, "ballsPerCannon": 5, "recycleVisible": true },
   "video":  { "aspect": "9:16", "resolution": 1080, "fps": 30, "durationSec": 45, "tempo": 1,
-              "audio": true, "volume": { "master": 100, "shot": 100, "hit": 100, "splash": 100 },
+              "audio": true, "volume": { "master": 100, "shot": 100, "hit": 100, "splash": 100, "land": 100, "reload": 100 },
               "quality": { "crf": 20, "preset": "medium", "bitrate": null } },
   "view":   { "hud": true, "camera": true }
 }
@@ -267,8 +267,10 @@ Simzeit in 2–3,5 s · JS-Heap nach 30 Minuten Simzeit unverändert ≈ 11 MB.
 
 ## Ton
 
-Beide Szenarien exportieren mit Tonspur (AAC, 48 kHz, Stereo). Die Seeschlacht nutzt bewusst nur drei Klänge:
-Kanonenschuss und Platscher (im Code erzeugt) und Holzaufschlag für Treffer; eine Dichtebegrenzung je Klang verhindert
+Beide Szenarien exportieren mit Tonspur (AAC, 48 kHz, Stereo). Die Seeschlacht nutzt bewusst wenige Klänge:
+Kanonenschuss und Platscher (im Code erzeugt), Holzaufschlag für Treffer und leise den Kreislauf – ein dumpfes „Tock“,
+wenn eine Kugel am Grund aufsetzt, und ein „Tink“, wenn sie im Regal ankommt (je rund 14 LU unter der Gesamtmischung,
+etwa so leise wie der Platscher); eine Dichtebegrenzung je Klang verhindert
 Ton-Chaos. Abschalten:
 `--no-audio`, `"video": { "audio": false }` oder der Schalter „Ton im exportierten Video“. Die Vorschau im Browser
 bleibt stumm.
@@ -278,7 +280,7 @@ Regler 100 %) **−14 LUFS** integriert erreicht (Messung nach ITU-R BS.1770 / E
 Spitzenbegrenzer mit 5 ms Vorausschau hält die Spitzen bei höchstens −1,5 dBFS (True Peak nach AAC unter −1 dBTP).
 
 **Lautstärke regeln:** In der Karte „Ton“ gibt es einen Gesamtregler und einen Regler je Klang (Seeschlacht:
-Kanonenschuss, Treffer, Platscher; Kugelfabrik: neun Klänge), jeweils **0–200 %**, Standard 100 % = YouTube-Ziel.
+Kanonenschuss, Treffer, Platscher, Kugel am Grund, Nachladen; Kugelfabrik: neun Klänge), jeweils **0–200 %**, Standard 100 % = YouTube-Ziel.
 Nach links leiser, nach rechts lauter (200 % = +6 dB, 50 % = −6 dB, 0 % = Klang aus). Der Gesamtregler wirkt unter
 100 % hinter dem Begrenzer (50 % ergibt genau −20 LUFS), darüber treibt er in den Begrenzer: lauter, die Spitzen
 bleiben begrenzt. Die Werte gelten für jedes Format (Hoch- und Querformat), werden gespeichert und stehen im
@@ -294,7 +296,7 @@ Per Kommandozeile: `--volume master=80 --volume splash=150`. Die Simulation blei
   verschiebt den Ton nicht gegenüber dem Bild.
 - **Reproduzierbar:** Gleiche Konfiguration ergibt dieselbe Tonspur (Prüfsumme in der JSON-Datei neben dem Video).
 - **Einbindung:** WAV wird blockweise geschrieben und ohne Neukodierung des Bildes ins MP4 eingebunden.
-- **Sounds:** 13 Dateien aus Kenney Impact Sounds (CC0), dazu zwei im Code erzeugte Klänge der Seeschlacht; siehe
+- **Sounds:** 17 Dateien aus Kenney Impact Sounds (CC0), dazu zwei im Code erzeugte Klänge der Seeschlacht; siehe
   `assets/audio/README.md`.
 
 Mit FFmpeg (`ebur128`) nachgemessen an zwei 12-s-Clips mit Standardreglern (Seeschlacht quer, Kugelfabrik hochkant):

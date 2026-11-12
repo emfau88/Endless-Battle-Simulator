@@ -548,6 +548,7 @@ class NavalBattle {
     ball.owner = ship.i; ball.mask = ship.ballMask;
     ball.state = 'lane'; ball.laneT = 0;
     this._fxSand(ball.x, ball.y + ball.r);
+    this._event('land', ball.x, ball.y, 1);                  // Kugel setzt am Grund auf -> „Tock“
     ball.viaX = bowl.liftX; ball.under = Math.abs(bowl.liftX - ship.liftX);
     ball.dir = ball.x >= bowl.liftX ? 1 : -1;
     let d = Math.abs(ball.x - bowl.liftX) + ball.under + ship.liftLen;
@@ -1324,7 +1325,8 @@ EBS.registerScenario({
     ];
   },
   panelNote: (sim) => sim.snapshot().summary,
-  // Tonspur – bewusst nur drei Klänge: Schuss (im Code erzeugt), Treffer (Holz), Platscher (im Code erzeugt, leise).
+  // Tonspur – bewusst wenige Klänge: Schuss (im Code erzeugt), Treffer (Holz), Platscher (im Code erzeugt, leise),
+  // dazu leise der Kreislauf: „Tock“, wenn eine Kugel am Grund aufsetzt, und „Tink“, wenn sie im Regal ankommt.
   // minGap begrenzt die Dichte je Klang, damit bei knapp drei Schüssen pro Sekunde kein Ton-Chaos entsteht.
   // label = Name des Lautstärkereglers in der Oberfläche (video.volume.<Klang> in Prozent); gain = Verhältnis der Klänge
   // zueinander – die Gesamtlautheit misst der Exporter auf −14 LUFS ein (lib/audio.mjs)
@@ -1333,6 +1335,8 @@ EBS.registerScenario({
       shot: { label: 'Kanonenschuss', samples: ['synth:cannon'], gain: 0.34, detune: 1.5, minGap: 0.07 },
       hit: { label: 'Treffer', samples: ['impactWood_medium_000', 'impactWood_medium_001', 'impactWood_heavy_000'], gain: 0.40, detune: 1.5, minGap: 0.05 },
       splash: { label: 'Platscher', samples: ['synth:splash'], gain: 0.11, detune: 2, minGap: 0.22 },
+      land: { label: 'Kugel am Grund', samples: ['impactGeneric_light_000', 'impactGeneric_light_001'], gain: 0.22, semis: -2, detune: 1.5, minGap: 0.12 },
+      reload: { label: 'Nachladen', samples: ['impactMetal_light_003', 'impactMetal_light_002'], gain: 0.09, semis: 3, detune: 1.5, minGap: 0.09 },
     },
   },
 });

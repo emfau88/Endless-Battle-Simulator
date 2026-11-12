@@ -14,6 +14,8 @@ Alle Dateien stammen unverändert aus **Kenney – Impact Sounds (1.0)**, www.ke
 | `impactSoft_medium_000.ogg` | Kugel landet auf dem Förderband (`belt`) |
 | `impactTin_medium_000.ogg` | Kugel fällt auf die Sammelschiene (`rail`) |
 | `impactWood_medium_000.ogg`, `_001`, `impactWood_heavy_000.ogg` | Seeschlacht: Treffer am Schiff (`hit`) |
+| `impactGeneric_light_000.ogg`, `_001` | Seeschlacht: Kugel setzt am Meeresgrund auf (`land`, „Tock“, etwas tiefer gestimmt) |
+| `impactMetal_light_002.ogg`, `_003` | Seeschlacht: Kugel kommt im Munitionsregal an (`reload`, „Tink“, etwas höher gestimmt) |
 
 Zwei Klänge der Seeschlacht stammen nicht aus Dateien, sondern werden in `lib/audio.mjs` erzeugt:
 `synth:cannon` (dumpfer Kanonenschuss) und `synth:splash` (Platscher).

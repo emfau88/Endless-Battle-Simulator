@@ -16,7 +16,7 @@ Konfiguration
   --no-audio             ohne Tonspur exportieren (Ton gibt es für Seeschlacht und Kugelfabrik)
   --volume klang=prozent Lautstärke 0–200, mehrfach möglich        (z. B. --volume master=80 --volume splash=150)
                          100 = Standard: Die Standardmischung wird auf −14 LUFS (YouTube) eingemessen
-                         Klänge Seeschlacht: shot, hit, splash · Kugelfabrik: hopper, tick, pick, belt, flap,
+                         Klänge Seeschlacht: shot, hit, splash, land, reload · Kugelfabrik: hopper, tick, pick, belt, flap,
                          clink, valve, rail, lift · master = Gesamtlautstärke
 
 Video

@@ -147,7 +147,7 @@ test('Ton ist reproduzierbar und beeinflusst die Simulation nicht; Stummoption l
   assert.equal(JSON.parse(readFileSync(mute.sidecar, 'utf8')).config.video.audio, false, 'Stummoption steht nicht in der Konfiguration');
 });
 
-test('Seeschlacht: Tonspur aus Schuss, Treffer und Platscher; Dichtebegrenzung hält die Stimmenzahl klein', async () => {
+test('Seeschlacht: Tonspur aus Schuss, Treffer, Platscher, Tock und Tink; Dichtebegrenzung hält die Stimmenzahl klein', async () => {
   const r = await exportVideo({ seed: 5, video: { resolution: 720, durationSec: 4 } }, { out: join(dir, 'naval.mp4'), ...fast });
   assert.deepEqual(verifyResult(r), []);
   assert.deepEqual([r.cfg.scenario, r.audioStream.codec, r.audioStream.channels], ['naval', 'aac', 2]);
@@ -174,7 +174,7 @@ for (const [aspect, volume, louder] of [['9:16', { master: 50, splash: 0 }, fals
       assert.ok(alt.audio.lufs < std.audio.lufs - 4, `leiser: ${std.audio.lufs} -> ${alt.audio.lufs} LUFS`);
       assert.ok(alt.audio.voices < std.audio.voices, `Platscher nicht stumm: ${alt.audio.voices} von ${std.audio.voices} Stimmen`);
     }
-    assert.deepEqual(JSON.parse(readFileSync(alt.sidecar, 'utf8')).config.video.volume, { master: 100, shot: 100, hit: 100, splash: 100, ...volume });
+    assert.deepEqual(JSON.parse(readFileSync(alt.sidecar, 'utf8')).config.video.volume, { master: 100, shot: 100, hit: 100, splash: 100, land: 100, reload: 100, ...volume });
   });
 }
 
@@ -220,12 +220,13 @@ test('Oberfläche: Lautstärkeregler gesamt und je Klang, gelten in Hoch- und Qu
     EBS.normalizeConfig({ video: { volume: { master: 250, shot: -5, hit: '155.4', foo: 30 } } }).video.volume,
     EBS.normalizeConfig({ 'vol.splash': '20' }).video.volume,
     EBS.normalizeConfig({ scenario: 'marble', video: { volume: { master: 60, shot: 10 } } }).video.volume.shot,
-  ]), [{ master: 200, shot: 0, hit: 155, splash: 100 }, { master: 100, shot: 100, hit: 100, splash: 20 }, undefined]);
-  assert.deepEqual(await sliders(), [['Gesamtlautstärke 100 % · −14 LUFS', false], ['Kanonenschuss 100 %', false], ['Treffer 100 %', false], ['Platscher 100 %', false]]
+  ]), [{ master: 200, shot: 0, hit: 155, splash: 100, land: 100, reload: 100 }, { master: 100, shot: 100, hit: 100, splash: 20, land: 100, reload: 100 }, undefined]);
+  assert.deepEqual(await sliders(), [['Gesamtlautstärke 100 % · −14 LUFS', false], ['Kanonenschuss 100 %', false], ['Treffer 100 %', false], ['Platscher 100 %', false],
+    ['Kugel am Grund 100 %', false], ['Nachladen 100 %', false]]
     .map(([label, dis]) => ({ label, dis })));
   assert.equal(await page.getAttribute('#vol-shot', 'max'), '200');
   await slide('master', 70); await slide('splash', 25); await slide('shot', 150);
-  const want = { master: 70, shot: 150, hit: 100, splash: 25 };
+  const want = { master: 70, shot: 150, hit: 100, splash: 25, land: 100, reload: 100 };
   assert.deepEqual(await vol(), want);
   assert.deepEqual(await Promise.all(['#vo-master', '#vo-shot', '#vo-splash'].map((s) => page.textContent(s))), ['70 % · ≈ −17 LUFS', '150 % · +3,5 dB', '25 % · −12,0 dB']);
   await page.click('#segFormat button[data-v="16:9"]');
@@ -241,7 +242,7 @@ test('Oberfläche: Lautstärkeregler gesamt und je Klang, gelten in Hoch- und Qu
   assert.ok((await sliders()).every((s) => s.dis), 'Regler bei ausgeschaltetem Ton nicht gesperrt');
   await page.check('#audio');
   await page.click('#btnVolumeReset');
-  assert.deepEqual(await vol(), { master: 100, shot: 100, hit: 100, splash: 100 });
+  assert.deepEqual(await vol(), { master: 100, shot: 100, hit: 100, splash: 100, land: 100, reload: 100 });
   // Kugelfabrik: eigene Klänge
   await page.selectOption('#scenario', 'marble');
   assert.equal((await sliders()).length, 10);
