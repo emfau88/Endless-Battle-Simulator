@@ -2,6 +2,7 @@
 // Kommandozeilen-Export: node export.mjs --duration 20 --seed 42 [--config presets/naval-standard.json] [--out datei.mp4]
 import { readFileSync } from 'node:fs';
 import { exportVideo, verifyResult } from './lib/exporter.mjs';
+import { exportRecipe } from './lib/provenance.mjs';
 
 const HELP = `Endless Battle Simulator – Videoexport
 
@@ -57,7 +58,7 @@ const deepMerge = (a, b) => {
 };
 
 function parseArgs(argv) {
-  const o = { file: null, cfg: { params: {}, video: { quality: {} }, view: {} }, opts: { gpu: 'auto', scripts: [] } };
+  const o = { file: null, cfg: { params: {}, video: { quality: {} }, view: {} }, opts: { scripts: [] } };
   const { cfg, opts } = o;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i], next = () => { if (i + 1 >= argv.length) throw new Error(`Wert fehlt für ${a}`); return argv[++i]; };
@@ -121,11 +122,15 @@ async function main() {
   let args;
   try { args = parseArgs(process.argv.slice(2)); } catch (e) { console.error(e.message); process.exit(2); }
   if (args.help) { console.log(HELP); return; }
-  let base = {};
+  let base = {}, savedOptions = {};
   if (args.file) {
     try {
       const j = JSON.parse(readFileSync(args.file, 'utf8'));
-      base = j.config && typeof j.config === 'object' ? j.config : j; // Video-JSON oder Vorlage
+      const recipe = exportRecipe(j);
+      base = recipe.config; savedOptions = recipe.options;
+      if (j.provenance?.scripts?.length && !args.opts.scripts.length) {
+        throw new Error('Dieses Rezept benötigt Zusatzskripte. Bitte die verzeichneten Quellen prüfen und explizit mit --script angeben.');
+      }
     } catch (e) { console.error(`Konfiguration ${args.file} nicht lesbar: ${e.message}`); process.exit(2); }
   }
   const cfg = deepMerge(base, args.cfg);
@@ -141,16 +146,20 @@ async function main() {
   });
 
   const isTTY = process.stdout.isTTY;
-  let lastLine = 0;
+  let lastLine = 0, lastPhase = '';
+  const phases = { starting: 'Start', rendering: 'Bilder', encoding: 'Video abschließen',
+    'audio-loading': 'Klänge laden', 'audio-mixing': 'Ton mischen', muxing: 'Ton einbinden',
+    verifying: 'Datei prüfen', saving: 'Dateien übernehmen' };
   try {
     const r = await exportVideo(cfg, {
-      ...args.opts, signal: ac.signal, log: (m) => console.log('  ' + m),
+      ...savedOptions, ...args.opts, signal: ac.signal, log: (m) => console.log('  ' + m),
       onProgress: (p) => {
         const now = Date.now();
-        if (!isTTY && now - lastLine < 5000 && p.frame !== p.totalFrames) return;
-        lastLine = now;
+        if (!isTTY && now - lastLine < 5000 && p.phase === lastPhase) return;
+        lastLine = now; lastPhase = p.phase;
         const w = 28, f = Math.round(p.progress * w);
-        const line = `  [${'#'.repeat(f)}${'.'.repeat(w - f)}] ${(p.progress * 100).toFixed(1).padStart(5)} %  Frame ${p.frame}/${p.totalFrames}  Sim ${fmt(p.simTime)}  ${p.renderFps.toFixed(1)} fps  Rest ${fmt(p.etaSec)}`;
+        const detail = p.phase === 'rendering' ? `Frame ${p.frame}/${p.totalFrames} · ${p.renderFps.toFixed(1)} fps · Bilder noch ca. ${fmt(p.etaSec)}` : '';
+        const line = `  [${'#'.repeat(f)}${'.'.repeat(w - f)}] ${(p.progress * 100).toFixed(1).padStart(5)} %  ${phases[p.phase] || p.phase}  ${detail}`;
         if (isTTY) process.stdout.write('\r' + line); else console.log(line);
       },
     });
