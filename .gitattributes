@@ -1,0 +1,2 @@
+# Preserve the supplied source byte-for-byte on Windows and Linux checkouts.
+docs/reference/scrap-arena.source.html -text

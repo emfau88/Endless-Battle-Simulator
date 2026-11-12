@@ -3,7 +3,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, launchAuto } from '../lib/browser.mjs';
 
@@ -108,6 +108,43 @@ test('Button „Video exportieren“ erzeugt über die Oberfläche ein geprüfte
   rmSync(file, { force: true }); rmSync(file.replace(/\.mp4$/, '.json'), { force: true });
   assert.deepEqual(errors, []);
   await page.close();
+});
+
+test('Scrap: Bedienfeld → Exportknopf → MP4/JSON → Downloadlink bewahrt die eingestellte Runde und den Ton', async (t) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  t.after(async () => {
+    await page.close();
+    await fetch(BASE + '/api/export/cancel', { method: 'POST' });
+    let s;
+    for (let i = 0; i < 100; i++) {
+      s = await (await fetch(BASE + '/api/export')).json();
+      if (s.state !== 'running') break;
+      await new Promise(r => setTimeout(r, 50));
+    }
+    assert.notEqual(s.state, 'running');
+    if (s.file) { const file = join(ROOT, 'output', s.file); rmSync(file, { force: true }); rmSync(file.replace(/\.mp4$/, '.json'), { force: true }); }
+  });
+  await page.goto(BASE + '/?scenario=scrap&seed=314&resolution=720&durationSec=3&tempo=0.8&paused');
+  await page.waitForFunction(() => window.EBS?.app?.cfg.scenario === 'scrap', null, { timeout: 30000 });
+  await page.uncheck('#p-repeatRounds');
+  await page.locator('#p-endPauseSec').evaluate(el => { el.value = '5'; el.dispatchEvent(new Event('change')); });
+  await page.locator('#vol-blaster').evaluate(el => { el.value = '70'; el.dispatchEvent(new Event('input')); });
+  const cfg = await page.evaluate(() => EBS.app.cfg);
+  const [accepted] = await Promise.all([
+    page.waitForResponse(r => r.url() === BASE + '/api/export' && r.request().method() === 'POST'),
+    page.click('#btnExport'),
+  ]);
+  assert.equal(accepted.status(), 202); assert.deepEqual(accepted.request().postDataJSON(), cfg);
+  // A newly opened page initially shows the previous job's download link.
+  // Wait specifically for this Scrap job, not an old completed Naval export.
+  await page.waitForSelector('#exportMsg a[href*="scrap_seed314_"]', { timeout: 180000 });
+  assert.match(await page.textContent('#exportMsg'), /720×1280, 30 fps, 3\.00 s, 90 Frames/);
+  const href = await page.getAttribute('#exportMsg a', 'href');
+  const file = join(ROOT, decodeURIComponent(href).replace(/^\//, ''));
+  const saved = JSON.parse(readFileSync(file.replace(/\.mp4$/, '.json'), 'utf8'));
+  assert.deepEqual(saved.config, cfg); assert.equal(saved.audio.lost, 0); assert.ok(saved.audio.voices > 0);
+  const download = await fetch(BASE + href); assert.equal(download.status, 200);
+  assert.ok((await download.arrayBuffer()).byteLength > 10000);
 });
 
 test('Export-API lehnt ein unbekanntes Szenario mit verständlicher Meldung ab', async () => {

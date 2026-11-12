@@ -14,7 +14,7 @@ Konfiguration
   --seed <n>             Zufalls-Seed                              (Standard 42)
   --param key=wert       Szenario-Parameter, mehrfach möglich      (z. B. --param ships=3)
   --no-hud | --no-camera HUD bzw. Kamerabewegung ausschalten
-  --no-audio             ohne Tonspur exportieren (Ton gibt es für Seeschlacht und Kugelfabrik)
+  --no-audio             ohne Tonspur exportieren
   --volume klang=prozent Lautstärke 0–200, mehrfach möglich        (z. B. --volume master=80 --volume splash=150)
                          100 = Standard: Die Standardmischung wird auf −14 LUFS (YouTube) eingemessen
                          Klänge Seeschlacht: shot, hit, splash, land, reload · Kugelfabrik: hopper, tick, pick, belt, flap,
@@ -22,6 +22,9 @@ Konfiguration
 
 Video
   --duration <t>         Länge: 20 | 20s | 5m | 1h                 (Standard 20s ohne Vorlage)
+  --clip-start <s>       Ausschnitt ab dieser Sekunde (derzeit Scrap); --duration bleibt die Episodendauer
+  --clip-duration <s>    nur diesen Ausschnitt rendern (beide Clip-Werte erforderlich)
+                         Ton wird aus der vollständigen Episodenmischung ausgeschnitten
   --aspect <a>           9:16 | 16:9 | 1:1   (alternativ --format portrait|landscape|square)
   --resolution <r>       720 | 1080 | 1440 | 2160 (4k)             (kurze Bildseite, Standard 1080)
   --fps <n>              30 | 60                                   (Standard 30)
@@ -74,6 +77,8 @@ function parseArgs(argv) {
         break;
       }
       case '--duration': cfg.video.durationSec = parseDuration(next()); break;
+      case '--clip-start': (opts.clip ||= {}).startSec = Number(next()); break;
+      case '--clip-duration': (opts.clip ||= {}).durationSec = Number(next()); break;
       case '--aspect': cfg.video.aspect = next(); break;
       case '--format': { const f = next(); cfg.video.aspect = f === 'landscape' ? '16:9' : f === 'square' ? '1:1' : f === 'portrait' ? '9:16' : f; break; }
       case '--resolution': { const r = next().toLowerCase(); cfg.video.resolution = r === '4k' ? 2160 : parseInt(r, 10); break; }
@@ -147,7 +152,7 @@ async function main() {
 
   const isTTY = process.stdout.isTTY;
   let lastLine = 0, lastPhase = '';
-  const phases = { starting: 'Start', rendering: 'Bilder', encoding: 'Video abschließen',
+  const phases = { starting: 'Start', simulating: 'Episodenverlauf', rendering: 'Bilder', encoding: 'Video abschließen',
     'audio-loading': 'Klänge laden', 'audio-mixing': 'Ton mischen', muxing: 'Ton einbinden',
     verifying: 'Datei prüfen', saving: 'Dateien übernehmen' };
   try {
@@ -169,7 +174,7 @@ async function main() {
     console.log(`  Datei:      ${r.file}`);
     console.log(`  Video:      ${r.codec} (${r.profile}, ${r.pixFmt}) ${r.width}×${r.height} @ ${r.fps} fps · ${r.bitrateKbps} kbit/s`);
     console.log(r.audio
-      ? `  Ton:        ${r.audioStream.codec} ${r.audioStream.sampleRate} Hz, ${r.audioStream.channels} Kanäle · ${r.audio.events} Ereignisse · Lautheit ${r.audio.lufs} LUFS · Spitze ${r.audio.peakOutDb} dBFS${r.audio.limited ? ` (Begrenzer bis ${r.audio.maxReductionDb} dB)` : ''}`
+      ? `  Ton:        ${r.audioStream.codec} ${r.audioStream.sampleRate} Hz, ${r.audioStream.channels} Kanäle · ${r.audio.events} Ereignisse · Lautheit${r.exportOptions.clip ? ' der vollständigen Episode' : ''} ${r.audio.lufs} LUFS · Spitze ${r.audio.peakOutDb} dBFS${r.audio.limited ? ` (Begrenzer bis ${r.audio.maxReductionDb} dB)` : ''}`
       : '  Ton:        keiner');
     console.log(`  Dauer:      ${r.duration.toFixed(3)} s · ${r.frames} Frames · ${(r.sizeBytes / 1048576).toFixed(1)} MB`);
     console.log(`  Szenario:   ${r.cfg.scenario} · Seed ${r.cfg.seed} · Zustand-Hash ${r.stateHash}`);

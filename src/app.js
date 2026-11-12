@@ -305,7 +305,7 @@ async function bootLive() {
     $('btnCancel').disabled = !!s.cancelRequested;
     msg.classList.toggle('err', s.state === 'error');
     if (s.state === 'running') {
-      const phases = { starting: 'Starte Renderer …', encoding: 'Schließe die Bildspur ab …',
+      const phases = { starting: 'Starte Renderer …', simulating: 'Berechne den Episodenverlauf …', encoding: 'Schließe die Bildspur ab …',
         'audio-loading': 'Lade die Klänge …', 'audio-mixing': 'Mische und prüfe die Tonspur …',
         muxing: 'Verbinde Bild und Ton …', verifying: 'Prüfe die fertige Videodatei …', saving: 'Speichere Video und Einstellungen …' };
       msg.textContent = s.cancelRequested ? 'Abbruch angefordert – räume auf …'

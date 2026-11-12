@@ -400,6 +400,9 @@ function installExportAPI(session, extra = {}) {
       const vs = videoSize(session.cfg.video);
       return {
         cfg: session.cfg, scenario: session.cfg.scenario, scenarioTitle: session.scenario.title,
+        // Opt-in after comparing captured frames with a continuous run. Some
+        // legacy renderers retain frame-dependent HUD state during simulation-only seek.
+        supportsClips: session.scenario.supportsClips === true,
         audio: session.scenario.audio || null, world: session.world,
         width: session.app.canvas.width, height: session.app.canvas.height, expected: vs,
         fps: session.cfg.video.fps, physHz: PHYS_HZ, pixi: PIXI.VERSION, matter: global.Matter ? Matter.version : null,
