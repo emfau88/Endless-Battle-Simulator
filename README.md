@@ -15,7 +15,8 @@ im Code entsteht (siehe [Endless Marble Factory](#endless-marble-factory)). Beid
 eingemessen auf YouTube-Lautheit (siehe [Ton](#ton)).
 
 Die Architektur ist für weitere Szenarien und Videoformate vorbereitet (siehe [Erweiterbarkeit](#erweiterbarkeit));
-der aktuelle Gesamtzustand steht im [Audit vom 12.11.2026](docs/AUDIT_2026-11-12.md).
+der aktuelle Gesamtzustand steht im [Audit vom 12.11.2026](docs/AUDIT_2026-11-12.md). Offene Punkte:
+[Roadmap](docs/ROADMAP.md) · Erledigtes: [Changelog](docs/CHANGELOG.md).
 
 ## Schnellstart
 
@@ -82,7 +83,8 @@ scripts/screenshot.mjs     Einzelbild der laufenden Simulation als PNG (gleiche 
 scripts/golden-hashes.mjs  Referenz-Hashes der Simulation prüfen (npm run golden) oder neu schreiben (npm run golden:write)
 scripts/marble-metrics.mjs Messwerte der Kugelfabrik (Umläufe, Rütteln, Verweildauer) als Markdown-Tabelle
 scripts/vendor.mjs         Browser-Builds von PixiJS und Matter.js nach vendor/ kopieren (npm run vendor)
-docs/                      Umsetzungsplan, Berichte je Schritt, Audit, Referenzbilder (reference/) und Nachweise (nachweise/)
+docs/                      ROADMAP.md (offene Punkte), CHANGELOG.md (Erledigtes), Berichte je Schritt, Audit,
+                           Referenzbilder (reference/) und Nachweise (nachweise/)
 src/app.js                 Live-Bedienfeld und Export-Modus – kennt keine Schiffe, nur die Registrierung
 lib/exporter.mjs           Export-Pipeline: Playwright rendert Frames -> Pipe -> FFmpeg (H.264) -> ffprobe-Prüfung
 lib/browser.mjs            Chromium-Start (GPU mit automatischem Software-Fallback), Export-Seite öffnen

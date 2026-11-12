@@ -63,6 +63,8 @@ Neu geprüft: statische Auslieferung unter einem Unterpfad ohne Export-Server, T
 
 ## Offen
 
+> Stand dieses Berichts. Offene Punkte werden seit 12.11.2026 nur noch in der [ROADMAP](ROADMAP.md) geführt.
+
 - **Geschwindigkeit auf einem echten Handy ist unbekannt.** Die Vorschau rechnet in voller Auflösung (1080×1920).
 - **Die Seite ist öffentlich.** Ausgeliefert werden nur `index.html`, `src/` und `vendor/`.
 - Ein Export vom Handy aus auf dem eigenen PC ist nicht Teil dieses Schritts.

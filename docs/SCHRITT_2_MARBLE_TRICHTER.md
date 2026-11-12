@@ -148,6 +148,8 @@ Jede Testdatei einzeln, je Lauf auf 2 Minuten begrenzt.
 
 ## 6 · Offen
 
+> Stand dieses Berichts. Offene Punkte werden seit 12.11.2026 nur noch in der [ROADMAP](ROADMAP.md) geführt.
+
 - **Brückenbrecher greift weiterhin oft ein:** 240–360× (quer) und 440–540× (hochkant) je 10 Minuten, jeweils ein
   kleiner Schubs, wenn der Hals länger als 0,5 s leer bleibt. In den angesehenen Einzelbildern fällt das nicht auf;
   ob es im laufenden Video als Zucken sichtbar ist, habe ich nicht am Bildschirm in Echtzeit beurteilt.

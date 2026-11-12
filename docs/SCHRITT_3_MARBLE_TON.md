@@ -63,6 +63,8 @@ Ein Test deckte einen Fehler auf, der behoben ist: Bei starker Übersteuerung li
 
 ## Offen
 
+> Stand dieses Berichts. Offene Punkte werden seit 12.11.2026 nur noch in der [ROADMAP](ROADMAP.md) geführt.
+
 - **Hörprobe fehlt** (siehe Abnahme). Stellschrauben stehen in der Klangtabelle: `gain` je Ereignis, `master`.
 - **Lautheit:** etwa −24 LUFS. YouTube zielt auf −14 LUFS und hebt leisere Videos nicht an; das Video wirkt also eher
   leise. Mehr Pegel braucht stärkere Begrenzung oder eine Lautheitsanpassung – nicht Teil dieses Schritts.

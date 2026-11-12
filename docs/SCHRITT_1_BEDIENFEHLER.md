@@ -53,6 +53,8 @@ Alle drei wurden angesehen. Es wurde kein Video exportiert außer den kurzen Exp
 
 ## Offen und bewusst nicht geändert
 
+> Stand dieses Berichts. Offene Punkte werden seit 12.11.2026 nur noch in der [ROADMAP](ROADMAP.md) geführt.
+
 - **Zwei Standardwerte:** Die Kommandozeile nimmt ohne Vorlage weiterhin 20 s, Kern und Oberfläche 45 s.
 - **`presets/naval-standard.json` bleibt bei 3600 s** – die Datei ist ausdrücklich die 60-Minuten-Vorlage.
 - **45 s als Standard** folgt der Empfehlung im Plan und wurde nicht eigens bestätigt.

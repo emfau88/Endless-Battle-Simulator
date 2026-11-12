@@ -63,6 +63,8 @@ Renderzeit zusammen knapp 2 Minuten.
 
 ## Offen
 
+> Stand dieses Berichts. Offene Punkte werden seit 12.11.2026 nur noch in der [ROADMAP](ROADMAP.md) geführt.
+
 - Entscheidung, welche Fassung hochgeladen wird (oder beide im Abstand, um zu vergleichen).
 - Falls die Sammelschiene in der App zu stark verdeckt ist: Hochkant-Layout nach oben rücken (eigener kleiner Auftrag).
 - Kein klarer Abschluss im Sinne einer Auflösung – es ist ein Ausschnitt aus einem Endlosbetrieb.

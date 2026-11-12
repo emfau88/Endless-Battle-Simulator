@@ -53,6 +53,8 @@ Marble-Einträge waren identisch. Die acht Einträge wurden bewusst neu gesetzt.
 
 ## Offen
 
+> Stand dieses Berichts. Offene Punkte werden seit 12.11.2026 nur noch in der [ROADMAP](ROADMAP.md) geführt.
+
 - Kugeln fliegen gelegentlich hinter den Lebensbalken am oberen Rand durch.
 - Etwas mehr Kugeln verlassen das Bild kurz seitlich (hinter den Schiffen), weil die Schiffe näher am Rand stehen.
 - Die Aufzugsrohre stehen jetzt nah an den Bildrändern.

@@ -1,7 +1,7 @@
 # Ausgangsbasis · Schritt 0
 
 **Datum:** 11.11.2026 · **Ausgangs-Commit:** `main` · `0f13787` · **Branch:** `schritt-0-ausgangsbasis`
-**Zweck:** verlässlicher Vergleichsstand vor den nächsten Änderungen (Plan: [UMSETZUNGSPLAN.md](UMSETZUNGSPLAN.md)).
+**Zweck:** verlässlicher Vergleichsstand vor den nächsten Änderungen (Plan damals: Umsetzungsplan, heute [ROADMAP.md](ROADMAP.md)).
 
 ## 1 · Ausgangslage
 
@@ -122,6 +122,8 @@ bleibt liegen (mindestens 10 Umläufe je Kugel), kein Lauf steht still, die Kuge
 | 9:16 | 7 | 467 | 12–15 | 10 | 49 | 4.1 | 10.6 | OK |
 
 ## 6 · Offen
+
+> Stand dieses Berichts. Offene Punkte werden seit 12.11.2026 nur noch in der [ROADMAP](ROADMAP.md) geführt.
 
 - Die Zielwerte für Schritt 2 im Plan (Rütteln höchstens 2× je 10 Minuten) sind gegenüber diesen Ausgangswerten
   ehrgeizig; ob sie erreichbar sind, zeigt erst die konstruktive Änderung.
