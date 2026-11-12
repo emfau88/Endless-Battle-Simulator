@@ -48,6 +48,7 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Datum | Entscheidung |
 |---|---|
+| 12.11.2026 | Short: 3 Kanonen statt 2 gegen die Action-Pause am Anfang (vorher 3,3 s ohne Schuss, jetzt höchstens 1,7 s); Feuerrate 0,7 je Kanone und Geschosse 0,8 halten es ruhig (≈ 1,3 statt 1 Schuss pro Sekunde). Das lange Video bleibt bei 2 Kanonen. |
 | 12.11.2026 | Himmelsverlauf, Sternschnuppe und Wal nach Vorschau freigegeben („so einbauen“), Himmel an die Videolänge gekoppelt; goldene Kugel für Short und langes Video; alles mit Schaltern, Standard = Empfehlung. Uploads in 1440p60 (YouTube vergibt ab 1440p den besseren VP9-Codec), Festlegung ohne eigene Rückfrage. |
 | 12.11.2026 | **E2** – Aus R19 werden zuerst „Tink“/„Tock“, Mondlicht sowie Mündungsfeuer-Licht und Schaum umgesetzt; Mondlicht und Licht nach Vorher/Nachher-Bildern freigegeben („so perfekt“). Goldene Kugel als eigener Schritt, Himmelsverlauf und seltene Ereignisse zurückgestellt (Empfehlung übernommen, nicht eigens bestätigt). |
 | 12.11.2026 | Seeschlacht: Umbau mit Physikänderung freigegeben (R01 sah reine Darstellung vor) – Mulden, Lift durch den Kiel, Beuteprinzip im Duell; nach Vorschau bestätigt. Bei drei und vier Schiffen behält jedes Schiff seine Kugeln (Festlegung nach Messung, nicht eigens bestätigt). |
