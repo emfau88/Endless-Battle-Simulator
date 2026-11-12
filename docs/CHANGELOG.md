@@ -2,10 +2,17 @@
 
 Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen in der [ROADMAP](ROADMAP.md).
 
+## 13.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| Vorhandenen Stand gepusht und PR #3 angelegt. Erste GitHub-CI-Läufe ausgewertet: beide am 25-Minuten-Limit abgebrochen, zuvor zwei bzw. drei Einzeltestfehler. Protokolle gesichert; bewusst kein Merge. R02 bleibt vor dem geplanten Ausbau offen. | `5cec854` (geprüfter Stand) | [CI-Erstlauf](CI_ERSTLAUF_2026-11-13.md) |
+
 ## 12.11.2026
 
 | Was | Commit | Bericht |
 |---|---|---|
+| Sechs Scrap-Qualitätspakete mit Umfangsgrenzen und Abschlusskriterien als R22 geplant. Zuerst Roboter/HUD und Treffer/Klang, danach Kampfablauf, Turnier, Arenen/Kamera und kleine optionale Werkstatt. Noch keine Umsetzung dieser Erweiterungen. | `d04e47a` | [ROADMAP](ROADMAP.md) |
 | Scrap Wars als drittes Szenario: gesicherter Quellprototyp, Canvas-Capture, Hoch-/Querformat-HUD und Ergebnis, vollständiger Ereigniston, feste 120-Hz-Physik und deterministische Folgerunden. Kurze Ausschnitte bewahren die Originalepisode samt Tonmischung. 113 Fälle durch Gesamtlauf und zwei gezielte Testkorrekturen abgedeckt; Naval-/Marble-Referenzen unverändert. R06 technisch umgesetzt, R20-Film-/Hörabnahme offen. | `2981dd1` (Quelle `3808ebe`) | [Scrap-Integration](SCRAP_WARS_INTEGRATION_2026-11-12.md) |
 | R08 abgeschlossen: tatsächliche Encoder-/Capturewerte, Git-/Laufzeitnachweis, Skript- und Audioereignisprüfsummen im Wiederholungsrezept. R11 A/B/C abgeschlossen: abbrechbare Prozesse und Audio-Worker, Phasenstatus, Prüfung vor MP4-/JSON-Übernahme und Wiederherstellung vorhandener Ausgaben. 97 Fälle erfolgreich abgedeckt (Gesamtlauf plus gezielte Live-Wiederholung); Referenzen unverändert. | `4676d3b` | [Produktionsabsicherung](PRODUKTIONSSICHERUNG_2026-11-12.md) |
 | R02 vorbereitet: CI für Push/PR, gebundene Node-/Playwright-Versionen, FFmpeg, Software-Rendering, Golden-Prüfung und Protokolle. Lokale Fehlersignalisierung geprüft; erster GitHub-Runnerlauf noch offen. | `79f4295` | [Produktionsabsicherung](PRODUKTIONSSICHERUNG_2026-11-12.md) |

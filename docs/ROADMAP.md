@@ -1,6 +1,6 @@
 # Roadmap
 
-**Stand:** 12.11.2026 · ursprüngliche Einarbeitung an `main`, Commit `0f87887bd28cad2e0a4524067b723981f0272857`.
+**Stand:** 13.11.2026 · ursprüngliche Einarbeitung an `main`, Commit `0f87887bd28cad2e0a4524067b723981f0272857`.
 GitHub-`main` entsprach bei dieser Abfrage dem Commit. Die Roadmap wurde anschließend in `c72cf78` aktualisiert.
 Die nun ausdrücklich beauftragte Produktionsabsicherung baut auf diesem Stand im Branch `codex/production-safety`
 auf; Nachweise stehen im [Produktionsbericht](PRODUKTIONSSICHERUNG_2026-11-12.md). Arbeitsverzeichnis jeweils zu Beginn
@@ -9,7 +9,9 @@ Die anschließend beauftragte Scrap-Integration startet an `0dfde76` im Branch `
 GitHub-`main` wurde erneut mit `0f87887` abgeglichen. Aktueller Anschluss- und Prüfstand:
 [Scrap-Bericht](SCRAP_WARS_INTEGRATION_2026-11-12.md). Der anschließend autorisierte Push ist erfolgt:
 `5cec854` liegt auf `origin/codex/scrap-wars`, [PR #3](https://github.com/emfau88/Endless-Battle-Simulator/pull/3)
-führt die acht vorhandenen Commits zusammen. Die erste GitHub-CI läuft; Merge erst nach bestandener Prüfung.
+führt die acht vorhandenen Commits zusammen. **Nicht gemergt:** beide ersten GitHub-CI-Läufe überschritten
+das Joblimit und meldeten zuvor Einzeltestfehler. Aktueller Nachweis: [CI-Erstlauf](CI_ERSTLAUF_2026-11-13.md).
+Der Ausbauplan liegt separat im Dokumentationsbranch `codex/scrap-video-plan`.
 
 **Zweck:** Dies bleibt die **einzige aktive Aufgabenliste**. Erledigtes steht im [CHANGELOG](CHANGELOG.md).
 Berichte dokumentieren ihren damaligen Stand und werden nicht nachträglich als aktuelle Prüfung umgeschrieben.
@@ -22,7 +24,7 @@ Der aktuelle Folgeauftrag plant die sechs vorgeschlagenen Scrap-Verbesserungen u
 reproduzierbarem MP4-Export ermöglichen: Shorts in 9:16 und längere Videos in 16:9. Inhaltsidee, Zuschauerreaktion
 und Produktionsaufwand bestimmen die Länge. Der bereits laufende Kanalpilot R04 wird parallel fortgesetzt.
 
-**Reihenfolge:** integrierten Scrap-Stand mit GitHub-CI sichern → kurze Filmproben/R20 beurteilen →
+**Reihenfolge:** CI-Befunde R02 klären und integrierten Scrap-Stand sicher zusammenführen → kurze Filmproben/R20 beurteilen →
 Scrap-Videoqualität in sechs begrenzten Paketen R22 verbessern. Zuerst Lesbarkeit und Treffer/Klang,
 dann Kampfablauf und Turnier; Arenen/Kamera und die kleine Werkstattvariante folgen getrennt.
 Hex Dominion V0.3/R17 bleibt der nächste neue Szenariokandidat, wird während R22 aber nicht parallel integriert.
@@ -81,6 +83,8 @@ Umgebung, kurze Exporte und Grenzen sind im [Produktionsbericht](PRODUKTIONSSICH
 Die Golden-Fälle bleiben 24 Fälle × 2 Prüfpunkte; Referenzen wurden nicht neu geschrieben.
 Die anschließenden Scrap- und Ausschnittsprüfungen einschließlich vollständigem Gesamtlauf werden separat
 im [Scrap-Bericht](SCRAP_WARS_INTEGRATION_2026-11-12.md) geführt.
+**Neuer Stand vom 13.11.:** die ersten GitHub-Läufe sind unvollständig und enthalten Fehler, siehe
+[CI-Erstlauf](CI_ERSTLAUF_2026-11-13.md). Daraus folgt keine erfolgreiche plattformübergreifende Abnahme.
 
 ### Befunde entlang des Produktionswegs
 
@@ -106,9 +110,17 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   Playwright-Chromium, FFmpeg/ffprobe, Software-Rendering, gesamte Suite einschließlich Golden-Prüfung und Protokolle.
   Das Testdatei-Limit beträgt zehn Minuten, das Job-Limit 25 Minuten. Explizites Bash/`pipefail` erhält den
   Testfehlercode trotz `tee`; lokale Negativprobe bestand. Es wird kein `golden:write` ausgeführt.
-  **Noch offen:** nach einem autorisierten Push den ersten sauberen Ubuntu-Runnerlauf und dessen Versionsprotokoll
-  prüfen, dem Commit zuordnen und die Fehlersignalisierung auch dort bestätigen. Der lokale Lauf ersetzt diese
-  Abnahme nicht. Keine zusätzlichen Langexporte oder Leistungsbenchmarks nötig.
+  **Aktueller Befund:** Push- und PR-Lauf an `5cec854` wurden am 25-Minuten-Limit abgebrochen. In beiden scheiterten
+  zuvor der Audioexport mit Tempo 0,8 und der Live-Abbruchtest; im PR-Lauf zusätzlich der Scrap-Konfigurations-/UI-Test.
+  Versions- und Teilprotokolle sind gesichert; vollständige Assertions fehlen wegen des vorzeitigen Endes.
+  [CI-Bericht mit Laufverweisen](CI_ERSTLAUF_2026-11-13.md). **R02 bleibt offen und hat vor R22 Vorrang.**
+  **Begrenztes Vorgehen:** die drei benannten Fälle zuerst auf Ubuntu einzeln mit unmittelbar ausgegebenen
+  Fehlerdetails reproduzieren. Fehler in Funktion und Testbedingungen anhand dieser Belege unterscheiden;
+  nur die konkrete Ursache korrigieren. Danach die vollständige Suite innerhalb eines begründeten Laufzeitbudgets
+  abschließen, bei Bedarf in wenige Prüfgruppen aufteilen. Ein höheres Joblimit allein behebt keine Einzeltestfehler.
+  **Abnahme:** vollständiger grüner Runnerlauf am zu mergenden Code, Versionsnachweis, wirksames `pipefail` und
+  erhaltene Referenzprüfungen. Keine Tests ausblenden, Grenzwerte grundlos lockern oder Golden-Werte neu setzen.
+  Keine zusätzlichen Langexporte, Leistungsbenchmarks oder Änderungen an den sechs Ausbaupaketen erforderlich.
 
 ## 3 · Szenarien: Scrap anschließen, gezielt ausbauen, danach Hex
 
@@ -174,7 +186,8 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   **Ziel:** auf kleinem Bildschirm nachvollziehbare Kämpfe, spürbare Treffer und eine abgeschlossene Episode.
   Die sechs Vorschläge sind zur Planung angenommen; **noch keine Umsetzung dieses Ausbaus**.
   Ausgangspunkt ist `5cec854` samt [Scrap-Bericht](SCRAP_WARS_INTEGRATION_2026-11-12.md).
-  Vor dem ersten Paket R20-Proben als Vergleich festhalten; offene Hör-/Handyurteile weiterhin ausdrücklich benennen.
+  Vor dem ersten Paket R02 schließen und R20-Proben als Vergleich festhalten; offene Hör-/Handyurteile
+  weiterhin ausdrücklich benennen. Die CI-Nacharbeit ist ein eigener begrenzter Schritt vor diesem Ausbau.
 
   **Was schon besteht:** vier benannte Roboter, Teamfarben, HP-/Waffenanzeigen, Rückstoß, Mündungslicht,
   Treffer-/Explosions-/Wrackdarstellung, zwei Waffentypen und Nachschubstationen. Rundenfolge, Siegzähler,
@@ -364,8 +377,8 @@ Getroffene Entscheidungen einschließlich E2 und der Umsetzung von R19 stehen im
 
 ## 7 · Die nächsten drei Schritte
 
-1. **R02 – bestehenden Stand sichern:** ersten GitHub-CI-Lauf und Protokolle prüfen, PR #3 bei grüner Prüfung
-   und ohne offene Einwände mergen. Produktionsabsicherung und Integration sind bereits committed/gepusht.
+1. **R02 – CI-Befunde klären:** die drei fehlgeschlagenen Fälle gezielt diagnostizieren und die komplette Suite
+   abschließen. Erst anschließend PR #3 mergen. Produktionsabsicherung und Integration sind bereits committed/gepusht.
 2. **R20/R22 P1–P2 – erste Qualitätsstufe:** vorhandene Filmproben als Vergleich beurteilen, dann Roboter/HUD
    und Treffer/Klang getrennt verbessern. Das ist das erste kleine Produktionsziel vor zusätzlichen Regeln.
 3. **R22 P3–P6 – nacheinander erweitern:** belegte Ablaufprobleme, endliches Turnier, zwei zusätzliche Arenen
