@@ -1,0 +1,47 @@
+name: Production checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash # Explizit: -eo pipefail; tee darf fehlgeschlagene Tests nicht verdecken.
+    env:
+      EBS_GPU: '0'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22.17.1'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Record tool versions
+        run: |
+          mkdir -p output
+          node --version | tee output/ci-versions.log
+          npx playwright --version | tee -a output/ci-versions.log
+          ffmpeg -version | tee -a output/ci-versions.log
+          ffprobe -version | tee -a output/ci-versions.log
+      - name: Tests, short exports and golden references
+        run: npm test 2>&1 | tee output/ci-tests.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production-checks-${{ github.sha }}
+          path: output/ci-*.log
+          if-no-files-found: ignore
