@@ -150,11 +150,25 @@ Ablauf bitgleich zu vorher.
 **Sprache im Video.** Alle Texte, die im Clip selbst erscheinen (HUD, Teamnamen, Zähler), sind englisch; das
 Bedienfeld bleibt deutsch.
 
-**Geschoss-Kreislauf.** Jedes Schiff besitzt eine feste Anzahl Kugeln (Kanonen × Kugeln je Kanone, Standard 5).
-Zustände: `Magazin → Flug (Matter.js) → Wasserkontakt → Sinken → Sammelrinne am Meeresgrund → Glasrohr nach oben →
-Magazin`. Kugeln werden nie erzeugt oder gelöscht, nur wiederverwendet. Ist das Magazin leer, warten die Kanonen – das begrenzt die Feuerrate automatisch.
+**Geschoss-Kreislauf.** Zu Beginn hat jedes Schiff gleich viele Kugeln (Kanonen × Kugeln je Kanone, Standard 5).
+Zustände: `Magazin → Flug (Matter.js) → Wasserkontakt → Sinken → Mulde am Meeresgrund → Messingsockel → Glasrohr durch
+den Kiel → Magazin`. Der Meeresgrund hat unter jedem Heck eine Mulde, dazwischen einen flachen Rücken, und steigt zu den
+Bildrändern an: Jede Kugel rollt bergab zum Sockel, egal wo sie landet. Kugeln werden nie erzeugt oder gelöscht, nur
+wiederverwendet. Ist das Magazin leer, warten die Kanonen – das begrenzt die Feuerrate automatisch.
+
+- **Duell (zwei Schiffe): Beuteprinzip.** Eine Kugel gehört dem Schiff, in dessen Mulde sie landet. Unter Wasser ist sie
+  neutral, im Glasrohr nimmt sie die Teamfarbe des neuen Besitzers an, der sie zurückschießt. Damit sich die Munition
+  nicht bei einem Schiff sammelt, feuert ein volles Regal bis zu 30 % schneller und ein leeres bis zu 15 % langsamer.
+- **Drei und vier Schiffe:** Jedes Schiff behält seine Kugeln. Sie rollen in den Sockel der Mulde, in der sie liegen, und
+  laufen von dort durch eine Leitung im Sand zum eigenen Rohr. Mit Beuteprinzip fangen die mittleren Schiffe fast alles
+  ab und die äußeren stehen ohne Munition da (gemessen, siehe [Bericht](docs/NAVAL_MULDEN_LIFT.md)).
+
 Kugeln, die an Deck liegen bleiben, werden Richtung Bug angestoßen; nur im Notfall (> 3 Stöße oder > 15 s Flugzeit)
-fallen sie durch den Rumpf ins Wasser (≈ 0,4 % der Schüsse).
+fallen sie durch den Rumpf ins Wasser (hochkant ≈ 0,7 %, quer ≈ 2 % der Schüsse).
+
+**Anzeige.** Hochkant stehen Titel, Zähler und Lebensbalken oben. Im Querformat mit zwei Schiffen stehen die
+Lebensbalken in den oberen Ecken, der Titel blendet nach 5 s aus, Zeit und Zähler stehen unten in der Mitte – die
+Bildmitte oben bleibt frei für die Flugbahnen.
 
 **Schaden & Stabilisierung.** Pro Treffer: `Δ = 0,0026 × Intensität × Faktor × (1 − Schaden)²`. Die Dämpfung,
 eine Reparatur der Crew ab 68 % und eine harte Grenze von 90 % verhindern, dass ein Schiff zerstört wird. Sichtbare

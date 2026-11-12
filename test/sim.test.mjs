@@ -31,6 +31,43 @@ test('Kugeln bleiben im geschlossenen Kreislauf (10 Minuten, Prüfung alle 15 s)
   await page.close();
 });
 
+test('Duell (Beuteprinzip): Munition bleibt verteilt, kein Schiff steht länger leer (10 Minuten, beide Formate)', async () => {
+  for (const aspect of ['9:16', '16:9']) {
+    const page = await sim({ seed: 7, video: { aspect } });
+    const zero = [0, 0];
+    let s;
+    for (let i = 0; i < 300; i++) {
+      s = await run(page, 2);
+      s.ships.forEach((x, k) => { if (x.ammo === 0) zero[k]++; });
+    }
+    const c = await check(page);
+    assert.ok(c.ok, c.errors.join('; '));
+    assert.equal(s.ballsTotal, s.ballsExpected);
+    assert.ok(Math.max(...zero) < 15, `${aspect}: ein Schiff steht zu oft ohne Munition da (${zero.join('/')} von 300 Abtastungen)`);
+    const shots = s.ships.map((x) => x.shots);
+    assert.ok(Math.min(...shots) > 0.8 * Math.max(...shots), `${aspect}: Schüsse ungleich verteilt (${shots.join('/')})`);
+    await page.close();
+  }
+});
+
+test('Drei und vier Schiffe: jedes Schiff behält seine Kugeln, keines steht leer (10 Minuten)', async () => {
+  for (const cfg of [{ ships: 3, cannons: 3 }, { ships: 4, cannons: 2 }, { ships: 3, cannons: 3, format: 'landscape' }]) {
+    const page = await sim({ seed: 9, ...cfg });
+    const zero = new Array(cfg.ships).fill(0);
+    let s;
+    for (let i = 0; i < 120; i++) {
+      s = await run(page, 5);
+      s.ships.forEach((x, k) => { if (x.ammo === 0) zero[k]++; });
+    }
+    const c = await check(page);                      // prüft hier auch: Kugelzahl je Schiff unverändert
+    assert.ok(c.ok, `${JSON.stringify(cfg)}: ${c.errors.join('; ')}`);
+    assert.ok(Math.max(...zero) < 12, `${JSON.stringify(cfg)}: ein Schiff steht zu oft ohne Munition da (${zero.join('/')} von 120 Abtastungen)`);
+    const shots = s.ships.map((x) => x.shots);
+    assert.ok(Math.min(...shots) > 0.8 * Math.max(...shots), `${JSON.stringify(cfg)}: Schüsse ungleich verteilt (${shots.join('/')})`);
+    await page.close();
+  }
+});
+
 test('Treffer und Wasserkollisionen funktionieren zuverlässig', async () => {
   const page = await sim({ seed: 3 });
   const s = await run(page, 300);

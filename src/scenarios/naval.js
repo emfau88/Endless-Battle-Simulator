@@ -1,7 +1,10 @@
 /*
  * Szenario: Endless Naval Battle
  * Zwei bis vier Schiffe beschießen sich endlos; jede Kanonenkugel läuft in einem geschlossenen,
- * sichtbaren Kreislauf zurück (Wasser -> Förderband -> Aufzug -> Magazin).
+ * sichtbaren Kreislauf zurück (Wasser -> Mulde am Meeresgrund -> Glasrohr durch den Kiel -> Magazin).
+ * Duell (zwei Schiffe): Beuteprinzip – eine Kugel gehört dem Schiff, in dessen Mulde sie landet; es schießt sie zurück.
+ * Drei und vier Schiffe: Jedes Schiff behält seine Kugeln; sie laufen vom Sockel der Mulde durch eine Leitung im Sand
+ * zum eigenen Rohr (sonst fangen die mittleren Schiffe fast alles ab und die äußeren stehen ohne Munition da).
  *
  * Aufbau eines Szenarios (siehe src/core.js, registerScenario):
  *   NavalBattle   – Simulation (Matter.js), kein Rendering
@@ -34,7 +37,8 @@ const TUNING = {
   maxHoles: 44,          // Gesamtgrenze (Löcher + Flicken) pro Schiff
   sinkAccel: 900,        // Sinkbeschleunigung unter Wasser (px/s²)
   sinkDrag: 3.4,         // -> Sinkgeschwindigkeit ≈ 265 px/s
-  conveyor: 330,         // Förderband/Aufzug (px/s)
+  conveyor: 300,         // Rollen am Meeresgrund (px/s)
+  lift: 230,             // Steigen im Glasrohr (px/s)
   shotSpeedFactor: 1.18, // Mündungsgeschwindigkeit relativ zur Minimalgeschwindigkeit
 };
 const BALL_CAT = 0x0001, SHIP_CAT = 0x0002, MAST_CAT = 0x0020;
@@ -58,7 +62,8 @@ function computeLayout(world, cfg) {
     W, H, portrait, wide, u, n, xs, spacing, hull, sc, g,
     ballR: Math.max(7, 10.5 * u * Math.max(0.75, sc)),
     waterY: Math.round(H * (portrait ? 0.565 : duel ? 0.66 : 0.6)),
-    floorY: Math.round(H - (portrait ? 92 : 64) * u),
+    floorY: portrait ? Math.round(H * 0.795) : Math.round(H - 74 * u),   // tiefster Punkt der Mulden
+    ridge: (portrait ? 66 : 58) * u, edgeRise: (portrait ? 40 : 46) * u,
     waveAmp: u,
     // Querformat: flachere Bögen, bleiben im Bild (im Duell wegen des größeren Abstands noch etwas flacher)
     v0: Math.sqrt(g * spacing) * TUNING.shotSpeedFactor * (portrait ? 1 : duel ? 0.90 : 0.95),
@@ -84,7 +89,7 @@ function shipGeometry(L, f) {
     ...quadPts(keelBow, [-0.02 * L, dr * 1.06], keelStern, 4),
     ...quadPts(keelStern, [-0.545 * L, 0.45 * dr], sternTop, 8).slice(0, -1)];
   const outline = outlineU.map(([x, y]) => [X(x), y]);
-  const cx0 = X(-0.535 * L), cx1 = X(-0.27 * L);
+  const cx0 = X(-0.535 * L), cx1 = X(-0.27 * L), portX = X(-0.36 * L);
   return {
     L, f, fb, dr, deckY: -fb, outline,
     castle: { x0: Math.min(cx0, cx1), x1: Math.max(cx0, cx1), y0: -fb - 0.13 * L, y1: -fb + 2 },
@@ -93,7 +98,7 @@ function shipGeometry(L, f) {
       { x: X(0.25 * L), h: 0.62 * L, w: Math.max(8, 0.026 * L), main: false },
     ],
     bowsprit: [[X(0.5 * L), -fb - 0.02 * L], [X(0.70 * L), -fb - 0.17 * L]],
-    liftAttach: { x: X(-0.6 * L), y: -fb - 0.07 * L },
+    port: { x: portX, y: polyYMax(outline, portX) },   // Kielöffnung unter dem Achterkastell: hier kommt der Lift von unten an
     rack: { x: X(-0.4 * L), y: -fb - 0.13 * L },
   };
 }
@@ -119,6 +124,14 @@ function polyXRange(poly, y) {
   }
   return mn < mx ? [mn, mx] : null;
 }
+function polyYMax(poly, x) {
+  let mx = -Infinity;
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i], b = poly[(i + 1) % poly.length];
+    if ((a[0] <= x && b[0] > x) || (b[0] <= x && a[0] > x)) mx = Math.max(mx, a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0]));
+  }
+  return mx;
+}
 const flat = (pts) => pts.flatMap((p) => p);
 
 class NavalBattle {
@@ -142,6 +155,22 @@ class NavalBattle {
     this.allShipsMask = ((1 << L.n) - 1) * SHIP_CAT;
     this.allMastsMask = ((1 << L.n) - 1) * MAST_CAT;
     for (let i = 0; i < L.n; i++) this.ships.push(this._createShip(i));
+    // Mulden von links nach rechts. Die Wasserscheide zwischen zwei Nachbarn liegt mittig zwischen den Schiffen,
+    // damit jedes Schiff einsammelt, was neben ihm ins Wasser fällt (im Duell ist das die Bildmitte).
+    this.bowls = [...this.ships].sort((a, b) => a.liftX - b.liftX);
+    this.liftXs = this.bowls.map((s) => s.liftX);
+    this.sheds = [];
+    for (let k = 0; k + 1 < this.bowls.length; k++) {
+      const a = this.bowls[k], b = this.bowls[k + 1];
+      this.sheds.push(clamp((a.x0 + b.x0) / 2, a.liftX + 60 * L.u, b.liftX - 60 * L.u));
+    }
+    for (const s of this.ships) {
+      s.footY = this.groundY(s.liftX) - L.ballR - 2 * L.u;            // Kugelmitte am Rohrfuß
+      s.liftLen = s.footY - (L.waterY + s.geo.rack.y);                 // Rohrfuß bis Munitionsregal
+      s.headY = L.waterY + s.geo.port.y + s.maxSink + 16 * L.u;        // Oberkante des feststehenden Glasrohrs
+    }
+    this.beute = L.n === 2;                                            // Beuteprinzip nur im Duell
+    this.ammoTarget = cfg.cannons * cfg.ballsPerCannon * 0.45;
     for (const s of this.ships) this._createBalls(s);
     for (const s of this.ships) this._initCannons(s);
     Events.on(this.engine, 'collisionStart', (e) => this._onCollision(e));
@@ -157,6 +186,17 @@ class NavalBattle {
   backY(x, t) {
     const a = this.L.waveAmp;
     return this.L.waterY - 18 * a + a * (5 * Math.sin(x * 0.0079 + t * 0.85 + 2) + 3 * Math.sin(x * 0.019 - t * 1.37));
+  }
+
+  // Meeresgrund: Mulde an jedem Rohrfuß, flacher Rücken dazwischen, Anstieg zu den Bildrändern -> jede Kugel rollt bergab
+  groundY(x) {
+    const L = this.L, xs = this.liftXs, n = xs.length;
+    const hill = (d, span, h) => h * (1 - Math.cos(Math.PI * clamp(d / span, 0, 1))) / 2;
+    if (x <= xs[0]) return L.floorY - hill(xs[0] - x, xs[0] + 90 * L.u, L.edgeRise);
+    if (x >= xs[n - 1]) return L.floorY - hill(x - xs[n - 1], L.W - xs[n - 1] + 90 * L.u, L.edgeRise);
+    let k = 0; while (x > xs[k + 1]) k++;
+    const m = this.sheds[k], left = m - xs[k], right = xs[k + 1] - m, h = Math.min(L.ridge, 0.2 * Math.min(left, right));
+    return L.floorY - (x < m ? hill(x - xs[k], left, h) : hill(xs[k + 1] - x, right, h));
   }
 
   // ---------- Aufbau ----------
@@ -190,10 +230,8 @@ class NavalBattle {
       maxSink: geo.fb * 0.42, damage: 0, holes: [], dmgVer: 0, lastPatch: 0,
       ammo: 0, magBalls: [], lane: [], cannons: [], totalBalls: 0,
       shots: 0, hitsDealt: 0, hitsTaken: 0, smokeAcc: 0, fireAcc: 0,
-      laneY: L.floorY - L.ballR - 4 - i * (2 * L.ballR + 9),
-      liftX: L.xs[i] + geo.liftAttach.x, liftTopX: 0, liftTopY: 0, liftLen: 0,
+      liftX: L.xs[i] + geo.port.x, footY: 0, headY: 0, liftLen: 0, portX: 0, portY: 0, rackX: 0, rackY: 0, ballMask: 0,
     };
-    ship.liftLen = ship.laneY - (L.waterY + geo.liftAttach.y);
     for (const p of [...parts, ...mastParts]) p.simShip = ship;
     body.simShip = mastBody.simShip = ship;
     Composite.add(this.world, [body, mastBody]);
@@ -211,12 +249,12 @@ class NavalBattle {
       const ball = {
         id: this.balls.length, owner: ship.i, body, r: L.ballR, mask, state: 'mag',
         x: 0, y: 0, vx: 0, vy: 0, age: 0, still: 0, nudges: 0, hit: false, ghost: false, dist: 0, dir: 1,
-        trail: new Float32Array(TRAIL_N * 2), trailLen: 0, trailHead: 0, bubbleT: 0,
+        trail: new Float32Array(TRAIL_N * 2), trailLen: 0, trailHead: 0, bubbleT: 0, laneT: 0, viaX: 0, under: 0,
       };
       body.simBall = ball;
       this.balls.push(ball); ship.magBalls.push(ball);
     }
-    ship.totalBalls = count; ship.ammo = ship.magBalls.length;
+    ship.totalBalls = count; ship.ammo = ship.magBalls.length; ship.ballMask = mask;
   }
 
   _initCannons(ship) {
@@ -306,8 +344,8 @@ class NavalBattle {
         Body.setAngle(b, ship.angle);
         Body.setPosition(b, { x: ship.x + co.x * ca - co.y * sa, y: ship.y + co.x * sa + co.y * ca });
       }
-      const lt = this._localToWorld(ship, ship.geo.liftAttach.x, ship.geo.liftAttach.y);
-      ship.liftTopX = lt.x; ship.liftTopY = lt.y;
+      const pt = this._localToWorld(ship, ship.geo.port.x, ship.geo.port.y), rk = this._localToWorld(ship, ship.geo.rack.x, ship.geo.rack.y);
+      ship.portX = pt.x; ship.portY = pt.y; ship.rackX = rk.x; ship.rackY = rk.y;
     }
   }
 
@@ -317,7 +355,8 @@ class NavalBattle {
       for (const c of ship.cannons) {
         c.recoil = Math.max(0, c.recoil - this.dt * 3);
         c.angle += clamp(angleDiff(c.aim, c.angle), -maxTurn, maxTurn);
-        c.timer -= this.dt * this.cfg.fireRate;
+        // Ausgleich fürs Beuteprinzip: ein volles Regal feuert etwas schneller, ein leeres etwas langsamer
+        c.timer -= this.dt * this.cfg.fireRate * (this.beute ? clamp(1 + 0.03 * (ship.ammo - this.ammoTarget), 0.85, 1.3) : 1);
         if (c.timer <= 0) {
           if (ship.ammo > 0) this._fire(ship, c); else { c.waiting = true; c.timer = 0; }
         }
@@ -465,22 +504,26 @@ class NavalBattle {
         ball.vy += (TUNING.sinkAccel * u - TUNING.sinkDrag * ball.vy) * this.dt;
         ball.x = clamp(ball.x + ball.vx * this.dt, -30 * u, W + 30 * u); ball.y += ball.vy * this.dt;
         if ((ball.bubbleT -= this.dt) <= 0) { ball.bubbleT = 0.08 + this.fx.next() * 0.08; this._fxBubble(ball.x, ball.y - ball.r); }
-        const ship = this.ships[ball.owner];
-        if (ball.y >= ship.laneY) this._enterLane(ball, ship);
+        const gy = this.groundY(ball.x) - ball.r - 1.5 * u;
+        if (ball.y >= gy) { ball.y = gy; this._enterLane(ball); }
       }
     }
-    // Förderband + Aufzug (Warteschlange je Schiff, Kugeln überholen sich nicht)
-    const step = TUNING.conveyor * u * this.dt;
+    // Mulde + Glasrohr (Warteschlange je Schiff, Kugeln überholen sich nicht)
+    const roll = TUNING.conveyor * u * this.dt, rise = TUNING.lift * u * this.dt;
     for (const ship of this.ships) {
       const lane = ship.lane, gap = 2 * this.L.ballR + 3;
       let prev = -Infinity;
-      for (const b of lane) { let d = b.dist - step; if (d < prev + gap) d = prev + gap; b.dist = d; prev = d; }
+      for (const b of lane) {
+        b.laneT += this.dt;                                   // rollt aus dem Stand an, steigt im Rohr gleichmäßig
+        let d = b.dist - (b.dist > ship.liftLen ? roll * clamp(0.2 + b.laneT * 1.6, 0.2, 1) : rise);
+        if (d < prev + gap) d = prev + gap;
+        b.dist = d; prev = d;
+      }
       while (lane.length && lane[0].dist <= 0) {
         const b = lane.shift();
         b.state = 'mag'; ship.magBalls.push(b); ship.ammo = ship.magBalls.length; this.stats.recycled++;
-        const rp = this._localToWorld(ship, ship.geo.rack.x, ship.geo.rack.y);
-        this._fxPop(ship.liftTopX, ship.liftTopY, ship.team.color);
-        this._event('reload', rp.x, rp.y, 1);
+        this._fxPop(ship.rackX, ship.rackY, ship.team.color);
+        this._event('reload', ship.rackX, ship.rackY, 1);
       }
     }
   }
@@ -495,10 +538,19 @@ class NavalBattle {
     this._event('splash', ball.x, sy, Math.hypot(vx, vy));
   }
 
-  _enterLane(ball, ship) {
-    ball.state = 'lane'; ball.y = ship.laneY;
-    ball.dir = ball.x >= ship.liftX ? 1 : -1;
-    let d = Math.abs(ball.x - ship.liftX) + ship.liftLen;
+  _enterLane(ball) {
+    // Die Kugel rollt in die Mulde, in der sie liegt (Bereich zwischen den Wasserscheiden).
+    // Duell: Beuteprinzip – sie gehört ab jetzt dem Schiff dieser Mulde.
+    // Drei und vier Schiffe: Sie bleibt bei ihrem Schiff und läuft vom Sockel dieser Mulde durch die Leitung im Sand
+    // (verdeckt) zum eigenen Rohr.
+    let k = 0; while (k < this.sheds.length && ball.x >= this.sheds[k]) k++;
+    const bowl = this.bowls[k], ship = this.beute ? bowl : this.ships[ball.owner];
+    ball.owner = ship.i; ball.mask = ship.ballMask;
+    ball.state = 'lane'; ball.laneT = 0;
+    this._fxSand(ball.x, ball.y + ball.r);
+    ball.viaX = bowl.liftX; ball.under = Math.abs(bowl.liftX - ship.liftX);
+    ball.dir = ball.x >= bowl.liftX ? 1 : -1;
+    let d = Math.abs(ball.x - bowl.liftX) + ball.under + ship.liftLen;
     const gap = 2 * this.L.ballR + 3;
     for (let guard = 0, moved = true; moved && guard < 64; guard++) {
       moved = false;
@@ -509,12 +561,20 @@ class NavalBattle {
     ship.lane.sort((a, b) => a.dist - b.dist || a.id - b.id);
   }
 
-  // Position einer Kugel auf Förderband/Aufzug (für Rendering)
+  // Position einer Kugel in der Mulde bzw. im Glasrohr (für Rendering)
   lanePos(ball) {
-    const ship = this.ships[ball.owner];
-    if (ball.dist > ship.liftLen) return { x: ship.liftX + ball.dir * (ball.dist - ship.liftLen), y: ship.laneY, lift: false };
-    const t = 1 - ball.dist / ship.liftLen;
-    return { x: lerp(ship.liftX, ship.liftTopX, t), y: lerp(ship.laneY, ship.liftTopY, t), lift: true };
+    const ship = this.ships[ball.owner], u = this.L.u;
+    const rest = ball.dist - ship.liftLen - ball.under;      // Weg bis zum Sockel der Mulde
+    if (rest > 0) {
+      const x = ball.viaX + ball.dir * rest;
+      return { x, y: this.groundY(x) - ball.r - 1.5 * u, lift: false, t: 0, hidden: false };
+    }
+    // in der Leitung im Sand unterwegs zum eigenen Rohr (nur bei drei und vier Schiffen)
+    if (ball.dist > ship.liftLen) return { x: ball.viaX, y: this.groundY(ball.viaX) - ball.r - 1.5 * u, lift: false, t: 0, hidden: true };
+    // Rohr: vom Fuß senkrecht nach oben, im Bereich der Manschette zur Kielöffnung, im Rumpf verdeckt bis zum Regal
+    const t = 1 - ball.dist / ship.liftLen, y = lerp(ship.footY, ship.rackY, t);
+    const k = clamp((ship.headY - y) / Math.max(1, ship.headY - ship.portY), 0, 1);
+    return { x: lerp(ship.liftX, ship.portX, k), y, lift: true, t, hidden: y < ship.portY + ball.r * 0.5 };
   }
 
   _event(type, x, y, p) {
@@ -600,6 +660,13 @@ class NavalBattle {
       this.particles.spawn(x, y, r.range(-50, 50) * u, -r.range(20, 70) * u, r.range(0.6, 1.1), 10 * u, 34 * u, 0.5, 0x9aa0aa, T_SOFT, 0, 0, 2, 0, 0);
     }
   }
+  _fxSand(x, y) {
+    const r = this.fx, u = this.L.u;
+    for (let i = 0; i < 4; i++) {
+      this.particles.spawn(x + r.range(-6, 6) * u, y, r.range(-45, 45) * u, -r.range(8, 34) * u, r.range(0.7, 1.3), 7 * u, r.range(22, 34) * u,
+        0.3, 0xb9ad92, T_SOFT, 0, 0, 2.2, 0, F_FADEIN);
+    }
+  }
   _shipSmoke(ship) {
     const holes = ship.holes;
     if (!holes.length) return;
@@ -654,11 +721,18 @@ class NavalBattle {
     this.ships.forEach((s, i) => {
       const p = per[i], total = p.mag + p.fly + p.sink + p.lane;
       fly += p.fly;
-      if (total !== s.totalBalls) errors.push(`Schiff ${i}: ${total} Kugeln statt ${s.totalBalls}`);
+      // Drei und vier Schiffe: jedes Schiff behält seine Kugeln; im Duell (Beuteprinzip) wechseln sie den Besitzer
+      if (!this.beute && total !== s.totalBalls) errors.push(`Schiff ${i}: ${total} Kugeln statt ${s.totalBalls}`);
       if (p.mag !== s.magBalls.length || s.ammo !== s.magBalls.length) errors.push(`Schiff ${i}: Magazin inkonsistent`);
-      if (p.lane !== s.lane.length) errors.push(`Schiff ${i}: Förderband inkonsistent`);
+      if (p.lane !== s.lane.length) errors.push(`Schiff ${i}: Mulde inkonsistent`);
       if (!(s.damage >= 0 && s.damage <= TUNING.maxDamage + 1e-9)) errors.push(`Schiff ${i}: Schaden außerhalb des Bereichs`);
     });
+    const all = per.reduce((a, p) => a + p.mag + p.fly + p.sink + p.lane, 0), expected = this.ships.reduce((a, sh) => a + sh.totalBalls, 0);
+    if (all !== expected || this.balls.length !== expected) errors.push(`${all} Kugeln im Umlauf statt ${expected}`);
+    for (const sh of this.ships) {
+      for (const b of sh.magBalls) if (b.owner !== sh.i || b.state !== 'mag') errors.push(`Schiff ${sh.i}: Kugel ${b.id} gehört nicht ins Magazin`);
+      for (const b of sh.lane) if (b.owner !== sh.i || b.state !== 'lane') errors.push(`Schiff ${sh.i}: Kugel ${b.id} gehört nicht in die Mulde`);
+    }
     const bodies = Composite.allBodies(this.world).filter((b) => b.parent === b).length;
     if (bodies !== 2 * this.ships.length + fly) errors.push(`Physikwelt: ${bodies} Körper statt ${2 * this.ships.length + fly}`);
     for (const b of this.balls) {
@@ -669,7 +743,7 @@ class NavalBattle {
   snapshot() {
     const c = this.counts();
     return {
-      summary: this.ships.map((s) => `${s.team.name} ${Math.round((1 - s.damage) * 100)} % · Munition ${s.ammo}/${s.totalBalls}`).join('   '),
+      summary: this.ships.map((s) => `${s.team.name} ${Math.round((1 - s.damage) * 100)} % · Munition ${s.ammo}${this.beute ? '' : '/' + s.totalBalls}`).join('   '),
       t: this.t, step: this.step, ...this.stats,
       inFlight: c.fly, inRecycle: c.sink + c.lane, inMag: c.mag, ballsTotal: this.balls.length,
       ballsExpected: this.ships.reduce((a, s) => a + s.totalBalls, 0),
@@ -868,7 +942,7 @@ class ShipView {
   _drawRack() {
     const g = this.rack, s = this.ship, r = this.L.ballR * 0.62, { x, y } = s.geo.rack;
     g.clear();
-    const rows = [6, 5, 4, 3, 2], w = 6 * 2 * r + 6;
+    const rows = [6, 5, 4, 3, 2, 1], w = 6 * 2 * r + 6;   // 21 Plätze; mehr liegt beim Beuteprinzip praktisch nie im Regal
     g.roundRect(x - w / 2, y - r * 0.9, w, r * 1.3, 3).fill(0x3a2416).stroke({ width: 1.5, color: 0x1a0f09 });
     let left = s.ammo;
     rows.forEach((cnt, ri) => {
@@ -931,22 +1005,42 @@ class NavalRenderer {
     }
     // Hintere Wellen (opakes Wasser hinter den Schiffen)
     this.gBack = new PIXI.Graphics(); this.world.addChild(this.gBack);
-    // Meeresboden (statisch)
-    const floor = new PIXI.Graphics();
-    const fpts = [];
-    for (let x = -M; x <= W + M; x += 40 * u) fpts.push(x, L.floorY + 14 * u + Math.sin(x * 0.013) * 8 * u + Math.sin(x * 0.041 + 1) * 4 * u);
-    fpts.push(W + M, H + M, -M, H + M);
-    floor.poly(fpts).fill(0x1d2a33);
-    for (let i = 0; i < 18; i++) {
-      const x = starRng.next() * W, r = starRng.range(10, 34) * u;
-      floor.ellipse(x, L.floorY + 26 * u + starRng.range(0, 30) * u, r * 1.4, r * 0.7).fill(starRng.next() < 0.5 ? 0x26343f : 0x17222a);
+    // Meeresgrund mit Mulden (statisch). Liegt über dem Wasserfilm, damit Sand, Sockel und Kugeln klar zu lesen sind.
+    const ground = new PIXI.Graphics();
+    const prof = (off) => { const p = []; for (let x = -M; x <= W + M; x += 16 * u) p.push(x, sim.groundY(x) + off); p.push(W + M, H + M, -M, H + M); return p; };
+    ground.poly(prof(0)).fill(0x3f5d66);
+    ground.poly(prof(13 * u)).fill(0x2b434c);
+    ground.poly(prof(48 * u)).fill(0x1d3038);
+    ground.poly(prof(120 * u)).fill(0x14232a);
+    ground.poly(prof(230 * u)).fill(0x0e1a20);
+    if (!sim.beute) {                      // Leitung im Sand: verbindet die Sockel, durch sie laufen die Kugeln zum eigenen Rohr
+      const xa = sim.liftXs[0], xb = sim.liftXs[sim.liftXs.length - 1], pipe = (off) => {
+        ground.moveTo(xa, sim.groundY(xa) + off);
+        for (let x = xa + 16 * u; x < xb; x += 16 * u) ground.lineTo(x, sim.groundY(x) + off);
+        ground.lineTo(xb, sim.groundY(xb) + off);
+      };
+      pipe(30 * u); ground.stroke({ width: 13 * u, color: 0x0b1419, alpha: 0.95, join: 'round' });
+      pipe(30 * u); ground.stroke({ width: 9 * u, color: 0x6b5a2e, alpha: 0.9, join: 'round' });
+      pipe(27.5 * u); ground.stroke({ width: 1.6 * u, color: 0xd9c27a, alpha: 0.55, join: 'round' });
     }
-    for (let i = 0; i < 14; i++) {
-      const x = starRng.next() * W, hgt = starRng.range(40, 120) * u, y0 = L.floorY + 20 * u;
-      floor.moveTo(x, y0).quadraticCurveTo(x + starRng.range(-25, 25) * u, y0 - hgt * 0.5, x + starRng.range(-12, 12) * u, y0 - hgt)
-        .stroke({ width: starRng.range(3, 6) * u, color: 0x1f5a4a, alpha: 0.75, cap: 'round' });
+    const clear = (x) => sim.ships.every((sh) => Math.abs(x - sh.liftX) > 70 * u);
+    for (let i = 0; i < 26; i++) {      // Steine, halb im Sand
+      const x = starRng.next() * W, r = starRng.range(8, 26) * u, dy = starRng.range(2, 9) * u, dark = starRng.next() < 0.5;
+      if (clear(x)) ground.ellipse(x, sim.groundY(x) + dy, r * 1.5, r * 0.62).fill(dark ? 0x223840 : 0x34505a);
     }
-    this.world.addChild(floor);
+    for (let i = 0; i < 70; i++) {      // Kiesel in den tieferen Schichten
+      const x = starRng.next() * W, y = sim.groundY(x) + starRng.range(24, 320) * u, r = starRng.range(2, 6) * u;
+      ground.ellipse(x, y, r * 1.5, r).fill({ color: 0x4a6a73, alpha: 0.22 });
+    }
+    for (let i = 0; i < 16; i++) {      // Seegras
+      const x = starRng.next() * W, hgt = starRng.range(34, 96) * u, y0 = sim.groundY(x) + 4 * u;
+      const c1 = starRng.range(-22, 22) * u, c2 = starRng.range(-12, 12) * u, sw = starRng.range(3, 6) * u;
+      if (clear(x)) ground.moveTo(x, y0).quadraticCurveTo(x + c1, y0 - hgt * 0.5, x + c2, y0 - hgt).stroke({ width: sw, color: 0x2c8a6c, alpha: 0.8, cap: 'round' });
+    }
+    const edge = prof(0);                 // Lichtkante des Sands
+    ground.moveTo(edge[0], edge[1]);
+    for (let i = 2; i < edge.length - 4; i += 2) ground.lineTo(edge[i], edge[i + 1]);
+    ground.stroke({ width: 2.5 * u, color: 0x9fc4c9, alpha: 0.5 });
     this.gRec = new PIXI.Graphics(); this.recBalls = new PIXI.Container();
     // Schiffe
     this.shipLayer = new PIXI.Container(); this.world.addChild(this.shipLayer);
@@ -959,11 +1053,12 @@ class NavalRenderer {
       g.fillStyle = gr; g.fillRect(0, 0, 4, 256);
     });
     this.ownTex.push(depth);
-    const depthS = new PIXI.Sprite(depth); depthS.position.set(-M, L.waterY + 10 * u); depthS.width = W + 2 * M; depthS.height = H - L.waterY + M;
+    const depthS = new PIXI.Sprite(depth); depthS.position.set(-M, L.waterY + 10 * u); depthS.width = W + 2 * M; depthS.height = L.floorY + 70 * u - L.waterY;
     this.world.addChild(depthS);
-    // Recycling-Mechanik + Kugeln im Wasser (über dem Wasserfilm, damit am Handy gut sichtbar)
-    this.recGlow = new PIXI.Container();
-    this.world.addChild(this.gRec); this.world.addChild(this.recGlow); this.world.addChild(this.recBalls);
+    this.world.addChild(ground);
+    // Lift + Kugeln im Wasser: Rückwand -> Farbschimmer -> Kugeln -> Frontglas und Messing (die Kugel sitzt sichtbar IM Rohr)
+    this.recGlow = new PIXI.Container(); this.gRecFront = new PIXI.Graphics();
+    this.world.addChild(this.gRec); this.world.addChild(this.recGlow); this.world.addChild(this.recBalls); this.world.addChild(this.gRecFront);
     this.gFoam = new PIXI.Graphics(); this.world.addChild(this.gFoam);
     // Flugbahnen + fliegende Kugeln
     this.gTrails = new PIXI.Graphics(); this.world.addChild(this.gTrails);
@@ -995,17 +1090,18 @@ class NavalRenderer {
       fontFamily: 'Segoe UI, Arial, sans-serif', fontSize: size, fontWeight: weight, fill, letterSpacing: ls,
       dropShadow: { color: 0x000000, alpha: 0.75, blur: 8 * u, distance: 0, angle: 0 },
     });
-    const top = L.portrait ? 70 * u : 34 * u;
+    const top = L.portrait ? 70 * u : 34 * u, corners = (this.cornerHud = L.wide && sim.ships.length === 2);
     this.hTitle = new PIXI.Text({ text: 'ENDLESS NAVAL BATTLE', style: style(L.portrait ? 50 * u : 40 * u, '900', 0xffffff, 5 * u) });
     this.hTitle.anchor.set(0.5, 0); this.hTitle.position.set(W / 2, top);
     this.hSub = new PIXI.Text({ text: '', style: style(26 * u, '600', 0xb9c6e4, 2 * u) });
-    this.hSub.anchor.set(0.5, 0); this.hSub.position.set(W / 2, top + (L.portrait ? 64 : 50) * u);
+    this.hSub.anchor.set(0.5, 0); this.hSub.position.set(W / 2, corners ? L.H - 50 * u : top + (L.portrait ? 64 : 50) * u);
+    if (corners) this.hSub.alpha = 0.8;
     this.hud.addChild(this.hTitle, this.hSub);
     const n = sim.ships.length, pad = 60 * u, gapX = 30 * u;
-    const bw = L.portrait ? (W - 2 * pad - (n - 1) * gapX) / n : Math.min(520 * u, (W - 2 * pad - (n - 1) * gapX) / n);
-    const totalW = n * bw + (n - 1) * gapX, x0 = (W - totalW) / 2, by = top + (L.portrait ? 132 : 104) * u;
+    const bw = corners ? 430 * u : L.portrait ? (W - 2 * pad - (n - 1) * gapX) / n : Math.min(520 * u, (W - 2 * pad - (n - 1) * gapX) / n);
+    const totalW = n * bw + (n - 1) * gapX, x0 = (W - totalW) / 2, by = corners ? 30 * u : top + (L.portrait ? 132 : 104) * u;
     this.hBars = sim.ships.map((s, i) => {
-      const x = x0 + i * (bw + gapX);
+      const x = corners ? (i === 0 ? pad : W - pad - bw) : x0 + i * (bw + gapX);
       const label = new PIXI.Text({ text: s.team.name, style: style(24 * u, '900', s.team.color, 3 * u) });
       label.position.set(x, by);
       const pct = new PIXI.Text({ text: '', style: style(24 * u, '800') });
@@ -1059,11 +1155,12 @@ class NavalRenderer {
     const gt = this.gTrails; gt.clear();
     sim.balls.forEach((b, i) => {
       const v = this.ballViews[i];
+      const team = sim.ships[b.owner].team;
       if (b.state === 'fly') {
         const p = b.body.position;
         v.fly.visible = v.glow.visible = true; v.rec.visible = v.tag.visible = false;
-        v.fly.position.set(p.x, p.y); v.glow.position.set(p.x, p.y);
-        this._drawTrail(gt, b, sim.ships[b.owner].team.color);
+        v.fly.position.set(p.x, p.y); v.glow.position.set(p.x, p.y); v.glow.tint = team.color;
+        this._drawTrail(gt, b, team.color);
       } else {
         v.fly.visible = v.glow.visible = false;
         if (b.state === 'mag') { v.rec.visible = v.tag.visible = false; return; }
@@ -1072,12 +1169,15 @@ class NavalRenderer {
         if (!cfg.recycleVisible) {
           v.rec.visible = b.state === 'sink' && depth < 90 * u;
           v.rec.alpha = clamp(1 - depth / (90 * u), 0, 1);
-        } else { v.rec.visible = true; v.rec.alpha = 1; }
+        } else { v.rec.visible = !pos.hidden; v.rec.alpha = 1; }
         v.rec.position.set(pos.x, pos.y);
-        v.rec.tint = depth > b.r ? 0x9cc8e0 : 0xffffff;
-        if (b.state === 'lane') v.rec.rotation = (b.dist / b.r) * (pos.lift ? 1 : -(b.dir || 1));   // rollt sichtbar
+        v.rec.tint = depth > b.r ? 0xa9d2e6 : 0xffffff;
+        if (b.state === 'lane' && !pos.lift) v.rec.rotation = -(b.dir || 1) * (b.dist / b.r);   // rollt sichtbar
+        const k = b.state === 'lane' && pos.lift ? clamp(pos.t * 2.6, 0, 1) : 0;
         v.tag.visible = v.rec.visible && depth > b.r; v.tag.position.set(pos.x, pos.y);
-        v.tag.alpha = 0.6 * v.rec.alpha * clamp(depth / (60 * u), 0, 1);
+        v.tag.tint = lerpColor(0xbfe2f4, team.color, k);
+        v.tag.alpha = (0.26 + 0.6 * k) * v.rec.alpha * clamp(depth / (60 * u), 0, 1);
+        v.tag.scale.set((b.r * (3.2 + 1.4 * k)) / 64);
       }
     });
     this.pview.draw();
@@ -1099,74 +1199,67 @@ class NavalRenderer {
   }
 
   /**
-   * Recycling unter Wasser: eine gemeinsame Sammelrinne am Grund und je Schiff ein gläsernes Aufzugsrohr.
-   * Die Rinne selbst ist neutral; die Teamfarbe tragen die Kugeln (Farbschimmer) und der Einlauf am Rohrfuß –
-   * so ist sofort zu sehen, welche Kugel wohin rollt. Nichts wandert außer den Kugeln.
-   * Reine Darstellung: Die getrennten Bahnen je Schiff, Kugelbewegung und Munitionsbilanz bleiben in der Simulation.
+   * Lift je Schiff: Messingsockel in der Mulde, feststehendes Glasrohr, oben eine Glasmanschette, die am Kiel sitzt und
+   * mit dem Seegang über das Rohr gleitet. Hinten (gRec) liegen Rohrkörper und Sockelinneres, vorne (gRecFront)
+   * Glasreflexe, Messingringe und Sockelplatte – die Kugeln liegen dazwischen und sitzen so sichtbar im Rohr.
    */
   _drawRecycling(t) {
-    const sim = this.sim, L = this.L, u = L.u, g = this.gRec, r = L.ballR;
-    g.clear();
+    const sim = this.sim, L = this.L, u = L.u, g = this.gRec, f = this.gRecFront, r = L.ballR;
+    g.clear(); f.clear();
     if (!sim.cfg.recycleVisible) return;
-    const STEEL = 0x8fa3b5, DARK = 0x0a151e, GLASS = 0xb6dcf4;
-    // ---- Sammelrinne: ein offener Metalltrog über die ganze Breite, darin eine Spur je Schiff
-    let top = 1e9, bot = -1e9;
-    for (const s of sim.ships) { top = Math.min(top, s.laneY - r - 5 * u); bot = Math.max(bot, s.laneY + r + 3 * u); }
-    // Die Rinne reicht genau von Rohrfuß zu Rohrfuß und schließt dort an die Einlaufgehäuse an (läuft nicht aus dem Bild)
-    const end = r + 14 * u;
-    let x0 = 1e9, x1 = -1e9;
-    for (const s of sim.ships) { x0 = Math.min(x0, s.liftX - end); x1 = Math.max(x1, s.liftX + end); }
-    const feet = Math.max(2, Math.round((x1 - x0) / (260 * u)));
-    for (let k = 0; k <= feet; k++) { const x = x0 + 14 * u + ((x1 - x0 - 28 * u) * k) / feet; g.rect(x - 5 * u, bot + 6 * u, 10 * u, L.H - bot).fill({ color: 0x1b2733, alpha: 0.95 }); }
-    g.rect(x0, top, x1 - x0, bot - top).fill({ color: DARK, alpha: 0.9 });
-    g.rect(x0, bot, x1 - x0, 8 * u).fill({ color: 0x2b3a49, alpha: 1 });
-    g.moveTo(x0, bot).lineTo(x1, bot).stroke({ width: 1.6 * u, color: STEEL, alpha: 0.7 });
-    g.moveTo(x0, bot + 8 * u).lineTo(x1, bot + 8 * u).stroke({ width: 1.5 * u, color: 0x000000, alpha: 0.55 });
-    g.moveTo(x0, top).lineTo(x1, top).stroke({ width: 2.2 * u, color: STEEL, alpha: 0.6 });
-    g.moveTo(x0, top + 2.4 * u).lineTo(x1, top + 2.4 * u).stroke({ width: 1 * u, color: 0x000000, alpha: 0.4 });
-    // Stirnplatten an beiden Enden
-    for (const x of [x0, x1]) g.rect(x - 3 * u, top - 3 * u, 6 * u, bot - top + 11 * u).fill({ color: 0x2b3a49, alpha: 1 }).stroke({ width: 1.2 * u, color: STEEL, alpha: 0.6 });
-    for (let i = 1; i < sim.ships.length; i++) {          // dezente Trennleiste zwischen den Spuren
-      const y = (sim.ships[i - 1].laneY + sim.ships[i].laneY) / 2;
-      g.moveTo(x0, y).lineTo(x1, y).stroke({ width: 1 * u, color: STEEL, alpha: 0.16 });
-    }
-    // ---- je Schiff: Glasrohr vom Rinnenboden zum Schiff, Einlauf und Auswurf in Teamfarbe
+    const BRASS = 0xc9a24a, BRASS_HI = 0xf6e2a0, BRASS_DK = 0x6b4f1e, GLASS = 0xc6ebff, SAND = 0x3f5d66;
+    const ring = (gr, x, y, hw, h) => {            // Messingring quer über das Rohr
+      gr.roundRect(x - hw, y - h / 2, 2 * hw, h, 2 * u).fill(BRASS).stroke({ width: 1.2 * u, color: BRASS_DK, alpha: 0.9 });
+      gr.moveTo(x - hw + 2 * u, y - h / 2 + 1.8 * u).lineTo(x + hw - 2 * u, y - h / 2 + 1.8 * u).stroke({ width: 1.4 * u, color: BRASS_HI, alpha: 0.85 });
+    };
     for (const s of sim.ships) {
-      const c = s.team.color, lx = s.liftX, ly = s.laneY, tx = s.liftTopX, ty = s.liftTopY;
-      const dx = tx - lx, dy = ty - ly, len = Math.hypot(dx, dy), nx = -dy / len, ny = dx / len, w = r + 5 * u;
-      const hx = nx * w, hy = ny * w, side = nx < 0 ? 1 : -1;          // Lichtkante auf der linken Rohrseite
-      // Kugel kurz vor oder im Einlauf? -> Ring leuchtet auf
-      let near = 0;
-      for (const b of s.lane) { const d = Math.abs(b.dist - s.liftLen); if (d < 30 * u) near = Math.max(near, 1 - d / (30 * u)); }
-      // Rohrkörper: dunkles, leicht getöntes Glas
-      g.moveTo(lx, ly).lineTo(tx, ty).stroke({ width: 2 * w, color: 0x07111a, alpha: 0.62 });
-      g.moveTo(lx, ly).lineTo(tx, ty).stroke({ width: 2 * w - 4 * u, color: 0x6fa8d0, alpha: 0.07 });
-      // Glaskanten + Lichtreflex
-      g.moveTo(lx + hx, ly + hy).lineTo(tx + hx, ty + hy).moveTo(lx - hx, ly - hy).lineTo(tx - hx, ty - hy).stroke({ width: 1.8 * u, color: GLASS, alpha: 0.5 });
-      const k = 0.55 * side;
-      g.moveTo(lx + hx * k, ly + hy * k + 14 * u * Math.sign(dy)).lineTo(tx + hx * k, ty + hy * k - 14 * u * Math.sign(dy)).stroke({ width: 2.2 * u, color: 0xffffff, alpha: 0.32 });
-      g.moveTo(lx - hx * k * 1.1, ly - hy * k * 1.1).lineTo(tx - hx * k * 1.1, ty - hy * k * 1.1).stroke({ width: 3 * u, color: 0x8fc8f0, alpha: 0.08 });
-      // Stahlmanschetten
-      const cuffs = Math.max(2, Math.round(len / (210 * u)));
-      for (let q = 1; q < cuffs; q++) {
-        const px = lx + (dx * q) / cuffs, py = ly + (dy * q) / cuffs, e = w + 3 * u;
-        g.moveTo(px - nx * e, py - ny * e).lineTo(px + nx * e, py + ny * e).stroke({ width: 7 * u, color: 0x26333f, alpha: 1 });
-        g.moveTo(px - nx * e, py - ny * e - 1.6 * u).lineTo(px + nx * e, py + ny * e - 1.6 * u).stroke({ width: 1.6 * u, color: 0xb8c6d4, alpha: 0.75 });
+      const c = s.team.color, x = s.liftX, w = r + 5 * u, yg = sim.groundY(x), y0 = s.footY, yh = s.headY;
+      const px = s.portX, py = s.portY, ws = w + 5 * u, ys = py + s.maxSink + 44 * u;   // Unterkante der Manschette
+      const bw = w + 23 * u, bt = y0 - r - 15 * u, R = r + 4 * u, Rm = r + 3.5 * u;   // Sockelplatte: halbe Breite, Oberkante, Schauglas, Einlauf
+      const tb = bt - 9 * u;                                                               // Unterkante des Glasrohrs (über der Sockelschulter)
+      let near = 0;                                                                        // Kugel am oder im Sockel -> Ring leuchtet
+      for (const o of sim.ships) for (const b of o.lane) {
+        const d = Math.min(o === s ? Math.abs(b.dist - o.liftLen) : Infinity, b.viaX === x ? Math.abs(b.dist - o.liftLen - b.under) : Infinity);
+        if (d < 40 * u) near = Math.max(near, 1 - d / (40 * u));
       }
-      // Einlauf am Rohrfuß: Stahlgehäuse mit Leuchtring in Teamfarbe
-      const bw = w + 9 * u;
-      g.roundRect(lx - bw, ly - r - 9 * u, 2 * bw, 2 * r + 15 * u, 6 * u).fill({ color: 0x1c2935, alpha: 0.96 }).stroke({ width: 1.6 * u, color: STEEL, alpha: 0.75 });
-      g.circle(lx, ly, r + 3.5 * u).fill({ color: 0x050b11, alpha: 0.9 });
-      g.circle(lx, ly, r + 3.5 * u).stroke({ width: (2.4 + 1.6 * near) * u, color: c, alpha: 0.55 + 0.45 * near });
-      g.circle(lx, ly, r + 7 * u).stroke({ width: 5 * u, color: c, alpha: 0.10 + 0.25 * near });
-      // Auswurf am Schiff
-      g.poly([tx - nx * w * 1.6, ty - 4 * u, tx + nx * w * 1.6, ty - 4 * u, tx + nx * w, ty + 10 * u, tx - nx * w, ty + 10 * u])
-        .fill({ color: 0x2a1a10, alpha: 0.92 }).stroke({ width: 2 * u, color: c, alpha: 0.6 });
+      // ---------- hinten
+      g.rect(px - ws, py, 2 * ws, ys - py).fill({ color: 0x06131c, alpha: 0.42 });                    // Manschette
+      g.rect(x - w, yh, 2 * w, bt - yh + 6 * u).fill({ color: 0x06131c, alpha: 0.6 });                 // Rohr
+      g.rect(x - w + 2 * u, yh, 2 * w - 4 * u, bt - yh + 6 * u).fill({ color: 0x7fc8ee, alpha: 0.1 });
+      g.roundRect(x - bw, bt, 2 * bw, yg - bt + 6 * u, 6 * u).fill({ color: 0x070d12, alpha: 1 });    // Sockelinneres
+      // ---------- vorne: Sockel mit Schauglas; die Kugel rollt seitlich in den dunklen Einlauf und taucht im Schauglas wieder auf
+      f.poly([x - bw + 12 * u, bt + 1 * u, x - w - 5 * u, tb, x + w + 5 * u, tb, x + bw - 12 * u, bt + 1 * u]).fill(0xb38d3c).stroke({ width: 1.4 * u, color: BRASS_DK });
+      f.roundRect(x - bw, bt, 2 * bw, yg - bt + 8 * u, 7 * u).fill(BRASS).circle(x, y0, R).cut();
+      f.roundRect(x - bw, bt, 2 * bw, yg - bt + 8 * u, 7 * u).stroke({ width: 1.6 * u, color: BRASS_DK, alpha: 1 });
+      f.moveTo(x - bw + 6 * u, bt + 3 * u).lineTo(x + bw - 6 * u, bt + 3 * u).stroke({ width: 2 * u, color: BRASS_HI, alpha: 0.8 });
+      f.moveTo(x - bw, y0 - Rm).arc(x - bw, y0, Rm, -Math.PI / 2, Math.PI / 2).closePath().fill(0x050b10).stroke({ width: 1.6 * u, color: BRASS_DK });
+      f.moveTo(x + bw, y0 + Rm).arc(x + bw, y0, Rm, Math.PI / 2, Math.PI * 1.5).closePath().fill(0x050b10).stroke({ width: 1.6 * u, color: BRASS_DK });
+      for (const sd of [-1, 1]) f.circle(x + sd * (R + 8 * u), bt + 9 * u, 1.8 * u).fill(BRASS_DK);    // Nieten
+      f.circle(x, y0, R).fill({ color: 0x9fd8ff, alpha: 0.07 });
+      f.circle(x, y0, R).stroke({ width: (2.6 + 1.8 * near) * u, color: c, alpha: 0.6 + 0.4 * near });
+      f.circle(x, y0, R + 4.5 * u).stroke({ width: 5 * u, color: c, alpha: 0.08 + 0.32 * near });
+      f.ellipse(x, yg + 7 * u, bw + 36 * u, 6 * u).fill(SAND);                                         // Sockel sitzt im Sand
+      // ---------- vorne: Glasrohr
+      const top = yh, bot = tb;
+      f.moveTo(x - w, top).lineTo(x - w, bot).moveTo(x + w, top).lineTo(x + w, bot).stroke({ width: 2 * u, color: GLASS, alpha: 0.75 });
+      f.moveTo(x - w * 0.52, top + 8 * u).lineTo(x - w * 0.52, bot - 8 * u).stroke({ width: 3.2 * u, color: 0xffffff, alpha: 0.2 });
+      f.moveTo(x - w * 0.74, top + 14 * u).lineTo(x - w * 0.74, bot - 14 * u).stroke({ width: 1.2 * u, color: 0xffffff, alpha: 0.55 });
+      f.moveTo(x + w * 0.62, top + 8 * u).lineTo(x + w * 0.62, bot - 8 * u).stroke({ width: 2 * u, color: 0x8fd0ff, alpha: 0.14 });
+      ring(f, x, bot, w + 5 * u, 9 * u);                                                               // Flansch am Sockel
+      ring(f, x, top, w + 1.5 * u, 5 * u);                                                             // Rohrkopf
+      const n = Math.max(1, Math.round((bot - top) / (190 * u)));
+      for (let q = 1; q < n; q++) ring(f, x, top + ((bot - top) * q) / n, w + 3 * u, 6 * u);
+      // ---------- vorne: Manschette am Kiel (bewegt sich mit dem Schiff)
+      f.moveTo(px - ws, py).lineTo(px - ws, ys).moveTo(px + ws, py).lineTo(px + ws, ys).stroke({ width: 2 * u, color: GLASS, alpha: 0.7 });
+      f.moveTo(px - ws * 0.6, py + 8 * u).lineTo(px - ws * 0.6, ys - 8 * u).stroke({ width: 2.6 * u, color: 0xffffff, alpha: 0.2 });
+      ring(f, px, ys, ws + 3 * u, 8 * u);
+      ring(f, px, py + 1 * u, ws + 6 * u, 9 * u);                                                      // Flansch am Kiel
     }
   }
 
   _drawHud() {
     const sim = this.sim, u = this.L.u, st = sim.stats;
+    if (this.cornerHud) this.hTitle.alpha = clamp(1 - (sim.step * DT - 5) / 1.5, 0, 1);
     for (const b of this.hBars) {
       const hp = 1 - b.s.damage, g = b.bar;
       g.clear();
@@ -1178,7 +1271,7 @@ class NavalRenderer {
       this.hSub.text = `${fmtTime(sim.step * DT)}  ·  Shots ${fmtIntEn(st.shots)}  ·  Hits ${fmtIntEn(st.hits)}`;
       for (const b of this.hBars) {
         b.pct.text = `${Math.round((1 - b.s.damage) * 100)}%`;
-        b.ammo.text = b.w < 400 * u ? `Ammo ${b.s.ammo}/${b.s.totalBalls}` : `Ammo ${b.s.ammo}/${b.s.totalBalls}  ·  Hits taken ${fmtIntEn(b.s.hitsTaken)}`;
+        b.ammo.text = sim.beute ? `Ammo ${b.s.ammo}` : `Ammo ${b.s.ammo}/${b.s.totalBalls}`;
       }
     }
   }

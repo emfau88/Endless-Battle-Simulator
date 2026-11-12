@@ -12,12 +12,9 @@ IDs: `R..` = Punkt dieser Roadmap, in Klammern die frühere Bezeichnung aus Road
 
 ## 1 · Priorität hoch
 
-- [ ] **R01 · Optik der Seeschlacht überarbeiten** – Schiffe; Glasrohre links und rechts; vor allem die Anschlüsse
-      der Rohre an die untere Sammelrinne bzw. die Förderbänder und die Rinne selbst. Dazu bekannte Mängel:
-      im Querformat stehen die Rohre nah am Bildrand; sinkt eine Kugel außerhalb der Rohre, rollt sie über den
-      Meeresgrund zur Rinne; Kugeln fliegen gelegentlich hinter den Lebensbalken durch.
-      Reine Darstellung, die Referenz-Hashes bleiben gleich.
-      *Quelle:* Vorgabe vom 12.11.2026, [NAVAL_QUERFORMAT.md](NAVAL_QUERFORMAT.md).
+- [ ] **R01 · Optik der Seeschlacht: Schiffe** – Rest der Vorgabe vom 12.11.2026. Glasrohre, Anschlüsse, Sammelrinne
+      und die drei bekannten Mängel sind erledigt ([NAVAL_MULDEN_LIFT.md](NAVAL_MULDEN_LIFT.md)); offen sind die
+      Schiffe selbst. *Quelle:* Vorgabe vom 12.11.2026.
 - [ ] **R02 · Tests automatisch bei jedem Push (CI)** (B10) – GitHub Actions mit Node, FFmpeg und Chromium; die
       Suite braucht ≈ 7 Minuten. Bisher laufen Tests nur von Hand und in den letzten Aufträgen nur teilweise.
       *Quelle:* [Audit](AUDIT_2026-11-12.md), Hotzone 3.
@@ -33,10 +30,19 @@ IDs: `R..` = Punkt dieser Roadmap, in Klammern die frühere Bezeichnung aus Road
       auswerten (Impressionen, Klickrate, Wiedergabedauer, Bindung, Abonnenten), dann Ausbau, Anpassung oder
       Begrenzung. Aus der Planprüfung: Der Engpass ist die Inhaltsidee, nicht die Technik; realistisch sind ein
       langes Video und ein Short pro Woche.
-- [ ] **R05 · Zuschauerführung der Seeschlacht** (B08) – Im Hochformat stehen die Schiffe klein in der Mitte, das
-      Wasser nimmt rund die halbe Bildhöhe ein. Größere Schiffe sind ein Layout-Eingriff und damit ein Eingriff in
-      die Physik (Referenz-Hashes neu setzen). Zusammen mit oder nach R01 planen.
-      *Quelle:* [B01_NAVAL_RECYCLING.md](B01_NAVAL_RECYCLING.md).
+- [ ] **R05 · Zuschauerführung der Seeschlacht** (B08) – Im Hochformat stehen die Schiffe klein in der Mitte. Die
+      Wassersäule ist seit dem Lift-Umbau von 39 % auf 23 % der Bildhöhe geschrumpft, darunter liegt Sand. Größere
+      Schiffe sind ein Layout-Eingriff und damit ein Eingriff in die Physik (Referenz-Hashes neu setzen).
+      *Quelle:* [B01_NAVAL_RECYCLING.md](B01_NAVAL_RECYCLING.md), [NAVAL_MULDEN_LIFT.md](NAVAL_MULDEN_LIFT.md).
+- [ ] **R18 · Seeschlacht: Feinschliff nach dem Lift-Umbau** – (1) Ob rechtes Rohr und Munitionsregal im Short unter
+      den YouTube-Buttons liegen, ist ungeprüft; eine zuschaltbare Sicherheitszonen-Schablone in der Vorschau würde
+      das klären. (2) Querformat mit drei und vier Schiffen: Die Lebensbalken stehen weiter oben in der Mitte, Kugeln
+      können dahinter durchfliegen. (3) Sand, Sockel und Rohr sind ein erster Wurf. (4) Die eingebaute Fassung wurde
+      nur an Einzelbildern beurteilt, nicht in Echtzeit. *Quelle:* [NAVAL_MULDEN_LIFT.md](NAVAL_MULDEN_LIFT.md).
+- [ ] **R19 · Seeschlacht: Atmosphäre und Aufhänger** – Vorschläge vom 12.11.2026: „Tink“ beim Nachladen und „Tock“
+      am Grund (Kenney); Mondlicht (Glitzerbahn auf dem Wasser, Lichtbahnen unter Wasser); Mündungsfeuer beleuchtet
+      kurz Segel und Rumpf, Schaum am Rumpf; goldene Kugel mit Zähler zum Verfolgen; langsamer Himmelsverlauf und
+      seltene Ereignisse für lange Videos. Braucht Entscheidung **E2**.
 - [ ] **R06 · Gemeinsame Szenario-Basis** – beim Bau von Szenario 3, nicht vorher: Ereignisring, Matter.js-Auf- und
       Abbau, Zeitschritt und Prüfsumme sind in beiden Szenarien doppelt gebaut. Die Checkliste für neue Szenarien
       steht bereits im Audit (Abschnitt 4). *Quelle:* [Audit](AUDIT_2026-11-12.md), Hotzones 1, 2, 4, 7.
@@ -70,6 +76,8 @@ Punkte, die nur du erledigen kannst.
 - [ ] **Hörprobe nach der Lautheits-Einmessung** (−14 LUFS): `output/naval_lufs_16x9_12s.mp4` und
       `output/marble_lufs_9x16_12s.mp4`. Die Kugelfabrik wird an den lautesten Stellen um bis zu 19 dB begrenzt –
       klingt sie gedrückt oder pumpend? Den Ton der Seeschlacht hat bisher niemand gehört.
+- [ ] **Neue Seeschlacht in Echtzeit ansehen** (Hoch- und Querformat, lokal über `start.bat`): rollt, wartet und
+      steigt alles stimmig? Im Hochformat am Handy darauf achten, ob das rechte Rohr unter den YouTube-Buttons liegt.
 - [ ] **Laufenden Server neu starten** (`start.bat`), damit der Export-Knopf die neuen Ton-Regler nutzt.
 - [ ] **Online-Vorschau am Handy prüfen** – Prüfliste in [W1_W2_PLAYLINK_START.md](W1_W2_PLAYLINK_START.md).
 - [ ] **Echter Doppelklick auf `start.bat`**, möglichst auch auf einem Rechner ohne vorherige Einrichtung.
@@ -78,6 +86,10 @@ Punkte, die nur du erledigen kannst.
 
 - [ ] **E1 · Variante für das lange Kugelfabrik-Video** (früher Entscheidung B): Überlastungsprobe, Sortierduell
       oder Wachsende Maschine. Empfehlung: Wachsende Maschine, weil sie fünf Minuten am natürlichsten füllt.
+
+- [ ] **E2 · Welche Vorschläge aus R19 umgesetzt werden.** Empfehlung: zuerst Ton („Tink“, „Tock“), dann Mondlicht,
+      dann Mündungsfeuer-Licht und Schaum (alle drei ohne Eingriff in die Physik). Goldene Kugel als eigener Schritt
+      für Shorts. Himmelsverlauf und seltene Ereignisse zurückstellen, bis lange Videos im Pilot zählen.
 
 Getroffene Entscheidungen stehen im [CHANGELOG](CHANGELOG.md#entscheidungen).
 
