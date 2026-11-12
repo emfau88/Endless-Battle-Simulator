@@ -1,111 +1,312 @@
 # Roadmap
 
-**Stand:** 12.11.2026 · `main` nach Atmosphäre und goldener Kugel der Seeschlacht (R19 erledigt)
-**Zweck:** die **einzige aktive Liste** offener Punkte. Erledigtes steht im [CHANGELOG](CHANGELOG.md), Hintergründe
-stehen in den Berichten unter `docs/`. Die Berichte halten ihren Stand fest und werden nicht nachgeführt.
+**Stand:** 12.11.2026 · geprüft an `main`, Commit `0f87887bd28cad2e0a4524067b723981f0272857`.
+GitHub-`main` wurde direkt abgefragt und entspricht diesem Commit; gegenüber dem Auftragsstand sind keine weiteren
+Änderungen hinzugekommen. Arbeitsverzeichnis bei Beginn sauber; keine anwendbare `AGENTS.md` im Repository oder
+in den übergeordneten Verzeichnissen gefunden. Dokumentationsbranch: `codex/roadmap-2026-11-12`.
 
-**Grundlage:** Roadmap V1.2 und Planergänzung „Kanalstart und nächste Sitzung“ (beide 10.11.2026, nicht im
-Repository). Der daraus abgeleitete Umsetzungsplan vom 11.11.2026 ist in dieser Datei aufgegangen
-(alte Fassung: `git show f2f5e6f:docs/UMSETZUNGSPLAN.md`).
+**Zweck:** Dies bleibt die **einzige aktive Aufgabenliste**. Erledigtes steht im [CHANGELOG](CHANGELOG.md).
+Berichte dokumentieren ihren damaligen Stand und werden nicht nachträglich als aktuelle Prüfung umgeschrieben.
+Diese Aktualisierung umfasst Planung und Dokumentation, keine Implementierung und keine Filmabnahme.
 
-IDs: `R..` = Punkt dieser Roadmap, in Klammern die frühere Bezeichnung aus Roadmap V1.2 bzw. Umsetzungsplan.
+**Projektziel:** SimCascade soll regelmäßig eigenständige, gut lesbare Simulationsvideos mit sauberem Ton und
+reproduzierbarem MP4-Export ermöglichen: Shorts in 9:16 und längere Videos in 16:9. Inhaltsidee, Zuschauerreaktion
+und Produktionsaufwand bestimmen die Länge. Der bereits laufende Kanalpilot R04 wird parallel fortgesetzt.
 
-## 1 · Priorität hoch
+**Reihenfolge:** aktuelle Naval-Fassung abnehmen und absichern → CI und Export-Zuverlässigkeit → Scrap Arena als
+Szenario 3 zusammen mit der notwendigen gemeinsamen Anbindung → Hex Dominion V0.3 als Territory Wars.
+Allgemeiner Engine-Umbau, zusätzliche Spielmechaniken, 4K-Optimierung und 60-Minuten-Produktion haben keinen Vorrang.
 
-- [ ] **R01 · Optik der Seeschlacht: Schiffe** – Rest der Vorgabe vom 12.11.2026. Glasrohre, Anschlüsse, Sammelrinne
-      und die drei bekannten Mängel sind erledigt ([NAVAL_MULDEN_LIFT.md](NAVAL_MULDEN_LIFT.md)); offen sind die
-      Schiffe selbst. *Quelle:* Vorgabe vom 12.11.2026.
-- [ ] **R02 · Tests automatisch bei jedem Push (CI)** (B10) – GitHub Actions mit Node, FFmpeg und Chromium; die
-      Suite braucht ≈ 7 Minuten. Bisher laufen Tests nur von Hand und in den letzten Aufträgen nur teilweise.
-      *Quelle:* [Audit](AUDIT_2026-11-12.md), Hotzone 3.
+**IDs:** R01–R19 bleiben vergeben, einschließlich des im CHANGELOG erledigten R19. R17 bleibt Territory Wars;
+neu sind **R20 für Scrap Wars / Scrap Arena** und **R21 für Naval-Zustandsabsicherung**. Nächste freie ID: R22.
+Frühere B-/Schritt-Bezeichnungen sind Herkunftsverweise, keine zweite Aufgabenliste.
 
-## 2 · Priorität mittel
+## 1 · Quellen und belastbarer Stand
 
-- [ ] **R03 · Kugelfabrik: Entwicklung statt reiner Schleife** (Schritt 5, Kern von B07) – Der Ablauf wiederholt
-      sich nach ≈ 40 s; für lange Kugelfabrik-Videos braucht es Anfang, Entwicklung und Abschluss. Zwei bis drei
-      Bauteile, nach jedem Bauteil Kreislauf, Sortierung und beide Formate testen; zuerst eine 20–30-s-Probe.
-      Braucht Entscheidung **E1**.
-- [ ] **R04 · Pilot über vier Wochen** (Schritt 7, Kern von B13) – läuft seit den ersten Uploads. Je Upload
-      festhalten: Idee, Szenario, Länge, Titel, Vorschaubild, aktive Arbeitszeit, Renderzeit. Nach 7 und 28 Tagen
-      auswerten (Impressionen, Klickrate, Wiedergabedauer, Bindung, Abonnenten), dann Ausbau, Anpassung oder
-      Begrenzung. Aus der Planprüfung: Der Engpass ist die Inhaltsidee, nicht die Technik; realistisch sind ein
-      langes Video und ein Short pro Woche.
-- [ ] **R05 · Zuschauerführung der Seeschlacht** (B08) – Im Hochformat stehen die Schiffe klein in der Mitte. Die
-      Wassersäule ist seit dem Lift-Umbau von 39 % auf 23 % der Bildhöhe geschrumpft, darunter liegt Sand. Größere
-      Schiffe sind ein Layout-Eingriff und damit ein Eingriff in die Physik (Referenz-Hashes neu setzen).
-      *Quelle:* [B01_NAVAL_RECYCLING.md](B01_NAVAL_RECYCLING.md), [NAVAL_MULDEN_LIFT.md](NAVAL_MULDEN_LIFT.md).
-- [ ] **R18 · Seeschlacht: Feinschliff nach dem Lift-Umbau** – (1) Ob rechtes Rohr und Munitionsregal im Short unter
-      den YouTube-Buttons liegen, ist ungeprüft; eine zuschaltbare Sicherheitszonen-Schablone in der Vorschau würde
-      das klären. (2) Querformat mit drei und vier Schiffen: Die Lebensbalken stehen weiter oben in der Mitte, Kugeln
-      können dahinter durchfliegen. (3) Sand, Sockel und Rohr sind ein erster Wurf. (4) Die eingebaute Fassung wurde
-      nur an Einzelbildern beurteilt, nicht in Echtzeit. *Quelle:* [NAVAL_MULDEN_LIFT.md](NAVAL_MULDEN_LIFT.md).
-- [ ] **R06 · Gemeinsame Szenario-Basis** – beim Bau von Szenario 3, nicht vorher: Ereignisring, Matter.js-Auf- und
-      Abbau, Zeitschritt und Prüfsumme sind in beiden Szenarien doppelt gebaut. Die Checkliste für neue Szenarien
-      steht bereits im Audit (Abschnitt 4). *Quelle:* [Audit](AUDIT_2026-11-12.md), Hotzones 1, 2, 4, 7.
-- [ ] **R07 · Oberfläche vervollständigen** (B09) – z. B. fehlen Qualitätswerte (CRF, x264-Preset) in der
-      Oberfläche. Genauer Umfang laut Roadmap V1.2 noch zu klären.
+### Verfügbare Projektquellen
 
-## 3 · Priorität niedrig
+Die folgenden externen Dateien wurden unter `C:/Users/madde/Downloads/` gesichtet; sie liegen nicht im Repository.
+Ihre früheren Startanweisungen und Prioritäten sind historische Planungsgrundlagen, keine neu auszuführenden Aufträge.
 
-- [ ] **R08 · Programmstand in der Video-JSON** – Commit mitschreiben, damit alte Videos sicher wiederholbar sind.
-      *Quelle:* Audit, Hotzone 6.
-- [ ] **R09 · Kugelfabrik: Kleinigkeiten** – Brückenbrecher greift 240–540× je 10 Minuten ein (sichtbares Zucken in
-      Echtzeit nicht geprüft); Grün hat bei 35 Kugeln nur 5 statt 6 Kugeln (ausgewogen erst bei 36); rechte Stütze
-      steht frei neben dem Zellenrad; Funken und Klirr-Ton haben leicht unterschiedliche Auslöser; falls die
-      Sammelschiene in der Shorts-App verdeckt ist, Hochkant-Layout nach oben rücken.
-      *Quelle:* [SCHRITT_2](SCHRITT_2_MARBLE_TRICHTER.md), [SCHRITT_3](SCHRITT_3_MARBLE_TON.md), [SCHRITT_4](SCHRITT_4_ERSTES_SHORT.md).
-- [ ] **R10 · Ton: Ergänzungen** – Motor- und Rollgeräusch der Kugelfabrik fehlen; die Vorschau im Browser ist
-      stumm, die Lautstärkeregler sind nur im Export hörbar.
-- [ ] **R11 · Leistung und lange Videos** – 4K-Export ≈ 10 Frames/s wegen JPEG/Base64-Übergabe; ein kompletter
-      60-Minuten-Export (Bild und Ton) wurde nie gemacht; Geschwindigkeit der Online-Vorschau am Handy unbekannt.
-- [ ] **R12 · Quadrat 1:1 gestalten** – nutzt bei beiden Szenarien das verkleinerte Querformat-Layout.
-- [ ] **R13 · Hinweistext im Bedienfeld** nennt „Schiffe, Kanonen“ auch bei der Kugelfabrik (kosmetisch).
-      *Quelle:* [SCHRITT_1](SCHRITT_1_BEDIENFEHLER.md).
-- [ ] **R14 · Grafik-Playbook** (B04) – reine Dokumentation, spätestens vor einem neuen Szenario.
-- [ ] **R15 · 30 gegen 60 fps vergleichen** (B03) – weitgehend überholt, die Bildrate ist wählbar; nur der
-      Sichtvergleich fehlt.
+| Quelle | Einordnung |
+|---|---|
+| `SimCascade_Endless_Battle_Roadmap_V1.2_2026-11-10(1).md` | V1.2 vom 10.11.2026 gefunden und gelesen; ihr Codebezug `0f13787` ist älter. Freie GUI-Dauer, Ton, Teilen und Naval-Recycling sind inzwischen umgesetzt. |
+| `02-SimCascade_Kanalstart_Planergaenzung_2026-11-10.md` | Kanalziel, begrenzter Pilot und eigenständige Episodenideen bleiben Grundlage. Die damalige Ausgangslage „kein Video veröffentlicht“ ist laut aktuellem CHANGELOG überholt. Markt- und Monetarisierungsangaben wurden hier nicht neu verifiziert und begründen keine technischen Abnahmen. |
+| `04-scrap-arena.html` | Maßgeblicher Scrap-Prototyp, ohne ausgewiesene Versionsnummer. Identisch zu `scrap-arena.html` (SHA-256 beginnt mit `38e2c7d28c96`). |
+| `07-Territory_Wars_Hex_Dominion_V0.3.html` | Maßgeblicher Kandidat für R17. Identisch zur unpräfixierten V0.3-Datei (SHA-256 beginnt mit `4bdee96025a2`). |
+| `Territory_Wars_Hex_Dominion_V0.2.html`, `Territory_Wars_Hex_Dominion.html` | Ältere Vergleichsdateien vorhanden; keine Grundlage für aktuelle Funktions- oder Rundendauerbehauptungen. |
+| Crystal Front | **Quelle fehlt:** im Repository und unter den gesichteten Download-Quellen nicht gefunden. Bleibt Referenz/Variante innerhalb R17, ohne zugeschriebene Funktionen oder Prüfergebnisse. |
 
-## 4 · Deine Aufgaben
+Gelesen wurden außerdem [README](../README.md), [CHANGELOG](CHANGELOG.md),
+[Audit](AUDIT_2026-11-12.md), [Ausgangsbasis](AUSGANGSBASIS_2026-11-11.md),
+[B01](B01_NAVAL_RECYCLING.md), [Naval-Querformat](NAVAL_QUERFORMAT.md),
+[Mulden/Lift](NAVAL_MULDEN_LIFT.md), [Bedienfehler](SCHRITT_1_BEDIENFEHLER.md),
+[Marble-Trichter](SCHRITT_2_MARBLE_TRICHTER.md), [Marble-Ton](SCHRITT_3_MARBLE_TON.md),
+[erstes Short](SCHRITT_4_ERSTES_SHORT.md) und [Playlink/PC-Start](W1_W2_PLAYLINK_START.md).
+Der frühere Umsetzungsplan ist bereits in dieser Roadmap aufgegangen (`git show f2f5e6f:docs/UMSETZUNGSPLAN.md`).
 
-Punkte, die nur du erledigen kannst.
+### Vorhanden, integriert, geprüft und abgenommen sind getrennte Zustände
 
-- [ ] **Hörprobe nach der Lautheits-Einmessung** (−14 LUFS): `output/naval_lufs_16x9_12s.mp4` und
-      `output/marble_lufs_9x16_12s.mp4`. Die Kugelfabrik wird an den lautesten Stellen um bis zu 19 dB begrenzt –
-      klingt sie gedrückt oder pumpend? Den Ton der Seeschlacht hat bisher niemand gehört – auch nicht das neue
-      „Tink“ und „Tock“, die nur nach Kennwerten der Dateien ausgewählt sind.
-- [ ] **Neue Seeschlacht in Echtzeit ansehen** (Hoch- und Querformat, lokal über `start.bat`): rollt, wartet und
-      steigt alles stimmig? Im Hochformat am Handy darauf achten, ob das rechte Rohr unter den YouTube-Buttons liegt.
-      Mondlicht, Mündungsfeuer, Schaum, Himmelsverlauf, Sternschnuppe, Wal und goldene Kugel wurden bisher nur an
-      Einzelbildern beurteilt – am besten im ersten exportierten Short und im 10-Minuten-Video prüfen.
-- [ ] **Laufenden Server neu starten** (`start.bat`), damit der Export-Knopf die neuen Ton-Regler nutzt.
-- [ ] **Online-Vorschau am Handy prüfen** – Prüfliste in [W1_W2_PLAYLINK_START.md](W1_W2_PLAYLINK_START.md).
-- [ ] **Echter Doppelklick auf `start.bat`**, möglichst auch auf einem Rechner ohne vorherige Einrichtung.
+**Im Prototyp vorhanden** bedeutet im externen Quellcode vorhanden. **Im Simulator integriert** verlangt den
+gemeinsamen Weg Konfiguration → Vorschau → Export. **Technisch geprüft** benennt immer Umfang und Codefassung.
+**Visuell/akustisch abgenommen** verlangt einen tatsächlich betrachteten laufenden Clip und eine gehörte Tonspur;
+Standbilder, Hashes und Lautheitswerte ersetzen diese Abnahme nicht.
 
-## 5 · Offene Entscheidungen
+| Szenario | Vorhandener Stand | Technischer Nachweis | Sicht-/Hörabnahme |
+|---|---|---|---|
+| Naval | Integriert: 2–4 Schiffe, Mulden, Lifte, Beuteprinzip im Duell; Tink/Tock und sämtliche R19-Effekte einschließlich goldener Kugel. | Bestehende Tests und historische Berichte; aktuelle gezielte Zustandsproben zeigen eine Prüflücke, siehe R21. | Frühere Bild-/Vorschaufreigaben gelten für die dortigen Fassungen. Laufende Gesamtfassung samt aktuellem Ton in beiden Formaten noch offen. Schiffsoptik bleibt R01. |
+| Marble | Integriert: Kugelfabrik, konstruktiv entschärfter Trichter, Ereigniston, Lautstärkeregler und MP4-Export. | Historische Kreislauf-, Export- und Lautheitsprüfungen; in diesem Auftrag keine neue Laufzeitabnahme. | Aktuelle Hörprobe, tatsächliche Handyprüfung und einzelne Bewegungsdetails offen. Dramaturgie bleibt R03/E1. |
+| Scrap Arena | Nur Prototyp: vier Roboter, zerstörbare Deckung, Waffenaufnahme, eigene Simulation, Canvas-Renderer samt HUD/Ergebnis, Browserklänge und WebM-Aufnahme in 1080×1080. | Zwei reine Simulationsläufe mit Seed 42 endeten identisch nach ca. 52,71 s, Hash `d3baa468`, End-Invarianten erfüllt. Keine Exportprüfung. | Keine neue Sicht-/Hörabnahme; noch kein Simulator-MP4. |
+| Hex Dominion V0.3 | Nur Prototyp: vier Reiche, beide Ausgabeformate, getrennte Kartenformen, Auto-Framing, Filmtempo 0,25–2×, vier Regelparameter, drei Profile, Garnisons-/Marsch-/Routenanzeigen. WebGL2-Renderer mit Canvas-Fallback. | Je zwei reine 20-s-Simulationsläufe mit Seed 42 und Profil `balanced` pro Kartenform identisch (`2e9531d1` hochkant, `4d38cf6c` quer). Keine Kamera-, Audio- oder Exportprüfung. | Keine neue Sicht-/Hörabnahme; kein MP4-/Audiopfad im Prototyp nachgewiesen. |
 
-- [ ] **E1 · Variante für das lange Kugelfabrik-Video** (früher Entscheidung B): Überlastungsprobe, Sortierduell
-      oder Wachsende Maschine. Empfehlung: Wachsende Maschine, weil sie fünf Minuten am natürlichsten füllt.
+**Teststände nicht vermischen:** Der Audit an `20ea040` meldet **72/72**, der Lift-Bericht zur Änderung `33f8eb1`
+**74/74**. Das aktuelle README nennt **79 Tests**; das ist hier kein erneut ausgeführter Testlauf.
+Die heutige Prüfung umfasst Quellcodelektüre und isolierte Node-Simulationsproben mit Node 22.17.1.
+`npm test` und `npm run golden` wurden für diese Dokumentationsänderung nicht ausgeführt; keine Videos erzeugt,
+keine Clips betrachtet oder gehört. Die aktuellen Golden-Fälle sind laut Skript 24 Fälle × 2 Prüfpunkte.
 
-Getroffene Entscheidungen stehen im [CHANGELOG](CHANGELOG.md#entscheidungen).
+### Befunde entlang des Produktionswegs
 
-## 6 · Merkliste (frühestens nach dem Pilot)
+| Weg / Beleg im aktuellen Code | Konsequenz für die Planung |
+|---|---|
+| [core.js](../src/core.js): `normalizeConfig`, `TEMPO_OPTIONS`; [app.js](../src/app.js): Format-/Tempo-Regler | Konfiguration, JSON, Teilen-Link, freie Dauer und 0,64/0,8/1× bestehen bereits. Die Probe bestätigt: **0,75 und 2 werden auf 1 normalisiert**. Der Formatregler startet die Simulation neu; beides passt noch nicht zum Hex-Vertrag. |
+| [core.js](../src/core.js): `Session.start`, `advanceFrame`, `installExportAPI`; [app.js](../src/app.js): `bootExport` | Registry und Offline-Modus existieren. Session erwartet derzeit eine Pixi-Root; Capture liest ausschließlich `app.canvas`. Externe Canvas-/WebGL-Renderer, zusätzliche Labels und DOM-Anzeigen sind damit noch nicht vollständig angeschlossen. |
+| [naval.js](../src/scenarios/naval.js): `_enterLane`, `checkInvariants`, `stateHash`; [sim.test.mjs](../test/sim.test.mjs) | Besitzwechsel und Warteschlangen sind implementiert, Verteilung/Kugelzahlen werden bereits geprüft. Der Hash enthält jedoch weder Kugelbesitzer noch die Reihenfolge in `magBalls`/`lane`. In isolierten Proben blieben **Hash und Invariantenprüfung trotz Besitzeränderung einer fliegenden Kugel bzw. umgedrehter Magazin-/Recyclingreihenfolge unverändert**. Das belegt eine Prüflücke, keinen beobachteten Fehler im normalen Ablauf. |
+| Scrap: `_event`, `_effect`, `soundEvents`; Hex: `_event`, `_arrive`, `frame`, `HexPrototype` | Scrap hält nur zehn Meldungen; Schussklänge kommen aus kurzlebigen Effekten. Hex hält 36 Meldungen und drosselt Eroberungsmeldungen. Diese UI-Listen sind keine vollständigen Exportereignisse. Scrap bleibt am Rundenende stehen; Hex startet nach neun Echtzeitsekunden mit Zufallsseed neu. |
+| [audio.mjs](../lib/audio.mjs): `buildVoices`; [exporter.mjs](../lib/exporter.mjs): Ereignisabholung | Der vorhandene Mischer setzt Audio über `step / 60` in Videozeit. Neue Szenarien brauchen eine ausdrückliche Zuordnung von Simulation, Filmtempo, Runde und Videozeit sowie lückenlose Sequenzen. Vorhandene Verlustprüfung erhalten. |
+| [exporter.mjs](../lib/exporter.mjs): `exportVideo`, Sidecar | Normalisierte Konfiguration, Zustands-Hash und Pixi-/Matter-/FFmpeg-Version stehen schon in der JSON. Commit, Arbeitsverzeichnisstatus, Node/Playwright/Chromium fehlen. `opts.encoder` kann die wirksame Qualität gegenüber `config.video.quality` überschreiben; JPEG-Qualität und nachgeladene Skripte stehen nicht vollständig im Wiederholungsrezept. |
+| [exporter.mjs](../lib/exporter.mjs), [audio.mjs](../lib/audio.mjs): `renderTrack`/`processTrack`; [server.mjs](../server.mjs); [export.test.mjs](../test/export.test.mjs) | Abbruchsignal wird vor Start und zwischen Frame-Paketen geprüft. Danach fehlen Prüfungen beim Encoderabschluss, Audiomix, Muxen und Finalisieren. Der synchrone Mischer blockiert den Server; Fortschritt beschreibt nur Frames. Der Abbruchtest löst während der Bildphase aus. |
+| [naval.js](../src/scenarios/naval.js): `eventPlan`, `skyProgress` | Himmel und seltene Ereignisse hängen von `video.durationSec` ab. Ein kurzer Ausschnitt aus einer längeren Episode darf nicht durch Verkürzen dieser Dauer einen neuen Fahrplan erhalten. |
 
-- **R16 · Factory Wars / Robot Wars** (B11)
-- **R17 · Territory Wars** (B12)
+## 2 · Höchste Priorität: Naval-Abnahme und sichere Produktion
 
-## 7 · Arbeitsregeln
+Die folgenden Punkte sind getrennte Aufträge. R02 kann unabhängig beginnen; R08 und die drei Zuverlässigkeitsteile
+von R11 folgen vor dem Produktionsabschluss eines neuen Szenarios. R04 wartet darauf nicht mit seiner Auswertung.
 
-- Je Auftrag: Ausgangs-Commit und betroffene Dateien nennen; genau ein Schwerpunkt, keine Nebenfunktionen.
-- Eigener Branch und Commit; Push und Merge nach `main` nur, wenn der Auftrag es freigibt.
-- Tests: mindestens die betroffenen Testdateien und `npm run golden`; vor größeren Schritten `npm test`.
-  Hängende Prozesse abbrechen.
-- Keine Exporte über 20 s ohne ausdrücklichen Auftrag.
-- Sichtbare Änderung = Vorher/Nachher-Bild oder kurzer Clip, der tatsächlich angesehen wurde.
-- Größere Schritte bekommen einen Bericht unter `docs/` (was geändert, was nachweislich besser, Messwerte).
-- Schlägt die Abnahme fehl: anhalten, dokumentieren, nicht ausweiten.
+- [ ] **R18 · Aktuelle Naval-Fassung in Bewegung und mit Ton abnehmen.**
+  **Ziel:** belastbare Mängelliste zur aktuellen Fassung statt neuer pauschaler Umbau.
+  **Abhängigkeit:** aktuelle Konfiguration und eindeutig benannte Prüffassung.
+  **Umfang:** kurze laufende MP4-Proben, jeweils höchstens 20 s, in 9:16 und 16:9. Kugelwege, Warteschlangen,
+  Rollen/Steigen, Sand/Sockel/Rohre, Lesbarkeit und rechte Shorts-Sicherheitszone beurteilen; HUD bei drei und vier
+  Schiffen zusätzlich prüfen. Schuss/Treffer/Platscher/Tink/Tock als tatsächliche Mischung anhören, ebenso das
+  Zusammenspiel mit Mondlicht, Mündungsfeuer, Schaum, Himmel, Sternschnuppe, Wal und goldener Kugel ansehen.
+  Späte Ereignisse gegebenenfalls nach Simulationsvorlauf kurz aufnehmen; ursprüngliche Episodendauer beibehalten.
+  Eine Sicherheitszonen-Schablone ist nur ein Prüfmittel, keine Behauptung über alle Handy-/YouTube-Oberflächen.
+  **Abnahme:** protokollierte Sicht- und Hörurteile mit Clip, Seed, Konfiguration, Commit und Zeitmarken; echte
+  Handyprüfung gesondert benennen. Nur reproduzierte Mängel als begrenzte Korrekturen unter R18, R01 oder R05 verfolgen.
 
-## 8 · Pflege
+- [ ] **R21 · Naval: Besitzwechsel und Recyclingreihenfolge gezielt absichern.**
+  **Ziel:** die belegte Lücke in Hash und Zustandsprüfung schließen, ohne die Spielphysik umzubauen.
+  **Abhängigkeit:** aktueller Lift-/Beute-Stand; unabhängig von einer gestalterischen Entscheidung.
+  **Umfang:** kleine Regressionen für jeden Übergang vom Wasser über Mulde/Lift ins Magazin und zum nächsten Schuss;
+  Kugelidentitäten, eindeutige Mitgliedschaft, Besitzerwechsel im Duell, Besitzererhalt bei drei/vier Schiffen,
+  geordnete Warteschlange und tatsächliche Entnahmefolge prüfen. Bestehende Verteilungs-/Langlauftests ergänzen.
+  **Abnahme:** gezielt vertauschte Besitzer oder Reihenfolgen werden erkannt; reguläre Läufe beider Formate und
+  2–4 Schiffe bestehen. Hash-Erweiterungen sind begründet und versioniert; veränderte Fingerabdrücke werden von
+  verändertem Verhalten unterschieden. Golden-Hashes allein genügen nicht, Referenzen werden nicht blind neu gesetzt.
 
-- Neue offene Punkte **nur hier** eintragen, mit nächster freier ID und Quelle.
-- Erledigt: Punkt hier entfernen und im [CHANGELOG](CHANGELOG.md) mit Datum, Commit und ggf. Bericht eintragen.
-- Berichte unter `docs/` verweisen auf diese Datei, statt eigene Listen weiterzuführen.
+- [ ] **R02 · Aktuelle Tests und Referenzen automatisch ausführen (CI, früher B10).**
+  **Ziel:** jeder PR/Push liefert einen dem Commit zugeordneten technischen Nachweis.
+  **Abhängigkeit:** Lockfile und aktuelle Referenzdatei; kein Szenario-Umbau nötig.
+  **Umfang:** eigener Prüfworkflow neben dem vorhandenen Pages-Deployment. Passende Node-Version (lokal 22.17.1),
+  `npm ci`, Playwright-Chromium samt Systemabhängigkeiten sowie FFmpeg/ffprobe mit libx264 bereitstellen und Versionen
+  protokollieren. `npm test` und Referenzprüfung ausführen; Software-Rendering, Zeitlimits und Prozessbereinigung
+  berücksichtigen. Die Golden-Prüfung ist bereits Teil der Suite und als `npm run golden` separat verfügbar.
+  **Abnahme:** sauberer Runner besteht mit tatsächlicher Testzahl und Referenzergebnis; ein absichtlich verletzter
+  Test liefert einen fehlgeschlagenen Check. Kein automatisches `golden:write`; Versionsunterschiede untersuchen.
+  Keine zusätzlichen Langexporte oder Leistungsbenchmarks in diesem Paket.
+
+- [ ] **R08 · Vollständiges Wiederholungsrezept in der Video-JSON.**
+  **Ziel:** nachvollziehen können, mit welchem Programmstand und welchen wirksamen Werten ein Video entstand.
+  **Abhängigkeit:** bestehende Sidecar-/CLI-/JSON-Ladewege; sinnvoll nach Einrichtung von R02.
+  **Umfang:** Git-Commit und sauber/geändert/unbekannt samt Status nicht versionierter relevanter Dateien, Node-,
+  Playwright-, Chromium-, FFmpeg-/ffprobe-Version ergänzen; vorhandene Bibliotheks-/Rendererangaben erhalten.
+  Normalisierte Szenario-Defaults, sämtliche Video-/Ansichtswerte und tatsächlich wirksame Encoder-/Capture-Optionen
+  einschließlich Überschreibungen festhalten; bei `--script` Quelle/Version identifizierbar machen.
+  Neue Defaults können das Bild alter, unvollständiger Konfigurationen verändern; diesen Unterschied sichtbar machen.
+  **Abnahme:** zwei kurze Exporte aus gespeicherter Konfiguration auf demselben Stand stimmen in wirksamen Werten,
+  Simulationszustand und Audioereignissen überein; sauberer/geänderter Stand und fehlendes Git sind unterscheidbar.
+  Ein Commit allein verspricht keine pixelidentischen Ergebnisse über unterschiedliche Renderer hinweg.
+
+- [ ] **R11 · Export-Zuverlässigkeit vor Leistungsoptimierung.**
+  **Ziel:** der Export bleibt während aller Phasen bedienbar, abbrechbar und eindeutig abgeschlossen.
+  **Abhängigkeit:** bestehender Exporter, Server und Audiotests; drei kleine, einzeln abgenommene Schritte:
+
+  | Teilauftrag | Begrenzter Umfang | Überprüfbare Abnahme |
+  |---|---|---|
+  | A · Bildberechnung und Status | Phasen Start/Bild/Audio/Finalisierung anzeigen; auch Warten auf Frame-Pakete, Pipe und Encoderabschluss in den Abbruchpfad einbeziehen. | Abbruch während Bildberechnung bzw. Encoder-Warten beendet Prozesse und Teildateien; 100 % Frames wird nicht als fertiges Video dargestellt. |
+  | B · Audiomix | Mischen/Einmessen aus dem blockierenden Serverpfad lösen, Abbruchsignal und Fortschritt weiterreichen. Keine neue Klanggestaltung. | Status- und Abbruchanfragen werden während des Mischens bearbeitet; kurze Prüfungen zeigen begrenzte Abbruchlatenz und unveränderte Audio-Synchronität/Reproduzierbarkeit. |
+  | C · Finalisierung | Sample-Dekodierung, Muxen, ffprobe und Schreiben/Übernehmen von Video plus JSON abbrechbar und konsistent abschließen. | Abbruch und Fehler jeder Teilphase hinterlassen weder laufende Kindprozesse noch `.part`-/WAV-/Mux-Reste oder ein fälschlich fertiges Ergebnis; bereits vorhandene fertige Dateien bleiben erhalten. |
+
+  **Späterer Rest von R11:** JPEG/Base64-Engpass bei 4K, vollständiger 60-Minuten-Export mit Ton und Leistung am
+  echten Handy. Die bisherigen Durchsatzwerte sind historische Messungen/Hochrechnungen, kein neuer Nachweis.
+  Diese Optimierungen sind keine Voraussetzung für R20/R17 und kein Auftrag zum Start langer Exporte.
+
+## 3 · Neue Szenarien: zuerst anschließen, dann ausbauen
+
+- [ ] **R06 · Die benötigte gemeinsame Szenario-Anbindung zusammen mit R20 entwickeln.**
+  **Ziel:** vorhandene Simulationen und Renderer durch den gemeinsamen Produktionsweg führen.
+  **Abhängigkeit:** erster konkreter Bedarf aus Scrap; R17 prüft anschließend denselben Vertrag an Hex.
+  **Umfang in kleinen Schritten:** Capture-/Renderer-Adapter, Zeit-/Rundenvertrag, Ereignis-/Konfigurationsvertrag.
+  Bestehende Canvas-, Pixi- und WebGL-Renderer weiterverwenden; keine neue Engine und keine allgemeine Matter.js-Pflicht.
+  Erforderlich sind:
+
+  - Vollständiges Capture von Welt, Labels, beabsichtigtem HUD und Ergebnisanzeige; Bedienknöpfe gehören nicht ins Video.
+  - Feste Simulationsschritte je Szenario mit Akkumulator und **genau einmal** angewandtem Filmtempo.
+    Videozeit, Simulationszeit und Rundenzustand unterscheiden; vorhandenes Naval-/Marble-Verhalten erhalten.
+  - Eine deterministische Rundenfolge mit lesbarer, festgelegter Endpause und aus Startseed/Rundennummer abgeleiteten
+    Folgeseeds. Pausen und Rundenwechsel folgen Videozeit, nicht Wanduhr oder Browser-Zufall.
+  - Vollständige Ereignisse für Audio und Auswertung mit über Runden hinweg eindeutiger Sequenz und präziser
+    Videozeit-Zuordnung; UI-Meldungen dürfen weiterhin verdichtet werden. Pufferverlust erkennen, Audio-Dichte separat steuern.
+  - Konfigurations-Roundtrip für Regeln, Darstellung, Tempo und Wiederholung sowie passende Zustands-/Invariantenprüfungen;
+    Quellen-/Klangzuordnung und Lizenzen dokumentieren, Parameternamenskollisionen im Teilen-Link vermeiden.
+
+  **Abnahme:** gleicher Startzustand liefert bei 30/60 fps dieselbe Simulation, Ereignisfolge und Rundenfolge zu
+  denselben Videozeitpunkten; Rendern verändert den Simulationszustand nicht. JSON/Teilen-Link bewahren alle Werte,
+  alle vorgesehenen Bildebenen erscheinen im kurzen MP4, Naval-/Marble-Regressionen bleiben abgesichert.
+
+  **Späterer Ausschnittsexport:** Episodendauer, Startversatz und Cliplänge getrennt behandeln; Vorlauf behält Regeln,
+  Seed und Fahrplan der gewählten Episode. Audio wird passend zum Startversatz ausgeschnitten. Bei Naval darf eine
+  kürzere Cliplänge `eventPlan`/`skyProgress` nicht neu planen. Ein Ausschnitt ist mit demselben Abschnitt eines
+  durchgehend simulierten Ablaufs zu vergleichen. Dafür keinen Timeline-Editor bauen; ein früher benötigter
+  Abnahmehelfer muss denselben Vertrag einhalten.
+
+- [ ] **R20 · Scrap Wars / Scrap Arena als erstes neues Szenario integrieren.**
+  **Ziel:** ein vollständiger Durchlauf Konfiguration → Vorschau → MP4 mit Ton und lesbarem Ergebnis.
+  **Abhängigkeit:** Produktionsabsicherung aus Abschnitt 2; R06 entsteht gemeinsam mit dieser Integration.
+  **Quelle:** `04-scrap-arena.html` / identisches `scrap-arena.html`; eigenständiges Arenaszenario, getrennt von R16.
+  **Umfang:** zuerst Registrierung, gemeinsame Konfiguration und Adapter für den vorhandenen Canvas-Renderer;
+  Bildgestaltung in 9:16/16:9 statt bloßer Übernahme der quadratischen WebM-Aufnahme. Vorhandenes Canvas-HUD und
+  Ergebnisbanner weiterverwenden. Danach vollständige Ereignis-/Audioanbindung an den MP4-Mischer und deterministische
+  Wiederholung mehrerer Runden. Browserklänge/MediaRecorder sind bereits vorhanden, aber kein Ersatz für Offline-Audio.
+  Das vorhandene Rundenende einschließlich Unentschieden übernehmen; nach der Endpause folgt die nächste Runde,
+  statt für den Rest eines langen Videos ein Standbild auszugeben. Zusätzliche Spielmechaniken folgen erst nach Abnahme.
+  **Abnahme:** kurze tatsächlich betrachtete und gehörte MP4-Proben beider Formate mit vollständigem HUD/Ergebnis und
+  synchronem Ton; Konfiguration erneut laden und reproduzieren. Rundenende, Endpause und Folgerunde gezielt prüfen,
+  gegebenenfalls per Simulationsvorlauf und ≤20-s-Clip; mehrere Runden ohne Video-Langexport auf Invarianten,
+  Ereignisvollständigkeit und begrenzte Objektzahl prüfen.
+
+- [ ] **R17 · Territory Wars: anschließend Hex Dominion V0.3 integrieren (früher B12).**
+  **Ziel:** den vorhandenen Gebietskrieg mit seinen Anzeigen und Einstellmöglichkeiten reproduzierbar exportieren.
+  **Abhängigkeit:** abgenommener Scrap-Produktionsweg/R06; Crystal Front bleibt vorerst zusätzliche Referenz/Variante.
+  **Vorhandenes übernehmen:** 9:16/16:9, eigenständige Hoch-/Quer-Kartenformen, Auto-Framing, Filmtempo 0,25–2×,
+  `incomeMultiplier`, `aggression`, `offensiveInterval`, `marchDuration`, Profile `calm`/`balanced`/`intense` sowie
+  Garnisons-, Marsch- und Routenanzeigen. Diese Funktionen sind keine neu zu entwickelnden Spielmechaniken.
+  **Drei begrenzte Integrationsschritte:**
+
+  1. **Konfiguration und Zeit:** Ausgabeformat und Kartenform getrennt halten. Ausgabewechsel erhält die laufende Welt;
+     „Karte anwenden“ startet bewusst neu. `0,75×` und der übrige Prototypbereich müssen verlustfrei durch Oberfläche,
+     JSON/Teilen-Link, Vorschau und Export gehen. `HexPrototype.advanceFrame(videoDelta)` multipliziert bereits mit
+     Tempo; der Adapter darf es nicht erneut anwenden. Normale Echtzeitschleife während Offline-Berechnung stilllegen.
+  2. **Darstellung und Capture:** Welt-Canvas, Label-Canvas und beabsichtigte DOM-Anzeigen (z. B. Fraktionsstände,
+     Uhr/Runde, Sieger) vollständig erfassen. Auto-Framing, Kameramodus/-werte und Anzeigeoptionen in den
+     Konfigurationsvertrag aufnehmen; englische Texte im Video, deutsche Bedienung erhalten. Kamera-/Formatprüfungen
+     müssen auch eine Ausgabe mit abweichender Kartenform berücksichtigen.
+  3. **Runden, Ereignisse und Audio:** den Echtzeit-Autoloop mit Zufallsseeds durch R06-Endpause/Folgeseeds ersetzen;
+     vollständige Ereignisse und eine passende Tonspur ergänzen. Der vorhandene Hex-Hash erfasst u. a. RNG-Zustand,
+     Entscheidungszeiten der Fraktionen und Marschzeiten nicht vollständig: Zustandsprüfung erweitern und Invarianten
+     für Besitz, HQs, Versorgung, Einheiten und Märsche ergänzen.
+
+  **Reproduktionsgrenze:** Export beginnt aus festgelegter Startkonfiguration neu. Der aktuelle Konfigurationsgetter
+  speichert keine Historie zwischenzeitlicher Regeländerungen; diese Historie aufzuzeichnen ist vorerst kein Auftrag.
+  **Abnahme:** kurze tatsächlich betrachtete und gehörte MP4s beider Formate; vollständige Labels/HUD/Ergebnis,
+  Kamera-Roundtrip und Welt-Erhalt bei Ausgabewechsel nachgewiesen. `0,75×` bei 30/60 fps, Pause der Echtzeitschleife,
+  identische Wiederholung, Ereigniszeiten und Rundenübergang gezielt prüfen. Rundendauern für V0.3 neu bestimmen;
+  keine alten V0.2-Dauern übernehmen. Vorlauf statt Exporten über 20 s verwenden.
+
+## 4 · Parallel: Kanalpilot und begrenzte Nacharbeiten
+
+- [ ] **R04 · Vierwöchigen Kanalpilot fortsetzen (Schritt 7, früher B13).**
+  **Ziel:** aus fertigen Videos und Zuschauerdaten lernen; erste Uploads sind im CHANGELOG vermerkt.
+  **Abhängigkeit:** verfügbare abgenommene Videos, kein Warten auf neue Szenarien oder alle kosmetischen Aufgaben.
+  **Umfang:** realistisch ein längeres Video und ein Short pro Woche; je Upload Idee, Szenario, Länge, Titel,
+  Vorschaubild, aktive Arbeitszeit und Renderzeit festhalten. Nach 7/28 Tagen Impressionen, Klickrate,
+  Wiedergabedauer, Bindung, Abonnenten und verfügbare Shorts-Kennzahlen auswerten; ein anderer Seed allein ist
+  keine neue Inhaltsidee. Aktuelle [20-s-Short-Vorlage](../presets/naval-youtube-short.json) (Seed 50, drei Kanonen)
+  und [10-Minuten-Vorlage](../presets/naval-youtube-10min.json) (Seed 314, zwei Kanonen) erhalten.
+  1440p60 ist ein verfügbares Profil; Qualitätsgewinn, Renderzeit und tatsächlich ausgelieferte YouTube-Fassung
+  vergleichen. Die VP9-Begründung in historischen Entscheidungen/Vorlagen gilt hier **nicht als verifizierte Garantie**.
+  Länge nach Inhaltsidee und Daten wählen; das Vorhandensein einer langen Vorlage autorisiert keinen Langexport.
+  **Abnahme:** eine dokumentierte Pilot-Auswertung entscheidet Ausbau, Anpassung oder Begrenzung; neue Szenarien
+  verschieben den Pilot nicht erneut auf unbestimmte Zeit.
+
+- [ ] **R01 · Verbleibende Schiffsoptik.** Ziel: die Schiffe selbst gezielt verbessern. Abhängigkeit: R18 und ein
+  konkreter Bildbefund. Umfang: jeweils ein begrenzter Darstellungsschritt; Mulden/Lifte/Beuteprinzip und R19 sind
+  umgesetzt. Abnahme: betrachteter Vorher/Nachher-Kurzclip bei gleicher Konfiguration, kein unbeabsichtigter
+  Einfluss auf Physik oder Lesbarkeit. Eine neue Spielmechanik ist nicht Teil dieser Restaufgabe.
+- [ ] **R05 · Zuschauerführung der Seeschlacht (früher B08).** Ziel: Schüsse, Recycling und Fortschritt gut verfolgen
+  können. Abhängigkeit: R18-Befunde und konkrete Episodenidee aus R04. Umfang: nur belegte Kompositions-/HUD-Mängel
+  korrigieren; keine pauschale Vergrößerung der Schiffe oder Physiküberarbeitung. Der Lift-Umbau hat die frühere
+  Bildaufteilung bereits verändert. Abnahme: lesbarer laufender Hoch-/Querclip; bei bewusst nötigem Layout-/Physikeingriff
+  vorher/nachher Zustände und Verhalten vergleichen und Referenzänderungen begründen.
+- [ ] **R03 · Kugelfabrik: Entwicklung statt reiner Schleife (Schritt 5, früher B07).** Ziel: eine längere Episode
+  trägt Anfang, Entwicklung und Abschluss. Abhängigkeit: Entscheidung E1. Umfang: höchstens zwei bis drei wirksame
+  Bauteile, einzeln mit Kreislauf/Sortierung und beiden Formaten prüfen. Abnahme: zuerst ≤20-s-Probe mit erkennbarem
+  Fortschritt; ein längerer Videoexport braucht einen gesonderten Auftrag.
+- [ ] **R14 · Grafik-Playbook (früher B04).** Ziel: vorhandene Grafikqualität nachvollziehbar wiederverwenden.
+  Abhängigkeit: tatsächlicher Marble-/Szenariocode; spätestens bei Vorbereitung von R20 klein dokumentieren.
+  Umfang: Layer, Canvas-Texturen, Material/Licht, mechanische Anschlüsse, Handy-Lesbarkeit und Capture-Regeln.
+  Abnahme: konkrete Codebeispiele und kurze Renderer-Checkliste; kein vorgezogener Grafikframework-Umbau.
+
+## 5 · Nachrangige offene Punkte und Merkliste
+
+- [ ] **R07 · Oberfläche vervollständigen (früher B09).** Nach Sichtung von V1.2 begrenzt auf noch fehlende
+  Qualitätswerte/-profile (CRF, x264-Preset, Bitrate) und ggf. 1:1-Auswahl. Freie Dauer, Auflösung/FPS,
+  Speichern/Laden/Teilen und Lautstärkeregler sind vorhanden. Exportstatus/Abbruch gehören zu R11, Metadaten zu R08.
+- [ ] **R09 · Kugelfabrik: Kleinigkeiten.** Historisch 240–540 Brückenbrecher-Eingriffe je zehn Minuten; sichtbares
+  Zucken erst im laufenden Clip prüfen. Grün hat bei 35 Kugeln fünf statt sechs Kugeln; 36 erfordert eine bewusste
+  Parameteränderung. Freistehende rechte Stütze, unterschiedliche Funken-/Klirr-Auslöser und mögliche Verdeckung
+  der Sammelschiene bleiben einzeln zu prüfen. Quellen: Schritt 2–4, keine neuen Messwerte aus diesem Auftrag.
+- [ ] **R10 · Ton-Ergänzungen.** Motor-/Rollgeräusch der Kugelfabrik und hörbare Simulator-Vorschau fehlen.
+  Die Browserklänge des Scrap-Prototyps sind noch keine integrierte Vorschauvertonung. Bestehenden MP4-Ton erhalten.
+- [ ] **R12 · Quadrat 1:1 gestalten.** Naval/Marble nutzen bisher ein verkleinertes Querformat-Layout; nachrangig
+  gegenüber guter 9:16-/16:9-Produktion.
+- [ ] **R13 · Hinweistext im Bedienfeld.** Nennt auch bei Marble „Schiffe, Kanonen“; kosmetischer Rest aus Schritt 1.
+- [ ] **R15 · 30 gegen 60 fps vergleichen (früher B03).** Auswahl ist vorhanden; Sichtvergleich bei gleichem
+  Seed/Ausschnitt mit Renderzeit, Dateigröße und Bildqualität fehlt. Mit R04-Profilbewertung bündeln, keine neue Engine.
+- [ ] **R16 · Factory Wars / Robot Wars (früher B11).** Frühestens nach dem Pilot: späteres Konzept mit zwei
+  Fabriken, zwei Robotertypen, Produktion und Schrottkreislauf. Eigener Gegenstand, nicht mit Scrap Arena/R20 zusammenlegen.
+
+## 6 · Offene Entscheidungen und Abnahmen am Gerät
+
+- [ ] **E1 · Variante für das lange Kugelfabrik-Video:** Überlastungsprobe, Sortierduell oder Wachsende Maschine.
+  Bisherige Empfehlung bleibt Wachsende Maschine; noch keine Entscheidung. R03 hängt daran, R04/R20/R17 nicht.
+- **Naval sehen/hören:** aktuelle Proben aus R18 einschließlich rechter Sicherheitszone und 3-/4-Schiff-HUD;
+  alte lokale Clipnamen sind kein Nachweis für die neue Fassung.
+- **Marble hören:** aktuelle Lautheitsmischung auf gedrückten/pumpenden Klang prüfen. Die frühere Messung von bis
+  zu 19 dB Begrenzung ist ein Hinweis für die Hörprobe, keine aktuelle klangliche Abnahme.
+- **Handy/PC:** echte Handyprüfung nach [W1/W2](W1_W2_PLAYLINK_START.md) und Doppelklick auf `start.bat`, möglichst
+  auch auf einem frisch eingerichteten Rechner. Bei veraltetem laufendem Server für den jeweiligen Test neu starten.
+
+Getroffene Entscheidungen einschließlich E2 und der Umsetzung von R19 stehen im [CHANGELOG](CHANGELOG.md#entscheidungen).
+
+## 7 · Die nächsten drei konkret ausführbaren Aufträge
+
+1. **R18 – Naval-Abnahmepaket:** Ausgangs-Commit festhalten, höchstens 20-s-Proben beider Formate und gezielte
+   3-/4-Schiff-HUD-Proben bereitstellen, tatsächlich ansehen/anhören und Befunde mit Zeitmarken dokumentieren.
+   Zunächst Prüfung; daraus jeweils kleine Korrekturaufträge ableiten.
+2. **R21 – Besitz und Reihenfolge absichern:** die oben beschriebenen Manipulationsfälle als gezielte Regressionen
+   abdecken, Übergangs-/Invariantenprüfung ergänzen und reguläres Verhalten mit festen Seeds vergleichen.
+   Keine allgemeine Physikänderung; jede nötige Hashdefinitions-/Referenzänderung erklären.
+3. **R02 – CI einrichten:** reproduzierbare Node-/Chromium-/FFmpeg-Umgebung plus aktuelle Suite/Referenzprüfung auf
+   einem sauberen Runner ausführen; Ergebnis dem geprüften Commit zuordnen und Fehlersignalisierung prüfen.
+
+Danach folgen R08 und R11 A/B/C als getrennte Produktionspakete, anschließend R06/R20 und R17. Diese Reihenfolge
+zieht Filmabnahme und belegte Reproduktions-/Abbruchlücken vor neue Mechaniken; R04 läuft parallel weiter.
+
+## 8 · Arbeitsregeln und Pflege
+
+- Je Auftrag Ausgangs-Commit und betroffene Dateien nennen, genau einen begrenzten Schwerpunkt bearbeiten und
+  bestehende lokale Änderungen erhalten. Eigener Branch und Commit; Push/Merge nur im autorisierten Umfang.
+- Für Codeänderungen betroffene Tests und Referenzvergleich ausführen, vor größeren Integrationsschritten die
+  vollständige Suite; tatsächliche Ergebnisse mit Version/Commit berichten. Für reine Dokumentationsänderungen
+  Inhalte, Verweise und Diff prüfen. Hängende Prozesse beenden, keine Referenzen blind neu schreiben.
+- **Keine Exporte über 20 s ohne gesonderten Auftrag.** Das gilt auch für vorhandene 30-s-/10-Minuten-/60-Minuten-Presets.
+  Reine Simulationsvorläufe sind davon zu unterscheiden; sie ersetzen keine laufende Sicht-/Hörprobe.
+- Sichtbare/akustische Änderungen mit tatsächlich betrachtetem/gehörtem Kurzclip abnehmen; fehlende Urteile
+  ausdrücklich offenlassen. Technische Tests, Standbilder und Freigaben älterer Fassungen getrennt benennen.
+- Größere Schritte erhalten einen datierten Bericht unter `docs/` mit Umfang, Messwerten, Grenzen und Nachweisen.
+  Berichte verweisen für offene Arbeit auf diese Datei und bilden keine zusätzliche aktive Aufgabenliste.
+- Bei fehlgeschlagener Abnahme den abgegrenzten Schritt dokumentieren und korrigieren, nicht unkontrolliert ausweiten.
+- Neue offene Punkte nur hier mit nächster freier ID und Quelle eintragen. Erledigtes mit Datum, Commit und ggf.
+  Bericht in den CHANGELOG übertragen; IDs nie wiederverwenden, auch nicht R18/R19.
