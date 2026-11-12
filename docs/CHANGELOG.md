@@ -51,6 +51,7 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Datum | Entscheidung |
 |---|---|
+| 12.11.2026 | Alle sechs Scrap-Qualitätsvorschläge zur begrenzten Umsetzungsplanung angenommen: Roboter/HUD, Treffer/Klang, Kampfablauf, 8-Runden-Turnier, insgesamt drei Arenen mit ruhiger Kamera und kleine optionale Werkstatt. R22 in der ROADMAP ist der einzige aktive Plan; zuerst P1/P2, kein paralleler Hex-/Marble-Ausbau und noch keine Umsetzung dieser Erweiterungen. Bestehenden Stand committen/pushen und bei bestandenen Prüfungen mergen ausdrücklich erlaubt. |
 | 12.11.2026 | Folgeauftrag: Scrap Wars jetzt schrittweise nach R06/R20 integrieren. Die Marble-Erweiterung bleibt ausdrücklich als isolierter lokaler Prototyp stehen. Keine neuen Scrap-Spielmechaniken vor der Filmabnahme. |
 | 12.11.2026 | Nach gemeldetem Naval-Short und 10-Minuten-Video hat Naval keinen Vorrang vor neuer Inhaltsentwicklung. Produktionsabsicherung ausdrücklich beauftragt und umgesetzt. Marble zunächst als isolierten lokalen Versuch ansehen; noch keine Entscheidung für die Integration. Scrap Arena bleibt der nächste Kandidat für ein eigenständiges Szenario, Hex V0.3 folgt danach. |
 | 12.11.2026 | Short: 3 Kanonen statt 2 gegen die Action-Pause am Anfang (vorher 3,3 s ohne Schuss, jetzt höchstens 1,7 s); Feuerrate 0,7 je Kanone und Geschosse 0,8 halten es ruhig (≈ 1,3 statt 1 Schuss pro Sekunde). Das lange Video bleibt bei 2 Kanonen. |

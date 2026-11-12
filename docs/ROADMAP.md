@@ -7,25 +7,31 @@ auf; Nachweise stehen im [Produktionsbericht](PRODUKTIONSSICHERUNG_2026-11-12.md
 sauber; keine anwendbare `AGENTS.md` im Repository oder in den übergeordneten Verzeichnissen gefunden.
 Die anschließend beauftragte Scrap-Integration startet an `0dfde76` im Branch `codex/scrap-wars`;
 GitHub-`main` wurde erneut mit `0f87887` abgeglichen. Aktueller Anschluss- und Prüfstand:
-[Scrap-Bericht](SCRAP_WARS_INTEGRATION_2026-11-12.md). Kein Push oder Merge ausgeführt.
+[Scrap-Bericht](SCRAP_WARS_INTEGRATION_2026-11-12.md). Der anschließend autorisierte Push ist erfolgt:
+`5cec854` liegt auf `origin/codex/scrap-wars`, [PR #3](https://github.com/emfau88/Endless-Battle-Simulator/pull/3)
+führt die acht vorhandenen Commits zusammen. Die erste GitHub-CI läuft; Merge erst nach bestandener Prüfung.
 
 **Zweck:** Dies bleibt die **einzige aktive Aufgabenliste**. Erledigtes steht im [CHANGELOG](CHANGELOG.md).
 Berichte dokumentieren ihren damaligen Stand und werden nicht nachträglich als aktuelle Prüfung umgeschrieben.
 Die Marble-Erweiterung bleibt auf ausdrücklichen Wunsch als isolierter lokaler Prototyp stehen.
 Scrap Wars wurde dagegen anschließend zur Integration beauftragt. Produktionsabsicherung und
 Scrap-Integration sind separate Änderungen; ein Video-Langexport wurde nicht beauftragt.
+Der aktuelle Folgeauftrag plant die sechs vorgeschlagenen Scrap-Verbesserungen unter R22; er implementiert sie nicht.
 
 **Projektziel:** SimCascade soll regelmäßig eigenständige, gut lesbare Simulationsvideos mit sauberem Ton und
 reproduzierbarem MP4-Export ermöglichen: Shorts in 9:16 und längere Videos in 16:9. Inhaltsidee, Zuschauerreaktion
 und Produktionsaufwand bestimmen die Länge. Der bereits laufende Kanalpilot R04 wird parallel fortgesetzt.
 
-**Reihenfolge:** Scrap Wars als Szenario 3 technisch integrieren und kurze Filmproben beurteilen →
-Hex Dominion V0.3 als Territory Wars. Der erste GitHub-CI-Lauf bleibt nach autorisiertem Push offen.
+**Reihenfolge:** integrierten Scrap-Stand mit GitHub-CI sichern → kurze Filmproben/R20 beurteilen →
+Scrap-Videoqualität in sechs begrenzten Paketen R22 verbessern. Zuerst Lesbarkeit und Treffer/Klang,
+dann Kampfablauf und Turnier; Arenen/Kamera und die kleine Werkstattvariante folgen getrennt.
+Hex Dominion V0.3/R17 bleibt der nächste neue Szenariokandidat, wird während R22 aber nicht parallel integriert.
 Naval hat nach dem gemeldeten Short und 10-Minuten-Upload keinen Vorrang; offene Abnahmen und R21 bleiben erhalten.
-Allgemeiner Engine-Umbau, zusätzliche Spielmechaniken, 4K-Optimierung und 60-Minuten-Produktion haben keinen Vorrang.
+Allgemeiner Engine-Umbau, Spielmechaniken außerhalb R22, 4K-Optimierung und 60-Minuten-Produktion haben keinen Vorrang.
 
 **IDs:** R01–R19 bleiben vergeben, einschließlich des im CHANGELOG erledigten R19. R17 bleibt Territory Wars;
-neu sind **R20 für Scrap Wars / Scrap Arena** und **R21 für Naval-Zustandsabsicherung**. Nächste freie ID: R22.
+neu sind **R20 für Scrap Wars / Scrap Arena**, **R21 für Naval-Zustandsabsicherung** und
+**R22 für den begrenzten Scrap-Qualitätsausbau**. Nächste freie ID: R23.
 Frühere B-/Schritt-Bezeichnungen sind Herkunftsverweise, keine zweite Aufgabenliste.
 
 ## 1 · Quellen und belastbarer Stand
@@ -104,7 +110,7 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   prüfen, dem Commit zuordnen und die Fehlersignalisierung auch dort bestätigen. Der lokale Lauf ersetzt diese
   Abnahme nicht. Keine zusätzlichen Langexporte oder Leistungsbenchmarks nötig.
 
-## 3 · Neue Szenarien: zuerst anschließen, dann ausbauen
+## 3 · Szenarien: Scrap anschließen, gezielt ausbauen, danach Hex
 
 - [x] **R06 · Für Scrap benötigte Szenario-Anbindung technisch umgesetzt.**
   **Ziel:** vorhandene Simulationen und Renderer durch den gemeinsamen Produktionsweg führen.
@@ -164,7 +170,69 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   gegebenenfalls per Simulationsvorlauf und ≤20-s-Clip; mehrere Runden ohne Video-Langexport auf Invarianten,
   Ereignisvollständigkeit und begrenzte Objektzahl prüfen.
 
-- [ ] **R17 · Territory Wars: anschließend Hex Dominion V0.3 integrieren (früher B12).**
+- [ ] **R22 · Scrap Wars: Umsetzungsplan für hochwertige Videos, sechs begrenzte Pakete.**
+  **Ziel:** auf kleinem Bildschirm nachvollziehbare Kämpfe, spürbare Treffer und eine abgeschlossene Episode.
+  Die sechs Vorschläge sind zur Planung angenommen; **noch keine Umsetzung dieses Ausbaus**.
+  Ausgangspunkt ist `5cec854` samt [Scrap-Bericht](SCRAP_WARS_INTEGRATION_2026-11-12.md).
+  Vor dem ersten Paket R20-Proben als Vergleich festhalten; offene Hör-/Handyurteile weiterhin ausdrücklich benennen.
+
+  **Was schon besteht:** vier benannte Roboter, Teamfarben, HP-/Waffenanzeigen, Rückstoß, Mündungslicht,
+  Treffer-/Explosions-/Wrackdarstellung, zwei Waffentypen und Nachschubstationen. Rundenfolge, Siegzähler,
+  Ergebnis-Pause und Ereigniston sind integriert. Der Ausbau verfeinert diese Basis.
+  Die Arena ist quadratisch; ein kleineres HUD allein vergrößert sie im Querformat nicht.
+  Der Renderer kennt optionales kurzes Kamerazittern, aber noch keine ruhige Duellverfolgung.
+
+  **P1 → P2 ist die erste nutzbare Qualitätsstufe; danach P3 → P4 → P5 → P6.**
+  Jedes Paket wird separat geprüft und committed. Paketgrenzen sind Lieferstände, keine zusätzliche pauschale
+  Freigabeschleife. P6 bleibt eine optionale Versuchsvariante und kein Muss für das erste gute Scrap-Video.
+
+  | Paket | Begrenzter Lieferumfang | Abschlusskriterium |
+  |---|---|---|
+  | **P1 · Roboter und Bildaufteilung** | Ein Material-/Kontrastdurchgang: größere Farbflächen, helle Kanten, vier erkennbare kosmetische Chassisvarianten innerhalb der bisherigen Kollisionskontur. Kompaktere Anzeigen für Name, HP, Waffe/Munition und Stand in 9:16/16:9; Industrieoptik erhalten. | In kurzen Vorher/Nachher-Proben sind alle vier Roboter und ihre Zustände bei etwa 390 px Bildbreite unterscheidbar; kein HUD verdeckt wichtige Aktion. Kampfverlauf und Physik-RNG bleiben identisch. Echte Handyprüfung separat dokumentieren. |
+  | **P2 · Treffer, Schaden und Klang** | Drei sichtbare Schadensstufen, wenige Funken/Rauch bei starkem Schaden, gezielte Panzerungsdetails. Bestehende Schuss-, Raketen- und KO-Klänge in Gewicht/Dichte abstimmen; vorhandenen Mischer und Effekte weiterverwenden. | Schaden ist ohne Blick auf Zahlen erkennbar; Effekte verdecken weder Roboter noch Geschosse. Vorher/Nachher tatsächlich anhören, Spitzen/Lautheit und Ausschnittskontinuität prüfen. Keine Änderung an Schaden, Rückstoßphysik oder Siegerfolge. |
+  | **P3 · Waffen- und Kampfablauf** | Zuerst Leerlauf und unbewaffnete Suchzeit messen. Danach höchstens **zwei** gezielte Regelkorrekturen: verlässlicheres Erreichen vorhandener Waffen und/oder Platzierung/Takt des vorhandenen Nachschubs. Ruhige Annäherung bleibt erlaubt. | Vor der Änderung einen belegten Stillstandsfall samt Messziel festhalten. Dieser verbessert sich; keine neuen unerreichbaren Waffen, Dauerblockaden oder erzwungenen Sieger. Läufe enden weiterhin regelgerecht. |
+  | **P4 · Abgeschlossenes Turnier** | Genau ein optionales **8-Runden-Format** mit bestehendem Siegzähler, Zwischenstand, letzter Runde und Gesamtergebnis; Gleichstand ergibt geteilten Sieg. Die bisherige freie Rundenfolge bleibt verfügbar. | Runde acht endet mit Ergebnis und kurzem Abschluss statt mitten im Kampf. Ein reiner deterministischer Vorlauf ermittelt die tatsächliche Dauer einschließlich Pausen/Abschluss; Oberfläche, MP4, Ton und Rezept verwenden dieselbe Dauer. |
+  | **P5 · Drei Arenen und ruhige Kamera** | Vorhandener Schrottplatz plus **zwei** handgebaute Varianten: Deckungslager und umkämpfte Mitte. Gleiche quadratische Welt und Grundregeln. Ein optionaler Kameramodus: Übersicht, bei zwei Überlebenden langsames gemeinsames Heranfahren. | Sichere Startplätze und erreichbarer Nachschub auf allen drei Karten. Kamera hält beide Kämpfer und relevante Geschosse/Ziele sichtbar, HUD bleibt fest. Ausschnitt nach Vorlauf stimmt mit kontinuierlicher Aufnahme überein. |
+  | **P6 · Kleine Scrap-Werkstatt** | Nur als zuschaltbare Turniervariante: Scrap aus vorhandenen Rundenergebnissen, eine kurze Werkstattanzeige in der bestehenden Pause. Drei feste Module für Panzerung, Waffenaufsatz oder Antrieb mit jeweiligen Nachteilen; **ein aktiver Platz und höchstens eine Aufrüstung je Roboter/Turnier**. | Entwicklung ist am Roboter und in der Pause sichtbar; Werte bleiben begrenzt und werden nach dem Turnier zurückgesetzt. Gleicher Seed reproduziert Module/Ergebnis. Kein dauerhaft übermächtiger Sieger im begrenzten Vergleich; bei ungeklärter Balance bleibt die Variante experimentell. |
+
+  **Technische Leitplanken je Paket:**
+
+  Einstiegspunkte sind [HUD/Registrierung](../src/scenarios/scrap.js),
+  [Renderer](../src/scenarios/scrap/renderer.js), [Rundenregeln](../src/scenarios/scrap/simulation.js),
+  [Episode/Ereignisse](../src/scenarios/scrap/episode.js) und für P2/P4/P5 der bestehende Audio-/Exportweg.
+
+  - **P1/P2:** Darstellung aus vorhandenem Zustand bzw. eigenem deterministischem Kosmetik-Zufall ableiten;
+    keine zusätzlichen Ziehungen aus dem Kampf-RNG. Partikel und Textur-Caches begrenzen.
+    Im bisherigen Export betrug die maximale Limiter-Absenkung etwa 20–21 dB: Anlass für die Hörprüfung,
+    kein nachgewiesener Klangfehler. Quellpegel/Überlagerung zuerst abstimmen, keinen neuen Audiomischer bauen.
+  - **P3:** Seeds 42, 7 und 314 als Ausgangsvergleich; längste aktive Phase ohne Schuss/Treffer und Suchzeiten
+    getrennt von Ergebnispausen erfassen. Bestehende Zielwahl/Lenkung korrigieren, kein Navigationssystem entwickeln.
+    Wenn kein reproduzierbares Problem besteht, endet das Paket mit dokumentiertem Befund statt künstlicher Regeländerung.
+  - **P4:** ein Format, keine Turnierkonfiguration mit beliebigen Rundenzahlen, Ligen oder K.-o.-Bäumen.
+    Acht Runden garantieren keine zehn Minuten: die Episode bestimmt die Länge. Dauerermittlung abbrechbar halten;
+    Ausschnittsgrenzen, vollständige Episodenmischung und Rezept-Roundtrip an das endliche Format anpassen.
+  - **P5:** erst Karten, danach Kamera innerhalb desselben Pakets prüfen. Kein Karteneditor, keine prozeduralen
+    Arenen und keine rechteckige Physikwelt. Kamera folgt festen Video-Ticks oder rein ableitbarem Zustand;
+    Renderaufrufe verändern sie nicht. Audio-Panorama muss zum sichtbaren Ausschnitt passen.
+  - **P6:** Module deterministisch vergeben; keine Auswahl-KI, zusätzlichen Waffenklassen oder physisch
+    einzusammelnden Schrottobjekte. Zum Beispiel mehr Schutz gegen weniger Tempo; konkrete Werte erst im Paket.
+    Keine persistenten Währungen, Inventare, Fabriken oder Verknüpfung mit Factory Wars/R16.
+
+  **Gemeinsamer Prüfumfang:** drei Ausgangs-Seeds, beide Videoformate und relevante Grenzfälle; gezielte
+  30/60-fps-, Tempo-, Konfigurations- und Exportprüfungen passend zur jeweiligen Änderung. Kurze vergleichbare
+  Clips mit gleichem Seed, Abschnitt und Einstellungen, jeweils **höchstens 20 s**. Für Rundenfolgen längere
+  reine Simulation verwenden; daraus entsteht kein Auftrag für einen 10-/20-Minuten-Videoexport.
+  P3/P4/P6 und neue Karten verändern absichtlich Regeln/Ablauf: Regelversion im Rezept kenntlich machen,
+  bisherigen Modus erhalten und Referenzänderungen begründen. Rohquelle und ursprüngliche Referenzfälle bleiben gesichert.
+  P1/P2 sowie Kamerabewegung dürfen den Kampfverlauf nicht verändern. Naval-/Marble-Regressionen bleiben bestehen.
+
+  **Umfangsgrenze:** ein Paket gleichzeitig, höchstens zwei Gestaltungs-/Balancevarianten pro Paket vergleichen.
+  Neue Mechaniken oder zusätzliche Optionen werden als Folgeidee vermerkt und erweitern das laufende Paket nicht.
+  Notwendige Fehlerkorrekturen und Prüfungen zählen nicht als neue Gestaltungsvarianten. Kein Engine-/3D-Umbau,
+  allgemeines Grafikframework, 4K-Leistungsprojekt oder paralleler Hex-/Marble-Ausbau. Einen guten Clip bereits
+  nach P1/P2 veröffentlichungsreif beurteilen; die Werkstatt darf die erste Produktion nicht blockieren.
+
+- [ ] **R17 · Territory Wars: nach dem priorisierten Scrap-Ausbau Hex Dominion V0.3 integrieren (früher B12).**
   **Ziel:** den vorhandenen Gebietskrieg mit seinen Anzeigen und Einstellmöglichkeiten reproduzierbar exportieren.
   **Abhängigkeit:** abgenommener Scrap-Produktionsweg/R06; Crystal Front bleibt vorerst zusätzliche Referenz/Variante.
   **Vorhandenes übernehmen:** 9:16/16:9, eigenständige Hoch-/Quer-Kartenformen, Auto-Framing, Filmtempo 0,25–2×,
@@ -296,13 +364,15 @@ Getroffene Entscheidungen einschließlich E2 und der Umsetzung von R19 stehen im
 
 ## 7 · Die nächsten drei Schritte
 
-1. **R20 – kurze Scrap-Filmproben beurteilen:** Inhalt, Lesbarkeit auf dem Handy, Ergebnis-Pause und Klang prüfen.
-   Die Integration einschließlich Rundenfolge ist vorhanden; erst aus der Beurteilung konkrete Nacharbeit ableiten.
-   Die Marble-Erweiterung bleibt ausdrücklich isolierter Prototyp und ist kein paralleler Ausbauauftrag.
-2. **R02 – CI abnehmen:** nach autorisiertem Push den neuen Workflow auf einem sauberen GitHub-Runner prüfen.
-   R08 und R11 A/B/C sind bereits implementiert; nur tatsächlich neue Befunde als Nacharbeit verfolgen.
-3. **R17 – Hex Dominion V0.3 vorbereiten:** den vorhandenen R06-Vertrag am eigenen WebGL-/Canvas-Renderer,
-   Kartenformat, Tempo und Rundenende prüfen. Keine Scrap-Spielregeln auf Hex übertragen.
+1. **R02 – bestehenden Stand sichern:** ersten GitHub-CI-Lauf und Protokolle prüfen, PR #3 bei grüner Prüfung
+   und ohne offene Einwände mergen. Produktionsabsicherung und Integration sind bereits committed/gepusht.
+2. **R20/R22 P1–P2 – erste Qualitätsstufe:** vorhandene Filmproben als Vergleich beurteilen, dann Roboter/HUD
+   und Treffer/Klang getrennt verbessern. Das ist das erste kleine Produktionsziel vor zusätzlichen Regeln.
+3. **R22 P3–P6 – nacheinander erweitern:** belegte Ablaufprobleme, endliches Turnier, zwei zusätzliche Arenen
+   mit ruhiger Kamera, zuletzt optionale Werkstatt. Jeweils beim definierten Abschlusskriterium stoppen.
+
+Der aktuelle Auftrag liefert den Plan; die sechs Pakete sind noch nicht implementiert.
+Marble bleibt isolierter Prototyp, Hex wird nicht gleichzeitig begonnen.
 
 R04 läuft mit den vorhandenen Uploads weiter. Naval wird gezielt bei Bedarf verbessert; aus einer offenen
 Abnahme oder Prüflücke folgt kein pauschaler Vorrang vor allen weiteren Szenarien.
