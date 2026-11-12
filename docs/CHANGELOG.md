@@ -6,6 +6,7 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Was | Commit | Bericht |
 |---|---|---|
+| Seeschlacht: Mulden am Meeresgrund, Glasrohr durch den Kiel, Beuteprinzip im Duell; Lebensbalken im Querformat in den Ecken; „Hits taken“ gestrichen; Referenz-Hashes der Seeschlacht neu gesetzt (R01, Teil Rohre/Anschlüsse/Rinne) | `33f8eb1` | [NAVAL_MULDEN_LIFT](NAVAL_MULDEN_LIFT.md) |
 | Roadmap und Changelog zusammengeführt; Umsetzungsplan darin aufgegangen | – | [ROADMAP](ROADMAP.md) |
 | Audit des Gesamtzustands (stabil, keine ernsten Mängel, acht Hotzones, Checkliste für neue Szenarien); README auf aktuellen Stand | `f2f5e6f` | [AUDIT_2026-11-12](AUDIT_2026-11-12.md) |
 | Ton: Einmessung jeder Tonspur auf YouTube-Lautheit (−14 LUFS), Spitzenbegrenzer mit Vorausschau, Regler 0–200 % in beide Richtungen | `20ea040` | README, Abschnitt „Ton“ |
@@ -44,6 +45,7 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Datum | Entscheidung |
 |---|---|
+| 12.11.2026 | Seeschlacht: Umbau mit Physikänderung freigegeben (R01 sah reine Darstellung vor) – Mulden, Lift durch den Kiel, Beuteprinzip im Duell; nach Vorschau bestätigt. Bei drei und vier Schiffen behält jedes Schiff seine Kugeln (Festlegung nach Messung, nicht eigens bestätigt). |
 | 12.11.2026 | Ton aller Szenarien wird auf YouTube-Lautheit (−14 LUFS) eingemessen; Regler wirken relativ dazu in beide Richtungen. |
 | 12.11.2026 | Offene Punkte werden nur noch in der [ROADMAP](ROADMAP.md) geführt. |
 | 11.11.2026 | **A** – Erstes Short: einfacher 30-Sekunden-Clip der laufenden Kugelfabrik. |
