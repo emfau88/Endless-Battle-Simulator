@@ -1,4 +1,4 @@
-name: Targeted production checks
+name: Baseline audio check
 
 on:
   push:
@@ -23,6 +23,8 @@ jobs:
       EBS_GPU: '0'
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: 0f87887bd28cad2e0a4524067b723981f0272857
       - uses: actions/setup-node@v6
         with:
           node-version: '22.17.1'
@@ -37,11 +39,11 @@ jobs:
           npx playwright --version | tee -a output/ci-versions.log
           ffmpeg -version | tee -a output/ci-versions.log
           ffprobe -version | tee -a output/ci-versions.log
-      - name: Diagnose audio export and live cancellation
+      - name: Compare the same audio test on the unchanged main baseline
         run: |
           node --test --test-concurrency=1 --test-timeout=300000 --test-reporter=tap \
-            --test-name-pattern='Export mit Ton \(Tempo 0\.8\)|Echter Server beantwortet' \
-            test/audio.test.mjs test/live.test.mjs 2>&1 | tee output/ci-tests.log
+            --test-name-pattern='Export mit Ton \(Tempo 0\.8\)' \
+            test/audio.test.mjs 2>&1 | tee output/ci-tests.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
