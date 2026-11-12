@@ -2,6 +2,7 @@
 // Kommandozeilen-Export: node export.mjs --duration 20 --seed 42 [--config presets/naval-standard.json] [--out datei.mp4]
 import { readFileSync } from 'node:fs';
 import { exportVideo, verifyResult } from './lib/exporter.mjs';
+import { exportRecipe } from './lib/provenance.mjs';
 
 const HELP = `Endless Battle Simulator – Videoexport
 
@@ -13,7 +14,7 @@ Konfiguration
   --seed <n>             Zufalls-Seed                              (Standard 42)
   --param key=wert       Szenario-Parameter, mehrfach möglich      (z. B. --param ships=3)
   --no-hud | --no-camera HUD bzw. Kamerabewegung ausschalten
-  --no-audio             ohne Tonspur exportieren (Ton gibt es für Seeschlacht und Kugelfabrik)
+  --no-audio             ohne Tonspur exportieren
   --volume klang=prozent Lautstärke 0–200, mehrfach möglich        (z. B. --volume master=80 --volume splash=150)
                          100 = Standard: Die Standardmischung wird auf −14 LUFS (YouTube) eingemessen
                          Klänge Seeschlacht: shot, hit, splash, land, reload · Kugelfabrik: hopper, tick, pick, belt, flap,
@@ -21,6 +22,9 @@ Konfiguration
 
 Video
   --duration <t>         Länge: 20 | 20s | 5m | 1h                 (Standard 20s ohne Vorlage)
+  --clip-start <s>       Ausschnitt ab dieser Sekunde (derzeit Scrap); --duration bleibt die Episodendauer
+  --clip-duration <s>    nur diesen Ausschnitt rendern (beide Clip-Werte erforderlich)
+                         Ton wird aus der vollständigen Episodenmischung ausgeschnitten
   --aspect <a>           9:16 | 16:9 | 1:1   (alternativ --format portrait|landscape|square)
   --resolution <r>       720 | 1080 | 1440 | 2160 (4k)             (kurze Bildseite, Standard 1080)
   --fps <n>              30 | 60                                   (Standard 30)
@@ -57,7 +61,7 @@ const deepMerge = (a, b) => {
 };
 
 function parseArgs(argv) {
-  const o = { file: null, cfg: { params: {}, video: { quality: {} }, view: {} }, opts: { gpu: 'auto', scripts: [] } };
+  const o = { file: null, cfg: { params: {}, video: { quality: {} }, view: {} }, opts: { scripts: [] } };
   const { cfg, opts } = o;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i], next = () => { if (i + 1 >= argv.length) throw new Error(`Wert fehlt für ${a}`); return argv[++i]; };
@@ -73,6 +77,8 @@ function parseArgs(argv) {
         break;
       }
       case '--duration': cfg.video.durationSec = parseDuration(next()); break;
+      case '--clip-start': (opts.clip ||= {}).startSec = Number(next()); break;
+      case '--clip-duration': (opts.clip ||= {}).durationSec = Number(next()); break;
       case '--aspect': cfg.video.aspect = next(); break;
       case '--format': { const f = next(); cfg.video.aspect = f === 'landscape' ? '16:9' : f === 'square' ? '1:1' : f === 'portrait' ? '9:16' : f; break; }
       case '--resolution': { const r = next().toLowerCase(); cfg.video.resolution = r === '4k' ? 2160 : parseInt(r, 10); break; }
@@ -121,11 +127,15 @@ async function main() {
   let args;
   try { args = parseArgs(process.argv.slice(2)); } catch (e) { console.error(e.message); process.exit(2); }
   if (args.help) { console.log(HELP); return; }
-  let base = {};
+  let base = {}, savedOptions = {};
   if (args.file) {
     try {
       const j = JSON.parse(readFileSync(args.file, 'utf8'));
-      base = j.config && typeof j.config === 'object' ? j.config : j; // Video-JSON oder Vorlage
+      const recipe = exportRecipe(j);
+      base = recipe.config; savedOptions = recipe.options;
+      if (j.provenance?.scripts?.length && !args.opts.scripts.length) {
+        throw new Error('Dieses Rezept benötigt Zusatzskripte. Bitte die verzeichneten Quellen prüfen und explizit mit --script angeben.');
+      }
     } catch (e) { console.error(`Konfiguration ${args.file} nicht lesbar: ${e.message}`); process.exit(2); }
   }
   const cfg = deepMerge(base, args.cfg);
@@ -141,16 +151,20 @@ async function main() {
   });
 
   const isTTY = process.stdout.isTTY;
-  let lastLine = 0;
+  let lastLine = 0, lastPhase = '';
+  const phases = { starting: 'Start', simulating: 'Episodenverlauf', rendering: 'Bilder', encoding: 'Video abschließen',
+    'audio-loading': 'Klänge laden', 'audio-mixing': 'Ton mischen', muxing: 'Ton einbinden',
+    verifying: 'Datei prüfen', saving: 'Dateien übernehmen' };
   try {
     const r = await exportVideo(cfg, {
-      ...args.opts, signal: ac.signal, log: (m) => console.log('  ' + m),
+      ...savedOptions, ...args.opts, signal: ac.signal, log: (m) => console.log('  ' + m),
       onProgress: (p) => {
         const now = Date.now();
-        if (!isTTY && now - lastLine < 5000 && p.frame !== p.totalFrames) return;
-        lastLine = now;
+        if (!isTTY && now - lastLine < 5000 && p.phase === lastPhase) return;
+        lastLine = now; lastPhase = p.phase;
         const w = 28, f = Math.round(p.progress * w);
-        const line = `  [${'#'.repeat(f)}${'.'.repeat(w - f)}] ${(p.progress * 100).toFixed(1).padStart(5)} %  Frame ${p.frame}/${p.totalFrames}  Sim ${fmt(p.simTime)}  ${p.renderFps.toFixed(1)} fps  Rest ${fmt(p.etaSec)}`;
+        const detail = p.phase === 'rendering' ? `Frame ${p.frame}/${p.totalFrames} · ${p.renderFps.toFixed(1)} fps · Bilder noch ca. ${fmt(p.etaSec)}` : '';
+        const line = `  [${'#'.repeat(f)}${'.'.repeat(w - f)}] ${(p.progress * 100).toFixed(1).padStart(5)} %  ${phases[p.phase] || p.phase}  ${detail}`;
         if (isTTY) process.stdout.write('\r' + line); else console.log(line);
       },
     });
@@ -160,7 +174,7 @@ async function main() {
     console.log(`  Datei:      ${r.file}`);
     console.log(`  Video:      ${r.codec} (${r.profile}, ${r.pixFmt}) ${r.width}×${r.height} @ ${r.fps} fps · ${r.bitrateKbps} kbit/s`);
     console.log(r.audio
-      ? `  Ton:        ${r.audioStream.codec} ${r.audioStream.sampleRate} Hz, ${r.audioStream.channels} Kanäle · ${r.audio.events} Ereignisse · Lautheit ${r.audio.lufs} LUFS · Spitze ${r.audio.peakOutDb} dBFS${r.audio.limited ? ` (Begrenzer bis ${r.audio.maxReductionDb} dB)` : ''}`
+      ? `  Ton:        ${r.audioStream.codec} ${r.audioStream.sampleRate} Hz, ${r.audioStream.channels} Kanäle · ${r.audio.events} Ereignisse · Lautheit${r.exportOptions.clip ? ' der vollständigen Episode' : ''} ${r.audio.lufs} LUFS · Spitze ${r.audio.peakOutDb} dBFS${r.audio.limited ? ` (Begrenzer bis ${r.audio.maxReductionDb} dB)` : ''}`
       : '  Ton:        keiner');
     console.log(`  Dauer:      ${r.duration.toFixed(3)} s · ${r.frames} Frames · ${(r.sizeBytes / 1048576).toFixed(1)} MB`);
     console.log(`  Szenario:   ${r.cfg.scenario} · Seed ${r.cfg.seed} · Zustand-Hash ${r.stateHash}`);

@@ -4,3 +4,5 @@ output/*
 !output/.gitkeep
 # lokale Claude-Code-Einstellungen (z. B. Vorschau-Server)
 .claude/
+# Chromium-Diagnoseprotokoll (lokal, wird beim Browserstart erzeugt)
+debug.log

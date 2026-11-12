@@ -3,7 +3,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { existsSync, mkdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, launchAuto } from '../lib/browser.mjs';
 
@@ -73,17 +73,34 @@ test('Live-Simulation läuft im Browser, Bedienfeld funktioniert, Screenshot', a
   await page.close();
 });
 
-test('Button „Video exportieren“ erzeugt über die Oberfläche ein 20-s-MP4', async () => {
+test('Button „Video exportieren“ erzeugt über die Oberfläche ein geprüftes 3-s-MP4', async (t) => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  t.after(async () => {
+    await page.close();
+    await fetch(BASE + '/api/export/cancel', { method: 'POST' });
+    let status;
+    for (let i = 0; i < 100; i++) {
+      status = await (await fetch(BASE + '/api/export')).json();
+      if (status.state !== 'running') break;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    assert.notEqual(status.state, 'running', 'Export nach Testende nicht aufgeräumt');
+    if (status.file) {
+      const file = join(ROOT, 'output', status.file);
+      rmSync(file, { force: true }); rmSync(file.replace(/\.mp4$/, '.json'), { force: true });
+    }
+  });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(BASE + '/?seed=21');
   await page.waitForFunction(() => window.EBS && window.EBS.app && window.EBS.app.sim, null, { timeout: 30000 });
-  await page.selectOption('#duration', '20');
+  // Der gesamte Bedienweg wird geprüft; hohe Auflösungen/Dauern decken die direkten Exporttests ab.
+  await page.selectOption('#resolution', '720');
+  await page.fill('#durationText', '3s'); await page.dispatchEvent('#durationText', 'change');
   await page.click('#btnExport');
   await page.waitForSelector('#exportMsg a', { timeout: 180000 });
   const text = await page.textContent('#exportMsg');
-  assert.match(text, /1080×1920, 30 fps, 20\.00 s, 600 Frames/);
+  assert.match(text, /720×1280, 30 fps, 3\.00 s, 90 Frames/);
   const href = await page.getAttribute('#exportMsg a', 'href');
   const file = join(ROOT, decodeURIComponent(href).replace(/^\//, ''));
   assert.ok(existsSync(file), 'Videodatei fehlt');
@@ -91,6 +108,43 @@ test('Button „Video exportieren“ erzeugt über die Oberfläche ein 20-s-MP4'
   rmSync(file, { force: true }); rmSync(file.replace(/\.mp4$/, '.json'), { force: true });
   assert.deepEqual(errors, []);
   await page.close();
+});
+
+test('Scrap: Bedienfeld → Exportknopf → MP4/JSON → Downloadlink bewahrt die eingestellte Runde und den Ton', async (t) => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  t.after(async () => {
+    await page.close();
+    await fetch(BASE + '/api/export/cancel', { method: 'POST' });
+    let s;
+    for (let i = 0; i < 100; i++) {
+      s = await (await fetch(BASE + '/api/export')).json();
+      if (s.state !== 'running') break;
+      await new Promise(r => setTimeout(r, 50));
+    }
+    assert.notEqual(s.state, 'running');
+    if (s.file) { const file = join(ROOT, 'output', s.file); rmSync(file, { force: true }); rmSync(file.replace(/\.mp4$/, '.json'), { force: true }); }
+  });
+  await page.goto(BASE + '/?scenario=scrap&seed=314&resolution=720&durationSec=3&tempo=0.8&paused');
+  await page.waitForFunction(() => window.EBS?.app?.cfg.scenario === 'scrap', null, { timeout: 30000 });
+  await page.uncheck('#p-repeatRounds');
+  await page.locator('#p-endPauseSec').evaluate(el => { el.value = '5'; el.dispatchEvent(new Event('change')); });
+  await page.locator('#vol-blaster').evaluate(el => { el.value = '70'; el.dispatchEvent(new Event('input')); });
+  const cfg = await page.evaluate(() => EBS.app.cfg);
+  const [accepted] = await Promise.all([
+    page.waitForResponse(r => r.url() === BASE + '/api/export' && r.request().method() === 'POST'),
+    page.click('#btnExport'),
+  ]);
+  assert.equal(accepted.status(), 202); assert.deepEqual(accepted.request().postDataJSON(), cfg);
+  // A newly opened page initially shows the previous job's download link.
+  // Wait specifically for this Scrap job, not an old completed Naval export.
+  await page.waitForSelector('#exportMsg a[href*="scrap_seed314_"]', { timeout: 180000 });
+  assert.match(await page.textContent('#exportMsg'), /720×1280, 30 fps, 3\.00 s, 90 Frames/);
+  const href = await page.getAttribute('#exportMsg a', 'href');
+  const file = join(ROOT, decodeURIComponent(href).replace(/^\//, ''));
+  const saved = JSON.parse(readFileSync(file.replace(/\.mp4$/, '.json'), 'utf8'));
+  assert.deepEqual(saved.config, cfg); assert.equal(saved.audio.lost, 0); assert.ok(saved.audio.voices > 0);
+  const download = await fetch(BASE + href); assert.equal(download.status, 200);
+  assert.ok((await download.arrayBuffer()).byteLength > 10000);
 });
 
 test('Export-API lehnt ein unbekanntes Szenario mit verständlicher Meldung ab', async () => {
@@ -123,4 +177,64 @@ test('Export per Button-API erzeugt ein abspielbares MP4', async () => {
   assert.equal(head.status, 206);
   assert.equal(head.headers.get('content-type'), 'video/mp4');
   rmSync(file, { force: true }); rmSync(file.replace(/\.mp4$/, '.json'), { force: true });
+});
+
+test('Oberfläche zeigt Audiophase und angeforderten Abbruch, ohne fertigen Export vorzutäuschen', async () => {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  let status = { state: 'running', phase: 'audio-mixing', frame: 600, totalFrames: 600, progress: 0.86 };
+  try {
+    await page.route('**/api/export', (route) => route.fulfill({ json: status }));
+    await page.route('**/api/export/cancel', (route) => {
+      status = { ...status, cancelRequested: true };
+      return route.fulfill({ json: status });
+    });
+    await page.goto(BASE + '/?scenario=marble&paused');
+    await page.waitForFunction(() => document.querySelector('#exportMsg').textContent.includes('Mische'));
+    assert.match(await page.textContent('#exportMsg'), /Tonspur/);
+    assert.equal(await page.locator('#exportMsg a').count(), 0);
+    assert.equal(await page.locator('#btnExport').isDisabled(), true);
+    await page.locator('#exportMsg').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: join(ROOT, 'output', 'production-audio-status.png') });
+    await page.click('#btnCancel');
+    await page.waitForFunction(() => document.querySelector('#exportMsg').textContent.includes('Abbruch angefordert'));
+    assert.equal(await page.locator('#btnCancel').isDisabled(), true);
+    status = { ...status, state: 'cancelled' };
+    await page.waitForFunction(() => document.querySelector('#exportMsg').textContent === 'Export abgebrochen.');
+    assert.equal(await page.locator('#btnExport').isEnabled(), true);
+  } finally { await page.close(); }
+});
+
+test('Echter Server beantwortet Status und Abbruch während des Audiomischens und räumt vollständig auf', async () => {
+  const before = new Set(readdirSync(join(ROOT, 'output')));
+  const res = await fetch(BASE + '/api/export', { method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ scenario: 'marble', seed: 73, video: { durationSec: 20, resolution: 720, aspect: '16:9', quality: { preset: 'ultrafast' } } }) });
+  assert.equal(res.status, 202);
+  let s, requestedAt;
+  try {
+    const deadline = Date.now() + 110000;
+    while (Date.now() < deadline) {
+      s = await (await fetch(BASE + '/api/export')).json();
+      if (s.phase === 'audio-mixing' && s.state === 'running') {
+        requestedAt = Date.now();
+        const cancel = await fetch(BASE + '/api/export/cancel', { method: 'POST' });
+        assert.equal(cancel.status, 200);
+        assert.equal((await cancel.json()).cancelRequested, true);
+        break;
+      }
+      assert.equal(s.state, 'running', 'Audiophase nicht rechtzeitig beobachtet: ' + JSON.stringify(s));
+      await new Promise((r) => setTimeout(r, s.progress >= 0.78 ? 5 : 50));
+    }
+    assert.ok(requestedAt, 'Audiophase innerhalb des Zeitlimits nicht erreicht');
+    while (Date.now() - requestedAt < 2500) {
+      s = await (await fetch(BASE + '/api/export')).json();
+      if (s.state !== 'running') break;
+      await new Promise((r) => setTimeout(r, 10));
+    }
+    assert.equal(s.state, 'cancelled', JSON.stringify(s));
+    assert.ok(Date.now() - requestedAt < 2500, 'Abbruch samt Aufräumen dauert länger als 2,5 s');
+    assert.ok(!existsSync(join(ROOT, 'output', s.file)), 'Abgebrochenes Video veröffentlicht');
+    assert.deepEqual(readdirSync(join(ROOT, 'output')).filter((f) => !before.has(f)), []);
+  } finally {
+    await fetch(BASE + '/api/export/cancel', { method: 'POST' });
+  }
 });

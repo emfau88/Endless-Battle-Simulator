@@ -1,0 +1,7 @@
+{
+  "source": "docs/reference/scrap-arena.source.html",
+  "suppliedAs": "04-scrap-arena.html",
+  "version": null,
+  "sha256": "38e2c7d28c96a78235a44a5d63943666d11c0ee18025065bcfdd6939e18bc130",
+  "extraction": "First two script blocks, unchanged apart from line endings and this provenance header. Browser UI/MediaRecorder excluded."
+}

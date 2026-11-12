@@ -302,11 +302,15 @@ async function bootLive() {
     if (!s || s.state === 'idle') return;
     bar.hidden = false; barIn.style.width = ((s.progress || 0) * 100).toFixed(1) + '%';
     ctl.hidden = s.state !== 'running'; btnExp.disabled = s.state === 'running';
+    $('btnCancel').disabled = !!s.cancelRequested;
     msg.classList.toggle('err', s.state === 'error');
     if (s.state === 'running') {
-      msg.textContent = s.frame
-        ? `Rendere Frame ${fmtInt(s.frame)} / ${fmtInt(s.totalFrames || 0)} · ${(s.renderFps || 0).toFixed(1)} fps · Rest ca. ${fmtTime(s.etaSec || 0)}`
-        : 'Starte Renderer …';
+      const phases = { starting: 'Starte Renderer …', simulating: 'Berechne den Episodenverlauf …', encoding: 'Schließe die Bildspur ab …',
+        'audio-loading': 'Lade die Klänge …', 'audio-mixing': 'Mische und prüfe die Tonspur …',
+        muxing: 'Verbinde Bild und Ton …', verifying: 'Prüfe die fertige Videodatei …', saving: 'Speichere Video und Einstellungen …' };
+      msg.textContent = s.cancelRequested ? 'Abbruch angefordert – räume auf …'
+        : s.phase === 'rendering' ? `Rendere Frame ${fmtInt(s.frame)} / ${fmtInt(s.totalFrames || 0)} · ${(s.renderFps || 0).toFixed(1)} fps · Bildphase noch ca. ${fmtTime(s.etaSec || 0)}`
+        : phases[s.phase] || 'Starte Export …';
     } else if (s.state === 'done') {
       const r = s.result || {};
       msg.innerHTML = `✅ Fertig: <a href="${s.url}" target="_blank">${s.file}</a><br>${r.width}×${r.height}, ${r.fps} fps, ${(+r.duration).toFixed(2)} s, ${fmtInt(r.frames)} Frames`;

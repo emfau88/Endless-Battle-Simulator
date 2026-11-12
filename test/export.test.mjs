@@ -68,7 +68,7 @@ test('Export lässt sich abbrechen und hinterlässt keine Dateien', async () => 
   const ac = new AbortController();
   const out = join(dir, 'cancel.mp4');
   await assert.rejects(
-    exportVideo({ seed: 1, durationSec: 60 }, { out, signal: ac.signal, onProgress: (p) => { if (p.frame >= 30) ac.abort(); } }),
+    exportVideo({ seed: 1, durationSec: 20 }, { out, signal: ac.signal, onProgress: (p) => { if (p.frame >= 30) ac.abort(); } }),
     (e) => e.name === 'AbortError',
   );
   assert.ok(!existsSync(out), 'Ausgabedatei existiert trotz Abbruch');

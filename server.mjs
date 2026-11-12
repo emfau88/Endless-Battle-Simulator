@@ -18,6 +18,7 @@ const TYPES = {
 const ALLOWED = ['index.html', 'src', 'vendor', 'output', 'presets', 'README.md'];
 
 let job = { state: 'idle' };
+let exportTask = Promise.resolve();
 
 const json = (res, code, body) => { res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }); res.end(JSON.stringify(body)); };
 const publicJob = () => { const { controller, ...rest } = job; return rest; };
@@ -31,9 +32,9 @@ async function readBody(req) {
 function startExport(cfg) {
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').slice(0, 15);
   const controller = new AbortController();
-  job = { state: 'running', progress: 0, frame: 0, totalFrames: 0, startedAt: Date.now(), controller, log: [] };
+  job = { state: 'running', phase: 'starting', progress: 0, frame: 0, totalFrames: 0, startedAt: Date.now(), controller, log: [] };
   const current = job;
-  exportVideo(cfg, {
+  exportTask = exportVideo(cfg, {
     // Dateiname aus der von der Seite normalisierten Konfiguration (Szenario, Seed, Format, Auflösung, Dauer)
     out: (info) => {
       current.file = defaultFileName(info.cfg, '_' + stamp);
@@ -46,7 +47,7 @@ function startExport(cfg) {
     onProgress: (p) => Object.assign(current, p),
   }).then((r) => {
     const issues = verifyResult(r);
-    Object.assign(current, { state: issues.length ? 'error' : 'done', progress: 1, error: issues.join('; ') || undefined,
+    Object.assign(current, { state: issues.length ? 'error' : 'done', phase: 'done', progress: 1, error: issues.join('; ') || undefined,
       result: { width: r.width, height: r.height, fps: r.fps, duration: r.duration, frames: r.frames, sizeBytes: r.sizeBytes, renderer: r.renderer, elapsedSec: r.elapsedSec } });
     console.log(`[export] fertig: ${current.file} (${r.frames} Frames, ${r.duration.toFixed(2)} s)`);
   }).catch((e) => {
@@ -91,7 +92,7 @@ const server = http.createServer(async (req, res) => {
       return json(res, 202, publicJob());
     }
     if (url.pathname === '/api/export/cancel' && req.method === 'POST') {
-      if (job.state === 'running') job.controller.abort();
+      if (job.state === 'running') { job.cancelRequested = true; job.controller.abort(); }
       return json(res, 200, publicJob());
     }
     if (url.pathname === '/api/health') {
@@ -110,6 +111,11 @@ server.listen(PORT, HOST, () => {
   console.log(`Endless Battle Simulator läuft auf http://localhost:${PORT}`);
   console.log('Beenden mit Strg+C.');
 });
-const shutdown = () => { if (job.state === 'running') job.controller.abort(); server.close(); setTimeout(() => process.exit(0), 1500).unref(); };
+const shutdown = async () => {
+  if (job.state === 'running') job.controller.abort();
+  server.close();
+  await exportTask; // Worker, Chromium, FFmpeg und temporäre Dateien zuerst vollständig aufräumen.
+  server.closeAllConnections();
+};
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
