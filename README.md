@@ -46,8 +46,10 @@ npm start                   # Server + Oberfläche: http://localhost:8080
 npm run export:test         # Abnahmetest: 20-s-MP4 -> output/test_20s.mp4 (inkl. ffprobe-Prüfung)
 npm run export -- --config presets/naval-standard.json          # 60 Minuten hochkant (Vorlage für die Langfassung)
 npm run export -- --config presets/naval-landscape-10min.json   # 10 Minuten 1920×1080
+npm run export -- --config presets/naval-youtube-short.json     # YouTube-Short: 20 s, 1440×2560, 60 fps, mit Ton
+npm run export -- --config presets/naval-youtube-10min.json     # YouTube: 10 Minuten, 2560×1440, 60 fps, mit Ton
 npm run export -- --duration 5m --seed 7 --aspect 1:1 --resolution 1440 --fps 60 --bitrate 12M
-npm test                    # alle automatisierten Tests (72 Tests, ≈ 7 min; jeder Test wird nach 2 min abgebrochen)
+npm test                    # alle automatisierten Tests (79 Tests, ≈ 7 min; jeder Test wird nach 2 min abgebrochen)
 npm run golden              # Referenz-Hashes der Simulation prüfen (≈ 1 min)
 npm run marble:test         # Kugelfabrik: 8-s-Testvideo 720p30 -> output/marble_test_8s_720p.mp4
 node scripts/screenshot.mjs --scenario marble --aspect 16:9 --at 9 --out output/marble_16x9.png   # Einzelbild (PNG)
@@ -64,7 +66,7 @@ Server (`npm start`). Ohne Server zeigt er den passenden Kommandozeilenbefehl an
 | Video | `--duration 20s/5m/1h` · `--aspect 9:16/16:9/1:1` (oder `--format portrait/landscape/square`) · `--resolution 720/1080/1440/2160` · `--fps 30/60` · `--tempo 0.64/0.8` (Zeitlupe) |
 | Ton | `--no-audio` · `--volume klang=prozent` (0–200, mehrfach; `master` = Gesamt, z. B. `--volume splash=150`) |
 | Qualität | `--crf 20` · `--bitrate 12M` (statt CRF) · `--preset medium` (x264) |
-| Seeschlacht-Kürzel | `--ships` · `--cannons` · `--fire-rate` · `--speed` · `--intensity` · `--no-recycle` |
+| Seeschlacht-Kürzel | `--ships` · `--cannons` · `--fire-rate` · `--speed` · `--intensity` · `--no-recycle` · `--no-golden` · `--no-sky` · `--no-meteors` · `--no-whales` |
 | Technik | `--out datei.mp4` · `--gpu` / `--no-gpu` · `--jpeg-quality 0.92` · `--script szenario.js` |
 
 Neben jedes Video schreibt der Export eine **JSON-Datei mit der vollständigen Konfiguration** (inkl. Seed und
@@ -110,7 +112,8 @@ Alle Browser-Dateien sind klassische Skripte (keine ES-Module), damit `index.htm
   "version": 1,
   "scenario": "naval",
   "seed": 42,
-  "params": { "ships": 2, "cannons": 4, "fireRate": 1, "projectileSpeed": 1, "intensity": 0.35, "ballsPerCannon": 5, "recycleVisible": true },
+  "params": { "ships": 2, "cannons": 4, "fireRate": 1, "projectileSpeed": 1, "intensity": 0.35, "ballsPerCannon": 5, "recycleVisible": true,
+              "goldenBall": true, "sky": true, "skyMinutes": 0, "meteors": true, "meteorEvery": 75, "whales": true, "whaleEvery": 210 },
   "video":  { "aspect": "9:16", "resolution": 1080, "fps": 30, "durationSec": 45, "tempo": 1,
               "audio": true, "volume": { "master": 100, "shot": 100, "hit": 100, "splash": 100, "land": 100, "reload": 100 },
               "quality": { "crf": 20, "preset": "medium", "bitrate": null } },
@@ -264,6 +267,23 @@ Simzeit in 2–3,5 s · JS-Heap nach 30 Minuten Simzeit unverändert ≈ 11 MB.
   10 Minuten kurz ein (kleiner Schubs, wenn der Hals länger als 0,5 s leer bleibt).
 - Die grüne Farbe hat bei 35 Kugeln nur 5 statt 6 Kugeln und wird entsprechend seltener sortiert.
 - 1:1 ist nicht eigens gestaltet (verkleinertes Querformat-Layout).
+
+## Seeschlacht: Himmel, seltene Ereignisse und goldene Kugel
+
+Reine Darstellung – der Physikverlauf und die Referenz-Hashes bleiben unverändert. Die Standardwerte sind so gewählt,
+dass jedes Video je nach Länge das passende Maß bekommt; alles ist im Bedienfeld einzeln schalt- und einstellbar und
+steht in `params` (Teilen-Link, JSON, `--param`).
+
+| Was | Standard | Einstellbar |
+|---|---|---|
+| **Goldene Kugel** (`goldenBall`) – eine Kugel ist golden, mit goldener Spur und Schimmer; der Zähler „GOLDEN BALL · fired 12×“ steht im Hochformat unter den Lebensbalken, im Querformat-Duell oben mittig, sobald der Titel ausgeblendet ist. Es ist die Kugel, die ein per Seed gewähltes Schiff als erste abfeuert; weil das Regal „zuletzt hinein, zuerst hinaus“ arbeitet, fliegt sie auch im 20-s-Short mehrmals (≈ alle 10–12 s) und wechselt im Duell die Seiten. | an | an/aus |
+| **Himmelsverlauf** (`sky`, `skyMinutes`) – die Nacht vergeht: Morgengrauen am Horizont, Sterne verblassen, Wolken färben sich rosa; der Mond bleibt sichtbar. | an · Morgengrauen am Videoende, mindestens nach 10 min (im Short bleibt es Nacht) | an/aus · Morgengrauen nach 5 min … 2 h |
+| **Sternschnuppe** (`meteors`, `meteorEvery`) – knapp 1 s lang. Jedes Video ab 8 s zeigt mindestens eine (im Short etwa in der Mitte). | an · etwa alle 75 s (10 min ≈ 6–10) | an/aus · 20–300 s (`--param` bis 600 s) |
+| **Wal am Horizont** (`whales`, `whaleEvery`) – taucht 8 s lang im Mondlicht zwischen den Schiffen auf, bläst und taucht mit der Schwanzflosse ab. Bleibt selten: mit dem Standard erst in Videos ab ≈ 1–2,5 min. | an · etwa alle 3½ min (10 min ≈ 2–4) | an/aus · 30 s – 15 min (`--param` bis 30 min) |
+
+Die Zeitpunkte stehen als fester Fahrplan aus Seed und Einstellungen fest (gleiche Konfiguration = gleiches Video) und
+laufen in Videozeit, auch in Zeitlupe. Kommandozeile: `--no-golden`, `--no-sky`, `--no-meteors`, `--no-whales`, Feinwerte
+mit `--param skyMinutes=20 --param meteorEvery=40 --param whaleEvery=120`.
 
 ## Ton
 

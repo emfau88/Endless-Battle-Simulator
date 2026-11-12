@@ -94,7 +94,7 @@ class RNG {
 //  Ein Szenario liefert:
 //    id, title, defaults, controls[], normalizeParams(p),
 //    create({ seed, params, world, view }) -> Simulation
-//    createRenderer({ app, sim, view, world, renderScale }) -> Renderer
+//    createRenderer({ app, sim, view, world, renderScale, video }) -> Renderer
 //    panelStats(sim) -> [{ key, label, value }]
 //  Simulation:  stepOnce(), t, step, snapshot(), checkInvariants(), stateHash(), destroy(),
 //               optional setParam(k, v), events/eventSeq
@@ -370,7 +370,8 @@ class Session {
     this.cfg = cfg; this.scenario = sc; this.world = world;
     this.view = { ...cfg.view };
     this.sim = sc.create({ seed: cfg.seed, params: { ...cfg.params }, world, view: this.view, timeScale: cfg.video.tempo });
-    this.renderer = sc.createRenderer({ app: this.app, sim: this.sim, view: this.view, world, renderScale: this.renderScale });
+    // video: Verweis auf die Videoeinstellungen (z. B. Videolänge für den Himmelsverlauf); Änderungen gelten sofort
+    this.renderer = sc.createRenderer({ app: this.app, sim: this.sim, view: this.view, world, renderScale: this.renderScale, video: cfg.video });
     this.app.stage.addChild(this.renderer.root);
     this.render();
     return this;

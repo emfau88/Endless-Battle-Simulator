@@ -31,6 +31,9 @@ Video
 
 Abkürzungen für das Szenario "naval"
   --ships 2–4  --cannons 1–6  --fire-rate 0.2–3  --speed 0.64–1.6  --intensity 0–1 (oder 0–100)  --no-recycle
+  --no-golden  --no-sky  --no-meteors  --no-whales      goldene Kugel, Himmelsverlauf, Sternschnuppen, Wal ausschalten
+  Feineinstellung per --param: skyMinutes=0 (Morgengrauen am Videoende, mind. 10 min) | 5–240,
+  meteorEvery=75 (Sekunden, 20–600), whaleEvery=210 (Sekunden, 30–1800)
 
 Technik
   --out <datei.mp4>      Ausgabe (Standard output/<szenario>_seed<n>_<format>_<auflösung>_<dauer>.mp4)
@@ -93,6 +96,10 @@ function parseArgs(argv) {
       case '--speed': cfg.params.projectileSpeed = Number(next()); break;
       case '--intensity': { const v = Number(next()); cfg.params.intensity = v > 1 ? v / 100 : v; break; }
       case '--no-recycle': cfg.params.recycleVisible = false; break;
+      case '--no-golden': cfg.params.goldenBall = false; break;
+      case '--no-sky': cfg.params.sky = false; break;
+      case '--no-meteors': cfg.params.meteors = false; break;
+      case '--no-whales': cfg.params.whales = false; break;
       case '--out': opts.out = next(); break;
       case '--gpu': opts.gpu = true; break;
       case '--no-gpu': opts.gpu = false; break;

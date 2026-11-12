@@ -1,6 +1,6 @@
 # Roadmap
 
-**Stand:** 12.11.2026 · `main` nach Ton und Mondlicht der Seeschlacht (R19, Teil)
+**Stand:** 12.11.2026 · `main` nach Atmosphäre und goldener Kugel der Seeschlacht (R19 erledigt)
 **Zweck:** die **einzige aktive Liste** offener Punkte. Erledigtes steht im [CHANGELOG](CHANGELOG.md), Hintergründe
 stehen in den Berichten unter `docs/`. Die Berichte halten ihren Stand fest und werden nicht nachgeführt.
 
@@ -39,11 +39,6 @@ IDs: `R..` = Punkt dieser Roadmap, in Klammern die frühere Bezeichnung aus Road
       das klären. (2) Querformat mit drei und vier Schiffen: Die Lebensbalken stehen weiter oben in der Mitte, Kugeln
       können dahinter durchfliegen. (3) Sand, Sockel und Rohr sind ein erster Wurf. (4) Die eingebaute Fassung wurde
       nur an Einzelbildern beurteilt, nicht in Echtzeit. *Quelle:* [NAVAL_MULDEN_LIFT.md](NAVAL_MULDEN_LIFT.md).
-- [ ] **R19 · Seeschlacht: Atmosphäre und Aufhänger** – Rest der Vorschläge vom 12.11.2026 („Tink“/„Tock“, Mondlicht,
-      Mündungsfeuer-Licht und Schaum sind erledigt, siehe [CHANGELOG](CHANGELOG.md)): (1) goldene Kugel mit Zähler
-      zum Verfolgen, als eigener Schritt für Shorts; braucht ein Anzeigeelement. (2) Langsamer Himmelsverlauf und
-      seltene Ereignisse (Sternschnuppe, Wal im Hintergrund) erst, wenn lange Videos im Pilot zählen. Mondlicht,
-      Mündungsfeuer und Schaum wurden nur an Einzelbildern beurteilt, nicht in Echtzeit.
 - [ ] **R06 · Gemeinsame Szenario-Basis** – beim Bau von Szenario 3, nicht vorher: Ereignisring, Matter.js-Auf- und
       Abbau, Zeitschritt und Prüfsumme sind in beiden Szenarien doppelt gebaut. Die Checkliste für neue Szenarien
       steht bereits im Audit (Abschnitt 4). *Quelle:* [Audit](AUDIT_2026-11-12.md), Hotzones 1, 2, 4, 7.
@@ -80,6 +75,8 @@ Punkte, die nur du erledigen kannst.
       „Tink“ und „Tock“, die nur nach Kennwerten der Dateien ausgewählt sind.
 - [ ] **Neue Seeschlacht in Echtzeit ansehen** (Hoch- und Querformat, lokal über `start.bat`): rollt, wartet und
       steigt alles stimmig? Im Hochformat am Handy darauf achten, ob das rechte Rohr unter den YouTube-Buttons liegt.
+      Mondlicht, Mündungsfeuer, Schaum, Himmelsverlauf, Sternschnuppe, Wal und goldene Kugel wurden bisher nur an
+      Einzelbildern beurteilt – am besten im ersten exportierten Short und im 10-Minuten-Video prüfen.
 - [ ] **Laufenden Server neu starten** (`start.bat`), damit der Export-Knopf die neuen Ton-Regler nutzt.
 - [ ] **Online-Vorschau am Handy prüfen** – Prüfliste in [W1_W2_PLAYLINK_START.md](W1_W2_PLAYLINK_START.md).
 - [ ] **Echter Doppelklick auf `start.bat`**, möglichst auch auf einem Rechner ohne vorherige Einrichtung.

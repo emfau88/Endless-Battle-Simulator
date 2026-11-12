@@ -44,6 +44,44 @@ const TUNING = {
 const BALL_CAT = 0x0001, SHIP_CAT = 0x0002, MAST_CAT = 0x0020;
 const TRAIL_N = 12;
 
+// =====================================================================
+//  Seltene Ereignisse (reine Darstellung, kein Einfluss auf die Physik)
+//  Fester Fahrplan in Videosekunden aus Seed und Einstellungen: Sternschnuppen etwa alle meteorEvery s, ein Wal am
+//  Horizont etwa alle whaleEvery s. Jedes Video ab 8 s zeigt mindestens eine Sternschnuppe; der Wal bleibt selten und
+//  erscheint mit den Standardwerten erst in längeren Videos (ab etwa 1–2,5 Minuten). Eigene Zufallsströme je Ereignis.
+// =====================================================================
+const EVENT_HORIZON = 4 * 3600, METEOR_LIFE = 0.9, WHALE_LIFE = 8;
+function eventPlan(seed, p, durationSec) {
+  const meteors = [], whales = [];
+  if (p.meteors) {
+    const r = new RNG(hashSeed(seed, 'sternschnuppen')), m = p.meteorEvery;
+    const one = (t) => ({ t, fx: r.range(0.2, 0.8), fy: r.next(), dir: r.next() < 0.5 ? -1 : 1, dy: r.range(0.3, 0.55), len: r.range(170, 260) });
+    for (let t = r.range(0.3, 1) * m; t < EVENT_HORIZON; t += r.range(0.6, 1.4) * m) meteors.push(one(t));
+    if (durationSec >= 8 && !meteors.some((e) => e.t > 2 && e.t + METEOR_LIFE < durationSec - 1)) {
+      meteors.push(one(r.range(0.35, 0.65) * durationSec));
+      meteors.sort((a, b) => a.t - b.t);
+    }
+  }
+  if (p.whales) {
+    const r = new RNG(hashSeed(seed, 'wal')), m = p.whaleEvery;
+    for (let t = r.range(0.35, 0.75) * m; t < EVENT_HORIZON; t += r.range(0.7, 1.3) * m) {
+      whales.push({ t, off: r.range(-1, 1), dir: r.next() < 0.5 ? -1 : 1, size: r.range(0.9, 1.15) });
+    }
+  }
+  return { meteors, whales };
+}
+// Bedienfeld: Zeitpunkt des Morgengrauens und Anzeige der Abstände
+const SKY_OPTIONS = [[0, 'Videolänge (automatisch, mind. 10 min)'], [5, '5 Minuten'], [10, '10 Minuten'], [20, '20 Minuten'],
+  [30, '30 Minuten'], [60, '60 Minuten'], [120, '2 Stunden']];
+const fmtEvery = (v) => (v < 60 ? `${v} s` : `${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')} min`);
+/** Fortschritt des Himmelsverlaufs 0 (tiefe Nacht) … 1 (Morgengrauen) zur Videozeit t. */
+function skyProgress(p, t, durationSec) {
+  if (!p.sky) return 0;
+  const span = p.skyMinutes > 0 ? p.skyMinutes * 60 : Math.max(durationSec, 600);   // automatisch: Videolänge, mindestens 10 min
+  const x = clamp(t / span, 0, 1);
+  return x * x * (3 - 2 * x);
+}
+
 // Layout aus der logischen Weltgröße (9:16, 16:9 oder 1:1 – kurze Seite 1080)
 function computeLayout(world, cfg) {
   const W = world.w, H = world.h, portrait = H > W * 1.2, wide = W > H * 1.2, u = Math.min(W, H) / 1080, n = cfg.ships;
@@ -172,6 +210,11 @@ class NavalBattle {
     this.beute = L.n === 2;                                            // Beuteprinzip nur im Duell
     this.ammoTarget = cfg.cannons * cfg.ballsPerCannon * 0.45;
     for (const s of this.ships) this._createBalls(s);
+    // Goldene Kugel: die Kugel, die ein per Seed gewähltes Schiff als erste abfeuert (das Regal arbeitet „zuletzt
+    // hinein, zuerst hinaus“, deshalb fliegt sie auch in kurzen Videos mehrmals). Eigener Zufallsstrom, nur gezählt –
+    // der Physikverlauf bleibt unverändert.
+    const gs = this.ships[Math.floor(new RNG(hashSeed(cfg.seed, 'gold')).next() * this.ships.length)];
+    this.goldBall = gs.magBalls[gs.magBalls.length - 1]; this.goldFired = 0;
     for (const s of this.ships) this._initCannons(s);
     Events.on(this.engine, 'collisionStart', (e) => this._onCollision(e));
     this._updateShips(0, true);
@@ -387,6 +430,7 @@ class NavalBattle {
     const dirX = Math.cos(ang) >= 0 ? 1 : -1;
     ship.recoilX -= dirX * 2.4 * this.L.u; ship.recoilA -= dirX * 0.008;
     this.stats.shots++; ship.shots++;
+    if (ball === this.goldBall) this.goldFired++;
     this._fxMuzzle(mx, my, ang);
     this._event('shot', mx, my, 1);
     c.timer = c.interval * this.rng.range(0.85, 1.15);
@@ -749,6 +793,7 @@ class NavalBattle {
       inFlight: c.fly, inRecycle: c.sink + c.lane, inMag: c.mag, ballsTotal: this.balls.length,
       ballsExpected: this.ships.reduce((a, s) => a + s.totalBalls, 0),
       particlesActive: this.particles.active, particleCap: this.particles.cap,
+      golden: { id: this.goldBall.id, fired: this.goldFired, owner: this.goldBall.owner, state: this.goldBall.state },
       ships: this.ships.map((s) => ({
         name: s.team.name, damage: s.damage, health: 1 - s.damage, ammo: s.ammo, shots: s.shots, hitsTaken: s.hitsTaken,
         holes: s.holes.filter((h) => !h.patched).length, patches: s.holes.filter((h) => h.patched).length, sink: s.sink,
@@ -790,10 +835,21 @@ function getBallTexture() {
     g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 2; g.stroke();
   }));
 }
+let goldTex = null;
+function getGoldTexture() {
+  if (goldTex) return goldTex;
+  return (goldTex = canvasTex(64, 64, (g) => {
+    const gr = g.createRadialGradient(24, 21, 2, 32, 32, 31);
+    gr.addColorStop(0, '#fffbe6'); gr.addColorStop(0.2, '#ffe08a'); gr.addColorStop(0.58, '#d9a12e'); gr.addColorStop(1, '#6e4a0c');
+    g.fillStyle = gr; g.beginPath(); g.arc(32, 32, 30, 0, 6.283); g.fill();
+    g.strokeStyle = 'rgba(70,40,0,.7)'; g.lineWidth = 2; g.stroke();
+  }));
+}
+const GOLD = 0xffcf5a;
 
 class ShipView {
   constructor(ship, L) {
-    this.ship = ship; this.L = L;
+    this.ship = ship; this.L = L; this.goldIdx = -1;
     const g = ship.geo, len = ship.len, f = ship.facing, team = ship.team, u = L.u;
     const root = (this.root = new PIXI.Container());
     // --- Takelage hinter dem Rumpf
@@ -923,7 +979,8 @@ class ShipView {
       this.flash.alpha = 0.5 * k;
     }
     if (this.dmgVer !== s.dmgVer) { this.dmgVer = s.dmgVer; this._drawDamage(); }
-    if (this.rackAmmo !== s.ammo) { this.rackAmmo = s.ammo; this._drawRack(); }
+    const rk = s.ammo * 1000 + this.goldIdx;                      // goldIdx: Platz der goldenen Kugel im Regal (−1 = keine)
+    if (this.rackKey !== rk) { this.rackKey = rk; this._drawRack(); }
   }
 
   _drawDamage() {
@@ -957,20 +1014,23 @@ class ShipView {
     g.clear();
     const rows = [6, 5, 4, 3, 2, 1], w = 6 * 2 * r + 6;   // 21 Plätze; mehr liegt beim Beuteprinzip praktisch nie im Regal
     g.roundRect(x - w / 2, y - r * 0.9, w, r * 1.3, 3).fill(0x3a2416).stroke({ width: 1.5, color: 0x1a0f09 });
-    let left = s.ammo;
+    let left = s.ammo, d = 0;
+    // Platz d entspricht magBalls[d] (unten zuerst); liegt die goldene Kugel jenseits der 21 Plätze, zeigt der letzte sie
+    const gold = this.goldIdx < 0 ? -1 : Math.min(this.goldIdx, Math.min(s.ammo, 21) - 1);
     rows.forEach((cnt, ri) => {
-      for (let k = 0; k < cnt && left > 0; k++, left--) {
-        const bx = x - (cnt - 1) * r + k * 2 * r, by = y - r * 0.9 - r - ri * r * 1.72;
-        g.circle(bx, by, r).fill(0x2b313b).stroke({ width: 1.2, color: 0x0e1116 });
-        g.circle(bx - r * 0.3, by - r * 0.3, r * 0.3).fill({ color: 0xaab4c4, alpha: 0.8 });
+      for (let k = 0; k < cnt && left > 0; k++, left--, d++) {
+        const bx = x - (cnt - 1) * r + k * 2 * r, by = y - r * 0.9 - r - ri * r * 1.72, au = d === gold;
+        g.circle(bx, by, r).fill(au ? 0xd9a12e : 0x2b313b).stroke({ width: 1.2, color: au ? 0x5a3a06 : 0x0e1116 });
+        g.circle(bx - r * 0.3, by - r * 0.3, r * 0.3).fill({ color: au ? 0xfff2c0 : 0xaab4c4, alpha: 0.85 });
       }
     });
   }
 }
 
 class NavalRenderer {
-  constructor({ app, sim, view, renderScale = 1 }) {
+  constructor({ app, sim, view, renderScale = 1, video = null }) {
     this.app = app; this.sim = sim; this.view = view; this.rs = renderScale; this.L = sim.L; this.frame = 0;
+    this.video = video;   // Videoeinstellungen (Verweis, damit eine geänderte Videolänge sofort gilt)
     const L = this.L, W = L.W, H = L.H, u = L.u, M = 90 * u;
     this.root = new PIXI.Container(); this.world = new PIXI.Container(); this.root.addChild(this.world);
     this.world.pivot.set(W / 2, H / 2); this.world.position.set(W / 2, H / 2);
@@ -1005,6 +1065,21 @@ class NavalRenderer {
     }, this.rs);
     this.ownTex.push(sky);
     const skyS = new PIXI.Sprite(sky); skyS.position.set(-M, -M); this.world.addChild(skyS);
+    // Himmelsverlauf: Die Morgengrauen-Schicht blendet über die Videolänge ein (Sterne verblassen, Horizont wird warm).
+    // Um den Mond ist ein weiches Loch geschnitten, damit er sichtbar bleibt.
+    const dawn = canvasTex(Math.ceil(W + 2 * M), Math.ceil(L.waterY + M), (g, w, h) => {
+      const gr = g.createLinearGradient(0, 0, 0, h);
+      gr.addColorStop(0, '#1b2b55'); gr.addColorStop(0.5, '#3b4f88'); gr.addColorStop(0.82, '#a06f8c'); gr.addColorStop(1, '#f4a66c');
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      const mx = moon.x + M, my = moon.y + M, mr = moon.r, hole = g.createRadialGradient(mx, my, mr * 1.02, mx, my, mr * 1.9);
+      hole.addColorStop(0, 'rgba(0,0,0,1)'); hole.addColorStop(1, 'rgba(0,0,0,0)');
+      g.globalCompositeOperation = 'destination-out'; g.fillStyle = hole; g.fillRect(0, 0, w, h);
+    }, this.rs);
+    this.ownTex.push(dawn);
+    this.dawnS = new PIXI.Sprite(dawn); this.dawnS.position.set(-M, -M); this.dawnS.alpha = 0; this.world.addChild(this.dawnS);
+    // Seltene Ereignisse (Sternschnuppe, Wal): liegen hinter Wolken und hinteren Wellen
+    this.gSky = new PIXI.Graphics(); this.world.addChild(this.gSky);
+    this.planKey = null; this.plan = null;
     // Wolken
     const cloudTex = canvasTex(256, 110, (g) => {
       for (const [x, y, r] of [[70, 65, 42], [120, 50, 50], [175, 62, 40], [100, 75, 38], [150, 78, 34]]) {
@@ -1156,6 +1231,15 @@ class NavalRenderer {
       this.hud.addChild(bar, label, pct, ammo);
       return { s, x, y: by + 36 * u, w: bw, h: 26 * u, bar, pct, ammo };
     });
+    // Goldene Kugel: „GOLDEN BALL · fired 12×“ mit kleiner Goldkugel davor. Querformat-Duell: oben mittig, sobald der
+    // Titel ausgeblendet ist; sonst unter den Lebensbalken.
+    this.hGold = new PIXI.Container();
+    this.hGoldTxt = new PIXI.Text({ text: '', style: style(25 * u, '800', GOLD, 2 * u) });
+    this.hGoldTxt.anchor.set(0.5, 0.5);
+    this.hGoldIcon = new PIXI.Sprite(getGoldTexture()); this.hGoldIcon.anchor.set(0.5); this.hGoldIcon.scale.set((24 * u) / 60);
+    this.hGold.addChild(this.hGoldIcon, this.hGoldTxt);
+    this.hGold.position.set(W / 2, corners ? top + 22 * u : by + 118 * u);
+    this.hud.addChild(this.hGold);
   }
 
   _drawWave(g, fn, t, fillColor, fillAlpha) {
@@ -1175,10 +1259,16 @@ class NavalRenderer {
       this.world.position.set(W / 2 + Math.sin(t * 61.3) * sh + Math.sin(t * 0.13) * 4 * u, L.H / 2 + Math.cos(t * 47.9) * sh * 0.7 + Math.sin(t * 0.11 + 1) * 3 * u);
       this.world.scale.set(1.02 + 0.008 * Math.sin(t * 0.05));
     } else { this.world.position.set(W / 2, L.H / 2); this.world.scale.set(1); }
+    // Himmelsverlauf und seltene Ereignisse laufen in Videozeit (bei Zeitlupe läuft die Simulationszeit langsamer)
+    const vt = sim.step * DT, dur = this.video ? this.video.durationSec : 600, dawn = skyProgress(cfg, vt, dur);
+    this.dawnS.alpha = 0.62 * dawn;
+    const cloudTint = lerpColor(0x9fb0d8, 0xe6b2a6, dawn);
     for (const c of this.clouds) {
       const span = W + 600 * u;
       c.s.position.set(((c.x0 + t * c.v) % span) - 300 * u, c.y);
+      c.s.tint = cloudTint;
     }
+    this._drawSkyEvents(vt, dur, t);
     // Wasser
     this.gBack.clear();
     this._drawWave(this.gBack, (x, tt) => sim.backY(x, tt), t, 0x0a2436, 1);
@@ -1225,20 +1315,29 @@ class NavalRenderer {
       r.s.rotation = -(r.off * 0.34 + 0.05 * Math.sin(t * r.sp * 0.7 + r.ph));      // fächert vom Mond weg auf
       r.s.alpha = r.a * (0.7 + 0.3 * Math.sin(t * r.sp * 1.9 + r.ph * 1.7));
     }
-    // Schiffe
-    for (const v of this.shipViews) v.draw(t);
+    // Schiffe (die goldene Kugel liegt im Regal auf ihrem Platz in magBalls)
+    const gb = cfg.goldenBall ? sim.goldBall : null;
+    for (const v of this.shipViews) {
+      v.goldIdx = gb && gb.state === 'mag' && gb.owner === v.ship.i ? v.ship.magBalls.indexOf(gb) : -1;
+      v.draw(t);
+    }
     // Recycling
     this._drawRecycling(t);
     // Kugeln
     const gt = this.gTrails; gt.clear();
+    const gv = this.ballViews[sim.goldBall.id], gTex = gb ? getGoldTexture() : getBallTexture();
+    if (gv.fly.texture !== gTex) {                                     // goldene Kugel ein-/ausgeschaltet
+      gv.fly.texture = gv.rec.texture = gTex;
+      gv.glow.scale.set((sim.goldBall.r * (gb ? 7 : 5)) / 64); gv.glow.alpha = gb ? 0.85 : 0.55;
+    }
     sim.balls.forEach((b, i) => {
       const v = this.ballViews[i];
-      const team = sim.ships[b.owner].team;
+      const team = sim.ships[b.owner].team, au = b === gb;
       if (b.state === 'fly') {
         const p = b.body.position;
         v.fly.visible = v.glow.visible = true; v.rec.visible = v.tag.visible = false;
-        v.fly.position.set(p.x, p.y); v.glow.position.set(p.x, p.y); v.glow.tint = team.color;
-        this._drawTrail(gt, b, team.color);
+        v.fly.position.set(p.x, p.y); v.glow.position.set(p.x, p.y); v.glow.tint = au ? GOLD : team.color;
+        this._drawTrail(gt, b, au ? GOLD : team.color);
       } else {
         v.fly.visible = v.glow.visible = false;
         if (b.state === 'mag') { v.rec.visible = v.tag.visible = false; return; }
@@ -1249,19 +1348,64 @@ class NavalRenderer {
           v.rec.alpha = clamp(1 - depth / (90 * u), 0, 1);
         } else { v.rec.visible = !pos.hidden; v.rec.alpha = 1; }
         v.rec.position.set(pos.x, pos.y);
-        v.rec.tint = depth > b.r ? 0xa9d2e6 : 0xffffff;
+        v.rec.tint = depth > b.r ? (au ? 0xe4eef2 : 0xa9d2e6) : 0xffffff;
         if (b.state === 'lane' && !pos.lift) v.rec.rotation = -(b.dir || 1) * (b.dist / b.r);   // rollt sichtbar
         const k = b.state === 'lane' && pos.lift ? clamp(pos.t * 2.6, 0, 1) : 0;
         v.tag.visible = v.rec.visible && depth > b.r; v.tag.position.set(pos.x, pos.y);
-        v.tag.tint = lerpColor(0xbfe2f4, team.color, k);
-        v.tag.alpha = (0.26 + 0.6 * k) * v.rec.alpha * clamp(depth / (60 * u), 0, 1);
-        v.tag.scale.set((b.r * (3.2 + 1.4 * k)) / 64);
+        v.tag.tint = lerpColor(au ? GOLD : 0xbfe2f4, team.color, k);               // goldene Kugel schimmert golden
+        v.tag.alpha = (au ? 0.6 + 0.3 * k : 0.26 + 0.6 * k) * v.rec.alpha * clamp(depth / (60 * u), 0, 1);
+        v.tag.scale.set((b.r * (au ? 4.4 : 3.2 + 1.4 * k)) / 64);
       }
     });
     this.pview.draw();
     // HUD
     this.hud.visible = this.view.hud;
     if (this.view.hud) this._drawHud();
+  }
+
+  /** Sternschnuppen und Wal nach dem festen Fahrplan (eventPlan); vt = Videozeit, t = Simulationszeit für die Wellen. */
+  _drawSkyEvents(vt, dur, t) {
+    const sim = this.sim, cfg = sim.cfg, L = this.L, u = L.u, W = L.W, gs = this.gSky;
+    const key = `${cfg.seed}|${cfg.meteors}|${cfg.meteorEvery}|${cfg.whales}|${cfg.whaleEvery}|${dur}`;
+    if (key !== this.planKey) { this.planKey = key; this.plan = eventPlan(cfg.seed, cfg, dur); }
+    gs.clear();
+    const [y0, y1] = L.portrait ? [0.36, 0.5] : [0.16, 0.36];               // unterhalb der Anzeigen, oberhalb der Schiffe
+    for (const m of this.plan.meteors) {                                      // Sternschnuppe: 0,9 s, Schweif wächst und verglüht
+      if (m.t > vt) break;
+      const s = (vt - m.t) / METEOR_LIFE; if (s > 1) continue;
+      const n = Math.hypot(1, m.dy), dx = m.dir / n, dy = m.dy / n, f = Math.sin(Math.PI * s), len = m.len * u;
+      const x0 = m.fx * W, yy = lerp(y0, y1, m.fy) * L.waterY;
+      const hx = x0 + dx * len * 1.7 * s, hy = yy + dy * len * 1.7 * s, tl = len * Math.min(1, s * 2.5);
+      for (let k = 0; k < 10; k++) {
+        gs.moveTo(hx - (dx * tl * k) / 10, hy - (dy * tl * k) / 10).lineTo(hx - (dx * tl * (k + 1)) / 10, hy - (dy * tl * (k + 1)) / 10)
+          .stroke({ width: (4.2 - 0.32 * k) * u, color: 0xeaf2ff, alpha: 0.95 * f * (1 - k / 10), cap: 'round' });
+      }
+      gs.circle(hx, hy, 9 * u).fill({ color: 0xcfe0ff, alpha: 0.22 * f });
+      gs.circle(hx, hy, 3.6 * u).fill({ color: 0xffffff, alpha: f });
+    }
+    const spread = (L.portrait ? 0.03 : 0.06) * W;
+    for (const w of this.plan.whales) {                                       // Wal: taucht 8 s lang im Bogen auf und wieder ab
+      if (w.t > vt) break;
+      const s = (vt - w.t) / WHALE_LIFE; if (s > 1) continue;
+      const z = w.size * u, x = this.moon.x + w.off * spread + w.dir * (s - 0.5) * 110 * z;
+      const y = sim.backY(x, t) + (16 - 30 * Math.sin(Math.PI * s)) * z;
+      const ang = Math.atan2(-30 * z * Math.PI * Math.cos(Math.PI * s), 110 * z), ca = Math.cos(ang), sa = Math.sin(ang);
+      const rx = 58 * z, ry = 13 * z, P = (lx, ly) => [x + w.dir * (lx * ca - ly * sa), y + lx * sa + ly * ca];   // gespiegelt statt gedreht
+      const body = [];
+      for (let k = 0; k < 28; k++) {
+        const a = (k / 28) * 6.283, px = Math.cos(a) * rx, taper = px < 0 ? 0.35 + 0.65 * (1 + px / rx) : 1;
+        body.push(...P(px, Math.sin(a) * ry * taper));
+      }
+      gs.poly(body).fill({ color: 0x0c1830, alpha: 0.96 }).stroke({ width: 1.3 * u, color: 0x9fb3d8, alpha: 0.35 });
+      gs.poly([...P(-rx * 0.92, 0), ...P(-rx * 1.38, -ry * 1.15), ...P(-rx * 1.22, 0), ...P(-rx * 1.38, ry * 1.15)]).fill({ color: 0x0c1830, alpha: 0.96 });
+      if (s > 0.2 && s < 0.48) {                                               // Blas: Tropfenfontäne über dem Kopf
+        const ph = (s - 0.2) / 0.28, [bx, by] = P(rx * 0.55, -ry);
+        for (let j = 0; j < 12; j++) {
+          const a = -Math.PI / 2 + (j / 11 - 0.5) * 0.9, r = 34 * z * ph * (0.7 + (0.3 * ((j * 7) % 5)) / 4);
+          gs.circle(bx + Math.cos(a) * r, by + Math.sin(a) * r, (1.4 + (1.2 * ((j * 3) % 4)) / 3) * u).fill({ color: 0xe8f2ff, alpha: 0.75 * (1 - ph) });
+        }
+      }
+    }
   }
 
   _drawTrail(g, b, color) {
@@ -1338,6 +1482,8 @@ class NavalRenderer {
   _drawHud() {
     const sim = this.sim, u = this.L.u, st = sim.stats;
     if (this.cornerHud) this.hTitle.alpha = clamp(1 - (sim.step * DT - 5) / 1.5, 0, 1);
+    this.hGold.visible = !!sim.cfg.goldenBall;
+    if (this.cornerHud) this.hGold.alpha = 1 - this.hTitle.alpha;
     for (const b of this.hBars) {
       const hp = 1 - b.s.damage, g = b.bar;
       g.clear();
@@ -1350,6 +1496,11 @@ class NavalRenderer {
       for (const b of this.hBars) {
         b.pct.text = `${Math.round((1 - b.s.damage) * 100)}%`;
         b.ammo.text = sim.beute ? `Ammo ${b.s.ammo}` : `Ammo ${b.s.ammo}/${b.s.totalBalls}`;
+      }
+      if (this.hGold.visible) {
+        this.hGoldTxt.text = `GOLDEN BALL  ·  fired ${fmtIntEn(sim.goldFired)}×`;
+        this.hGoldTxt.x = 15 * u;                                         // Symbol und Text gemeinsam mittig
+        this.hGoldIcon.x = 15 * u - this.hGoldTxt.width / 2 - 18 * u;
       }
     }
   }
@@ -1367,7 +1518,13 @@ class NavalRenderer {
 EBS.registerScenario({
   id: 'naval',
   title: 'Endless Naval Battle',
-  defaults: { ships: 2, cannons: 4, fireRate: 1, projectileSpeed: 1, intensity: 0.35, ballsPerCannon: 5, recycleVisible: true },
+  // Atmosphäre und goldene Kugel sind reine Darstellung: Standard = Empfehlung für jede Videolänge (Short wie langes
+  // Video) – Himmel erreicht das Morgengrauen am Videoende (mindestens 10 min), Sternschnuppe etwa alle 75 s (jedes
+  // Video ab 8 s hat mindestens eine), Wal etwa alle 3½ Minuten, goldene Kugel mit Zähler.
+  defaults: {
+    ships: 2, cannons: 4, fireRate: 1, projectileSpeed: 1, intensity: 0.35, ballsPerCannon: 5, recycleVisible: true,
+    goldenBall: true, sky: true, skyMinutes: 0, meteors: true, meteorEvery: 75, whales: true, whaleEvery: 210,
+  },
   // Bedienelemente fürs Live-Bedienfeld (restart: true -> Änderung startet die Simulation neu)
   controls: [
     { key: 'ships', label: 'Anzahl der Schiffe', type: 'select', restart: true, options: [[2, '2 Schiffe'], [3, '3 Schiffe'], [4, '4 Schiffe']] },
@@ -1375,7 +1532,14 @@ EBS.registerScenario({
     { key: 'fireRate', label: 'Feuergeschwindigkeit', type: 'range', min: 0.2, max: 3, step: 0.05, format: (v) => v.toFixed(2) + '×' },
     { key: 'projectileSpeed', label: 'Geschossgeschwindigkeit', type: 'range', min: 0.64, max: 1.6, step: 0.02, format: (v) => v.toFixed(2) + '×' },
     { key: 'intensity', label: 'Zerstörungsintensität', type: 'range', min: 0, max: 1, step: 0.01, format: (v) => Math.round(v * 100) + ' %' },
+    { key: 'skyMinutes', label: 'Morgengrauen erreicht nach', type: 'select', options: SKY_OPTIONS },
+    { key: 'meteorEvery', label: 'Sternschnuppe etwa alle', type: 'range', min: 20, max: 300, step: 5, format: fmtEvery },
+    { key: 'whaleEvery', label: 'Wal am Horizont etwa alle', type: 'range', min: 30, max: 900, step: 15, format: fmtEvery },
     { key: 'recycleVisible', label: 'Recycling sichtbar', type: 'check' },
+    { key: 'goldenBall', label: 'Goldene Kugel mit Zähler', type: 'check' },
+    { key: 'sky', label: 'Himmelsverlauf (Nacht → Morgengrauen)', type: 'check' },
+    { key: 'meteors', label: 'Sternschnuppen', type: 'check' },
+    { key: 'whales', label: 'Wal am Horizont', type: 'check' },
   ],
   normalizeParams(p) {
     return {
@@ -1386,10 +1550,19 @@ EBS.registerScenario({
       intensity: clamp(num(p.intensity, 0.35), 0, 1),
       ballsPerCannon: clamp(Math.round(num(p.ballsPerCannon, 5)), 2, 10),
       recycleVisible: bool(p.recycleVisible, true),
+      goldenBall: bool(p.goldenBall, true),
+      sky: bool(p.sky, true),
+      skyMinutes: clamp(Math.round(num(p.skyMinutes, 0)), 0, 240),          // 0 = automatisch (Videolänge, mind. 10 min)
+      meteors: bool(p.meteors, true),
+      meteorEvery: clamp(Math.round(num(p.meteorEvery, 75)), 20, 600),      // Sekunden (Mittelwert)
+      whales: bool(p.whales, true),
+      whaleEvery: clamp(Math.round(num(p.whaleEvery, 210)), 30, 1800),      // Sekunden (Mittelwert)
     };
   },
   create: (ctx) => new NavalBattle(ctx),
   createRenderer: (ctx) => new NavalRenderer(ctx),
+  // Fahrplan der seltenen Ereignisse und Himmelsverlauf als reine Funktionen (für Tests und Planung)
+  eventPlan, skyProgress,
   panelStats(sim) {
     const s = sim.snapshot();
     return [
