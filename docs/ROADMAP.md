@@ -8,10 +8,11 @@ sauber; keine anwendbare `AGENTS.md` im Repository oder in den übergeordneten V
 Die anschließend beauftragte Scrap-Integration startet an `0dfde76` im Branch `codex/scrap-wars`;
 GitHub-`main` wurde erneut mit `0f87887` abgeglichen. Aktueller Anschluss- und Prüfstand:
 [Scrap-Bericht](SCRAP_WARS_INTEGRATION_2026-11-12.md). Der anschließend autorisierte Push ist erfolgt:
-`5cec854` liegt auf `origin/codex/scrap-wars`, [PR #3](https://github.com/emfau88/Endless-Battle-Simulator/pull/3)
-führt die acht vorhandenen Commits zusammen. **Nicht gemergt:** beide ersten GitHub-CI-Läufe überschritten
-das Joblimit und meldeten zuvor Einzeltestfehler. Aktueller Nachweis: [CI-Erstlauf](CI_ERSTLAUF_2026-11-13.md).
-Der Ausbauplan liegt separat im Dokumentationsbranch `codex/scrap-video-plan`.
+Die acht vorhandenen Commits bis `5cec854` sind über [PR #3](https://github.com/emfau88/Endless-Battle-Simulator/pull/3)
+in `main` gemergt (`34c63aa`). Grundlage war die anschließend beauftragte Minimalprüfung: Live-Abbruch bestanden,
+Audio-Spitzenabweichung identisch auf dem alten `main` reproduziert. Die ersten vollständigen CI-Läufe waren
+unvollständig; R02 bleibt offen. Nachweise und Grenzen: [CI-Erstlauf und Nachtrag](CI_ERSTLAUF_2026-11-13.md).
+Der Ausbauplan und diese Nachweise werden separat in [PR #4](https://github.com/emfau88/Endless-Battle-Simulator/pull/4) geführt.
 
 **Zweck:** Dies bleibt die **einzige aktive Aufgabenliste**. Erledigtes steht im [CHANGELOG](CHANGELOG.md).
 Berichte dokumentieren ihren damaligen Stand und werden nicht nachträglich als aktuelle Prüfung umgeschrieben.
@@ -24,7 +25,7 @@ Der aktuelle Folgeauftrag plant die sechs vorgeschlagenen Scrap-Verbesserungen u
 reproduzierbarem MP4-Export ermöglichen: Shorts in 9:16 und längere Videos in 16:9. Inhaltsidee, Zuschauerreaktion
 und Produktionsaufwand bestimmen die Länge. Der bereits laufende Kanalpilot R04 wird parallel fortgesetzt.
 
-**Reihenfolge:** CI-Befunde R02 klären und integrierten Scrap-Stand sicher zusammenführen → kurze Filmproben/R20 beurteilen →
+**Reihenfolge:** verbleibende CI-Nacharbeit R02 und kurze Filmproben/R20 beurteilen →
 Scrap-Videoqualität in sechs begrenzten Paketen R22 verbessern. Zuerst Lesbarkeit und Treffer/Klang,
 dann Kampfablauf und Turnier; Arenen/Kamera und die kleine Werkstattvariante folgen getrennt.
 Hex Dominion V0.3/R17 bleibt der nächste neue Szenariokandidat, wird während R22 aber nicht parallel integriert.
@@ -114,11 +115,15 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   zuvor der Audioexport mit Tempo 0,8 und der Live-Abbruchtest; im PR-Lauf zusätzlich der Scrap-Konfigurations-/UI-Test.
   Versions- und Teilprotokolle sind gesichert; vollständige Assertions fehlen wegen des vorzeitigen Endes.
   [CI-Bericht mit Laufverweisen](CI_ERSTLAUF_2026-11-13.md). **R02 bleibt offen und hat vor R22 Vorrang.**
-  **Begrenztes Vorgehen:** die drei benannten Fälle zuerst auf Ubuntu einzeln mit unmittelbar ausgegebenen
-  Fehlerdetails reproduzieren. Fehler in Funktion und Testbedingungen anhand dieser Belege unterscheiden;
-  nur die konkrete Ursache korrigieren. Danach die vollständige Suite innerhalb eines begründeten Laufzeitbudgets
+  **Nachtrag nach beauftragter Minimalprüfung:** Live-Abbruch einschließlich 2,5-s-Reaktionsgrenze und Aufräumen
+  bestanden. Der Audiotest meldet −0,7 dBTP statt höchstens −1 dBTP, **identisch auf dem bisherigen `main`**;
+  somit keine neue Abweichung durch die Integration. Details und Grenzen im CI-Bericht. Diese beiden Befunde
+  gelten nicht mehr als Merge-Sperre für PR #3; ein vollständig grüner CI-Lauf ist damit nicht behauptet.
+  **Begrenzte Nacharbeit:** bestehende Audio-Spitzenreserve unter FFmpeg 6.1.1 prüfen, die knappe 110-s-Wartefrist
+  vor dem Audiomix vom unverändert strengen 2,5-s-Abbruchziel trennen und den sporadischen Scrap-UI-Fall gezielt
+  reproduzieren. Nur belegte Ursachen korrigieren. Danach die vollständige Suite innerhalb eines begründeten Laufzeitbudgets
   abschließen, bei Bedarf in wenige Prüfgruppen aufteilen. Ein höheres Joblimit allein behebt keine Einzeltestfehler.
-  **Abnahme:** vollständiger grüner Runnerlauf am zu mergenden Code, Versionsnachweis, wirksames `pipefail` und
+  **Abnahme von R02:** vollständiger grüner Runnerlauf, Versionsnachweis, wirksames `pipefail` und
   erhaltene Referenzprüfungen. Keine Tests ausblenden, Grenzwerte grundlos lockern oder Golden-Werte neu setzen.
   Keine zusätzlichen Langexporte, Leistungsbenchmarks oder Änderungen an den sechs Ausbaupaketen erforderlich.
 
@@ -377,8 +382,9 @@ Getroffene Entscheidungen einschließlich E2 und der Umsetzung von R19 stehen im
 
 ## 7 · Die nächsten drei Schritte
 
-1. **R02 – CI-Befunde klären:** die drei fehlgeschlagenen Fälle gezielt diagnostizieren und die komplette Suite
-   abschließen. Erst anschließend PR #3 mergen. Produktionsabsicherung und Integration sind bereits committed/gepusht.
+1. **R02 – verbleibende CI-Nacharbeit:** vorhandene Audio-Spitzenabweichung, Laufzeitreserve und sporadischen UI-Fall
+   begrenzt bearbeiten. Die Minimalprüfung hat Abbruch bestätigt und den Audio-Befund auf dem alten `main` reproduziert;
+   sie erlaubt die Integration, ersetzt aber keine vollständige CI-Abnahme.
 2. **R20/R22 P1–P2 – erste Qualitätsstufe:** vorhandene Filmproben als Vergleich beurteilen, dann Roboter/HUD
    und Treffer/Klang getrennt verbessern. Das ist das erste kleine Produktionsziel vor zusätzlichen Regeln.
 3. **R22 P3–P6 – nacheinander erweitern:** belegte Ablaufprobleme, endliches Turnier, zwei zusätzliche Arenen

@@ -6,6 +6,8 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Was | Commit | Bericht |
 |---|---|---|
+| Scrap-Integration und Produktionsabsicherung nach gezielter Minimalprüfung über PR #3 in main zusammengeführt. Live-Abbruch bestanden, Audio-Abweichung bereits im bisherigen main vorhanden; vollständige CI-Abnahme bleibt als R02 offen. | `34c63aa` | [CI-Nachtrag](CI_ERSTLAUF_2026-11-13.md) |
+| Beauftragte Minimalprüfung: Live-Abbruch bestanden; Audio-Spitzenabweichung −0,7 dBTP im aktuellen Stand und im bisherigen main identisch reproduziert. Kein neu eingeführter Audiofehler, keine gelockerten Grenzen. Vollständige CI-Abnahme bleibt offen. | `13734ac` (Diagnose von `5cec854`), `9d6510e` (Workflow für Baseline `0f87887`) | [CI-Nachtrag](CI_ERSTLAUF_2026-11-13.md#nachtrag--gezielte-minimalprüfung-vor-dem-merge) |
 | Vorhandenen Stand gepusht und PR #3 angelegt. Erste GitHub-CI-Läufe ausgewertet: beide am 25-Minuten-Limit abgebrochen, zuvor zwei bzw. drei Einzeltestfehler. Protokolle gesichert; bewusst kein Merge. R02 bleibt vor dem geplanten Ausbau offen. | `5cec854` (geprüfter Stand) | [CI-Erstlauf](CI_ERSTLAUF_2026-11-13.md) |
 
 ## 12.11.2026
@@ -58,6 +60,7 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Datum | Entscheidung |
 |---|---|
+| 13.11.2026 | Folgeauftrag: nur die minimal nötigen Audio-/Abbruchtests vor dem Merge. Live-Abbruch besteht; der Audiofall verfehlt die Spitzenreserve in altem und neuem Stand identisch um 0,3 dB. Daher Integration gemergt und bestehende Abweichung als Nacharbeit dokumentiert; keine vollständig grüne CI behauptet, keine Testgrenzen gelockert. |
 | 12.11.2026 | Alle sechs Scrap-Qualitätsvorschläge zur begrenzten Umsetzungsplanung angenommen: Roboter/HUD, Treffer/Klang, Kampfablauf, 8-Runden-Turnier, insgesamt drei Arenen mit ruhiger Kamera und kleine optionale Werkstatt. R22 in der ROADMAP ist der einzige aktive Plan; zuerst P1/P2, kein paralleler Hex-/Marble-Ausbau und noch keine Umsetzung dieser Erweiterungen. Bestehenden Stand committen/pushen und bei bestandenen Prüfungen mergen ausdrücklich erlaubt. |
 | 12.11.2026 | Folgeauftrag: Scrap Wars jetzt schrittweise nach R06/R20 integrieren. Die Marble-Erweiterung bleibt ausdrücklich als isolierter lokaler Prototyp stehen. Keine neuen Scrap-Spielmechaniken vor der Filmabnahme. |
 | 12.11.2026 | Nach gemeldetem Naval-Short und 10-Minuten-Video hat Naval keinen Vorrang vor neuer Inhaltsentwicklung. Produktionsabsicherung ausdrücklich beauftragt und umgesetzt. Marble zunächst als isolierten lokalen Versuch ansehen; noch keine Entscheidung für die Integration. Scrap Arena bleibt der nächste Kandidat für ein eigenständiges Szenario, Hex V0.3 folgt danach. |
