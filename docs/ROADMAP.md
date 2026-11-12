@@ -1,6 +1,6 @@
 # Roadmap
 
-**Stand:** 12.11.2026 · `main` nach `f2f5e6f`
+**Stand:** 12.11.2026 · `main` nach Ton und Mondlicht der Seeschlacht (R19, Teil)
 **Zweck:** die **einzige aktive Liste** offener Punkte. Erledigtes steht im [CHANGELOG](CHANGELOG.md), Hintergründe
 stehen in den Berichten unter `docs/`. Die Berichte halten ihren Stand fest und werden nicht nachgeführt.
 
@@ -39,10 +39,11 @@ IDs: `R..` = Punkt dieser Roadmap, in Klammern die frühere Bezeichnung aus Road
       das klären. (2) Querformat mit drei und vier Schiffen: Die Lebensbalken stehen weiter oben in der Mitte, Kugeln
       können dahinter durchfliegen. (3) Sand, Sockel und Rohr sind ein erster Wurf. (4) Die eingebaute Fassung wurde
       nur an Einzelbildern beurteilt, nicht in Echtzeit. *Quelle:* [NAVAL_MULDEN_LIFT.md](NAVAL_MULDEN_LIFT.md).
-- [ ] **R19 · Seeschlacht: Atmosphäre und Aufhänger** – Vorschläge vom 12.11.2026: „Tink“ beim Nachladen und „Tock“
-      am Grund (Kenney); Mondlicht (Glitzerbahn auf dem Wasser, Lichtbahnen unter Wasser); Mündungsfeuer beleuchtet
-      kurz Segel und Rumpf, Schaum am Rumpf; goldene Kugel mit Zähler zum Verfolgen; langsamer Himmelsverlauf und
-      seltene Ereignisse für lange Videos. Braucht Entscheidung **E2**.
+- [ ] **R19 · Seeschlacht: Atmosphäre und Aufhänger** – Rest der Vorschläge vom 12.11.2026 („Tink“/„Tock“, Mondlicht,
+      Mündungsfeuer-Licht und Schaum sind erledigt, siehe [CHANGELOG](CHANGELOG.md)): (1) goldene Kugel mit Zähler
+      zum Verfolgen, als eigener Schritt für Shorts; braucht ein Anzeigeelement. (2) Langsamer Himmelsverlauf und
+      seltene Ereignisse (Sternschnuppe, Wal im Hintergrund) erst, wenn lange Videos im Pilot zählen. Mondlicht,
+      Mündungsfeuer und Schaum wurden nur an Einzelbildern beurteilt, nicht in Echtzeit.
 - [ ] **R06 · Gemeinsame Szenario-Basis** – beim Bau von Szenario 3, nicht vorher: Ereignisring, Matter.js-Auf- und
       Abbau, Zeitschritt und Prüfsumme sind in beiden Szenarien doppelt gebaut. Die Checkliste für neue Szenarien
       steht bereits im Audit (Abschnitt 4). *Quelle:* [Audit](AUDIT_2026-11-12.md), Hotzones 1, 2, 4, 7.
@@ -75,7 +76,8 @@ Punkte, die nur du erledigen kannst.
 
 - [ ] **Hörprobe nach der Lautheits-Einmessung** (−14 LUFS): `output/naval_lufs_16x9_12s.mp4` und
       `output/marble_lufs_9x16_12s.mp4`. Die Kugelfabrik wird an den lautesten Stellen um bis zu 19 dB begrenzt –
-      klingt sie gedrückt oder pumpend? Den Ton der Seeschlacht hat bisher niemand gehört.
+      klingt sie gedrückt oder pumpend? Den Ton der Seeschlacht hat bisher niemand gehört – auch nicht das neue
+      „Tink“ und „Tock“, die nur nach Kennwerten der Dateien ausgewählt sind.
 - [ ] **Neue Seeschlacht in Echtzeit ansehen** (Hoch- und Querformat, lokal über `start.bat`): rollt, wartet und
       steigt alles stimmig? Im Hochformat am Handy darauf achten, ob das rechte Rohr unter den YouTube-Buttons liegt.
 - [ ] **Laufenden Server neu starten** (`start.bat`), damit der Export-Knopf die neuen Ton-Regler nutzt.
@@ -86,10 +88,6 @@ Punkte, die nur du erledigen kannst.
 
 - [ ] **E1 · Variante für das lange Kugelfabrik-Video** (früher Entscheidung B): Überlastungsprobe, Sortierduell
       oder Wachsende Maschine. Empfehlung: Wachsende Maschine, weil sie fünf Minuten am natürlichsten füllt.
-
-- [ ] **E2 · Welche Vorschläge aus R19 umgesetzt werden.** Empfehlung: zuerst Ton („Tink“, „Tock“), dann Mondlicht,
-      dann Mündungsfeuer-Licht und Schaum (alle drei ohne Eingriff in die Physik). Goldene Kugel als eigener Schritt
-      für Shorts. Himmelsverlauf und seltene Ereignisse zurückstellen, bis lange Videos im Pilot zählen.
 
 Getroffene Entscheidungen stehen im [CHANGELOG](CHANGELOG.md#entscheidungen).
 
