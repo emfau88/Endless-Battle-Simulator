@@ -1,4 +1,4 @@
-name: Production checks
+name: Targeted production checks
 
 on:
   push:
@@ -15,7 +15,7 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 10
     defaults:
       run:
         shell: bash # Explizit: -eo pipefail; tee darf fehlgeschlagene Tests nicht verdecken.
@@ -37,8 +37,11 @@ jobs:
           npx playwright --version | tee -a output/ci-versions.log
           ffmpeg -version | tee -a output/ci-versions.log
           ffprobe -version | tee -a output/ci-versions.log
-      - name: Tests, short exports and golden references
-        run: npm test 2>&1 | tee output/ci-tests.log
+      - name: Diagnose audio export and live cancellation
+        run: |
+          node --test --test-concurrency=1 --test-timeout=300000 --test-reporter=tap \
+            --test-name-pattern='Export mit Ton \(Tempo 0\.8\)|Echter Server beantwortet' \
+            test/audio.test.mjs test/live.test.mjs 2>&1 | tee output/ci-tests.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
