@@ -129,8 +129,22 @@ Der erste echte Ubuntu-GitHub-Runnerlauf bleibt R02; er wird durch lokale Tests 
 ## Filmbeurteilung und unveränderter Marble-Prototyp
 
 Exportierte Einzelbilder von Start, Aktion, Ergebnis und Folgerunde wurden auf Beschriftung, Ausschnitt
-und Sichtbarkeit geprüft. Kurze MP4s beider Formate werden aus dem gesicherten Stand zur laufenden
-Sicht-/Hörbeurteilung bereitgestellt; ihre Rezepte liegen jeweils daneben.
+und Sichtbarkeit geprüft. Drei kurze MP4s wurden aus dem sauberen Stand `f94e856` erzeugt; ihre
+Wiederholungsrezepte liegen jeweils daneben. Alle verwenden Seed 42, eine 60-s-Originalepisode,
+720p30, H.264/AAC, SwiftShader und `veryfast`. Es gingen keine Tonereignisse verloren; sämtliche
+Exportprüfungen bestanden. Die unabhängige FFmpeg-Messung bezieht sich auf den fertigen Clip:
+
+| Lokale Datei unter `output/` | Abschnitt / Bildzahl | Zustands-Hash | Clip-Lautheit / True Peak |
+|---|---|---|---|
+| `scrap-review-transition.mp4` | 16:9, 50–58 s, 240 Frames | `3e47192f` | −13,6 LUFS / −1,2 dBTP |
+| `scrap-review-portrait.mp4` | 9:16, 48–60 s, 360 Frames | `13bce06a` | −13,6 LUFS / −1,0 dBTP |
+| `scrap-review-action.mp4` | 16:9, 10–20 s, 300 Frames | `fd41b4b8` | −14,2 LUFS / −1,3 dBTP |
+
+Datei-SHA-256, Versionsangaben und Messwerte: lokal `output/scrap-review-summary.json`.
+Die Dateien sind erzeugte, nicht versionierte Nachweise. Kein einzelner Videoexport dieses Auftrags
+überschritt 20 Sekunden. Die lokale Simulatorvorschau läuft auf Port 62346; der eigenständige
+Marble-Prototyp auf Port 62345 blieb erreichbar. Diese lokalen Prozesse sind keine Veröffentlichung.
+
 Ein tatsächliches subjektives Hörurteil und eine Prüfung auf einem echten Handy sind damit **nicht** behauptet.
 Insbesondere die Wirkung von Lautheitsnormalisierung/Begrenzer muss beim Anhören beurteilt werden.
 R20 bleibt für diese Filmabnahme offen; die technische Integration ist abgeschlossen.
