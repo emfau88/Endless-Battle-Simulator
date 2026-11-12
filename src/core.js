@@ -167,12 +167,14 @@ function parseBitrate(v) {
 const DEFAULT_DURATION = 45, MAX_DURATION = 4 * 3600;
 
 /**
- * Lautstärke der Tonspur in Prozent (0–100): Gesamtregler "master" plus je Klang der Klangtabelle des Szenarios.
+ * Lautstärke der Tonspur in Prozent (0–200, Standard 100): Gesamtregler "master" plus je Klang der Klangtabelle.
+ * 100 % = Standardmischung, die der Exporter auf die YouTube-Lautheit (−14 LUFS) einmisst; 200 % = +6 dB, 50 % = −6 dB.
  * Fehlende Werte = 100 %, unbekannte Klänge fallen weg. Gilt für jedes Format (Hoch-, Querformat, Quadrat).
  */
+const VOLUME_MAX = 200;
 function normalizeVolume(vol, sc) {
   const keys = ['master', ...Object.keys((sc.audio && sc.audio.events) || {})], out = {};
-  for (const k of keys) out[k] = clamp(Math.round(num(vol && vol[k], 100)), 0, 100);
+  for (const k of keys) out[k] = clamp(Math.round(num(vol && vol[k], 100)), 0, VOLUME_MAX);
   return out;
 }
 
@@ -429,7 +431,7 @@ function installExportAPI(session, extra = {}) {
 }
 
 Object.assign(EBS, {
-  PHYS_HZ, DT, DT_MS, CONFIG_VERSION, VOLUME_PREFIX, DEFAULT_DURATION, MAX_DURATION, ASPECTS, RESOLUTIONS, FPS_OPTIONS, TEMPO_OPTIONS, X264_PRESETS, FX,
+  PHYS_HZ, DT, DT_MS, CONFIG_VERSION, VOLUME_PREFIX, VOLUME_MAX, DEFAULT_DURATION, MAX_DURATION, ASPECTS, RESOLUTIONS, FPS_OPTIONS, TEMPO_OPTIONS, X264_PRESETS, FX,
   videoSize, normalizeConfig, mergeConfig, liftConfig, parseBitrate, deepMerge,
   registerScenario, getScenario, scenarios,
   util: { clamp, lerp, angleDiff, num, bool, fnv1a, hashSeed, lerpColor, fmtTime, fmtInt, fmtIntEn },

@@ -143,6 +143,14 @@ async function bootLive() {
     }
   }
   // ---- Lautstärke: Gesamtregler + je Klang der Klangtabelle (Prozent, nur für den Export; wirkt ohne Neustart)
+  // 100 % = Standardmischung auf YouTube-Lautheit (−14 LUFS); 0–200 %, also leiser und lauter möglich
+  const dB = (v) => { const d = 20 * Math.log10(v / 100); return (d > 0 ? '+' : '−') + Math.abs(d).toFixed(1).replace('.', ','); };
+  const fmtVol = (key, v) => {
+    if (v === 0) return '0 % · aus';
+    // Gesamt unter 100 % wirkt hinter dem Begrenzer (exakt), darüber treibt er in den Begrenzer (lauter, Spitzen begrenzt)
+    if (key === 'master') return v === 100 ? '100 % · −14 LUFS' : v < 100 ? `${v} % · ≈ −${Math.round(14 - 20 * Math.log10(v / 100))} LUFS` : `${v} % · ${dB(v)} dB, begrenzt`;
+    return v === 100 ? '100 %' : `${v} % · ${dB(v)} dB`;
+  };
   function buildVolumeUi() {
     const sc = session.scenario, box = $('volumeControls'), events = (sc.audio && sc.audio.events) || {};
     box.innerHTML = '';
@@ -150,10 +158,10 @@ async function bootLive() {
       const d = document.createElement('div'); d.className = 'ctl';
       d.innerHTML = `<label for="vol-${key}">${label} <output id="vo-${key}"></output></label>`;
       const el = document.createElement('input');
-      Object.assign(el, { type: 'range', id: 'vol-' + key, min: 0, max: 100, step: 5 });
+      Object.assign(el, { type: 'range', id: 'vol-' + key, min: 0, max: EBS.VOLUME_MAX, step: 5 });
       el.dataset.key = key;
       el.addEventListener('input', () => {
-        session.cfg.video.volume[key] = +el.value; $('vo-' + key).textContent = el.value + ' %'; save();
+        session.cfg.video.volume[key] = +el.value; $('vo-' + key).textContent = fmtVol(key, +el.value); save();
       });
       d.appendChild(el); box.appendChild(d);
     };
@@ -170,11 +178,12 @@ async function bootLive() {
       const v = c.video.volume[el.dataset.key] ?? 100;
       el.value = String(v); el.disabled = !on;
       el.closest('.ctl').classList.toggle('off', !on);
-      $('vo-' + el.dataset.key).textContent = v + ' %';
+      $('vo-' + el.dataset.key).textContent = fmtVol(el.dataset.key, v);
     }
     $('btnVolumeReset').disabled = !on;
     $('audioHint').textContent = !hasAudio ? 'Dieses Szenario hat noch keinen Ton.'
-      : on ? 'Die Vorschau ist stumm. Die Regler gelten für den Ton im exportierten Video, im Hoch- wie im Querformat.'
+      : on ? 'Standard 100 % = YouTube-Lautheit (−14 LUFS). Nach links leiser, nach rechts lauter (bis 200 % = +6 dB). '
+        + 'Gilt für den Ton im exportierten Video, im Hoch- wie im Querformat; die Vorschau ist stumm.'
         : 'Ton ist ausgeschaltet – das Video wird ohne Tonspur exportiert.';
   }
   $('btnVolumeReset').addEventListener('click', () => {

@@ -1233,9 +1233,9 @@ EBS.registerScenario({
   panelNote: (sim) => sim.snapshot().summary,
   // Tonspur – bewusst nur drei Klänge: Schuss (im Code erzeugt), Treffer (Holz), Platscher (im Code erzeugt, leise).
   // minGap begrenzt die Dichte je Klang, damit bei knapp drei Schüssen pro Sekunde kein Ton-Chaos entsteht.
-  // label = Name des Lautstärkereglers in der Oberfläche (video.volume.<Klang> in Prozent)
+  // label = Name des Lautstärkereglers in der Oberfläche (video.volume.<Klang> in Prozent); gain = Verhältnis der Klänge
+  // zueinander – die Gesamtlautheit misst der Exporter auf −14 LUFS ein (lib/audio.mjs)
   audio: {
-    master: 0.8,
     events: {
       shot: { label: 'Kanonenschuss', samples: ['synth:cannon'], gain: 0.34, detune: 1.5, minGap: 0.07 },
       hit: { label: 'Treffer', samples: ['impactWood_medium_000', 'impactWood_medium_001', 'impactWood_heavy_000'], gain: 0.40, detune: 1.5, minGap: 0.05 },

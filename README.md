@@ -243,24 +243,32 @@ Ton-Chaos. Abschalten:
 `--no-audio`, `"video": { "audio": false }` oder der Schalter „Ton im exportierten Video“. Die Vorschau im Browser
 bleibt stumm.
 
+**Lautheit nach YouTube-Standard:** Jede Tonspur wird beim Export eingemessen, sodass die Standardmischung (alle
+Regler 100 %) **−14 LUFS** integriert erreicht (Messung nach ITU-R BS.1770 / EBU R128, für jedes Video einzeln). Ein
+Spitzenbegrenzer mit 5 ms Vorausschau hält die Spitzen bei höchstens −1,5 dBFS (True Peak nach AAC unter −1 dBTP).
+
 **Lautstärke regeln:** In der Karte „Ton“ gibt es einen Gesamtregler und einen Regler je Klang (Seeschlacht:
-Kanonenschuss, Treffer, Platscher; Kugelfabrik: neun Klänge), jeweils 0–100 %. Die Werte gelten für jedes Format
-(Hoch- und Querformat), werden gespeichert und stehen im Teilen-Link (`vol.splash=40`) und in der JSON-Datei
-(`"video": { "volume": { "master": 80, "splash": 40 } }`). Per Kommandozeile: `--volume master=80 --volume splash=40`.
-0 % schaltet einen Klang ganz ab; 100 % entspricht der bisherigen Mischung. Die Simulation bleibt davon unberührt.
+Kanonenschuss, Treffer, Platscher; Kugelfabrik: neun Klänge), jeweils **0–200 %**, Standard 100 % = YouTube-Ziel.
+Nach links leiser, nach rechts lauter (200 % = +6 dB, 50 % = −6 dB, 0 % = Klang aus). Der Gesamtregler wirkt unter
+100 % hinter dem Begrenzer (50 % ergibt genau −20 LUFS), darüber treibt er in den Begrenzer: lauter, die Spitzen
+bleiben begrenzt. Die Werte gelten für jedes Format (Hoch- und Querformat), werden gespeichert und stehen im
+Teilen-Link (`vol.splash=40`) und in der JSON-Datei (`"video": { "volume": { "master": 80, "splash": 150 } }`).
+Per Kommandozeile: `--volume master=80 --volume splash=150`. Die Simulation bleibt davon unberührt.
 
 - **Ereignisse statt Aufnahme:** Die Simulation protokolliert, was passiert (Aufnahme am Zellenrad, Landung auf dem
   Band, Klappe, Aufprall in der Röhre, Ventil, Sammelschiene, Aufzug, Fall in den Behälter, Stöße im Behälter).
   Das Protokoll beobachtet nur – die Referenz-Hashes der Simulation sind mit und ohne Ton identisch.
 - **Mischung:** `lib/audio.mjs` setzt je Ereignis ein Sample auf den Abtastwert genau (Physikschritt ÷ 60 s, auch in
   Zeitlupe), mit Lautstärke nach Aufprallstärke, Stereoposition nach Bildposition und leichter Verstimmung. Jede
-  Farbröhre hat eine eigene Tonhöhe. Ein weicher Begrenzer hält die Spitze unter −0,45 dBFS.
+  Farbröhre hat eine eigene Tonhöhe. Danach Einmessung auf −14 LUFS und Begrenzer (siehe oben); die Vorausschau
+  verschiebt den Ton nicht gegenüber dem Bild.
 - **Reproduzierbar:** Gleiche Konfiguration ergibt dieselbe Tonspur (Prüfsumme in der JSON-Datei neben dem Video).
 - **Einbindung:** WAV wird blockweise geschrieben und ohne Neukodierung des Bildes ins MP4 eingebunden.
 - **Sounds:** zehn Dateien aus Kenney Impact Sounds (CC0), siehe `assets/audio/README.md`.
 
-Gemessen an zwei 12-s-Clips: Spitze −0,9 bis −1,8 dBFS, Lautheit etwa −24 bis −25 LUFS (leiser als YouTubes Ziel von
-−14 LUFS; YouTube hebt leise Videos nicht an). Motor- und Rollgeräusche fehlen.
+Mit FFmpeg (`ebur128`) nachgemessen an zwei 12-s-Clips mit Standardreglern (Seeschlacht quer, Kugelfabrik hochkant):
+je −14,1 LUFS, True Peak −1,2 dBTP. Die Seeschlacht braucht dafür bis zu 5 dB Begrenzung, die Kugelfabrik wegen des
+impulsiven Glasklirrens bis zu 19 dB an den lautesten Stellen. Motor- und Rollgeräusche fehlen.
 
 ## Gemessene Leistung (dieser Rechner, AMD Radeon iGPU)
 

@@ -1337,9 +1337,9 @@ EBS.registerScenario({
   panelNote: (sim) => sim.snapshot().summary,
   // Tonspur: Ereignistyp -> Samples (assets/audio), Lautstärke, optional Stärkebezug (ref), Verstimmung in Halbtönen
   // (detune = zufällige Streuung, semis = fester Versatz, scale = Versatz je Farbe -> jede Farbröhre klingt anders)
-  // label = Name des Lautstärkereglers in der Oberfläche (video.volume.<Klang> in Prozent)
+  // label = Name des Lautstärkereglers in der Oberfläche (video.volume.<Klang> in Prozent); gain = Verhältnis der Klänge
+  // zueinander – die Gesamtlautheit misst der Exporter auf −14 LUFS ein (lib/audio.mjs)
   audio: {
-    master: 0.8,
     events: {
       hopper: { label: 'Fall in den Behälter', samples: ['impactGlass_medium_000', 'impactGlass_medium_001'], gain: 0.40, detune: 1 },
       tick: { label: 'Stöße im Behälter', samples: ['impactGlass_light_000', 'impactGlass_light_001', 'impactGlass_light_002'], gain: 0.15, ref: 240, detune: 2 },
