@@ -890,6 +890,9 @@ class ShipView {
       cc.addChild(barrel); cc.addChild(carriage); root.addChild(cc);
       return { cc, barrel };
     });
+    // Mündungsfeuer als Licht: warmer Schein auf Segeln und Rumpf, solange der Rückstoß abklingt
+    this.flash = new PIXI.Sprite(getParticleTextures()[T_SOFT]); this.flash.anchor.set(0.5); this.flash.blendMode = 'add';
+    this.flash.tint = 0xffb264; this.flash.visible = false; root.addChild(this.flash);
   }
 
   draw(t) {
@@ -910,6 +913,15 @@ class ShipView {
       const v = this.cannons[i], rot = c.angle - s.angle, rec = c.recoil * c.recoil * 0.05 * s.len;
       v.barrel.rotation = rot; v.barrel.position.set(-Math.cos(rot) * rec, -Math.sin(rot) * rec);
     });
+    let hot = null;                                           // die Kanone, die zuletzt gefeuert hat
+    for (const c of s.cannons) if (c.recoil > 0 && (!hot || c.recoil > hot.recoil)) hot = c;
+    this.flash.visible = !!hot;
+    if (hot) {
+      const rot = hot.angle - s.angle, k = hot.recoil * hot.recoil;
+      this.flash.position.set(hot.lx + Math.cos(rot) * hot.len * 0.6, hot.ly + Math.sin(rot) * hot.len * 0.6 - 0.1 * s.len);
+      this.flash.scale.set((s.len * (0.75 + 0.35 * k)) / 64);
+      this.flash.alpha = 0.5 * k;
+    }
     if (this.dmgVer !== s.dmgVer) { this.dmgVer = s.dmgVer; this._drawDamage(); }
     if (this.rackAmmo !== s.ammo) { this.rackAmmo = s.ammo; this._drawRack(); }
   }
@@ -964,6 +976,11 @@ class NavalRenderer {
     this.world.pivot.set(W / 2, H / 2); this.world.position.set(W / 2, H / 2);
     this.ownTex = [];
     const starRng = new RNG(hashSeed(sim.cfg.seed, 'stars'));
+    // Mond: steht über der Lücke zwischen zwei Schiffen, damit seine Glitzerbahn auf dem Wasser frei zu sehen ist
+    const gaps = sim.ships.slice(0, -1).map((s, i) => (s.x0 + sim.ships[i + 1].x0) / 2);
+    const moon = (this.moon = {
+      x: gaps.reduce((a, b) => (Math.abs(b - 0.6 * W) < Math.abs(a - 0.6 * W) ? b : a)), y: (L.portrait ? 0.235 : 0.27) * H, r: 46 * u,
+    });
     // Himmel
     const sky = canvasTex(Math.ceil(W + 2 * M), Math.ceil(L.waterY + M), (g, w, h) => {
       const gr = g.createLinearGradient(0, 0, 0, h);
@@ -973,7 +990,7 @@ class NavalRenderer {
         const x = starRng.next() * w, y = starRng.next() * (h * 0.8), a = starRng.range(0.15, 0.9) * (1 - y / h);
         g.fillStyle = `rgba(220,230,255,${a.toFixed(3)})`; g.fillRect(x, y, starRng.next() < 0.1 ? 2.2 : 1.3, starRng.next() < 0.1 ? 2.2 : 1.3);
       }
-      const mx = (L.portrait ? 0.8 : 0.86) * W + M, my = (L.portrait ? 0.235 : 0.3) * H + M, mr = 46 * u;
+      const mx = moon.x + M, my = moon.y + M, mr = moon.r;
       const glow = g.createRadialGradient(mx, my, mr * 0.6, mx, my, mr * 5);
       glow.addColorStop(0, 'rgba(200,220,255,.35)'); glow.addColorStop(1, 'rgba(200,220,255,0)');
       g.fillStyle = glow; g.fillRect(0, 0, w, h);
@@ -1006,6 +1023,14 @@ class NavalRenderer {
     }
     // Hintere Wellen (opakes Wasser hinter den Schiffen)
     this.gBack = new PIXI.Graphics(); this.world.addChild(this.gBack);
+    // Mondlicht auf dem Wasser: heller Fleck und Glitzerbahn unter dem Mond (liegt hinter den Schiffen)
+    this.moonPool = new PIXI.Sprite(getParticleTextures()[T_SOFT]); this.moonPool.anchor.set(0.5); this.moonPool.blendMode = 'add';
+    this.moonPool.tint = 0xcfe0ff; this.moonPool.alpha = 0.2; this.moonPool.position.set(moon.x, L.waterY - 8 * u);
+    this.moonPool.scale.set((330 * u) / 64, (64 * u) / 64); this.world.addChild(this.moonPool);
+    this.gGlitter = new PIXI.Graphics(); this.gGlitter.blendMode = 'add'; this.world.addChild(this.gGlitter);
+    const glRng = new RNG(hashSeed(sim.cfg.seed, 'mondlicht'));
+    this.glints = [];
+    for (let k = 0; k < 26; k++) this.glints.push({ dx: glRng.range(-1, 1), row: glRng.next(), len: glRng.range(8, 30) * u, sp: glRng.range(1.2, 3.4), ph: glRng.range(0, 6.283) });
     // Meeresgrund mit Mulden (statisch). Liegt über dem Wasserfilm, damit Sand, Sockel und Kugeln klar zu lesen sind.
     const ground = new PIXI.Graphics();
     const prof = (off) => { const p = []; for (let x = -M; x <= W + M; x += 16 * u) p.push(x, sim.groundY(x) + off); p.push(W + M, H + M, -M, H + M); return p; };
@@ -1056,6 +1081,24 @@ class NavalRenderer {
     this.ownTex.push(depth);
     const depthS = new PIXI.Sprite(depth); depthS.position.set(-M, L.waterY + 10 * u); depthS.width = W + 2 * M; depthS.height = L.floorY + 70 * u - L.waterY;
     this.world.addChild(depthS);
+    // Mondlicht unter Wasser: weiche Lichtbahnen, die von der Glitzerbahn aus leicht auffächern
+    const rayTex = canvasTex(64, 256, (g) => {
+      const v = g.createLinearGradient(0, 0, 0, 256);
+      v.addColorStop(0, 'rgba(255,255,255,.95)'); v.addColorStop(0.55, 'rgba(255,255,255,.35)'); v.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = v; g.fillRect(0, 0, 64, 256);
+      const h = g.createLinearGradient(0, 0, 64, 0);          // seitlich weich ausblenden
+      h.addColorStop(0, 'rgba(0,0,0,1)'); h.addColorStop(0.5, 'rgba(0,0,0,0)'); h.addColorStop(1, 'rgba(0,0,0,1)');
+      g.globalCompositeOperation = 'destination-out'; g.fillStyle = h; g.fillRect(0, 0, 64, 256);
+    });
+    this.ownTex.push(rayTex);
+    this.rays = [];
+    for (let k = 0; k < 9; k++) {
+      const s = new PIXI.Sprite(rayTex); s.anchor.set(0.5, 0); s.blendMode = 'add'; s.tint = 0xbfe4ff;
+      const off = (k - 4) / 4 + glRng.range(-0.12, 0.12);                       // −1 … 1 um den Mond herum
+      const ray = { s, off, a: glRng.range(0.13, 0.24) * (1 - 0.45 * Math.abs(off)), sp: glRng.range(0.15, 0.4), ph: glRng.range(0, 6.283) };
+      s.width = glRng.range(50, 125) * u; s.height = (L.floorY - L.waterY) * 1.15;
+      this.rays.push(ray); this.world.addChild(s);
+    }
     this.world.addChild(ground);
     // Lift + Kugeln im Wasser: Rückwand -> Farbschimmer -> Kugeln -> Frontglas und Messing (die Kugel sitzt sichtbar IM Rohr)
     this.recGlow = new PIXI.Container(); this.gRecFront = new PIXI.Graphics();
@@ -1148,6 +1191,40 @@ class NavalRenderer {
     gf.moveTo(pts[0], pts[1]);
     for (let i = 2; i < pts.length - 4; i += 2) gf.lineTo(pts[i], pts[i + 1]);
     gf.stroke({ width: 3 * u, color: 0xbfefff, alpha: 0.75 });
+    // Schaum am Rumpf: helle Kante entlang der Wasserlinie, kräftiger an Bug und Heck
+    for (const s of sim.ships) {
+      const wl = polyXRange(s.geo.outline, -s.sink);
+      if (!wl) continue;
+      const ca = Math.cos(s.angle), xa = s.x + wl[0] * ca - 5 * u, xb = s.x + wl[1] * ca + 5 * u, n = Math.max(6, Math.round((xb - xa) / (11 * u)));
+      gf.moveTo(xa, sim.surfaceY(xa, t) + 1.5 * u);
+      for (let k = 1; k <= n; k++) { const x = xa + ((xb - xa) * k) / n; gf.lineTo(x, sim.surfaceY(x, t) + 1.5 * u); }
+      gf.stroke({ width: 5 * u, color: 0xffffff, alpha: 0.22, cap: 'round', join: 'round' });
+      for (let k = 0; k <= n; k++) {
+        const x = xa + ((xb - xa) * k) / n, e = Math.min(k, n - k) < 2 ? 1.7 : 1;      // Bug und Heck schäumen stärker
+        const r = (1.8 + 1.5 * Math.sin(t * 1.9 + k * 2.4 + s.i)) * e * u;
+        if (r > 0.6 * u) gf.circle(x + 3 * u * Math.sin(t * 0.8 + k * 1.3), sim.surfaceY(x, t) + 1.5 * u + Math.sin(t * 1.3 + k) * 1.5 * u, r).fill({ color: 0xffffff, alpha: 0.5 });
+      }
+    }
+    // Mondlicht: Glitzerbahn auf dem Wasser (nach vorn breiter), Glanzpunkte auf der Wasserlinie, Lichtbahnen unter Wasser
+    const gg = this.gGlitter, mo = this.moon; gg.clear();
+    this.glints.forEach((q, k) => {
+      const a = 0.5 + 0.5 * Math.sin(t * q.sp + q.ph);
+      const x = mo.x + q.dx * (36 + 100 * q.row) * u, yb = sim.backY(x, t) + 2.5 * u, yf = sim.surfaceY(x, t) - 2.5 * u;
+      if (yf - yb > 3 * u) {
+        gg.moveTo(x - q.len / 2, lerp(yb, yf, q.row)).lineTo(x + q.len / 2, lerp(yb, yf, q.row))
+          .stroke({ width: (1.6 + 1.8 * q.row) * u, color: 0xeaf2ff, alpha: 0.14 + 0.62 * a * a, cap: 'round' });
+      }
+      if (k < 9) {
+        const xs = mo.x + q.dx * 150 * u, ys = sim.surfaceY(xs, t);
+        gf.moveTo(xs - q.len * 0.4, ys).lineTo(xs + q.len * 0.4, ys).stroke({ width: 2.6 * u, color: 0xffffff, alpha: 0.2 + 0.55 * a * a, cap: 'round' });
+      }
+    });
+    for (const r of this.rays) {
+      const x = mo.x + r.off * 0.44 * W + Math.sin(t * r.sp + r.ph) * 16 * u;
+      r.s.position.set(x, sim.surfaceY(x, t) + 2 * u);
+      r.s.rotation = -(r.off * 0.34 + 0.05 * Math.sin(t * r.sp * 0.7 + r.ph));      // fächert vom Mond weg auf
+      r.s.alpha = r.a * (0.7 + 0.3 * Math.sin(t * r.sp * 1.9 + r.ph * 1.7));
+    }
     // Schiffe
     for (const v of this.shipViews) v.draw(t);
     // Recycling

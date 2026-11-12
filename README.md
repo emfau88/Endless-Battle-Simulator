@@ -318,7 +318,9 @@ impulsiven Glasklirrens bis zu 19 dB an den lautesten Stellen. Motor- und Rollge
 ## Bewertung und bekannte Schwächen
 
 - Optik: dunkle Nachtszene, leuchtende Flugbahnen in Teamfarben, sichtbare Löcher/Flicken, Rauch, Feuer, transparentes
-  Wasser mit sichtbarer Recycling-Mechanik, HUD mit Rumpfzustand – auf dem Handy gut lesbar.
+  Wasser mit sichtbarer Recycling-Mechanik, HUD mit Rumpfzustand – auf dem Handy gut lesbar. Der Mond steht über der
+  Lücke zwischen den Schiffen und wirft eine Glitzerbahn aufs Wasser und weiche Lichtbahnen darunter; das Mündungsfeuer
+  erhellt kurz Segel und Rumpf, an der Wasserlinie schäumt es am Rumpf (reine Darstellung, ohne Einfluss auf die Physik).
 - Schiffe sind einfache Vektorgrafik; Segel blähen sich nur leicht, Masten brechen nicht. Treffer auf Masten erscheinen
   als Löcher in den Segeln.
 - Ton gibt es nur im exportierten Video; die Vorschau im Browser ist stumm (siehe „Ton“).
