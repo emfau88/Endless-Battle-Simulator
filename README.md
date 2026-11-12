@@ -1,4 +1,4 @@
-# Endless Battle Simulator – Phase A (MVP)
+# Endless Battle Simulator
 
 ### ▶ [Jetzt im Browser öffnen: emfau88.github.io/Endless-Battle-Simulator](https://emfau88.github.io/Endless-Battle-Simulator/)
 
@@ -10,11 +10,12 @@ Deterministische 2D-Physiksimulation im Stil von Algodoo-/„Satisfying Physics�
 Erstes Szenario: **Endless Naval Battle** – zwei Schiffe beschießen sich endlos, jede Kanonenkugel läuft in einem
 geschlossenen, sichtbaren Kreislauf zurück ins Magazin.
 
-Phase A ist abgeschlossen. Die Architektur ist bereits für weitere Szenarien und Videoformate vorbereitet
-(siehe [Erweiterbarkeit](#erweiterbarkeit)).
+Zweites Szenario: **Endless Marble Factory** – eine Kugelfabrik mit geschlossenem Kreislauf, deren Grafik vollständig
+im Code entsteht (siehe [Endless Marble Factory](#endless-marble-factory)). Beide Szenarien exportieren mit Ton,
+eingemessen auf YouTube-Lautheit (siehe [Ton](#ton)).
 
-Zweites Szenario (visueller Prototyp V0.1): **Endless Marble Factory** – eine Kugelfabrik mit geschlossenem Kreislauf,
-deren Grafik vollständig im Code entsteht (siehe [Endless Marble Factory](#endless-marble-factory-prototyp-v01)).
+Die Architektur ist für weitere Szenarien und Videoformate vorbereitet (siehe [Erweiterbarkeit](#erweiterbarkeit));
+der aktuelle Gesamtzustand steht im [Audit vom 12.11.2026](docs/AUDIT_2026-11-12.md).
 
 ## Schnellstart
 
@@ -45,7 +46,8 @@ npm run export:test         # Abnahmetest: 20-s-MP4 -> output/test_20s.mp4 (inkl
 npm run export -- --config presets/naval-standard.json          # 60 Minuten hochkant (Vorlage für die Langfassung)
 npm run export -- --config presets/naval-landscape-10min.json   # 10 Minuten 1920×1080
 npm run export -- --duration 5m --seed 7 --aspect 1:1 --resolution 1440 --fps 60 --bitrate 12M
-npm test                    # alle automatisierten Tests (≈ 4 min; jeder Test wird nach 2 min automatisch abgebrochen)
+npm test                    # alle automatisierten Tests (72 Tests, ≈ 7 min; jeder Test wird nach 2 min abgebrochen)
+npm run golden              # Referenz-Hashes der Simulation prüfen (≈ 1 min)
 npm run marble:test         # Kugelfabrik: 8-s-Testvideo 720p30 -> output/marble_test_8s_720p.mp4
 node scripts/screenshot.mjs --scenario marble --aspect 16:9 --at 9 --out output/marble_16x9.png   # Einzelbild (PNG)
 ```
@@ -58,7 +60,8 @@ Server (`npm start`). Ohne Server zeigt er den passenden Kommandozeilenbefehl an
 | Bereich | Optionen |
 |---|---|
 | Konfiguration | `--config datei.json` · `--scenario id` · `--seed n` · `--param key=wert` (mehrfach) · `--no-hud` · `--no-camera` |
-| Video | `--duration 20s/5m/1h` · `--aspect 9:16/16:9/1:1` (oder `--format portrait/landscape/square`) · `--resolution 720/1080/1440/2160` · `--fps 30/60` · `--tempo 0.8` (Zeitlupe) |
+| Video | `--duration 20s/5m/1h` · `--aspect 9:16/16:9/1:1` (oder `--format portrait/landscape/square`) · `--resolution 720/1080/1440/2160` · `--fps 30/60` · `--tempo 0.64/0.8` (Zeitlupe) |
+| Ton | `--no-audio` · `--volume klang=prozent` (0–200, mehrfach; `master` = Gesamt, z. B. `--volume splash=150`) |
 | Qualität | `--crf 20` · `--bitrate 12M` (statt CRF) · `--preset medium` (x264) |
 | Seeschlacht-Kürzel | `--ships` · `--cannons` · `--fire-rate` · `--speed` · `--intensity` · `--no-recycle` |
 | Technik | `--out datei.mp4` · `--gpu` / `--no-gpu` · `--jpeg-quality 0.92` · `--script szenario.js` |
@@ -78,7 +81,8 @@ src/scenarios/marble.js    Szenario „Endless Marble Factory“ (Bahnen, Simula
 scripts/screenshot.mjs     Einzelbild der laufenden Simulation als PNG (gleiche Seite wie der Export)
 scripts/golden-hashes.mjs  Referenz-Hashes der Simulation prüfen (npm run golden) oder neu schreiben (npm run golden:write)
 scripts/marble-metrics.mjs Messwerte der Kugelfabrik (Umläufe, Rütteln, Verweildauer) als Markdown-Tabelle
-docs/                      Umsetzungsplan, Ausgangsbasis und Referenzbilder
+scripts/vendor.mjs         Browser-Builds von PixiJS und Matter.js nach vendor/ kopieren (npm run vendor)
+docs/                      Umsetzungsplan, Berichte je Schritt, Audit, Referenzbilder (reference/) und Nachweise (nachweise/)
 src/app.js                 Live-Bedienfeld und Export-Modus – kennt keine Schiffe, nur die Registrierung
 lib/exporter.mjs           Export-Pipeline: Playwright rendert Frames -> Pipe -> FFmpeg (H.264) -> ffprobe-Prüfung
 lib/browser.mjs            Chromium-Start (GPU mit automatischem Software-Fallback), Export-Seite öffnen
@@ -89,9 +93,10 @@ server.mjs                 Statischer Server + Export-API für den Button (/api/
 start.bat                  Start per Doppelklick unter Windows (prüft Node.js und FFmpeg, startet Server und Browser)
 presets/*.json             Konfigurationsvorlagen
 test/*.test.mjs            Kern-, Simulations-, Export- und Browsertests (node:test)
-test/fixtures/             Minimales Testszenario (beweist, dass Kern und Export szenariounabhängig sind)
+test/fixtures/             Minimales Testszenario (beweist, dass Kern und Export szenariounabhängig sind), Referenz-Hashes
 vendor/                    PixiJS- und Matter.js-Browser-Builds (per `npm run vendor` aus node_modules kopiert)
-output/                    erzeugte Videos, JSON-Dateien, Screenshots
+.github/workflows/pages.yml  Online-Vorschau über GitHub Pages (liefert index.html, src/ und vendor/ aus)
+output/                    erzeugte Videos, JSON-Dateien, Screenshots (nicht im Repository)
 ```
 
 Alle Browser-Dateien sind klassische Skripte (keine ES-Module), damit `index.html` auch per `file://` läuft.
@@ -103,14 +108,17 @@ Alle Browser-Dateien sind klassische Skripte (keine ES-Module), damit `index.htm
   "version": 1,
   "scenario": "naval",
   "seed": 42,
-  "params": { "ships": 2, "cannons": 4, "fireRate": 1, "projectileSpeed": 1, "intensity": 0.35, "recycleVisible": true },
+  "params": { "ships": 2, "cannons": 4, "fireRate": 1, "projectileSpeed": 1, "intensity": 0.35, "ballsPerCannon": 5, "recycleVisible": true },
   "video":  { "aspect": "9:16", "resolution": 1080, "fps": 30, "durationSec": 45, "tempo": 1,
+              "audio": true, "volume": { "master": 100, "shot": 100, "hit": 100, "splash": 100 },
               "quality": { "crf": 20, "preset": "medium", "bitrate": null } },
   "view":   { "hud": true, "camera": true }
 }
 ```
 
 - `params` gehört dem Szenario (es normalisiert und begrenzt seine Werte selbst), `video` und `view` dem Kern.
+- `video.volume`: Lautstärke in Prozent (0–200, Standard 100) – Gesamt (`master`) und je Klang der Klangtabelle des
+  Szenarios; unbekannte Klänge fallen weg (siehe [Ton](#ton)).
 - Fehlende oder ungültige Werte werden auf Standardwerte bzw. Grenzen gesetzt; die Seite ist die einzige Stelle, die das
   entscheidet (CLI, Server und Oberfläche reichen Konfigurationen nur weiter).
 - **Videolänge:** Standard 45 Sekunden, frei wählbar von 1 s bis 4 h. In der Oberfläche als Eingabe (`45`, `45s`, `5m`,
@@ -140,9 +148,9 @@ Ablauf bitgleich zu vorher.
 **Sprache im Video.** Alle Texte, die im Clip selbst erscheinen (HUD, Teamnamen, Zähler), sind englisch; das
 Bedienfeld bleibt deutsch.
 
-**Geschoss-Kreislauf.** Jedes Schiff besitzt eine feste Anzahl Kugeln (Kanonen × 5). Zustände:
-`Magazin → Flug (Matter.js) → Wasserkontakt → Sinken → Förderband → Aufzug → Magazin`. Kugeln werden nie erzeugt oder
-gelöscht, nur wiederverwendet. Ist das Magazin leer, warten die Kanonen – das begrenzt die Feuerrate automatisch.
+**Geschoss-Kreislauf.** Jedes Schiff besitzt eine feste Anzahl Kugeln (Kanonen × Kugeln je Kanone, Standard 5).
+Zustände: `Magazin → Flug (Matter.js) → Wasserkontakt → Sinken → Sammelrinne am Meeresgrund → Glasrohr nach oben →
+Magazin`. Kugeln werden nie erzeugt oder gelöscht, nur wiederverwendet. Ist das Magazin leer, warten die Kanonen – das begrenzt die Feuerrate automatisch.
 Kugeln, die an Deck liegen bleiben, werden Richtung Bug angestoßen; nur im Notfall (> 3 Stöße oder > 15 s Flugzeit)
 fallen sie durch den Rumpf ins Wasser (≈ 0,4 % der Schüsse).
 
@@ -156,27 +164,33 @@ Schlagseite und dunklerer Rumpf. Gemessener Verlauf bei 35 %: **1 min ≈ 3 % ·
 
 | Anforderung | Stand | Wo es andockt |
 |---|---|---|
-| 720p / 1080p / 1440p / 4K | im Kern und in der CLI fertig, getestet (720p, 1080p, 4K); Oberfläche bietet noch nur 1080p | `EBS.RESOLUTIONS`, `videoSize()` in `src/core.js` |
-| 30 und 60 FPS | Kern + CLI fertig, getestet | `EBS.FPS_OPTIONS`; Physik bleibt bei 60 Hz |
+| 720p / 1080p / 1440p / 4K | Kern, CLI und Oberfläche, getestet (720p, 1080p, 4K) | `EBS.RESOLUTIONS`, `videoSize()` in `src/core.js` |
+| 30 und 60 FPS | Kern, CLI und Oberfläche, getestet | `EBS.FPS_OPTIONS`; Physik bleibt bei 60 Hz |
 | 9:16, 16:9, 1:1 | 9:16 und 16:9 in der Oberfläche; 1:1 in Kern + CLI, getestet | `EBS.ASPECTS`; Oberfläche: `UI_ASPECTS` in `src/app.js` |
-| Videoqualität / Bitrate | CRF, x264-Preset, feste Bitrate in CLI und Schema | `video.quality`; `encoderArgs()` in `lib/exporter.mjs` |
+| Zeitlupe | 0,64× und 0,8× in Kern, CLI und Oberfläche | `EBS.TEMPO_OPTIONS`; Szenario rechnet mit `timeScale` |
+| Videoqualität / Bitrate | CRF, x264-Preset, feste Bitrate in CLI und Schema (nicht in der Oberfläche) | `video.quality`; `encoderArgs()` in `lib/exporter.mjs` |
 | Frei wählbare Dauer | CLI, Schema und Oberfläche frei (1 s – 4 h); Oberfläche zusätzlich mit Schnellwahl | `UI_DURATIONS`, `parseDuration()` in `src/app.js` |
-| Vorlagen und Seeds speichern | `presets/*.json`, `--config`, JSON neben jedem Video; Oberfläche merkt sich die letzte Konfiguration | Verwaltung in der Oberfläche noch offen |
-| Modulare Szenarien | Registry + Schnittstelle fertig; Bedienfeld, Statistiken, Export und Tests arbeiten szenariounabhängig | `EBS.registerScenario(...)` |
+| Ton und Lautstärke | Tonspur aus Ereignissen, −14 LUFS, Regler gesamt und je Klang in Oberfläche, CLI und Schema | `audio` in der Szenario-Registrierung; `lib/audio.mjs` |
+| Vorlagen und Seeds speichern | `presets/*.json`, `--config`, JSON neben jedem Video; Oberfläche: Teilen-Link, JSON speichern und laden, letzte Konfiguration bleibt erhalten | „Einstellungen teilen“ in `src/app.js` |
+| Modulare Szenarien | Registry + Schnittstelle fertig; Bedienfeld, Statistiken, Ton-Regler, Export und Tests arbeiten szenariounabhängig | `EBS.registerScenario(...)` |
 
 ### Neues Szenario anlegen
 
-1. Datei `src/scenarios/<name>.js` anlegen (Vorlage: `test/fixtures/dummy-scenario.js`, Vollbeispiel: `naval.js`).
-2. Darin `EBS.registerScenario({ id, title, defaults, controls, normalizeParams, create, createRenderer, panelStats })`.
-   - `create({ seed, params, world, view })` liefert die Simulation mit `stepOnce()`, `t`, `snapshot()`,
-     `checkInvariants()`, `stateHash()`, `destroy()`.
+1. Datei `src/scenarios/<name>.js` anlegen (Vorlage: `test/fixtures/dummy-scenario.js`, Vollbeispiele: `naval.js`, `marble.js`).
+2. Darin `EBS.registerScenario({ id, title, defaults, controls, normalizeParams, create, createRenderer, panelStats })`,
+   optional `panelNote` und `audio` (Klangtabelle).
+   - `create({ seed, params, world, view, timeScale })` liefert die Simulation mit `stepOnce()`, `t`, `step`,
+     `snapshot()`, `checkInvariants()`, `stateHash()`, `destroy()`; für Ton zusätzlich `events` und `eventSeq`.
    - `createRenderer({ app, sim, view, world, renderScale })` liefert `{ root, draw(), destroy() }`.
-   - `controls` beschreibt die Regler; das Bedienfeld erzeugt sie automatisch.
+   - `controls` beschreibt die Regler; das Bedienfeld erzeugt sie automatisch, ebenso die Ton-Regler aus `audio`.
 3. Eine `<script>`-Zeile in `index.html` ergänzen – oder ohne Änderung testen: `node export.mjs --script <datei> --scenario <id>`.
+4. Szenario in `scripts/golden-hashes.mjs` aufnehmen (`npm run golden:write`) und eine eigene Testdatei anlegen.
 
-Kern, Partikelpool, Bühne, Export-Pipeline, Server und CLI bleiben dabei unverändert.
+Kern, Partikelpool, Bühne, Export-Pipeline, Mischer, Server und CLI bleiben dabei unverändert. Die vollständige
+Checkliste (Determinismus, Matter.js-Reset, Ereignisformat, Parameternamen) steht im
+[Audit, Abschnitt 4](docs/AUDIT_2026-11-12.md#4--checkliste-für-ein-neues-szenario).
 
-## Endless Marble Factory (Prototyp V0.1)
+## Endless Marble Factory
 
 Auswahl in der Oberfläche über **Szenario**, per Kommandozeile mit `--scenario marble`. Regler: Anzahl der Kugeln
 (20–35, Standard 35) und Kugeln je Farbröhre (1–3, Standard 2).
@@ -224,7 +238,7 @@ verkleinert (nicht eigens gestaltet).
 8-s-Testvideo 720p30 komplett in 7 s (≈ 35 Frames/s inkl. Browserstart und Encoder) · reine Simulation: 10 Minuten
 Simzeit in 2–3,5 s · JS-Heap nach 30 Minuten Simzeit unverändert ≈ 11 MB.
 
-**Bekannte Schwächen des Prototyps**
+**Bekannte Schwächen**
 
 - **Behälter (seit Schritt 2 entschärft):** Der frühere symmetrische Trichter ließ zwei Kugeln über dem Hals
   verkeilen und hatte eine tote Zone an der Flanke gegenüber dem Einlauf. Jetzt fällt der Boden einseitig zum Hals.
@@ -264,7 +278,8 @@ Per Kommandozeile: `--volume master=80 --volume splash=150`. Die Simulation blei
   verschiebt den Ton nicht gegenüber dem Bild.
 - **Reproduzierbar:** Gleiche Konfiguration ergibt dieselbe Tonspur (Prüfsumme in der JSON-Datei neben dem Video).
 - **Einbindung:** WAV wird blockweise geschrieben und ohne Neukodierung des Bildes ins MP4 eingebunden.
-- **Sounds:** zehn Dateien aus Kenney Impact Sounds (CC0), siehe `assets/audio/README.md`.
+- **Sounds:** 13 Dateien aus Kenney Impact Sounds (CC0), dazu zwei im Code erzeugte Klänge der Seeschlacht; siehe
+  `assets/audio/README.md`.
 
 Mit FFmpeg (`ebur128`) nachgemessen an zwei 12-s-Clips mit Standardreglern (Seeschlacht quer, Kugelfabrik hochkant):
 je −14,1 LUFS, True Peak −1,2 dBTP. Die Seeschlacht braucht dafür bis zu 5 dB Begrenzung, die Kugelfabrik wegen des
