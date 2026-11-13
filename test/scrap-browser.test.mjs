@@ -33,7 +33,7 @@ test('Scrap: Canvas-Upload, beide Formate/Quadrat und 30/60 fps erhalten Simulat
       const readOnly = await page.evaluate(() => {
         const cfg = exportAPI.config(), world = exportAPI.info().world, sc = EBS.getScenario('scrap');
         const sim = sc.create({ seed: cfg.seed, params: cfg.params, world, timeScale: cfg.video.tempo });
-        for (let i = 0; i < 54 * 60; i++) sim.stepOnce(); // result banner during pause
+        while (sim.phase === 'running' && sim.step < 91 * 60) sim.stepOnce(); // first result banner, independent of arena duration
         const renderer = sc.createRenderer({ sim, world, renderScale: .5, view: cfg.view });
         const before = sim.stateHash(); renderer.draw(); renderer.draw(); const after = sim.stateHash();
         renderer.destroy(); return { before, after, phase: sim.phase };
@@ -52,7 +52,7 @@ test('Scrap: UI-Regler, Teilen-Link und JSON bewahren Runde, Pause, Tempo, Bild 
     await page.uncheck('#p-repeatRounds');
     await page.locator('#p-endPauseSec').evaluate(el => { el.value = '7'; el.dispatchEvent(new Event('change')); });
     await page.locator('#vol-rocket').evaluate(el => { el.value = '135'; el.dispatchEvent(new Event('input')); });
-    await page.selectOption('#p-rulesVersion', 'v2');
+    await page.selectOption('#p-rulesVersion', 'v3');
     await page.selectOption('#p-arena', 'crossroads');
     await page.selectOption('#p-episodeMode', 'tournament');
     await page.check('#p-workshop');
@@ -103,6 +103,24 @@ test('Scrap: echte kurze MP4s beider Formate entsprechen der Simulation; Exportr
   }
 });
 
+test('Scrap v3: Materialkarten und Duellkamera liefern im Quer-/Hochformat identische Bilder aus Vorlauf und 30/60 fps', async () => {
+  for(const arena of ['yard','foundry','crossroads'])for(const aspect of ['16:9','9:16']) {
+    const {page,errors}=await openExportPage(browser,config({aspect,resolution:720,durationSec:90},{rulesVersion:'v3',arena}));
+    try {
+      const at=await page.evaluate(()=>{
+        const cfg=exportAPI.config(),sim=new EBS.Scrap.Episode({seed:cfg.seed,params:cfg.params,world:exportAPI.info().world});
+        while(sim.phase==='running'&&sim.camera.zoom<1.04)sim.stepOnce();
+        return Math.ceil(sim.step/60*30)/30;
+      });
+      const drawn=await page.evaluate(at=>{exportAPI.simulate(at-1);const frames=exportAPI.renderFrames(30,1,'image/png');return{frame:frames.at(-1),hash:exportAPI.hash()};},at);
+      await page.evaluate(()=>exportAPI.restart({video:{fps:60}}));
+      const seek=await page.evaluate(at=>{exportAPI.simulate(at-1/30);return{frame:exportAPI.renderFrames(2,1,'image/png').at(-1),hash:exportAPI.hash(),check:exportAPI.check()};},at);
+      assert.equal(seek.frame,drawn.frame,`${arena}/${aspect}: exaktes Kamerabild`);
+      assert.equal(seek.hash,drawn.hash);assert.equal(seek.check.ok,true);assert.deepEqual(errors.map(e=>e.message),[]);
+    } finally {await page.close();}
+  }
+});
+
 test('Ausschnitt: Originalepisode, voller Ton samt Nachklang/Normalisierung und gespeicherter Versatz bleiben erhalten', async () => {
   const c = config({ aspect: '16:9', durationSec: 6 });
   const r = await exportVideo(c, { ...options('clip'), scripts: [audit], clip: { startSec: 2, durationSec: 2 } });
@@ -138,7 +156,7 @@ test('Ausschnitt: Originalepisode, voller Ton samt Nachklang/Normalisierung und 
 });
 
 test('Scrap: Rundenwechsel im kurzen Clip und Abbruch im Vorlauf/Tonmischer verwenden den gemeinsamen Produktionsweg', async () => {
-  const c = config({ durationSec: 60, aspect: '16:9' });
+  const c = config({ durationSec: 60, aspect: '16:9' }, { rulesVersion: 'classic' }); // historical 52–57 s transition
   const r = await exportVideo(c, { ...options('transition'), clip: { startSec: 52, durationSec: 5 } });
   assert.deepEqual(verifyResult(r), []); assert.equal(r.snapshot.round, 2);
   assert.ok(r.audioEvents.some(e => e.type === 'round_end' && e.step / 60 > 52));

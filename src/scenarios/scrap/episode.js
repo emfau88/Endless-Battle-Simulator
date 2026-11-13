@@ -7,14 +7,21 @@
   const { clamp, num, bool, hashSeed, fnv1a } = EBS.util;
   const EVENT_LIMIT = 4096;
   const normalizeParams = (p = {}) => ({
-    rulesVersion: p.rulesVersion === 'v2' ? 'v2' : 'classic',
+    rulesVersion: ['v2','v3'].includes(p.rulesVersion) ? p.rulesVersion : 'classic',
     episodeMode: p.episodeMode === 'tournament' ? 'tournament' : 'endless',
     arena: Object.hasOwn(EBS.ScrapRules.arenas, p.arena) ? p.arena : 'yard',
     workshop: p.episodeMode === 'tournament' && bool(p.workshop, false),
     repeatRounds: bool(p.repeatRounds, true),
     endPauseSec: clamp(Math.round(num(p.endPauseSec, 3)), 2, 8),
   });
-  function layout({ w, h }) {
+  function layout({ w, h }, params = {}) {
+    if (params.rulesVersion === 'v3') {
+      const portrait=h>w, aw=portrait?EBS.ScrapMaterials.height:EBS.ScrapMaterials.width;
+      const ah=portrait?EBS.ScrapMaterials.width:EBS.ScrapMaterials.height, top=portrait?132:80;
+      const scale=Math.min((w-24)/aw,(h-top-12)/ah),width=aw*scale,height=ah*scale;
+      return { x:(w-width)/2,y:top+(h-top-12-height)/2,width,height,size:Math.min(width,height),
+        scale,arenaW:aw,arenaH:ah,full:true,kind:portrait?'portrait':w>h?'landscape':'square' };
+    }
     if (h > w) return { x: 40, y: 436, size: 1000, kind: 'portrait' };
     if (w > h) return { x: 460, y: 40, size: 1000, kind: 'landscape' };
     return { x: 190, y: 174, size: 700, kind: 'square' };
@@ -59,7 +66,7 @@
       return p;
     }
   };
-  const ObservedRound = observe(ScrapArena.Sim), ImprovedRound = observe(EBS.ScrapRules.Round);
+  const ObservedRound = observe(ScrapArena.Sim), ImprovedRound = observe(EBS.ScrapRules.Round), MaterialRound = observe(EBS.ScrapMaterials.Round);
 
   class Episode {
     constructor({ seed, params, world, view = { camera: true }, timeScale = 1 }) {
@@ -74,12 +81,15 @@
       this.events = []; this.eventSeq = 0; this.eventDigest = 0; this.eventStep = 0;
       this._startRound();
     }
-    _event(type, arenaX = 450, arenaY = 450, details = {}) {
-      const l = layout(this.world);
+    _event(type, arenaX, arenaY, details = {}) {
+      const bounds=this.roundSim.bounds||{w:900,h:900};
+      arenaX ??= bounds.w/2; arenaY ??= bounds.h/2;
+      const l = layout(this.world, this.cfg);
       // The reference renderer includes 18 px of arena margin on each side.
-      const camera = this.view.camera ? this.camera : { x: 450, y: 450, zoom: 1 };
-      const x = l.x + l.size * (.5 + (arenaX - camera.x) * camera.zoom / 936);
-      const y = l.y + l.size * (.5 + (arenaY - camera.y) * camera.zoom / 936);
+      const camera = this.view.camera ? this.camera : { x: bounds.w/2, y: bounds.h/2, zoom: 1 };
+      const px=(arenaX-camera.x)*camera.zoom,py=(arenaY-camera.y)*camera.zoom;
+      const x = l.full ? l.x+l.width*(.5+(l.kind==='portrait'?-py/bounds.h:px/bounds.w)) : l.x+l.size*(.5+px/936);
+      const y = l.full ? l.y+l.height*(.5+(l.kind==='portrait'?px/bounds.w:py/bounds.h)) : l.y+l.size*(.5+py/936);
       const e = { seq: this.eventSeq++, step: this.eventStep, type, x, y,
         arenaX, arenaY, round: this.roundNumber, roundSeed: this.roundSeed, roundTime: this.roundSim.t, ...details };
       this.eventDigest = fnv1a(this.eventDigest + '|' + JSON.stringify(e));
@@ -89,12 +99,12 @@
     _startRound() {
       this.roundNumber++;
       this.roundSeed = this.roundNumber === 1 ? this.seed : hashSeed('scrap-round-v1', this.seed, this.roundNumber);
-      const Round = this.cfg.rulesVersion === 'classic' && this.cfg.arena === 'yard' && !this.cfg.workshop ? ObservedRound : ImprovedRound;
+      const Round = this.cfg.rulesVersion === 'v3' ? MaterialRound : this.cfg.rulesVersion === 'classic' && this.cfg.arena === 'yard' && !this.cfg.workshop ? ObservedRound : ImprovedRound;
       this.roundSim = new Round({ seed: this.roundSeed, rulesVersion: this.cfg.rulesVersion, arena: this.cfg.arena, upgrades: this.workshop.modules });
       // Non-enumerable: JSON of the round stays byte-identical to the source.
       Object.defineProperty(this.roundSim, 'emit', { value: (...args) => this._event(...args) });
       this.phase = 'running'; this.pauseUntil = 0; this.accumulator = 0;
-      this.camera = { x: 450, y: 450, zoom: 1 };
+      this.camera = { x: (this.roundSim.bounds?.w||900)/2, y: (this.roundSim.bounds?.h||900)/2, zoom: 1 };
       this._event('round_start');
     }
     stepOnce() {
@@ -121,12 +131,12 @@
           if (winner === null) this.draws++; else this.wins[winner]++;
           this.roundResults.push({ round: this.roundNumber, winner });
           if (this.roundResults.length > 8) this.roundResults.shift();
-          this._event('round_end', 450, 450, { winner });
+          this._event('round_end', undefined, undefined, { winner });
           if (this.cfg.workshop && this.completedRounds < 8) this._awardModules();
           const tournament = this.cfg.episodeMode === 'tournament';
           if (tournament && this.completedRounds === 8) {
             this.phase = 'outro'; this.outroUntil = this.step + 5 * 60;
-            this._event('tournament_end', 450, 450, { champions: this.champions(), wins: [...this.wins] });
+            this._event('tournament_end', undefined, undefined, { champions: this.champions(), wins: [...this.wins] });
           } else {
             this.phase = tournament || this.cfg.repeatRounds ? 'pause' : 'ended';
             this.pauseUntil = this.phase === 'pause' ? this.step + this.cfg.endPauseSec * 60 : 0;
@@ -153,6 +163,7 @@
       }
     }
     _updateCamera() {
+      if(this.roundSim.bounds) { this._updateMaterialCamera();return; }
       const living = this.roundSim.robots.filter(r => r.alive), c = this.camera;
       const points = this.phase === 'running' && living.length === 2
         ? living.concat(this.roundSim.projectiles, living.filter(r => !r.weapon).map(r => ({ x:r.goalX, y:r.goalY }))) : [];
@@ -174,6 +185,23 @@
         c.y = clamp(c.y, Math.max(...points.map(p => p.y)) + 70 - half, Math.min(...points.map(p => p.y)) - 70 + half);
       }
       c.x = clamp(c.x, half - 18, 918 - half); c.y = clamp(c.y, half - 18, 918 - half);
+    }
+    _updateMaterialCamera() {
+      const {w,h}=this.roundSim.bounds,c=this.camera,living=this.roundSim.robots.filter(r=>r.alive);
+      const points=this.phase==='running'&&living.length===2?living.concat(this.roundSim.projectiles,living.filter(r=>!r.weapon).map(r=>({x:r.goalX,y:r.goalY}))):[];
+      let zoom=1,x=w/2,y=h/2,minX,maxX,minY,maxY;
+      if(points.length) {
+        minX=Math.min(...points.map(p=>p.x));maxX=Math.max(...points.map(p=>p.x));
+        minY=Math.min(...points.map(p=>p.y));maxY=Math.max(...points.map(p=>p.y));
+        zoom=clamp(Math.min(w/(maxX-minX+160),h/(maxY-minY+160)),1,1.25);
+        x=(minX+maxX)/2;y=(minY+maxY)/2;c.zoom=Math.min(c.zoom,zoom);
+      }
+      c.zoom+=clamp(zoom-c.zoom,-.008,.002);
+      const hx=w/2/c.zoom,hy=h/2/c.zoom;
+      x=clamp(x,hx,w-hx);y=clamp(y,hy,h-hy);
+      c.x+=clamp((x-c.x)*.025,-.75,.75);c.y+=clamp((y-c.y)*.025,-.75,.75);
+      if(points.length&&c.zoom>1) {c.x=clamp(c.x,maxX+64-hx,minX-64+hx);c.y=clamp(c.y,maxY+64-hy,minY-64+hy);}
+      c.x=clamp(c.x,hx,w-hx);c.y=clamp(c.y,hy,h-hy);
     }
     champions() {
       const best = Math.max(...this.wins);
@@ -197,7 +225,7 @@
     stateHash() {
       // Full round state (AI targets/cooldowns, both RNGs, objects, effects, UI
       // feed) plus episode scheduling and a rolling digest of ALL past events.
-      const state = { version: 'scrap-episode-v2', seed: this.seed, cfg: this.cfg, world: this.world,
+      const state = { version: this.cfg.rulesVersion==='v3'?'scrap-episode-v3':'scrap-episode-v2', seed: this.seed, cfg: this.cfg, world: this.world,
         timeScale: this.timeScale, unitsPerStep: this.unitsPerStep, step: this.step, simTicks: this.simTicks,
         accumulator: this.accumulator, round: this.roundNumber, roundSeed: this.roundSeed,
         phase: this.phase, pauseUntil: this.pauseUntil, completed: this.completedRounds,

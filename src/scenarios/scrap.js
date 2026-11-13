@@ -54,7 +54,7 @@
     }
     _robot(g, robot, t) {
       const color = colorOf(robot);
-      super._robot(g, { ...robot, color }, t);
+      super._robot(g, { ...robot, color, name:this.materialArena?' ':robot.name }, t);
       if (!robot.alive) return;
       g.save(); g.translate(robot.x, robot.y);
       const stage = damageStage(robot);
@@ -92,12 +92,13 @@
         }
         g.restore();
       }
-      const y = -robot.r - 25;
+      const y = this.materialArena && robot.y < 62 ? robot.r + 31 : -robot.r - 25;
       box(g, -34, y - 8, 68, 15, 4); g.fillStyle = '#10202be8'; g.fill();
       text(g, robot.name, 0, y, 10, color, 'center', 800);
       g.restore();
     }
     _effect(g, e, under = false) {
+      if(e.type==='break'&&e.material) { EBS.ScrapMaterialArt.breakEffect(g,e,under);return; }
       if (e.type === 'shot') return; // The weapon already supplies its muzzle flash.
       if (e.type !== 'hit') { super._effect(g, e, under); return; }
       if (under || e.age >= e.ttl) return;
@@ -122,11 +123,16 @@
   class ScrapRenderer extends EBS.CanvasScene {
     constructor(ctx) {
       super(ctx);
-      this.sim = ctx.sim; this.view = ctx.view; this.layout = layout(ctx.world);
+      this.sim = ctx.sim; this.view = ctx.view; this.layout = layout(ctx.world, ctx.sim.cfg);
       this.arenaCanvas = document.createElement('canvas');
       this.arena = new ArenaRenderer(this.arenaCanvas, { dpr: 1, quality: 1 });
-      const size = Math.round(this.layout.size * ctx.renderScale);
+      this.arena.materialArena=!!this.layout.full;
+      const size = this.layout.full ? 1 : Math.round(this.layout.size * ctx.renderScale);
       this.arena.setSize(size, size);
+    }
+    overlayLayout() {
+      const l=this.layout;
+      return l.full?{...l,x:l.x+(l.width-l.size)/2,y:l.y+(l.height-l.size)/2}:l;
     }
     card(g, robot, x, y, w, h, compact = false) {
       const alive = robot.alive, color = alive ? colorOf(robot) : '#71818b';
@@ -162,7 +168,7 @@
       });
     }
     finale(g) {
-      const s = this.sim, l = this.layout, champions = s.champions();
+      const s = this.sim, l = this.overlayLayout(), champions = s.champions();
       const rows = [...s.roundSim.robots].sort((a,b) => s.wins[b.id] - s.wins[a.id] || a.id - b.id);
       g.save(); g.translate(l.x, l.y); g.scale(l.size / 1000, l.size / 1000);
       g.fillStyle = '#07131bb8'; g.fillRect(0, 0, 1000, 1000);
@@ -182,7 +188,7 @@
       g.restore();
     }
     workshopPanel(g) {
-      const s=this.sim, l=this.layout;
+      const s=this.sim, l=this.overlayLayout();
       if (!s.cfg.workshop || s.phase !== 'pause' || !s.workshop.lastAwards.length) return;
       g.save(); g.translate(l.x,l.y); g.scale(l.size/1000,l.size/1000);
       const awards=s.workshop.lastAwards, height=80+awards.length*58, y=940-height;
@@ -196,6 +202,7 @@
       g.restore();
     }
     paint(g) {
+      if(this.layout.full) { this.paintMaterialArena(g);return; }
       const s = this.sim, r = s.roundSim, l = this.layout, { w, h } = this.world;
       const bg = g.createLinearGradient(0, 0, w, h);
       bg.addColorStop(0, '#1c2b36'); bg.addColorStop(.5, '#101a24'); bg.addColorStop(1, '#080f17');
@@ -252,15 +259,85 @@
         text(g, status, 540, 133, 24, '#b4c5ca', 'center');
       }
     }
-    destroy() { this.arena.destroy(); this.arenaCanvas.width = this.arenaCanvas.height = 1; super.destroy(); }
+    paintMaterialArena(g) {
+      const s=this.sim,r=s.roundSim,l=this.layout,art=EBS.ScrapMaterialArt,portrait=l.kind==='portrait';
+      const final=s.cfg.episodeMode==='tournament'&&s.completedRounds===8;
+      const elapsed=s.phase==='pause'?s.cfg.endPauseSec-(s.pauseUntil-s.step)/60:final?Math.max(0,5-(s.outroUntil-s.step)/60):0;
+      const mapPoint=p=>portrait?{...p,x:r.bounds.h-p.y,y:p.x,
+        ...('vx' in p?{vx:-p.vy,vy:p.vx}:{}),...('angle' in p?{angle:p.angle+Math.PI/2}:{}),
+        ...('px' in p?{px:r.bounds.h-p.py,py:p.px}:{})}:p;
+      const robots=r.robots.map(mapPoint),effects=r.effects.slice(-100).map(e=>({...mapPoint(e),age:e.age+elapsed}));
+      const blocks=portrait?r.blocks.map(b=>({...b,x:r.bounds.h-b.y-b.h,y:b.x,w:b.h,h:b.w})):r.blocks;
+      const c=this.view.camera?s.camera:{x:r.bounds.w/2,y:r.bounds.h/2,zoom:1};
+      const cx=portrait?r.bounds.h-c.y:c.x,cy=portrait?c.x:c.y;
+      g.fillStyle='#10191f';g.fillRect(0,0,this.world.w,this.world.h);
+      g.save();box(g,l.x,l.y,l.width,l.height,16);g.clip();
+      g.translate(l.x+l.width/2,l.y+l.height/2);g.scale(l.scale*c.zoom,l.scale*c.zoom);g.translate(-cx,-cy);
+      g.lineCap='round';g.lineJoin='round';g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
+      const floorKey=`${r.seed}:${l.arenaW}:${l.arenaH}`;
+      if(this.materialFloorKey!==floorKey) {this.materialFloor=art.floor(r.seed,l.arenaW,l.arenaH);this.materialFloorKey=floorKey;}
+      g.drawImage(this.materialFloor,0,0,l.arenaW,l.arenaH);
+      for(const b of blocks)if(!b.alive)art.rubble(g,b);
+      r.pads.forEach((p,i)=>this.arena._pad(g,mapPoint(p),r.t,i));
+      for(const e of effects)this.arena._effect(g,e,true);
+      for(const p of r.pickups)this.arena._pickup(g,mapPoint(p),r.t);
+      for(const b of blocks)if(b.alive) {
+        const t=art.block(b,this.arena._blocks);g.drawImage(t.canvas,b.x-t.pad,b.y-t.pad,t.width,t.height);
+      }
+      for(const robot of [...robots.filter(p=>!p.alive),...robots.filter(p=>p.alive)])this.arena._robot(g,robot,r.t);
+      for(const p of r.projectiles)this.arena._projectile(g,mapPoint(p));
+      for(const e of effects)this.arena._effect(g,e);
+      g.restore();
+      if(final)this.finale(g);
+      else if(r.phase==='ended') {
+        const winner=r.robots.find(p=>p.id===r.winner),xx=l.x+l.width/2,yy=l.y+l.height/2;
+        box(g,xx-260,yy-62,520,124,12);g.fillStyle='#101e29ed';g.fill();g.strokeStyle=winner?colorOf(winner):'#c2c9c6';g.lineWidth=2;g.stroke();
+        text(g,winner?`${winner.name} WINS`:'DRAW',xx,yy-13,34,winner?colorOf(winner):'#d1d9d5','center');
+        text(g,s.phase==='pause'?`NEXT ROUND IN ${Math.ceil((s.pauseUntil-s.step)/60)}s`:'ROUND COMPLETE',xx,yy+30,17,'#aabfc8','center');
+        this.workshopPanel(g);
+      }
+      if(this.view.hud)this.materialHud(g,final);
+    }
+    materialHud(g,final) {
+      const s=this.sim,r=s.roundSim,portrait=this.layout.kind==='portrait',wide=this.world.w>1500;
+      const round=s.cfg.episodeMode==='tournament'?`ROUND ${s.roundNumber}/8`:`ROUND ${String(s.roundNumber).padStart(2,'0')}`;
+      const clock=final?'END':EBS.util.fmtTime(Math.ceil(Math.max(0,r.duration-r.t)));
+      text(g,'SCRAP WARS',24,27,24,'#edf1e5');
+      text(g,EBS.ScrapRules.arenas[s.cfg.arena].name,25,52,12,'#a1b2b9');
+      text(g,round,wide?240:this.world.w-210,26,19,'#dec598');
+      text(g,clock,wide?436:this.world.w-24,26,22,'#edf1e5','right');
+      const legendX=wide?240:this.world.w-326;
+      ['wood','stone','concrete'].forEach((key,i)=>{
+        const m=EBS.ScrapMaterials.materials[key],x=legendX+i*72;
+        box(g,x,46,9,9,1);g.fillStyle=m.color;g.fill();text(g,m.name,x+14,51,10,'#9caeb6');
+      });
+      const start=wide?480:12,y=wide?9:70,gap=12,ww=(this.world.w-start-12-gap*3)/4;
+      r.robots.forEach((robot,i)=>{
+        const x=start+i*(ww+gap),color=robot.alive?colorOf(robot):'#66777e';
+        box(g,x,y,ww,54,6);g.fillStyle='#1b2a32';g.fill();
+        g.fillStyle=color;g.fillRect(x,y+10,3,30);
+        text(g,robot.name,x+13,y+17,wide?17:16,color);
+        text(g,`${s.wins[robot.id]} W`,x+ww-12,y+17,14,color,'right');
+        const weapon=robot.weapon,info=!robot.alive?'OUT':weapon?`${weapon.kind==='rocket'?'RKT':'BLST'} ${weapon.ammo}`:'SEARCH';
+        text(g,info,x+ww-12,y+35,11,'#a9bac1','right',600);
+        const barWidth=ww-98;
+        box(g,x+13,y+32,barWidth,5,2);g.fillStyle='#0b141b';g.fill();
+        if(robot.alive) {box(g,x+13,y+32,barWidth*robot.hp/robot.maxHp,5,2);g.fillStyle=color;g.fill();}
+        if(s.cfg.workshop) {
+          const key=robot.module||s.workshop.modules[robot.id];
+          text(g,key?EBS.ScrapRules.modules[key].name:`${s.workshop.balances[robot.id]}/4`,x+13,y+46,8,'#c8ba92','left',600);
+        }
+      });
+    }
+    destroy() { this.materialFloor=null;this.arena.destroy(); this.arenaCanvas.width = this.arenaCanvas.height = 1; super.destroy(); }
   }
   EBS.registerScenario({
     id: 'scrap', title: 'Scrap Wars',
     supportsClips: true,
-    defaults: { rulesVersion: 'classic', episodeMode: 'endless', arena: 'yard', workshop: false, repeatRounds: true, endPauseSec: 3 },
+    defaults: { rulesVersion: 'v3', episodeMode: 'endless', arena: 'yard', workshop: false, repeatRounds: true, endPauseSec: 3 },
     controls: [
       { key: 'episodeMode', label: 'Format', type: 'select', options: [['endless', 'Freie Videolänge'], ['tournament', 'Turnier · 8 Runden + Finale']], restart: true },
-      { key: 'rulesVersion', label: 'Kampfregeln', type: 'select', options: [['classic', 'Original'], ['v2', 'Flüssiger Kampf (empfohlen)']], restart: true },
+      { key: 'rulesVersion', label: 'Arena / Kampfregeln', type: 'select', options: [['v3', 'Große Arena · Holz, Stein, Beton'], ['v2', 'Bisherige Arena · flüssiger Kampf'], ['classic', 'Originalprototyp']], restart: true },
       { key: 'arena', label: 'Arena', type: 'select', options: [['yard', 'Scrapyard · ausgewogen'], ['foundry', 'Foundry · Deckungsgassen'], ['crossroads', 'Crossroads · offenes Zentrum']], restart: true },
       { key: 'workshop', label: 'Werkstatt (experimentell, ein Modul je Roboter)', type: 'check', enabled: p => p.episodeMode === 'tournament', restart: true },
       { key: 'repeatRounds', label: 'Weitere Runden spielen', type: 'check', enabled: p => p.episodeMode !== 'tournament', restart: true },

@@ -6,7 +6,7 @@ import vm from 'node:vm';
 
 const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const context = vm.createContext({}); context.window = context;
-for (const path of ['core.js', 'canvas-scene.js', 'scenarios/scrap/simulation.js', 'scenarios/scrap/renderer.js', 'scenarios/scrap/rules.js', 'scenarios/scrap/episode.js', 'scenarios/scrap.js']) {
+for (const path of ['core.js', 'canvas-scene.js', 'scenarios/scrap/simulation.js', 'scenarios/scrap/renderer.js', 'scenarios/scrap/rules.js', 'scenarios/scrap/materials.js', 'scenarios/scrap/material-art.js', 'scenarios/scrap/episode.js', 'scenarios/scrap.js']) {
   vm.runInContext(read('src/' + path), context, { filename: path });
 }
 const { EBS } = context;
@@ -14,6 +14,77 @@ const make = (overrides = {}) => new EBS.Scrap.Episode({ seed: 42, params: {}, w
 const advance = (s, seconds) => { for (let i = 0; i < Math.round(seconds * 60); i++) s.stepOnce(); };
 const plain = o => JSON.parse(JSON.stringify(o));
 const sha = data => createHash('sha256').update(data).digest('hex');
+
+test('Scrap v3: Holz, Stein und Beton brauchen 2/5/10 Blaster oder 1/1/2 direkte Raketen; zerstörte Deckung gibt Wege frei', () => {
+  for(const [material,blaster,rocket] of [['wood',2,1],['stone',5,1],['concrete',10,2]])for(const [kind,hits] of [['blaster',blaster],['rocket',rocket]]) {
+    const s=make({params:{rulesVersion:'v3',repeatRounds:false}}),r=s.roundSim;
+    const b={...r.blocks.find(b=>b.material===material),x:200,y:200,w:64,h:64};r.blocks=[b];
+    for(let shot=1;shot<=hits;shot++) {
+      r.projectiles=[{id:100+shot,x:140,y:232,px:140,py:232,vx:1000,vy:0,kind,owner:0,life:2,radius:kind==='rocket'?7:4}];
+      r._moveProjectiles(1); // crosses the entire block in one step: swept collision required
+      assert.equal(b.alive,shot<hits,`${material}/${kind}/${shot}`);
+      assert.equal(r.projectiles.length,0);
+      assert.equal(r._blocked(140,232,320,232,24),shot<hits,'echte Kollisionsdeckung, nach Zerstörung passierbar');
+    }
+    assert.equal(r.stats.destroyed,1);assert.equal(s.events.filter(e=>e.type==='break').length,1);
+    assert.equal(r.effects.find(e=>e.type==='break').material,material);
+  }
+  const r=make({params:{rulesVersion:'v3'}}).roundSim;
+  r.projectiles=[{id:100,x:950,y:270,px:950,py:270,vx:650,vy:0,kind:'blaster',owner:0,life:2,radius:4}];
+  r._moveProjectiles(.05);assert.equal(r.projectiles.length,1,'östlich der alten 900er-Grenze frei');
+  r._moveProjectiles(.1);assert.equal(r.projectiles.length,0,'neue Außenwand stoppt Projektil');
+  r.robots[0].x=1100;assert.equal(r.checkInvariants().ok,false,'Rechteckgrenze tatsächlich geprüft');
+});
+
+test('Scrap v3: alle drei Karten begehbar, drei Seeds kollisionsfrei, Kamera hält aktive Roboter im Bild', () => {
+  for(const arena of ['yard','foundry','crossroads']) {
+    const initial=make({params:{rulesVersion:'v3',arena}}).roundSim;
+    const free=(x,y)=>!initial.blocks.some(b=>Math.hypot(x-Math.max(b.x,Math.min(x,b.x+b.w)),y-Math.max(b.y,Math.min(y,b.y+b.h)))<25);
+    const cells=new Map();for(let x=50;x<=990;x+=10)for(let y=50;y<=490;y+=10)if(free(x,y))cells.set(`${x},${y}`,{x,y});
+    const queue=[cells.get('110,80')],seen=new Set(['110,80']);
+    for(let i=0;i<queue.length;i++)for(const [dx,dy] of [[10,0],[-10,0],[0,10],[0,-10]]) {
+      const key=`${queue[i].x+dx},${queue[i].y+dy}`;if(cells.has(key)&&!seen.has(key)){seen.add(key);queue.push(cells.get(key));}
+    }
+    assert.equal(seen.size,cells.size,`${arena}: keine abgetrennte begehbare Zelle`);
+    for(const p of [...initial.robots,...initial.pickups,...initial.pads])assert.ok(queue.some(c=>Math.hypot(c.x-p.x,c.y-p.y)<15),`${arena}: Start/Nachschub erreichbar`);
+    for(const seed of [42,7,314]) {
+      const s=make({seed,params:{rulesVersion:'v3',arena,repeatRounds:false}});
+      while(s.phase==='running') {
+        s.stepOnce();
+        if(s.step%30===0)assert.equal(s.checkInvariants().ok,true,`${arena}/${seed}: ${JSON.stringify(s.checkInvariants())}`);
+        for(const r of s.roundSim.robots.filter(r=>r.alive)) {
+          assert.ok(Math.abs(r.x-s.camera.x)*s.camera.zoom<=520-r.r,`${arena}/${seed}: X im Bild`);
+          assert.ok(Math.abs(r.y-s.camera.y)*s.camera.zoom<=270-r.r,`${arena}/${seed}: Y im Bild`);
+        }
+      }
+      assert.equal(s.checkInvariants().ok,true);
+      assert.ok(s.roundSim.stats.destroyed>0,`${arena}/${seed}: Zerstörung findet statt`);
+    }
+  }
+});
+
+test('Scrap v3: 90% Arena im Querformat; Hochformat, Tempo und Turnierplanung ändern weder Rundenausgang noch Module', () => {
+  const params={rulesVersion:'v3',episodeMode:'tournament',workshop:true},world={w:1920,h:1080};
+  const l=EBS.Scrap.layout(world,params);
+  assert.ok(l.width*l.height/(world.w*world.h)>.89);
+  const a=make({params,world}),b=make({params,timeScale:.64});
+  while(a.phase!=='ended')a.stepOnce();while(b.phase!=='ended')b.stepOnce();
+  assert.equal(a.completedRounds,8);assert.equal(a.roundNumber,8);
+  assert.equal(JSON.stringify(a.roundSim),JSON.stringify(b.roundSim));
+  assert.deepEqual(plain(a.roundResults),plain(b.roundResults));assert.deepEqual(plain(a.workshop),plain(b.workshop));
+  assert.equal(a.checkInvariants().ok,true);assert.equal(b.checkInvariants().ok,true);
+  const cfg=EBS.normalizeConfig({scenario:'scrap',params,video:{aspect:'16:9',fps:30}});
+  const plan=EBS.Scrap.createExportPlan(cfg,world);let progress;do{progress=plan.advance();}while(!progress.done);
+  assert.equal(progress.durationSec,Math.ceil(a.step/60*30)/30);
+  const low=make({params,world:{w:1920,h:1080},view:{camera:false}}),portrait=make({params,view:{camera:false}});
+  advance(low,12);advance(portrait,12);
+  const lp=EBS.Scrap.layout(portrait.world,params);
+  low.events.forEach((e,i)=>{
+    const p=portrait.events[i];assert.equal(e.type,p.type);assert.equal(e.arenaX,p.arenaX);assert.equal(e.arenaY,p.arenaY);
+    assert.ok(Math.abs((e.x-l.x)/l.width-(p.y-lp.y)/lp.height)<1e-9);
+    assert.ok(Math.abs((e.y-l.y)/l.height+(p.x-lp.x)/lp.width-1)<1e-9);
+  });
+});
 
 test('Scrap: Quelle und extrahierte Simulation/Renderer sind unverändert', () => {
   const source = readFileSync(new URL('../docs/reference/scrap-arena.source.html', import.meta.url));

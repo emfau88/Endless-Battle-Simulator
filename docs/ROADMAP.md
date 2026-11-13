@@ -17,6 +17,11 @@ Der anschließend ausdrücklich beauftragte Ausbau startet von diesem sauberen, 
 im Branch `codex/scrap-video-quality`. Umsetzung und aktuelle Prüfgrenzen:
 [Scrap-Videoqualität](SCRAP_VIDEOQUALITAET_2026-11-13.md).
 
+**Aktueller Nachtrag:** Die erste Bildaufteilung wurde vom Nutzer wegen zu großem HUD und zu wenig
+sichtbarer Arena/Deckung abgelehnt. Der gezielte Folgeauftrag ersetzt sie durch ein fast bildfüllendes
+Spielfeld und Holz, Stein, Beton mit verschiedener Haltbarkeit. Umsetzung und aktuelle Nachweise:
+[Materialarena V3](SCRAP_MATERIALARENA_2026-11-13.md). Keine Maschinenwracks als Arenadekoration.
+
 **Zweck:** Dies bleibt die **einzige aktive Aufgabenliste**. Erledigtes steht im [CHANGELOG](CHANGELOG.md).
 Berichte dokumentieren ihren damaligen Stand und werden nicht nachträglich als aktuelle Prüfung umgeschrieben.
 Die Marble-Erweiterung bleibt auf ausdrücklichen Wunsch als isolierter lokaler Prototyp stehen.
@@ -29,7 +34,8 @@ reproduzierbarem MP4-Export ermöglichen: Shorts in 9:16 und längere Videos in 
 und Produktionsaufwand bestimmen die Länge. Der bereits laufende Kanalpilot R04 wird parallel fortgesetzt.
 
 **Reihenfolge des beauftragten Ausbaus:** Lesbarkeit → Kampfablauf → Turnier → Treffer/Klang → Arenen/Kamera → Werkstatt.
-Die sechs Schritte sind implementiert. Persönliche Film-/Hör-/Handyabnahme bleibt unter R20;
+Die sechs Schritte sind implementiert; die visuelle Abnahme der ersten Fassung ist ausdrücklich nicht erfolgt.
+Die neue Materialarena folgt auf dieses Feedback. Persönliche Film-/Hör-/Handyabnahme bleibt unter R20;
 die vollständige plattformübergreifende CI-Abnahme unter R02. Sie wurde durch den ausdrücklichen Folgeauftrag
 nicht mehr zur Vorbedingung für die Umsetzung gemacht.
 Hex Dominion V0.3/R17 bleibt nach der Scrap-Abnahme der nächste neue Szenariokandidat.
@@ -77,7 +83,7 @@ Standbilder, Hashes und Lautheitswerte ersetzen diese Abnahme nicht.
 |---|---|---|---|
 | Naval | Integriert: 2–4 Schiffe, Mulden, Lifte, Beuteprinzip im Duell; Tink/Tock und sämtliche R19-Effekte einschließlich goldener Kugel. | Bestehende Tests und historische Berichte; aktuelle gezielte Zustandsproben zeigen eine Prüflücke, siehe R21. | Frühere Bild-/Vorschaufreigaben gelten für die dortigen Fassungen. Laufende Gesamtfassung samt aktuellem Ton in beiden Formaten noch offen. Schiffsoptik bleibt R01. |
 | Marble | Integriert: Kugelfabrik, konstruktiv entschärfter Trichter, Ereigniston, Lautstärkeregler und MP4-Export. | Historische Kreislauf-, Export- und Lautheitsprüfungen; in diesem Auftrag keine neue Laufzeitabnahme. | Aktuelle Hörprobe, tatsächliche Handyprüfung und einzelne Bewegungsdetails offen. Dramaturgie bleibt R03/E1. |
-| Scrap Wars / Scrap Arena | Integriert als `scrap`; R22 ergänzt Chassis/HUD, Schäden/Klang, versionierte Kampfregeln, Acht-Runden-Turnier, drei Karten, Duellkamera und optionale Werkstatt. | Originalquelle und erster Rundenzustand der drei Referenzseeds unverändert. Aktuelle Nachweise separat im [Qualitätsbericht](SCRAP_VIDEOQUALITAET_2026-11-13.md), historische Integration im älteren Scrap-Bericht. | Neue Vorher/Nachher-Einzelbilder betrachtet und kurze Filmproben erstellt. Persönliche Film-/Klangbeurteilung, breite Werkstatt-Balance und echtes Handy bleiben offen. |
+| Scrap Wars / Scrap Arena | Integriert als `scrap`; zusätzlich zur R22-Ausstattung jetzt V3: große Rechteckarena, schmales HUD, Holz/Stein/Beton. | Originalquelle und drei Original-Seeds unverändert. Aktuelle Arena-Prüfungen im [Materialarena-Bericht](SCRAP_MATERIALARENA_2026-11-13.md); vorheriger Ausbau im [Qualitätsbericht](SCRAP_VIDEOQUALITAET_2026-11-13.md). | Die erste Bildaufteilung wurde abgelehnt. Neue Vorher/Nachher-Bilder und Kurzprobe liegen vor; persönliches Urteil, Hör-/Handyprüfung und breite Werkstatt-Balance bleiben R20. |
 | Hex Dominion V0.3 | Nur Prototyp: vier Reiche, beide Ausgabeformate, getrennte Kartenformen, Auto-Framing, Filmtempo 0,25–2×, vier Regelparameter, drei Profile, Garnisons-/Marsch-/Routenanzeigen. WebGL2-Renderer mit Canvas-Fallback. | Je zwei reine 20-s-Simulationsläufe mit Seed 42 und Profil `balanced` pro Kartenform identisch (`2e9531d1` hochkant, `4d38cf6c` quer). Keine Kamera-, Audio- oder Exportprüfung. | Keine neue Sicht-/Hörabnahme; kein MP4-/Audiopfad im Prototyp nachgewiesen. |
 
 **Teststände nicht vermischen:** Der Audit an `20ea040` meldet **72/72**, der Lift-Bericht zur Änderung `33f8eb1`
@@ -203,10 +209,18 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   Vorherbilder stammen vom unveränderten Ausgangsstand. Persönliche Hör-/Handyurteile bleiben R20,
   eine breite Werkstatt-Balance ist nicht nachgewiesen; die Variante bleibt ausdrücklich experimentell.
 
+  **Beauftragte Bildkorrektur nach P1–P6:** V3 mit echter 1040×540-Arena, rund 90 % Bildanteil in 16:9,
+  schmaler Kopfzeile, spiegelgleichen Deckungsgruppen und drei Materialien (Holz 38 HP, Stein 95 HP,
+  Beton 190 HP). Keine Wrack-Dekoration, zusätzlichen Waffen oder Maschinen. Die drei Karten behalten
+  einen passierbaren Mittelweg und Außenring; Original/V2 bleiben auswählbar. Geänderte Geometrie und HP
+  verändern bewusst den Verlauf, deshalb eigene Regelversion. Technische Nachweise im
+  [Materialarena-Bericht](SCRAP_MATERIALARENA_2026-11-13.md); persönliches Bildurteil bleibt offen.
+
   **Basis vor diesem Ausbau:** vier benannte Roboter, Teamfarben, HP-/Waffenanzeigen, Rückstoß, Mündungslicht,
   Treffer-/Explosions-/Wrackdarstellung, zwei Waffentypen und Nachschubstationen. Rundenfolge, Siegzähler,
   Ergebnis-Pause und Ereigniston sind integriert. Der Ausbau verfeinert diese Basis.
-  Die Arena ist quadratisch; ein kleineres HUD allein vergrößert sie im Querformat nicht.
+  Die damalige Arena war quadratisch; ein kleineres HUD allein vergrößerte sie im Querformat nicht.
+  Die aktuelle V3-Rechteckarena setzt deshalb den ausdrücklich geänderten Folgeauftrag um.
   Das vorherige kurze Kamerazittern wurde im Adapter durch eine ruhige Duellkamera ersetzt.
 
   **Umgesetzt in der vom Nutzer bestätigten Reihenfolge P1 → P3 → P4 → P2 → P5 → P6.**
@@ -242,7 +256,8 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
     Acht Runden garantieren keine zehn Minuten: die Episode bestimmt die Länge. Dauerermittlung abbrechbar halten;
     Ausschnittsgrenzen, vollständige Episodenmischung und Rezept-Roundtrip an das endliche Format anpassen.
   - **P5:** erst Karten, danach Kamera innerhalb desselben Pakets prüfen. Kein Karteneditor, keine prozeduralen
-    Arenen und keine rechteckige Physikwelt. Kamera folgt festen Video-Ticks oder rein ableitbarem Zustand;
+    Arenen. Die damalige Grenze „keine rechteckige Physikwelt“ ist durch den gezielten Folgeauftrag zur
+    bildfüllenden Materialarena ersetzt; sie erlaubt keinen allgemeinen Engine-Umbau. Kamera folgt festen Video-Ticks oder rein ableitbarem Zustand;
     Renderaufrufe verändern sie nicht. Audio-Panorama muss zum sichtbaren Ausschnitt passen.
   - **P6:** Module deterministisch vergeben; keine Auswahl-KI, zusätzlichen Waffenklassen oder physisch
     einzusammelnden Schrottobjekte. Zum Beispiel mehr Schutz gegen weniger Tempo; konkrete Werte erst im Paket.

@@ -94,8 +94,19 @@ Renderer oder Programmversionen hinweg sind damit nicht zugesichert.
 In der Szenarioauswahl **Scrap Wars** wählen oder lokal
 `http://localhost:8080/?scenario=scrap` öffnen. Vier Roboter starten mit Blastern und je 125 Lebenspunkten.
 Leere Waffen werden abgeworfen, neue aufgesammelt; Raketen zerstören auch Deckung und öffnen Wege.
-Die ursprünglichen Kampfregeln bleiben als **Original** erhalten. **Flüssiger Kampf** (`rulesVersion=v2`)
-berücksichtigt Hindernisse und Wartezeit bei der Waffenwahl; die beiden Nachschubstationen laden 25 % schneller nach.
+Standard ist **Große Arena · Holz, Stein, Beton** (`rulesVersion=v3`): eine echte 1040×540-Arena,
+die in 16:9 rund 90 % des Bildes belegt, mit schmaler Kopfzeile und klaren Deckungsgruppen.
+Holzkisten benötigen 2, Steinblöcke 5 und Betonblöcke 10 direkte Blastertreffer; direkte Raketen benötigen
+1/1/2 Treffer. Splitter und Bruchstücke bleiben sichtbar, zerstörte Blöcke geben den Weg physisch frei.
+Hochformat dreht dieselbe Arena um 90°, lässt Namen/HUD lesbar und verändert den Kampf nicht.
+Quadrat zeigt die vollständige breite Arena mit freien Rändern. Kurzprobe: [scrap-materials.json](presets/scrap-materials.json).
+
+Die bisherigen Varianten bleiben als **Originalprototyp** (`rulesVersion=classic`) und
+**Bisherige Arena · flüssiger Kampf** (`rulesVersion=v2`) erhalten. V2 und V3 berücksichtigen Hindernisse und
+Wartezeit bei der Waffenwahl; die beiden Nachschubstationen laden 25 % schneller nach.
+V3 verändert Geometrie und Deckung, deshalb auch Rundenausgänge. Gespeicherte Regelversionen bleiben erhalten;
+alte Links/JSON ohne `rulesVersion` verwenden jetzt V3 – für frühere Originalresultate `classic` ausdrücklich setzen.
+Die beiden alten 20-s-Kurzvorlagen sind dafür ausdrücklich auf `classic` festgelegt.
 Nach höchstens 90 Simulationssekunden endet eine Runde.
 Ein alleiniger Überlebender gewinnt; mehrere Überlebende am Zeitlimit ergeben ein Unentschieden.
 
@@ -107,7 +118,7 @@ zur gesamten Simulationszeit im Bedienfeld. Gleiche Arena und Regeln gelten für
 
 **Neu für Videos:** vier deutlich gefärbte Chassis, kompakte Anzeigen und drei sichtbare Schadensstufen.
 Scrapyard, Foundry und Crossroads sind die drei verfügbaren Karten. Der Kamera-Schalter aktiviert einen
-langsamen gemeinsamen Duellzoom bis 1,4×; Roboter, Geschosse und aktuelle Suchziele bleiben im Ausschnitt.
+langsamen gemeinsamen Duellzoom (V3 bis 1,25×, frühere Regeln bis 1,4×); Roboter, Geschosse und aktuelle Suchziele bleiben im Ausschnitt.
 
 **Turnier:** `episodeMode=tournament` spielt genau acht Runden, zeigt den sortierten Zwischenstand und
 endet mit fünf Sekunden Gesamtergebnis. Gleichstände ergeben geteilte Sieger. Oberfläche und Export
@@ -129,6 +140,8 @@ keine weiteren Punkte gesammelt. Alles wird beim Neustart zurückgesetzt. Die dr
 Vorlage mit längerer Ergebnis-/Werkstattpause: [scrap-workshop.json](presets/scrap-workshop.json).
 Die begrenzten Vergleichsläufe ersetzen noch keine breite Balance- oder persönliche Hörabnahme.
 Umsetzung, Messwerte und Vorher/Nachher-Nachweise: [Scrap-Videoqualität](docs/SCRAP_VIDEOQUALITAET_2026-11-13.md).
+Die danach ausdrücklich verlangte Arena-Neufassung ist separat dokumentiert:
+[Große Arena und drei Materialien](docs/SCRAP_MATERIALARENA_2026-11-13.md).
 
 Der Canvas-Renderer liefert Welt, Roboterdaten und vergrößertes Ergebnisbanner an die gemeinsame Pixi-Capturebühne.
 Die Vorschau ist wie bei den anderen Szenarien stumm; die MP4-Tonspur enthält Blaster, Raketen, Treffer,
