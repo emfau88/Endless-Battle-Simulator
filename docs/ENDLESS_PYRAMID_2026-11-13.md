@@ -6,6 +6,11 @@ im Integrationsbranch enthalten. Szenariocode und Regeln bleiben gegenüber dies
 unverändert. Aktuelle Prüfungen, Produktionsvorlagen und Freigabegrenzen stehen im
 [Integrationsbericht](ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
 
+**Bekannte Ton-Einschränkung:** Die vollständige 60-Sekunden-Probe mit Tierchen zeigte bei
+100 % / −14,1 LUFS einzelne AAC-Spitzen von +0,5 dBTP. Die bestehende Tonprüfung kann den
+Export daher abbrechen. Der Nutzer akzeptiert diesen dokumentierten Folgepunkt R27 für
+die Integration; eine zusätzliche Pyramid-Korrektur ist nicht übernommen.
+
 Branch `endless-pyramid`, isoliert in einem eigenen Worktree auf Basis von `main` (`247992a`) entwickelt.
 Ausgangspunkt war ein freigegebener Prototyp aus einer Kopie des Projekts (Leuchtkugeln, Murmelbahn mit
 Becherwerk). Auftrag: einführen, testweise Tierchen statt Murmeln, Ton, alle Regler, Hoch- und Querformat.

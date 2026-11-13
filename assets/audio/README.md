@@ -71,6 +71,12 @@ keine M/S-/Intensitätsstereo-Kodierung und kein Rauschersatz, PCM-Grenze −3 d
 
 ## Endless Pyramid
 
+Bekannter Folgepunkt R27: Beim vollständigen 60-Sekunden-Tierchenablauf wurden bei
+Standardlautstärke −14,1 LUFS einzelne AAC-Spitzen von +0,5 dBTP gemessen (PCM: −1,7 dBTP).
+Die Prüfung kann solche Exporte abbrechen. Es wurde kein neues Pyramid-Audioprofil übernommen;
+der Nutzer hat die Einschränkung für die Integration akzeptiert und weitere Zusatzdiagnosen
+beendet. [Nachweis](../../docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
+
 Die Klangtabelle in `src/scenarios/pyramid.js` verwendet dieselben unveränderten CC0-Dateien:
 `impactSoft_medium_000` (Becher schöpft, höher gestimmt), `impactMetal_light_000` (Becher kippt aus) und
 `impactGlass_light_000/001/002` (Leuchtkugel trifft eine Wendekappe). Der Platscher ist der vorhandene

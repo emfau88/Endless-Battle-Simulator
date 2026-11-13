@@ -71,7 +71,8 @@ neu sind **R20 für Scrap Wars / Scrap Arena**, **R21 für Naval-Zustandsabsiche
 **R22 für den begrenzten Scrap-Qualitätsausbau**, **R23 für den Pyramiden-Ausbau**,
 **R24 als Merkposten (Pyramiden-Melodie)** und **R25 für Endless Mycelium**.
 Mycelium hieß im isolierten Featurebranch ebenfalls R23; bei der Integration wird diese Doppelbelegung aufgelöst.
-**R26** bezeichnet den gemeinsamen Produktionsgenerator. Nächste freie ID: R27.
+**R26** bezeichnet den gemeinsamen Produktionsgenerator, **R27** den eingegrenzten Pyramid-Audiofall.
+Nächste freie ID: R28.
 Frühere B-/Schritt-Bezeichnungen sind Herkunftsverweise, keine zweite Aufgabenliste.
 
 ## 1 · Quellen und belastbarer Stand
@@ -317,20 +318,31 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   Bedienung und Export prüfen. Keine neuen Szenariomechaniken. Arbeitsbranch: `codex/all-scenarios-production`.
   **Umgesetzt:** Mycelium und Pyramid zusammengeführt; Vorlagen für alle fünf Szenarien; auf ausdrücklichen
   Nutzerwunsch Teilen-Link-Oberfläche entfernt, Einstellungsdateien erhalten.
-  **Abnahme:** kurze echte Exporte beider Formate, vollständige Windows-/Linux-Prüfung, je ein
-  60-Sekunden-Film für Pyramid und Mycelium, Sicht-/Hörprüfung, danach freigegebener Main-Merge samt
-  vollständigem Main-Nachlauf. Auf Nutzerwunsch keine fünf 10-Minuten-Testvideos; längere Abläufe
-  werden zusätzlich durch die vorhandenen reinen Simulationstests geprüft.
-  Der offene Pyramid-Finale-Tonbefund wird erst an einem echten vollständigen Film eingeordnet;
-  keine weitere Änderung auf Grundlage des separat normalisierten Stressfensters.
+  **Prüfstand:** Windows 179/179; neuer Linux-Nachweis nach Aufteilung der unveränderten Exportfälle
+  je Szenario. Kurze echte Exporte beider Formate sind nachgewiesen. Der vollständige Pyramid-Film
+  und die Standard-Tonkontrolle bestätigen einen verbleibenden Tonfehler, siehe R27.
+  **Freigabeumfang:** Auf ausdrücklichen Nutzerwunsch weitere manuelle Film-/Extremprüfungen beendet,
+  kein 60-Sekunden-Mycelium-Nachlauf und keine fünf 10-Minuten-Testvideos. Reguläre CI muss bestehen;
+  Merge ist freigegeben, Main-Nachlauf wird abgewartet. Dessen tatsächlicher Stand wird in
+  [PR #8](https://github.com/emfau88/Endless-Battle-Simulator/pull/8) festgehalten.
   Die ursprüngliche 20-Sekunden-Grenze wurde für die Filmabnahme ausdrücklich erweitert.
   [Messungen und Grenzen](ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
+
+- [ ] **R27 · Pyramid: einzelne AAC-Spitzen auch bei Standardlautstärke.**
+  **Beleg:** Seed 42, Tierchen, 9:16, 60 s, 1-Minuten-Tag: Standardmischung −14,1 LUFS,
+  PCM −1,7 dBTP, fertiges AAC +0,5 dBTP statt maximal −1 dBTP. Der Export kann deshalb abbrechen.
+  Die identische PCM-Datei mit ausgeschaltetem AAC-Rauschersatz ergab −1,4 dBTP; eine allgemeine
+  Korrektur ist nicht abgenommen. Pyramid-Code und Schutzgrenze bleiben unverändert.
+  **Entscheidung:** als bekannte Einschränkung für die Integration akzeptiert; keine weiteren
+  Zusatzdiagnosen oder vorsorglichen Reparaturen in diesem Auftrag.
+  [Belege und genaue Abgrenzung](ALLE_SZENARIEN_INTEGRATION_2026-11-13.md#filmabnahme-und-akzeptierte-einschränkung).
 
 - [ ] **R25 · Endless Mycelium ist im Integrationsbranch enthalten – Sicht-/Hörabnahme am Gerät abschließen.**
   **Ziel:** ruhiges Satisfying-Szenario (Myzel wächst, frisst Laub, Pilze, Sporen, nächste Generation in neuer Farbe)
   als Short und als langes Video produzieren.
   **Stand:** Branch `endless-mycelium` mit Simulation, Renderer, 13 Reglern, Ton, YouTube-Standard 1440p60 und zwei
-  Vorlagen; Prüfungen und Messwerte im [Myzel-Bericht](MYCELIUM_2026-11-13.md). Noch nicht in `main`.
+  Vorlagen; Prüfungen und Messwerte im [Myzel-Bericht](MYCELIUM_2026-11-13.md).
+  Gemeinsame Veröffentlichung und Prüfstand über [PR #8](https://github.com/emfau88/Endless-Battle-Simulator/pull/8).
   **Abnahme:** Short-Vorlage und ein kurzer Querformat-Ausschnitt am Handy angesehen und angehört (insbesondere
   Lautstärke der Nachtluft und Größe der Pilze); danach Merge-Entscheidung. Ein Export über 20 s braucht einen
   gesonderten Auftrag.

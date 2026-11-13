@@ -115,7 +115,8 @@ Logs. **Genau der nächste benötigte Nachweis:** ein echter vollständiger 60-S
 Pyramid-Export, Seed 42, 9:16, Tierchen, `dayMinutes: 1`, Ton mit Gesamt 200 %, mit
 vollständiger normaler Einmessung und Messung der fertigen AAC-Spur. Er entscheidet,
 ob die beobachtete Spitze den unterstützten Produktionsweg tatsächlich betrifft.
-Dieser Nachweis benötigt die Erweiterung der bisherigen 20-Sekunden-Exportgrenze.
+Dieser Nachweis benötigte die inzwischen erteilte Erweiterung der bisherigen 20-Sekunden-Exportgrenze.
+Das tatsächliche Ergebnis und die anschließend akzeptierte Einschränkung stehen unten.
 
 ## Schritt 3: Produktionsvorlagen und vereinfachte Bedienung
 
@@ -198,18 +199,51 @@ Prüfergebnisse des vollständigen Windows-/Linux-Laufs werden am Arbeitsbranch 
 im zugehörigen Pull Request und im Abschlussbericht mit dem tatsächlich geprüften
 Commit festgehalten. Dieser Bericht dokumentiert die Umsetzung vor dieser Gesamtfreigabe.
 
-## Vereinbarter Umfang der Filmabnahme
+## Filmabnahme und akzeptierte Einschränkung
 
 Der Nutzer hat die ursprüngliche 20-Sekunden-Grenze ausdrücklich erweitert. Auf seinen
 anschließenden Einwand wird die Abnahme auf **je einen 60-Sekunden-Film für Pyramid und
 Mycelium** begrenzt: Pyramid mit Tierchen, 1-Minuten-Tag und Gesamtlautstärke 200 % zur
 Klärung des Finale-Befunds, Mycelium mit der gemeinsamen Short-Vorlage für vollständige
-Generationswechsel. Beide verwenden 1080p30, CRF 20/medium und Ton. Es werden **keine fünf
+Generationswechsel. Die vorgesehene Qualität ist 1080p30, CRF 20/medium und Ton. Es werden **keine fünf
 10-Minuten-Testvideos** erzeugt. Längere Abläufe werden zusätzlich durch die vorhandenen
 reinen Simulationstests geprüft; das ersetzt keinen tatsächlich kodierten Langfilm.
 
-## Noch offen
+Der vollständige Pyramid-Film an `ef8d34b` berechnete alle 1.800 Bilder in etwa 77 Sekunden
+mit dem vorhandenen AMD-Hardware-Renderer. Bei Gesamtlautstärke 200 % wurde die fertige
+AAC-Spur mit **+1,3 dBTP** abgewiesen; die unkodierte PCM-Datei hatte **−1,4 dBTP**.
+Beide Dateien wurden nach der Kodierung gesichert, bevor die unveränderte Schutzprüfung
+den Export beendete. Belege:
+`output/production-acceptance/pyramid-finale-master200-1794599506551/`.
 
-Linux-Nachweis mit der korrigierten Testaufteilung, die beiden 60-Sekunden-Filme und deren
-Sicht-/Hörabnahme. Die Ergebnisse werden mit dem geprüften Commit im PR festgehalten.
-Main-Merge und anschließender Main-Nachlauf sind noch nicht erfolgt. R02 bleibt offen.
+Der Nutzer akzeptierte den 200-%-Randfall ausdrücklich und legte die Standardlautstärke
+100 % / −14 LUFS als maßgeblich fest. Eine einzelne Tonkontrolle verwendete denselben
+vollständigen Ablauf und die bereits berechneten Bilder. Bei 100 % lagen PCM und AAC
+bei **−14,1 LUFS**; PCM-True-Peak **−1,7 dBTP**, AAC-True-Peak jedoch **+0,5 dBTP**.
+Die Standardkontrolle besteht damit ebenfalls nicht. Sie ist eine Tonkontrolle mit
+wiederverwendetem Bildmaterial, kein zweiter vollständig gerenderter Export.
+Dateien, Ereignisse und Messwerte: `standard100-control/` im genannten Belegordner.
+
+Der Vergleich derselben Standard-PCM-Datei grenzt die Spitze auf die AAC-Verarbeitung
+ein: unveränderte Kodierung +0,5 dBTP; nur M/S aus +0,2; nur Intensitätsstereo aus −0,1;
+nur Rauschersatz (PNS) aus −1,4; alle drei aus −1,3 dBTP. Die Lautheit blieb −14,1 LUFS.
+PCM-SHA-256: `0840b67d11bdb6a462de8a71de291fcd376396d1da1245a13c2ff0932864c255`.
+Das ist ein eingegrenzter Befund, keine allgemein validierte Pyramid-Korrektur.
+
+**Abschließende Nutzerentscheidung:** Weitere Zusatzdiagnosen, Filmproben und vorsorgliche
+Reparaturen werden beendet; die bekannten Einschränkungen sollen dokumentiert und die
+Integration bei bestandener regulärer CI gemergt werden. Deshalb wurde **keine** zusätzliche
+Pyramid-Audioänderung übernommen und kein 60-Sekunden-Mycelium-Film mehr gestartet.
+Der Pyramid-Szenariocode bleibt unverändert gegenüber seinem Featurebranch.
+Die Ton-Schutzprüfung bleibt wirksam; der Generator wird nicht als vollständig abbruchfrei
+bezeichnet. Der Folgepunkt ist in der Roadmap unter R27 festgehalten.
+
+## Veröffentlichung und verbleibende Grenzen
+
+Die reguläre Linux-CI mit der korrigierten Testaufteilung muss vor dem Merge bestehen.
+Die explizite Mergefreigabe liegt vor. Anschließend wird der tatsächliche Main-Nachlauf
+abgewartet; Ergebnis, Commit und Lauf-Links werden in
+[PR #8](https://github.com/emfau88/Endless-Battle-Simulator/pull/8) und im Abschlussbericht
+festgehalten. Dieser Bericht nimmt deren Ergebnis nicht vorweg.
+R02 (historischer Replayfehler), R27 (Pyramid-Tonspitzen) und persönliche Hörabnahmen
+bleiben offen. Lange fertige Videos sind mit dieser Integration nicht vollständig abgenommen.
