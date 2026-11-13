@@ -240,10 +240,36 @@ bezeichnet. Der Folgepunkt ist in der Roadmap unter R27 festgehalten.
 
 ## Veröffentlichung und verbleibende Grenzen
 
-Die reguläre Linux-CI mit der korrigierten Testaufteilung muss vor dem Merge bestehen.
-Die explizite Mergefreigabe liegt vor. Anschließend wird der tatsächliche Main-Nachlauf
+Der [abschließende Linux-Lauf an `20ba943`](https://github.com/emfau88/Endless-Battle-Simulator/actions/runs/43498607564)
+ist **fehlgeschlagen**: insgesamt 179 gemeldete Prüfungen, davon **176 bestanden,
+zwei fehlgeschlagen und eine abgebrochen**. Neun der elf Gruppen sind erfolgreich.
+
+| Gruppe | Ergebnis |
+|---|---|
+| Core | 58/58 |
+| Audio | 17/17 |
+| Produktion | 33/33 |
+| Scrap | 28 bestanden, eine Testdatei bei 600 s abgebrochen |
+| Mycelium | 11/11 |
+| Pyramid | 21/21 |
+| Export Naval / Marble / Scrap / Pyramid | jeweils 2/2 |
+| Export Mycelium | beide Fälle bei 180 s Wartezeit abgebrochen |
+
+Die Mycelium-Statusdateien zeigen laufendes Software-Rendering bei 60 bzw. 70 von 90
+Bildern, etwa 0,36 bzw. 0,39 Bildern/s. Der Test forderte anschließend den Abbruch an.
+Ein Rendererabsturz wurde nicht protokolliert; eine fertige MP4 aus diesen beiden
+Linux-Proben liegt deshalb nicht vor. Die unveränderten Fälle bestanden zuvor unter Windows.
+Die Scrap-Datei überschritt ihre gemeinsame 600-s-Grenze; der Sunny-Yard-Bytevergleich
+bestand in diesem Lauf. Die Grenzen werden nicht erhöht, Tests nicht übersprungen und
+keine weitere Reparatur-/Wiederholungsrunde begonnen. Folgepunkt: R28.
+
+Die ursprüngliche Mergefreigabe war an bestandene Prüfungen gebunden. Ein Merge dieses
+Standes benötigt deshalb eine ausdrückliche Ausnahme für den dokumentierten roten
+Linux-Status; diese Entscheidung wird in PR #8 festgehalten. Der abschließende
+Markdown-Nachtrag verändert keinen Generator- oder Testcode und startet keine neue CI-Runde.
+Nach einem freigegebenen Merge wird der tatsächliche Main-Nachlauf
 abgewartet; Ergebnis, Commit und Lauf-Links werden in
 [PR #8](https://github.com/emfau88/Endless-Battle-Simulator/pull/8) und im Abschlussbericht
 festgehalten. Dieser Bericht nimmt deren Ergebnis nicht vorweg.
-R02 (historischer Replayfehler), R27 (Pyramid-Tonspitzen) und persönliche Hörabnahmen
+R02 (historischer Replayfehler), R27 (Pyramid-Tonspitzen), R28 (Linux-Zeitgrenzen) und persönliche Hörabnahmen
 bleiben offen. Lange fertige Videos sind mit dieser Integration nicht vollständig abgenommen.

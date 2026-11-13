@@ -72,7 +72,7 @@ neu sind **R20 für Scrap Wars / Scrap Arena**, **R21 für Naval-Zustandsabsiche
 **R24 als Merkposten (Pyramiden-Melodie)** und **R25 für Endless Mycelium**.
 Mycelium hieß im isolierten Featurebranch ebenfalls R23; bei der Integration wird diese Doppelbelegung aufgelöst.
 **R26** bezeichnet den gemeinsamen Produktionsgenerator, **R27** den eingegrenzten Pyramid-Audiofall.
-Nächste freie ID: R28.
+**R28** hält die abschließenden Linux-Zeitüberschreitungen fest. Nächste freie ID: R29.
 Frühere B-/Schritt-Bezeichnungen sind Herkunftsverweise, keine zweite Aufgabenliste.
 
 ## 1 · Quellen und belastbarer Stand
@@ -336,6 +336,14 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   **Entscheidung:** als bekannte Einschränkung für die Integration akzeptiert; keine weiteren
   Zusatzdiagnosen oder vorsorglichen Reparaturen in diesem Auftrag.
   [Belege und genaue Abgrenzung](ALLE_SZENARIEN_INTEGRATION_2026-11-13.md#filmabnahme-und-akzeptierte-einschränkung).
+
+- [ ] **R28 · Linux-Prüfung der Integration bleibt wegen Zeitgrenzen rot.**
+  [Lauf an `20ba943`](https://github.com/emfau88/Endless-Battle-Simulator/actions/runs/43498607564):
+  176 bestanden, zwei Mycelium-Exportfälle nach 180 s fehlgeschlagen, eine Scrap-Testdatei nach
+  600 s abgebrochen. Mycelium renderte noch bei 60/90 bzw. 70/90 Bildern; der Test brach die Jobs ab.
+  Keine neue Abweichung des Sunny-Yard-Bytevergleichs. Windows zuvor 179/179 am unveränderten
+  Generatorcode. Auf Nutzerwunsch keine weitere Reparatur-/Testreihe, keine gelockerten Prüfungen.
+  Ein Merge benötigt die ausdrücklich dokumentierte Ausnahme von der früheren CI-Bedingung.
 
 - [ ] **R25 · Endless Mycelium ist im Integrationsbranch enthalten – Sicht-/Hörabnahme am Gerät abschließen.**
   **Ziel:** ruhiges Satisfying-Szenario (Myzel wächst, frisst Laub, Pilze, Sporen, nächste Generation in neuer Farbe)
