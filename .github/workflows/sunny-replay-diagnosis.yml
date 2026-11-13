@@ -2,8 +2,14 @@ name: Sunny Yard diagnosis
 on:
   push:
     branches: [codex/sunny-replay-cause]
+    paths:
+      - '.github/workflows/sunny-replay-diagnosis.yml'
+      - 'scripts/diagnose-sunny-*.mjs'
+      - 'lib/exporter.mjs'
+      - 'test/scrap-browser.test.mjs'
 permissions:
   contents: read
+  actions: read
 jobs:
   sunny:
     runs-on: ubuntu-24.04
@@ -21,15 +27,18 @@ jobs:
           node-version: '22.17.1'
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Record environment
         run: |
           mkdir -p output/sunny-replay
           { uname -a; cat /etc/os-release; node --version; npx playwright --version; ffmpeg -version; ffprobe -version; lscpu; } > output/sunny-replay/environment.log
-      - name: Sunny Yard with its four original predecessors, once
+      - name: Download the verified inputs from round 2
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          node --test --test-concurrency=1 --test-timeout=600000 --test-name-pattern='^(Sunny Yard:|Scrap: (Canvas-Upload|UI-Regler|echte kurze)|Scrap v3:)' test/scrap-browser.test.mjs 2>&1 | tee output/sunny-replay/test.log
+          gh run download 43470899791 --name sunny-replay-1bad1b599f54b3084d2b5a79695d2a2f9395d71c --dir output/frozen-inputs
+      - name: Identical inputs and options, immediate versus delayed delivery
+        run: node scripts/diagnose-sunny-encoder.mjs 2>&1 | tee output/sunny-replay/test.log
       - name: Separate video, audio and container
         if: always()
         run: node scripts/diagnose-sunny-replay.mjs 2>&1 | tee output/sunny-replay/analysis.log
