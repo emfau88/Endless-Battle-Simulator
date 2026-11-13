@@ -152,7 +152,7 @@ historischen Linux-Fehler nicht. Log: `output/integration/settings-presets.log`.
 
 ## Schritt 4: vollständiger Produktionsweg und CI
 
-`test/presets-export.test.mjs` prüft alle fünf Szenarien in beiden Vorlagen über
+`test/presets-export-*.test.mjs` prüft alle fünf Szenarien in beiden Vorlagen über
 einen eigenen lokalen Server: UI-Auswahl → vollständiger API-Auftrag → MP4/JSON →
 Nachmessung → bytegleicher Download. Nur die Dauer wird auf drei Sekunden verkürzt.
 MP4, JSON, extrahiertes Bild, Serverlog und Jobstatus werden als Belege gesichert.
@@ -165,17 +165,51 @@ bei 2,5 Sekunden zeigen die erwarteten Szenen. Das ist keine vollständige Sicht
 Hörabnahme. Log: `output/integration/production-paths.log`; MP4-/JSON-/Bildbelege:
 `output/production-checks/1794596464826/`.
 
-Die CI erhält eigene Gruppen für Mycelium, Pyramid und diese Produktionsvorlagen,
-damit die bisherigen Gruppen nicht um sämtliche neuen Browser-/Exporttests wachsen.
-Alle bisherigen Zeitgrenzen bleiben unverändert. Fehlerpaare und Produktionsbelege
-werden zusätzlich zu den Test-/Versionslogs als Artefakte hochgeladen.
+**Vollständige Windows-Prüfung an `43102d9`: 179/179 bestanden**, ohne Abbruch oder
+übersprungene Tests, in 1.845 Sekunden. Log: `output/integration/full-windows-43102d9.log`.
+
+Der erste vollständige [Linux-Lauf an `43102d9`](https://github.com/emfau88/Endless-Battle-Simulator/actions/runs/43490389709)
+bestand in sechs Gruppen: Core 55/55, Audio 17/17, Produktion 33/33, Scrap 29/29,
+Mycelium 11/11 und Pyramid 21/21. Auch der strenge Sunny-Yard-Replay bestand; seine
+historische Fehlerursache ist damit nicht geklärt.
+
+Die neue Kataloggruppe wurde **nicht bestanden**: Alle zehn Exportfälle waren zunächst
+in einer Testdatei zusammengefasst. Die ersten drei fertigen Fälle dauerten unter Linux
+164, 160 und 182 Sekunden. Bei 600 Sekunden beendete Node die gesamte Testdatei während
+des vierten Falls; sieben Exportfälle erhielten damit keinen vollständigen Nachweis.
+Die drei zusätzlichen Bedienprüfungen bestanden. Logs und fertige MP4-/JSON-Dateien
+sind als CI-Artefakte sowie unter `output/integration/linux-43102d9/` gesichert.
+
+Die einzelne begründete Korrektur betrifft deshalb ausschließlich die **Testaufteilung**:
+ein Einstieg und ein CI-Job pro Szenario, jeweils beide Formate; der gemeinsame
+Prüfablauf liegt unverändert in `test/helpers/production-preset-export.mjs`. Die drei
+reinen Vorlagen-/Bedientests gehören zur Core-Gruppe. Insgesamt bleiben es 179 Tests.
+Keine kürzeren Testvideos, gelockerten Assertions, Retries oder erhöhten Zeitgrenzen:
+weiterhin drei Sekunden Video, 180 Sekunden für die Exportanzeige, 600 Sekunden je
+Testdatei und 25 Minuten je CI-Job. Der Generatorcode wird hierfür nicht verändert.
+Die neue Aufteilung wurde unter Windows gezielt am Seeschlacht-Einstieg geprüft:
+beide unveränderten Exportfälle bestanden (2/2, 84 Sekunden;
+`output/integration/export-shard-naval.log`). Der gemeinsame Prüfablauf wurde zusätzlich
+mit der bisherigen Fassung verglichen: nur Registrierung/Dateiablage und Importpfade ändern sich.
+Fehlerpaare und Produktionsbelege werden zusätzlich zu den Test-/Versionslogs als
+Artefakte hochgeladen.
 
 Prüfergebnisse des vollständigen Windows-/Linux-Laufs werden am Arbeitsbranch bzw.
 im zugehörigen Pull Request und im Abschlussbericht mit dem tatsächlich geprüften
 Commit festgehalten. Dieser Bericht dokumentiert die Umsetzung vor dieser Gesamtfreigabe.
 
+## Vereinbarter Umfang der Filmabnahme
+
+Der Nutzer hat die ursprüngliche 20-Sekunden-Grenze ausdrücklich erweitert. Auf seinen
+anschließenden Einwand wird die Abnahme auf **je einen 60-Sekunden-Film für Pyramid und
+Mycelium** begrenzt: Pyramid mit Tierchen, 1-Minuten-Tag und Gesamtlautstärke 200 % zur
+Klärung des Finale-Befunds, Mycelium mit der gemeinsamen Short-Vorlage für vollständige
+Generationswechsel. Beide verwenden 1080p30, CRF 20/medium und Ton. Es werden **keine fünf
+10-Minuten-Testvideos** erzeugt. Längere Abläufe werden zusätzlich durch die vorhandenen
+reinen Simulationstests geprüft; das ersetzt keinen tatsächlich kodierten Langfilm.
+
 ## Noch offen
 
-Vollständige Windows-/Linux-Prüfung und Sicht-/Hörabnahme der vollständigen Filme.
-Echte Langexports über 20 Sekunden benötigen die zuvor besprochene Erweiterung der
-Freigabe. Main-Merge und anschließender Main-Nachlauf sind noch nicht erfolgt.
+Linux-Nachweis mit der korrigierten Testaufteilung, die beiden 60-Sekunden-Filme und deren
+Sicht-/Hörabnahme. Die Ergebnisse werden mit dem geprüften Commit im PR festgehalten.
+Main-Merge und anschließender Main-Nachlauf sind noch nicht erfolgt. R02 bleibt offen.

@@ -5,10 +5,12 @@ import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
 const root=fileURLToPath(new URL('..',import.meta.url));
-const suites={core:[],audio:[],production:[],scrap:[],mycelium:[],pyramid:[],catalogue:[]};
+const suites={core:[],audio:[],production:[],scrap:[],mycelium:[],pyramid:[],
+  ...Object.fromEntries(['naval','marble','scrap','mycelium','pyramid'].map(id=>['export-'+id,[]]))};
 for(const file of readdirSync(join(root,'test')).filter(f=>f.endsWith('.test.mjs')).sort()) {
-  const suite=file.startsWith('scrap')?'scrap':file.startsWith('audio')?'audio'
-    :file.startsWith('mycelium')?'mycelium':file.startsWith('pyramid')?'pyramid':file.startsWith('presets')?'catalogue'
+  const exportScenario=/^presets-export-(naval|marble|scrap|mycelium|pyramid)\.test\.mjs$/.exec(file)?.[1];
+  const suite=exportScenario?'export-'+exportScenario:file.startsWith('scrap')?'scrap':file.startsWith('audio')?'audio'
+    :file.startsWith('mycelium')?'mycelium':file.startsWith('pyramid')?'pyramid'
     :['export.test.mjs','live.test.mjs','production.test.mjs'].includes(file)?'production':'core';
   suites[suite].push(join('test',file));
 }

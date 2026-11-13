@@ -90,3 +90,15 @@ anschließend `config.test.mjs` in einem frischen Prozess **7/7**, 33,18 s. Prot
 `output/browser-test-stability/config-share-1.log` und `config-2.log`. Kein Fall übersprungen oder abgebrochen.
 Die Ergänzung wird nach dieser gezielten Prüfung per Fast-forward vom eigenen Branch `codex/config-test-fixture`
 nach `main` übernommen. Der dadurch gestartete vollständige Main-Nachlauf wird vor Abschluss ausgewertet.
+
+## Verifizierter Anschlussstand
+
+Der anschließende [Main-Lauf an `cc1bc7c`](https://github.com/emfau88/Endless-Battle-Simulator/actions/runs/43462916717)
+bestand mit 133/134 Tests: Die früheren Lade- und Konfigurationsfälle bestanden; abweichend war
+der vollständige MP4-Bytevergleich des Sunny-Yard-Replays. Simulationszustand und Audioereignis-Hash
+stimmten überein. Die damaligen Dateien fehlen; die Ursache bleibt ungeklärt. R02 bleibt offen.
+
+Die spätere Zusammenführung aller fünf Szenarien entfernt auf Nutzerwunsch die Teilen-Oberfläche.
+Die Übertragungsprüfungen verwenden Einstellungsdateien (`test/settings.test.mjs`); der strenge
+Sunny-Yard-Bytevergleich bleibt erhalten. Ein grüner Replay-Lauf ist kein Ursachenbeweis.
+Aktuelle Prüfungen und Grenzen: [Integrationsbericht](ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).

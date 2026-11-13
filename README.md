@@ -21,7 +21,7 @@ Alle verwenden dieselbe Bedienoberfläche und den MP4-Export mit Ton. Integratio
 Abnahmen stehen im [Integrationsbericht](docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
 
 Die Architektur ist für weitere Szenarien und Videoformate vorbereitet (siehe [Erweiterbarkeit](#erweiterbarkeit));
-der aktuelle Gesamtzustand steht im [Audit vom 12.11.2026](docs/AUDIT_2026-11-12.md). Offene Punkte:
+der [Audit vom 12.11.2026](docs/AUDIT_2026-11-12.md) dokumentiert den damaligen Ausgangspunkt. Offene Punkte:
 [Roadmap](docs/ROADMAP.md) · Erledigtes: [Changelog](docs/CHANGELOG.md).
 
 ## Schnellstart
@@ -215,11 +215,12 @@ im gemeldeten `.ebs-export-*`-Ordner zur manuellen Wiederherstellung erhalten.
 
 Der Workflow [Production checks](.github/workflows/ci.yml) installiert Node 22.17.1, die per Lockfile gebundene
 Playwright-/Chromium-Fassung und FFmpeg auf Ubuntu 24.04. Er führt bei Pull Requests und Push auf `main` die
-vollständige Suite mit Software-Rendering (`EBS_GPU=0`) in vier getrennten Gruppen aus: Kern/Referenzen, Audio,
-Produktion und Scrap. Jede Testdatei gehört genau einer Gruppe an; `node scripts/test-ci.mjs --list` zeigt die
+vollständige Suite mit Software-Rendering (`EBS_GPU=0`) in elf getrennten Gruppen aus: Kern/Referenzen, Audio,
+Produktion, Scrap, Mycelium, Pyramid sowie je Szenario ein Job für die beiden kurzen Produktionsproben.
+Jede Testdatei gehört genau einer Gruppe an; `node scripts/test-ci.mjs --list` zeigt die
 Zuordnung. Pro Gruppe gelten 25 Minuten, Fehler beenden keine andere Gruppe. Versions- und Testprotokolle
 bleiben erhalten; Bash mit `pipefail` erhält Fehlercodes trotz `tee`. Referenzen werden nicht neu geschrieben.
-Aktueller Prüfstand und Grenzen: [Audio und Produktionsabsicherung](docs/SCRAP_AUDIO_PRODUKTION_2026-11-13.md).
+Aktueller Prüfstand und Grenzen: [gemeinsame Integration](docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
 
 ## Aufbau
 
@@ -575,8 +576,9 @@ bleibt stumm.
 
 **Lautheit nach YouTube-Standard:** Jede Tonspur wird beim Export eingemessen, sodass die Standardmischung (alle
 Regler 100 %) **−14 LUFS** integriert erreicht (Messung nach ITU-R BS.1770 / EBU R128, für jedes Video einzeln). Ein
-Spitzenbegrenzer mit 5 ms Vorausschau hält PCM-Spitzen bei höchstens −2 dBFS, für Scrap bei −3 dBFS wegen
-der größeren AAC-Spitzen einzelner Kampfeffekte. Anschließend wird die **fertige
+Spitzenbegrenzer mit 5 ms Vorausschau hält PCM-Spitzen bei höchstens −2 dBFS, für Scrap und Mycelium bei
+−3 dBFS wegen gemessener AAC-Spitzen. Mycelium verwendet zusätzlich ein auf seine Klänge abgestimmtes
+AAC-Profil ([Nachweis](docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md)). Anschließend wird die **fertige
 AAC-Spur** mit FFmpeg nachgemessen: Über −1 dBTP oder bei fehlgeschlagener Messung wird der Export nicht
 veröffentlicht. Vorhandene MP4/JSON bleiben erhalten. Die Messwerte stehen unter `audio.encoded` im Sidecar;
 bei Ausschnitten betreffen sie den Clip, während die übrigen Mischwerte weiterhin die gesamte Episode beschreiben.

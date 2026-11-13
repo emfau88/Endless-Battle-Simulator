@@ -1,4 +1,10 @@
-# Endless Pyramid – viertes Szenario (13.11.2026)
+# Endless Pyramid – Szenariobericht (13.11.2026)
+
+**Anschluss an den gemeinsamen Generator:** Der folgende Bericht beschreibt den ursprünglichen
+Featurebranch. Pyramid ist inzwischen gemeinsam mit Mycelium und den drei bisherigen Szenarien
+im Integrationsbranch enthalten. Szenariocode und Regeln bleiben gegenüber diesem Featurestand
+unverändert. Aktuelle Prüfungen, Produktionsvorlagen und Freigabegrenzen stehen im
+[Integrationsbericht](ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
 
 Branch `endless-pyramid`, isoliert in einem eigenen Worktree auf Basis von `main` (`247992a`) entwickelt.
 Ausgangspunkt war ein freigegebener Prototyp aus einer Kopie des Projekts (Leuchtkugeln, Murmelbahn mit

@@ -144,16 +144,22 @@ Nachweis und Grenzen stehen im [Produktionsbericht](PRODUKTIONSSICHERUNG_2026-11
 Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechaniken sind kein Teil dieser Umsetzung.
 
 - [ ] **R02 · Main-Nachlauf der Browser-Prüfungen absichern (früher B10).**
-  **Aktuell:** `test/share.test.mjs` besteht im PR und auf main. Der Main-Nachlauf scheiterte zusätzlich
-  an einem Fall in `test/config.test.mjs`; einmalige Testvorbereitung, stärkere Speicherprüfungen und
-  verlässliches Kontext-Aufräumen sind ergänzt. Der vollständige grüne Main-Nachweis folgt.
-  Grenzen, Assertions und Referenzen bleiben erhalten. [Nachweis](BROWSER_TESTSTABILITAET_2026-11-13.md).
+  **Aktuell:** Der letzte Main-Lauf an `cc1bc7c` bestand mit 133/134; offen ist der bytegenaue
+  Sunny-Yard-MP4-Replay. Die früheren Lade- und Konfigurationsfälle bestanden dort. Drei gezielte
+  Linux-Diagnosen konnten kein abweichendes Paar sichern. Im Integrationslauf an `43102d9` bestand
+  der Replay, was die frühere Ursache nicht erklärt. Fehlerpaare werden künftig nach Abschluss
+  beider Exporte gesichert. R02 bleibt offen, auch wenn eine Wiederholung grün ist.
+  Die entfernte Teilen-Oberfläche wird durch vollständige Datei-Roundtrips in `test/settings.test.mjs`
+  abgedeckt. Grenzen, Assertions und Referenzen bleiben erhalten.
+  [Historischer Nachweis](BROWSER_TESTSTABILITAET_2026-11-13.md),
+  [aktueller Integrationsstand](ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
   **Vorheriger Abschluss 13.11.2026 an `bc0bf61`:** vollständiger Linux-Lauf mit **133/133 Tests** in vier Gruppen,
   einschließlich Golden-Referenzen, früher fehlerhaftem Marble-AAC-Fall, Scrap-UI und echtem HTTP-Abbruch.
   Node 22.17.1, Playwright 1.60.0, FFmpeg 6.1.1-3ubuntu5, Ubuntu 24.04, Software-Rendering und Protokolle gesichert.
   `pipefail`, zehn Minuten Testdatei-Limit, 25 Minuten je Job und 2,5 s für Abbruch/Aufräumen bleiben erhalten.
   AAC wird vor Veröffentlichung nachgemessen; zu hohe Spitzen oder Messfehler bewahren vorhandene Dateien.
-  Die gemeinsame PCM-Reserve beträgt −2 dBFS, Scrap benötigt −3 dBFS. Die AAC-Grenze bleibt **−1 dBTP**.
+  Die gemeinsame PCM-Reserve beträgt −2 dBFS, Scrap und inzwischen auch Mycelium benötigen −3 dBFS.
+  Die AAC-Grenze bleibt **−1 dBTP**.
   Alle Testdateien werden ausgeführt; keine Golden-Referenzen neu gesetzt. Lokal zusätzlich Produktionsgruppe 33/33.
   Nachweis und begrenzte 15-Minuten-Audioprüfung: [Abschlussbericht](SCRAP_AUDIO_PRODUKTION_2026-11-13.md).
   Frühere fehlgeschlagene/unvollständige Läufe bleiben historische Nachweise im [CI-Erstbericht](CI_ERSTLAUF_2026-11-13.md).
@@ -311,11 +317,13 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   Bedienung und Export prüfen. Keine neuen Szenariomechaniken. Arbeitsbranch: `codex/all-scenarios-production`.
   **Umgesetzt:** Mycelium und Pyramid zusammengeführt; Vorlagen für alle fünf Szenarien; auf ausdrücklichen
   Nutzerwunsch Teilen-Link-Oberfläche entfernt, Einstellungsdateien erhalten.
-  **Abnahme:** kurze echte Exporte beider Formate, vollständige Windows-/Linux-Prüfung, echte Langvideos,
-  Sicht-/Hörprüfung, danach freigegebener Main-Merge samt vollständigem Main-Nachlauf.
+  **Abnahme:** kurze echte Exporte beider Formate, vollständige Windows-/Linux-Prüfung, je ein
+  60-Sekunden-Film für Pyramid und Mycelium, Sicht-/Hörprüfung, danach freigegebener Main-Merge samt
+  vollständigem Main-Nachlauf. Auf Nutzerwunsch keine fünf 10-Minuten-Testvideos; längere Abläufe
+  werden zusätzlich durch die vorhandenen reinen Simulationstests geprüft.
   Der offene Pyramid-Finale-Tonbefund wird erst an einem echten vollständigen Film eingeordnet;
   keine weitere Änderung auf Grundlage des separat normalisierten Stressfensters.
-  Exporte über 20 Sekunden benötigen die bereits besprochene Erweiterung der Freigabe.
+  Die ursprüngliche 20-Sekunden-Grenze wurde für die Filmabnahme ausdrücklich erweitert.
   [Messungen und Grenzen](ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
 
 - [ ] **R25 · Endless Mycelium ist im Integrationsbranch enthalten – Sicht-/Hörabnahme am Gerät abschließen.**

@@ -6,9 +6,10 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { mkdirSync, readFileSync, writeFileSync, copyFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { ROOT, launchBrowser } from '../lib/browser.mjs';
-import { probeVideo, verifyResult, run, ffmpegBin } from '../lib/exporter.mjs';
+import { ROOT, launchBrowser } from '../../lib/browser.mjs';
+import { probeVideo, verifyResult, run, ffmpegBin } from '../../lib/exporter.mjs';
 
+export function productionPresetTests(scenario) {
 const port = 20000 + Math.floor(Math.random() * 1000), base = `http://127.0.0.1:${port}`;
 const evidence = join(ROOT, 'output', 'production-checks', String(Date.now()));
 let server, browser, serverLog = '';
@@ -29,7 +30,7 @@ after(async () => {
   writeFileSync(join(evidence, 'server.log'), serverLog);
 });
 
-for (const scenario of ['naval', 'marble', 'scrap', 'mycelium', 'pyramid']) for (const kind of ['short', 'long']) {
+for (const kind of ['short', 'long']) {
   test(`Produktionsweg ${scenario}/${kind}: 1080p30, 3 Sekunden, Ton und herunterladbare MP4/JSON`, async t => {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
     const page = await ctx.newPage(), errors = [];
@@ -82,3 +83,6 @@ for (const scenario of ['naval', 'marble', 'scrap', 'mycelium', 'pyramid']) for 
     t.diagnostic(JSON.stringify({ scenario, kind, frames: probe.frames, audio: meta.audio.encoded, elapsedSec: status.result.elapsedSec, evidence }));
   });
 }
+
+}
+

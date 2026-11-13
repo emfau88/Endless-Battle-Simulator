@@ -1,5 +1,10 @@
 # Schritte W1 und W2 · Playlink, Handybedienung, Start per Doppelklick
 
+**Historischer Bericht:** Die hier beschriebene Teilen-Link-Oberfläche wurde im gemeinsamen
+Generator auf Nutzerwunsch entfernt. Einstellungen werden weiterhin als Datei gespeichert
+und geladen; Online-Vorschau, Handybedienung und Start per Doppelklick bleiben erhalten.
+Aktueller Stand: [Integration aller fünf Szenarien](ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
+
 **Datum:** 11.11.2026 · **Ausgangs-Commit:** `fad2cb4` (Schritt 4) · **Branch:** `w1-playlink`
 **Betroffene Dateien:** `src/app.js`, `index.html`, neu `start.bat`, `.nojekyll`, `test/share.test.mjs`, `README.md`.
 Simulation, Renderer und Export unverändert.
