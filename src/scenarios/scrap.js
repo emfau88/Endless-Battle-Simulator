@@ -100,6 +100,7 @@
       g.restore();
     }
     _result(g, round) {
+      if (this.skipResult) return;
       // Preserve the source result banner; enlarge and move it into the arena
       // centre, where it remains legible in a phone-sized portrait export.
       g.save(); g.translate(450, 430); g.scale(2.3, 2.3); g.translate(-450, -112.5);
@@ -173,18 +174,29 @@
       const final = s.cfg.episodeMode === 'tournament' && s.completedRounds === 8;
       const elapsed = s.phase === 'pause' ? s.cfg.endPauseSec - (s.pauseUntil - s.step) / 60 : final ? 5 - (s.outroUntil - s.step) / 60 : 0;
       const renderState = elapsed > 0 || final ? { ...r, phase: final ? 'running' : r.phase, effects: r.effects.map(e => ({ ...e, age: e.age + elapsed })) } : r;
-      this.arena.draw(renderState, { hud: false, cinematic: !!this.view.camera });
-      g.drawImage(this.arenaCanvas, l.x, l.y, l.size, l.size);
+      this.arena.skipResult = true;
+      this.arena.draw(renderState, { hud: false, cinematic: false });
+      this.arena.skipResult = false;
+      const camera = this.view.camera ? s.camera : { x:450,y:450,zoom:1 }, size = this.arenaCanvas.width;
+      const crop = size / camera.zoom;
+      g.drawImage(this.arenaCanvas, (camera.x + 18) / 936 * size - crop / 2, (camera.y + 18) / 936 * size - crop / 2,
+        crop, crop, l.x, l.y, l.size, l.size);
+      if (!final && r.phase === 'ended') {
+        g.save(); g.translate(l.x + l.size * 18 / 936, l.y + l.size * 18 / 936); g.scale(l.size / 936, l.size / 936);
+        this.arena._result(g, r); g.restore();
+      }
       if (final) this.finale(g);
       if (!this.view.hud) return;
       const clock = final ? 'END' : EBS.util.fmtTime(Math.ceil(Math.max(0, r.duration - r.t)));
       const roundLabel = s.cfg.episodeMode === 'tournament' ? `ROUND ${s.roundNumber}/8${s.roundNumber === 8 ? ' · FINAL' : ''}` : `ROUND ${String(s.roundNumber).padStart(2, '0')}`;
+      const arenaName = EBS.ScrapRules.arenas[s.cfg.arena].name;
       const status = s.phase === 'running' ? `${r.robots.filter(x => x.alive).length} BOTS ALIVE  /  ${r.stats.destroyed} COVER LOST`
         : s.phase === 'pause' ? `NEXT ROUND IN ${Math.ceil((s.pauseUntil - s.step) / 60)}s` : 'MATCH COMPLETE';
       if (l.kind === 'portrait') {
         text(g, 'SCRAP WARS', 54, 106, 56);
         text(g, roundLabel, 56, 177, 30, '#f0bf7b');
         text(g, clock, 1024, 173, 52, '#dde9e9', 'right');
+        text(g, arenaName, 56, 211, 18, '#8da7b6');
         this.card(g, r.robots[0], 54, 244, 468, 156);
         this.card(g, r.robots[1], 558, 244, 468, 156);
         this.card(g, r.robots[3], 54, 1468, 468, 156);
@@ -193,7 +205,7 @@
         this.scores(g, 58, 1748, 980, true);
       } else if (l.kind === 'landscape') {
         text(g, 'SCRAP WARS', 46, 92, 49);
-        text(g, 'FOUR BOTS. ONE ARENA.', 48, 139, 20, '#8da7b6');
+        text(g, `${arenaName} · FOUR CONTENDERS`, 48, 139, 17, '#8da7b6');
         text(g, roundLabel, 50, 252, 26, '#f0bf7b');
         text(g, clock, 46, 323, 68);
         this.scores(g, 52, 480, 340, false);
@@ -213,10 +225,11 @@
   EBS.registerScenario({
     id: 'scrap', title: 'Scrap Wars',
     supportsClips: true,
-    defaults: { rulesVersion: 'classic', episodeMode: 'endless', repeatRounds: true, endPauseSec: 3 },
+    defaults: { rulesVersion: 'classic', episodeMode: 'endless', arena: 'yard', repeatRounds: true, endPauseSec: 3 },
     controls: [
       { key: 'episodeMode', label: 'Format', type: 'select', options: [['endless', 'Freie Videolänge'], ['tournament', 'Turnier · 8 Runden + Finale']], restart: true },
       { key: 'rulesVersion', label: 'Kampfregeln', type: 'select', options: [['classic', 'Original'], ['v2', 'Flüssiger Kampf (empfohlen)']], restart: true },
+      { key: 'arena', label: 'Arena', type: 'select', options: [['yard', 'Scrapyard · ausgewogen'], ['foundry', 'Foundry · Deckungsgassen'], ['crossroads', 'Crossroads · offenes Zentrum']], restart: true },
       { key: 'repeatRounds', label: 'Weitere Runden spielen', type: 'check', restart: true },
       { key: 'endPauseSec', label: 'Ergebnis zeigen', type: 'range', min: 2, max: 8, step: 1, restart: true, format: v => `${v} s` },
     ],

@@ -9,6 +9,7 @@
   const normalizeParams = (p = {}) => ({
     rulesVersion: p.rulesVersion === 'v2' ? 'v2' : 'classic',
     episodeMode: p.episodeMode === 'tournament' ? 'tournament' : 'endless',
+    arena: Object.hasOwn(EBS.ScrapRules.arenas, p.arena) ? p.arena : 'yard',
     repeatRounds: bool(p.repeatRounds, true),
     endPauseSec: clamp(Math.round(num(p.endPauseSec, 3)), 2, 8),
   });
@@ -60,8 +61,9 @@
   const ObservedRound = observe(ScrapArena.Sim), ImprovedRound = observe(EBS.ScrapRules.Round);
 
   class Episode {
-    constructor({ seed, params, world, timeScale = 1 }) {
+    constructor({ seed, params, world, view = { camera: true }, timeScale = 1 }) {
       this.seed = seed >>> 0; this.cfg = normalizeParams(params); this.world = world;
+      this.view = view; this.camera = { x: 450, y: 450, zoom: 1 };
       this.timeScale = timeScale; this.unitsPerStep = Math.round(timeScale * 200);
       this.step = 0; this.t = 0; this.simTicks = 0; this.accumulator = 0;
       this.roundNumber = 0; this.completedRounds = 0; this.phase = 'running'; this.pauseUntil = 0;
@@ -73,8 +75,9 @@
     _event(type, arenaX = 450, arenaY = 450, details = {}) {
       const l = layout(this.world);
       // The reference renderer includes 18 px of arena margin on each side.
-      const x = l.x + l.size * (arenaX + 18) / 936;
-      const y = l.y + l.size * (arenaY + 18) / 936;
+      const camera = this.view.camera ? this.camera : { x: 450, y: 450, zoom: 1 };
+      const x = l.x + l.size * (.5 + (arenaX - camera.x) * camera.zoom / 936);
+      const y = l.y + l.size * (.5 + (arenaY - camera.y) * camera.zoom / 936);
       const e = { seq: this.eventSeq++, step: this.eventStep, type, x, y,
         arenaX, arenaY, round: this.roundNumber, roundSeed: this.roundSeed, roundTime: this.roundSim.t, ...details };
       this.eventDigest = fnv1a(this.eventDigest + '|' + JSON.stringify(e));
@@ -84,15 +87,17 @@
     _startRound() {
       this.roundNumber++;
       this.roundSeed = this.roundNumber === 1 ? this.seed : hashSeed('scrap-round-v1', this.seed, this.roundNumber);
-      const Round = this.cfg.rulesVersion === 'classic' ? ObservedRound : ImprovedRound;
-      this.roundSim = new Round({ seed: this.roundSeed, rulesVersion: this.cfg.rulesVersion });
+      const Round = this.cfg.rulesVersion === 'classic' && this.cfg.arena === 'yard' ? ObservedRound : ImprovedRound;
+      this.roundSim = new Round({ seed: this.roundSeed, rulesVersion: this.cfg.rulesVersion, arena: this.cfg.arena });
       // Non-enumerable: JSON of the round stays byte-identical to the source.
       Object.defineProperty(this.roundSim, 'emit', { value: (...args) => this._event(...args) });
       this.phase = 'running'; this.pauseUntil = 0; this.accumulator = 0;
+      this.camera = { x: 450, y: 450, zoom: 1 };
       this._event('round_start');
     }
     stepOnce() {
       this.step++;
+      this._updateCamera();
       if (this.phase !== 'running') {
         if (this.phase === 'outro' && this.step >= this.outroUntil) this.phase = 'ended';
         if (this.phase === 'pause' && this.step >= this.pauseUntil) {
@@ -128,6 +133,29 @@
         }
       }
     }
+    _updateCamera() {
+      const living = this.roundSim.robots.filter(r => r.alive), c = this.camera;
+      const points = this.phase === 'running' && living.length === 2
+        ? living.concat(this.roundSim.projectiles, living.filter(r => !r.weapon).map(r => ({ x:r.goalX, y:r.goalY }))) : [];
+      let zoom = 1, x = 450, y = 450;
+      if (points.length) {
+        const xs = points.map(p => p.x), ys = points.map(p => p.y);
+        const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+        zoom = clamp(936 / Math.max(maxX - minX + 240, maxY - minY + 240), 1, 1.4);
+        x = (minX + maxX) / 2; y = (minY + maxY) / 2;
+        // Safety wins over smoothing: never crop a competitor or live projectile.
+        c.zoom = Math.min(c.zoom, zoom);
+      }
+      c.zoom += clamp(zoom - c.zoom, -.008, .002);
+      const half = 468 / c.zoom;
+      x = clamp(x, half - 18, 918 - half); y = clamp(y, half - 18, 918 - half);
+      c.x += clamp((x - c.x) * .025, -.75, .75); c.y += clamp((y - c.y) * .025, -.75, .75);
+      if (points.length) {
+        c.x = clamp(c.x, Math.max(...points.map(p => p.x)) + 70 - half, Math.min(...points.map(p => p.x)) - 70 + half);
+        c.y = clamp(c.y, Math.max(...points.map(p => p.y)) + 70 - half, Math.min(...points.map(p => p.y)) - 70 + half);
+      }
+      c.x = clamp(c.x, half - 18, 918 - half); c.y = clamp(c.y, half - 18, 918 - half);
+    }
     champions() {
       const best = Math.max(...this.wins);
       return this.wins.map((score, id) => score === best ? id : -1).filter(id => id >= 0);
@@ -139,6 +167,7 @@
         round: this.roundNumber, completedRounds: this.completedRounds, wins: [...this.wins], draws: this.draws,
         roundResults: this.roundResults.map(r => ({ ...r })), champions: this.champions(),
         tournament: this.cfg.episodeMode === 'tournament', outroUntil: this.outroUntil,
+        arena: this.cfg.arena, camera: { ...this.camera },
         pauseRemaining: this.phase === 'pause' ? (this.pauseUntil - this.step) / 60 : 0,
         roundHash: this.roundSim.stateHash(), eventSeq: this.eventSeq,
         summary: `Runde ${this.roundNumber} · ${s.summary}` };
@@ -152,6 +181,7 @@
         phase: this.phase, pauseUntil: this.pauseUntil, completed: this.completedRounds,
         wins: this.wins, draws: this.draws, roundResults: this.roundResults, outroUntil: this.outroUntil,
         eventSeq: this.eventSeq, eventDigest: this.eventDigest,
+        camera: this.camera,
         roundState: this.roundSim };
       return fnv1a(JSON.stringify(state, (_, v) => typeof v === 'number' && !Number.isFinite(v) ? String(v) : v)).toString(16).padStart(8, '0');
     }

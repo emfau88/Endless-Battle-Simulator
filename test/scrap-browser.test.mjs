@@ -169,3 +169,22 @@ test('Scrap-Turnier: UI berechnet die Dauer, Export endet nach dem Finale und Pl
     assert.ok(!readdirSync(dir).some(f => f.startsWith('abort-planning') || f.startsWith('.ebs-export-')));
   } finally { await page.close(); }
 });
+
+test('Scrap-Duellkamera: Bild nach Vorlauf entspricht 30/60-fps-Capture auf allen drei Karten', async () => {
+  for(const arena of ['yard','foundry','crossroads']) {
+    const {page,errors}=await openExportPage(browser,config({aspect:'16:9',resolution:720},{rulesVersion:'v2',arena}));
+    try {
+      const compare=await page.evaluate(()=>{
+        exportAPI.simulate(34);
+        const continuous=exportAPI.renderFrames(30,1,'image/png').at(-1), hash=exportAPI.hash();
+        exportAPI.restart(); exportAPI.simulate(35-1/30);
+        const sought=exportAPI.renderFrames(1,1,'image/png')[0];
+        exportAPI.restart({video:{fps:60}}); exportAPI.simulate(35-1/60);
+        const sixty=exportAPI.renderFrames(1,1,'image/png')[0];
+        return {same:continuous===sought&&sought===sixty,hash,after:exportAPI.hash(),checks:exportAPI.check()};
+      });
+      assert.equal(compare.same,true); assert.equal(compare.hash,compare.after); assert.equal(compare.checks.ok,true);
+      assert.equal(errors.length,0);
+    } finally {await page.close();}
+  }
+});

@@ -120,7 +120,7 @@ test('Scrap: Parameter normalisieren und kollidieren nicht mit Video-/Tonwerten'
   assert.equal(cfg.params.repeatRounds, false); assert.equal(cfg.params.endPauseSec, 7);
   assert.equal(cfg.video.volume.rocket, 130);
   assert.deepEqual(plain(EBS.normalizeConfig(plain(cfg))), plain(cfg));
-  assert.deepEqual(plain(EBS.Scrap.normalizeParams({ endPauseSec: 99, repeatRounds: 'false' })), { rulesVersion: 'classic', episodeMode: 'endless', repeatRounds: false, endPauseSec: 8 });
+  assert.deepEqual(plain(EBS.Scrap.normalizeParams({ endPauseSec: 99, repeatRounds: 'false' })), { rulesVersion: 'classic', episodeMode: 'endless', arena: 'yard', repeatRounds: false, endPauseSec: 8 });
 });
 
 test('Scrap-Turnier: genau acht Runden, echte fünf Sekunden Finale und gleiche UI-/Exportdauer', () => {
@@ -156,4 +156,36 @@ test('Scrap v2: drei Prüfseeds ohne lange Feuerpausen, reproduzierbar bei Zeitl
     while (slow.phase === 'running') slow.stepOnce();
     assert.equal(JSON.stringify(s.roundSim), JSON.stringify(slow.roundSim));
   }
+});
+
+test('Scrap-Arenen: alle Starts und Waffen erreichbar; drei Seeds bleiben gültig, Duellkamera hält das Geschehen im Bild', () => {
+  let maximumZoom = 1;
+  for (const arena of ['yard','foundry','crossroads']) {
+    const initial = make({ params: { arena, rulesVersion: 'v2' } }).roundSim;
+    // Independent clearance-grid flood fill, not the robots' steering code.
+    const free = (x,y) => !initial.blocks.some(b => Math.hypot(x - Math.max(b.x, Math.min(x,b.x+b.w)), y - Math.max(b.y,Math.min(y,b.y+b.h))) < 25);
+    const cells = new Map();
+    for (let x=60;x<=840;x+=20) for(let y=60;y<=840;y+=20) if(free(x,y)) cells.set(`${x},${y}`,{x,y});
+    const queue = [cells.get('140,140')], seen = new Set(['140,140']);
+    for (let i=0;i<queue.length;i++) for(const [dx,dy] of [[20,0],[-20,0],[0,20],[0,-20]]) {
+      const key = `${queue[i].x+dx},${queue[i].y+dy}`;
+      if(cells.has(key)&&!seen.has(key)) { seen.add(key); queue.push(cells.get(key)); }
+    }
+    for(const p of [...initial.robots,...initial.pickups,...initial.pads]) assert.ok(queue.some(c=>Math.hypot(c.x-p.x,c.y-p.y)<25), `${arena}: ${p.x},${p.y} erreichbar`);
+    for(const seed of [42,7,314]) {
+      const s=make({seed,params:{arena,rulesVersion:'v2',repeatRounds:false}});
+      while(s.phase==='running') {
+        s.stepOnce();
+        maximumZoom=Math.max(maximumZoom,s.camera.zoom);
+        if(s.step%60===0) assert.equal(s.checkInvariants().ok,true,`${arena}/${seed}: ${JSON.stringify(s.checkInvariants())}`);
+        for(const r of s.roundSim.robots.filter(r=>r.alive)) {
+          assert.ok(Math.abs(r.x-s.camera.x)*s.camera.zoom < 468-r.r, `${arena}: X im Bild`);
+          assert.ok(Math.abs(r.y-s.camera.y)*s.camera.zoom < 468-r.r, `${arena}: Y im Bild`);
+        }
+      }
+      assert.equal(s.roundSim.arena,arena);
+      assert.equal(s.checkInvariants().ok,true);
+    }
+  }
+  assert.ok(maximumZoom > 1.2, 'Kamera hat tatsächlich eingezoomt');
 });

@@ -1,10 +1,26 @@
 /* Versioned Scrap rules. The archived prototype and classic round stay intact. */
 (function () {
   'use strict';
+  const arenas = {
+    yard: { name: 'SCRAPYARD', blocks: null },
+    foundry: { name: 'FOUNDRY', blocks: [
+      [260,290,60,60],[340,290,60,60],[500,290,60,60],[580,290,60,60],
+      [260,550,60,60],[340,550,60,60],[500,550,60,60],[580,550,60,60],
+      [205,380,60,60],[205,460,60,60],[635,380,60,60],[635,460,60,60],
+    ] },
+    crossroads: { name: 'CROSSROADS', blocks: [
+      [345,345,60,60],[495,345,60,60],[345,495,60,60],[495,495,60,60],
+      [190,255,90,50],[620,255,90,50],[190,595,90,50],[620,595,90,50],
+    ] },
+  };
   class Round extends ScrapArena.Sim {
-    constructor({ seed, rulesVersion = 'v2' }) {
+    constructor({ seed, rulesVersion = 'v2', arena = 'yard' }) {
       super({ seed });
       this.rulesVersion = rulesVersion;
+      this.arena = arena;
+      if (arenas[arena].blocks) {
+        this.blocks = arenas[arena].blocks.map(([x,y,w,h], id) => ({ id,x,y,w,h,hp:50,maxHp:50,alive:true }));
+      }
       if (rulesVersion === 'v2') {
         // Second, bounded change: a 25% shorter supply cycle. Same two pads,
         // weapons, ammunition and global weapon cap as the original round.
@@ -27,5 +43,5 @@
       if (goal) { robot.goalX = goal.x; robot.goalY = goal.y; }
     }
   }
-  EBS.ScrapRules = { Round };
+  EBS.ScrapRules = { Round, arenas };
 })();
