@@ -1,7 +1,7 @@
 # Roadmap
 
-**Aktueller Auftrag · 13.11.2026:** R26 führt die fünf vorhandenen Szenarien schrittweise in einem
-gemeinsamen Produktionsgenerator zusammen. Auf Wunsch des Nutzers entfällt die Teilen-Link-Oberfläche;
+**Aktueller Stand · 13.11.2026:** R26 vereint die fünf vorhandenen Szenarien in einem
+gemeinsamen Produktionsgenerator. Auf Wunsch des Nutzers entfällt die Teilen-Link-Oberfläche;
 Seed, Feinjustierungen sowie Speichern/Laden von Einstellungen bleiben erhalten.
 [Integrationsbericht und offene Abnahmen](ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
 Der letzte vollständige Main-Lauf an `cc1bc7c` bestand mit **133/134 Tests**: offen ist der
@@ -313,7 +313,7 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   allgemeines Grafikframework, 4K-Leistungsprojekt oder paralleler Hex-/Marble-Ausbau. Einen guten Clip bereits
   nach P1/P2 veröffentlichungsreif beurteilen; die Werkstatt darf die erste Produktion nicht blockieren.
 
-- [ ] **R26 · Gemeinsamer Produktionsgenerator mit allen fünf Szenarien.**
+- [x] **R26 · Technische Integration aller fünf Szenarien in einem gemeinsamen Produktionsgenerator.**
   **Auftrag:** vorhandene Szenarien nacheinander integrieren, gemeinsame Short-/Langvideo-Vorlagen,
   Bedienung und Export prüfen. Keine neuen Szenariomechaniken. Arbeitsbranch: `codex/all-scenarios-production`.
   **Umgesetzt:** Mycelium und Pyramid zusammengeführt; Vorlagen für alle fünf Szenarien; auf ausdrücklichen
@@ -322,8 +322,9 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   je Szenario. Kurze echte Exporte beider Formate sind nachgewiesen. Der vollständige Pyramid-Film
   und die Standard-Tonkontrolle bestätigen einen verbleibenden Tonfehler, siehe R27.
   **Freigabeumfang:** Auf ausdrücklichen Nutzerwunsch weitere manuelle Film-/Extremprüfungen beendet,
-  kein 60-Sekunden-Mycelium-Nachlauf und keine fünf 10-Minuten-Testvideos. Reguläre CI muss bestehen;
-  Merge ist freigegeben, Main-Nachlauf wird abgewartet. Dessen tatsächlicher Stand wird in
+  kein 60-Sekunden-Mycelium-Nachlauf und keine fünf 10-Minuten-Testvideos. Nach dem abschließenden
+  Linux-Lauf wurde der Merge ausdrücklich trotz der dokumentierten Zeitüberschreitungen freigegeben.
+  R02, R27 und R28 bleiben offen; Main-Nachlauf wird abgewartet. Dessen tatsächlicher Stand wird in
   [PR #8](https://github.com/emfau88/Endless-Battle-Simulator/pull/8) festgehalten.
   Die ursprüngliche 20-Sekunden-Grenze wurde für die Filmabnahme ausdrücklich erweitert.
   [Messungen und Grenzen](ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
@@ -343,7 +344,8 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   600 s abgebrochen. Mycelium renderte noch bei 60/90 bzw. 70/90 Bildern; der Test brach die Jobs ab.
   Keine neue Abweichung des Sunny-Yard-Bytevergleichs. Windows zuvor 179/179 am unveränderten
   Generatorcode. Auf Nutzerwunsch keine weitere Reparatur-/Testreihe, keine gelockerten Prüfungen.
-  Ein Merge benötigt die ausdrücklich dokumentierte Ausnahme von der früheren CI-Bedingung.
+  Der Nutzer hat die Ausnahme von der früheren CI-Bedingung ausdrücklich mit
+  „CI-Zeitüberschreitungen akzeptieren und mergen“ freigegeben. Der CI-Lauf bleibt als fehlgeschlagen dokumentiert.
 
 - [ ] **R25 · Endless Mycelium ist im Integrationsbranch enthalten – Sicht-/Hörabnahme am Gerät abschließen.**
   **Ziel:** ruhiges Satisfying-Szenario (Myzel wächst, frisst Laub, Pilze, Sporen, nächste Generation in neuer Farbe)

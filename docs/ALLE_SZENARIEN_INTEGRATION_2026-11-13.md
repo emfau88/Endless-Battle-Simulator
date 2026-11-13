@@ -263,9 +263,10 @@ Die Scrap-Datei überschritt ihre gemeinsame 600-s-Grenze; der Sunny-Yard-Byteve
 bestand in diesem Lauf. Die Grenzen werden nicht erhöht, Tests nicht übersprungen und
 keine weitere Reparatur-/Wiederholungsrunde begonnen. Folgepunkt: R28.
 
-Die ursprüngliche Mergefreigabe war an bestandene Prüfungen gebunden. Ein Merge dieses
-Standes benötigt deshalb eine ausdrückliche Ausnahme für den dokumentierten roten
-Linux-Status; diese Entscheidung wird in PR #8 festgehalten. Der abschließende
+Die ursprüngliche Mergefreigabe war an bestandene Prüfungen gebunden. Nach Vorlage des
+vollständigen Endstands hat der Nutzer ausdrücklich **„CI-Zeitüberschreitungen akzeptieren
+und mergen“** freigegeben. Diese Ausnahme gilt für den dokumentierten roten Linux-Status;
+sie erklärt die Tests nicht nachträglich für bestanden. Die Entscheidung wird auch in PR #8 festgehalten. Der abschließende
 Markdown-Nachtrag verändert keinen Generator- oder Testcode und startet keine neue CI-Runde.
 Nach einem freigegebenen Merge wird der tatsächliche Main-Nachlauf
 abgewartet; Ergebnis, Commit und Lauf-Links werden in
