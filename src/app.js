@@ -68,7 +68,7 @@ async function bootLive() {
   const sc0 = getScenario(initial.scenario);
   if (sc0.videoDefaults && saved.scenario !== initial.scenario) {
     const over = { ...sc0.videoDefaults };
-    for (const k of ['resolution', 'fps']) if (fromUrl[k] !== undefined) delete over[k];
+    for (const k of ['resolution', 'fps', 'tempo']) if (fromUrl[k] !== undefined) delete over[k];
     if (['crf', 'preset'].some((k) => fromUrl[k] !== undefined)) delete over.quality;
     initial = mergeConfig(initial, { video: over });
   }
@@ -149,9 +149,13 @@ async function bootLive() {
       el.addEventListener('input', () => {
         const v = value();
         if (c.format) $('o-' + c.key).textContent = c.format(v);
-        if (!c.restart) onParam(c, v);
+        if (!c.restart && !c.applyLabel) onParam(c, v);
       });
-      el.addEventListener('change', () => { if (c.restart) onParam(c, value()); });
+      el.addEventListener('change', () => { if (c.restart && !c.applyLabel) onParam(c, value()); });
+      if (c.applyLabel) {
+        const apply = document.createElement('button'); apply.id = id + '-apply'; apply.textContent = c.applyLabel;
+        apply.addEventListener('click', () => onParam(c, value())); d.appendChild(apply);
+      }
     }
     if (checks.children.length) box.appendChild(checks);
     buildVolumeUi();
@@ -214,8 +218,27 @@ async function bootLive() {
   });
 
   function onParam(c, v) {
+    if (c.presets && c.presets[v]) {
+      const preset = c.presets[v];
+      for (const [key, value] of Object.entries(preset.params || {})) session.setParam(key, value);
+      if (preset.video?.tempo !== undefined) {
+        session.cfg.video.tempo = preset.video.tempo; session.sim.setTimeScale(preset.video.tempo);
+      }
+      session.setParam(c.key, v); invalidate(); save(); syncUi(); return;
+    }
+    markCustomProfile(c.key);
     if (c.restart) restart({ params: { [c.key]: v } });
-    else { session.setParam(c.key, v); invalidate(); save(); }
+    else {
+      session.setParam(c.key, v); invalidate(); save();
+      for (const control of session.scenario.controls) if (control.enabled) {
+        $('p-' + control.key).disabled = !control.enabled(session.cfg.params);
+      }
+    }
+  }
+  function markCustomProfile(key) {
+    const control = session.scenario.controls.find(c => c.presets && Object.values(c.presets).some(p =>
+      key === 'tempo' ? p.video?.tempo !== undefined : Object.hasOwn(p.params || {}, key)));
+    if (control) { session.setParam(control.key, 'custom'); $('p-' + control.key).value = 'custom'; }
   }
 
   // ---- allgemeine Regler
@@ -232,14 +255,39 @@ async function bootLive() {
     return mark;
   };
   // Die Zeitlupe steckt im Physik-Zeitschritt (cfg.video.tempo); speed beschleunigt nur die Vorschau zusätzlich
-  const uiSpeed = () => (cfg().video.tempo < 1 ? cfg().video.tempo : speed);
-  const markSpeed = seg('segSpeed', UI_SPEEDS.map((s) => [s, s + '×']), uiSpeed(), (v) => {
-    const tempo = v < 1 ? v : 1;
-    speed = v / tempo;
-    if (cfg().video.tempo !== tempo) restart({ video: { tempo } });
-  });
+  const uiSpeed = () => session.scenario.tempoRange ? cfg().video.tempo : (cfg().video.tempo < 1 ? cfg().video.tempo : speed);
+  let speedScenario, markSpeed;
+  function syncSpeed() {
+    if (speedScenario !== session.scenario.id) {
+      speedScenario = session.scenario.id;
+      const range = session.scenario.tempoRange;
+      if (range) {
+        speed = 1;
+        const box = $('segSpeed'); box.innerHTML = '';
+        const label = document.createElement('label'); label.htmlFor = 'filmTempo'; label.textContent = 'Filmtempo ';
+        const value = document.createElement('output'), input = document.createElement('input');
+        Object.assign(input, { id: 'filmTempo', type: 'range', min: range.min, max: range.max, step: range.step });
+        label.appendChild(value); box.append(label, input);
+        const change = () => {
+          const tempo = Math.max(range.min, Math.min(range.max, +input.value));
+          markCustomProfile('tempo');
+          if (session.sim.setTimeScale) { session.cfg.video.tempo = tempo; session.sim.setTimeScale(tempo); invalidate(); save(); }
+          else if (cfg().video.tempo !== tempo) restart({ video: { tempo } });
+          value.textContent = tempo + '×';
+        };
+        input.addEventListener('input', change); input.addEventListener('change', change);
+        markSpeed = v => { input.value = String(v); value.textContent = v + '×'; };
+      } else {
+        markSpeed = seg('segSpeed', UI_SPEEDS.map((s) => [s, s + '×']), uiSpeed(), (v) => {
+          const tempo = v < 1 ? v : 1; speed = v / tempo;
+          if (cfg().video.tempo !== tempo) restart({ video: { tempo } });
+        });
+      }
+    }
+    markSpeed(uiSpeed());
+  }
   const markAspect = seg('segFormat', UI_ASPECTS.map((k) => [k, `${ASPECTS[k].label} ${ASPECTS[k].w}×${ASPECTS[k].h}`]), cfg().video.aspect,
-    (v) => { if (cfg().video.aspect !== v) restart({ video: { aspect: v } }); });
+    (v) => { if (cfg().video.aspect !== v) { session.setAspect(v); acc = 0; fit(); save(); syncUi(); } });
   // Auflösung und Bildrate des exportierten Videos (die Vorschau bleibt bei 1080p und der Bildrate des Bildschirms)
   const resSel = $('resolution');
   for (const [v, t] of Object.entries(EBS.RESOLUTIONS)) resSel.add(new Option(t, v));
@@ -309,7 +357,9 @@ async function bootLive() {
       const el = $('p-' + ctl.key), v = c.params[ctl.key];
       if (!el) continue;
       el.disabled = ctl.enabled ? !ctl.enabled(c.params) : false;
-      if (ctl.type === 'check') el.checked = !!v; else el.value = String(v);
+      if (ctl.type === 'check') el.checked = !!v;
+      else if (!ctl.applyLabel || el.dataset.applied !== String(v)) el.value = String(v);
+      if (ctl.applyLabel) el.dataset.applied = String(v);
       const o = $('o-' + ctl.key);
       if (o && ctl.format) o.textContent = ctl.format(+v);
     }
@@ -321,7 +371,7 @@ async function bootLive() {
     $('audio').checked = hasAudio && c.video.audio; $('audio').disabled = !hasAudio;
     $('audioLabel').title = hasAudio ? 'Die Vorschau ist stumm; der Ton entsteht beim Export.' : 'Dieses Szenario hat noch keinen Ton.';
     syncVolumeUi();
-    markAspect(c.video.aspect); markSpeed(uiSpeed());
+    markAspect(c.video.aspect); syncSpeed();
     resSel.value = String(c.video.resolution); markFps(c.video.fps); showSize();
     showDuration();
   }

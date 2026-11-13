@@ -1,0 +1,369 @@
+{
+  "sourceSha": "4bdee96025a22bab270c2575eaf71c49a81bb50938f90d1ad11c1d4028c91ea8",
+  "state": "All own fields; Map entries explicit; original 0.1 second steps",
+  "checkpoints": [
+    0,
+    100,
+    600,
+    1800,
+    6000
+  ],
+  "cases": [
+    {
+      "options": {
+        "seed": 42,
+        "layout": "landscape"
+      },
+      "states": [
+        {
+          "requestedTick": 0,
+          "ticks": 0,
+          "sha256": "4e53b484a2ad3314d28a805b7ba8635793251885c203196310a2cedf7d210acc",
+          "phase": "running",
+          "winner": null,
+          "rng": 3109435215,
+          "moveId": 0,
+          "captures": 0
+        },
+        {
+          "requestedTick": 100,
+          "ticks": 100,
+          "sha256": "40b7dc6e725f0a01c5b6fcd907aaa941aaf72fcaf11e5ff7aeb02b4d7491f66f",
+          "phase": "running",
+          "winner": null,
+          "rng": 4049155067,
+          "moveId": 20,
+          "captures": 6
+        },
+        {
+          "requestedTick": 600,
+          "ticks": 600,
+          "sha256": "472bda27cb3644a88dd279ed5d8bf13d85848ea7f5437cea44cff99aa37f808a",
+          "phase": "running",
+          "winner": null,
+          "rng": 4132166340,
+          "moveId": 253,
+          "captures": 46
+        },
+        {
+          "requestedTick": 1800,
+          "ticks": 1800,
+          "sha256": "c68b22b44ce8344bb5686b2748ea4acc4d1b36094d1d4af9285228871d88a030",
+          "phase": "running",
+          "winner": null,
+          "rng": 2599337649,
+          "moveId": 916,
+          "captures": 156
+        },
+        {
+          "requestedTick": 6000,
+          "ticks": 3069,
+          "sha256": "48f41700f1b9b2acd1c2e4e71059d45cc855b72914151148c6328c299936e759",
+          "phase": "finished",
+          "winner": 3,
+          "rng": 2623826586,
+          "moveId": 1738,
+          "captures": 218
+        }
+      ]
+    },
+    {
+      "options": {
+        "seed": 42,
+        "layout": "portrait"
+      },
+      "states": [
+        {
+          "requestedTick": 0,
+          "ticks": 0,
+          "sha256": "17823c1094f3af93e083c5b826534de51383f305d875e77577db24e7bda97a72",
+          "phase": "running",
+          "winner": null,
+          "rng": 3109435215,
+          "moveId": 0,
+          "captures": 0
+        },
+        {
+          "requestedTick": 100,
+          "ticks": 100,
+          "sha256": "6678ed0a78594f169ff6799f8e7896a2089149a5b62e624908c7fc8a8fcde819",
+          "phase": "running",
+          "winner": null,
+          "rng": 2680330233,
+          "moveId": 19,
+          "captures": 6
+        },
+        {
+          "requestedTick": 600,
+          "ticks": 600,
+          "sha256": "bbf7d27993be86cdc072a6f7d9f9cd1b71cc4067c6ebb955861feae8eb413000",
+          "phase": "running",
+          "winner": null,
+          "rng": 2109691642,
+          "moveId": 238,
+          "captures": 55
+        },
+        {
+          "requestedTick": 1800,
+          "ticks": 1800,
+          "sha256": "dc9263cc32256eea2b0cee9e1978e41f28193f0a27350911b9f6984839cd774d",
+          "phase": "running",
+          "winner": null,
+          "rng": 2596921558,
+          "moveId": 818,
+          "captures": 168
+        },
+        {
+          "requestedTick": 6000,
+          "ticks": 2579,
+          "sha256": "b82d40f33a3abbca337a2365dfa8660944d0ac7dd78b1c9bf32c5145cbbcd038",
+          "phase": "finished",
+          "winner": 0,
+          "rng": 3370549489,
+          "moveId": 1298,
+          "captures": 212
+        }
+      ]
+    },
+    {
+      "options": {
+        "seed": 7,
+        "layout": "landscape"
+      },
+      "states": [
+        {
+          "requestedTick": 0,
+          "ticks": 0,
+          "sha256": "c0e27490c747f9a28fc0a297af8fdd0f15833ad432d266fdb5c762891985b743",
+          "phase": "running",
+          "winner": null,
+          "rng": 3109435188,
+          "moveId": 0,
+          "captures": 0
+        },
+        {
+          "requestedTick": 100,
+          "ticks": 100,
+          "sha256": "3b3582696cfb18b9212fbd54447d3ca2be7352b5f4ab4f47a05340afb5f4dcd8",
+          "phase": "running",
+          "winner": null,
+          "rng": 769670596,
+          "moveId": 19,
+          "captures": 7
+        },
+        {
+          "requestedTick": 600,
+          "ticks": 600,
+          "sha256": "b4584706af80c8f376ebf91e9a5a9626bba5f6050ff244ec3ab9bd3c3a0c269a",
+          "phase": "running",
+          "winner": null,
+          "rng": 1906046221,
+          "moveId": 238,
+          "captures": 50
+        },
+        {
+          "requestedTick": 1800,
+          "ticks": 1800,
+          "sha256": "a846af795bdbcbfeec5bce82767b7863a5bb326a2263bcfd17136b9d3fa16136",
+          "phase": "running",
+          "winner": null,
+          "rng": 524743530,
+          "moveId": 879,
+          "captures": 156
+        },
+        {
+          "requestedTick": 6000,
+          "ticks": 1903,
+          "sha256": "fa2efe9f667c38a8d488f05bbf0b4209151300288a9ad2c739f73158e80413fa",
+          "phase": "finished",
+          "winner": 0,
+          "rng": 2904805713,
+          "moveId": 937,
+          "captures": 161
+        }
+      ]
+    },
+    {
+      "options": {
+        "seed": 7,
+        "layout": "portrait"
+      },
+      "states": [
+        {
+          "requestedTick": 0,
+          "ticks": 0,
+          "sha256": "7909961605cdec62713fb4a92b2e3548b4d3b1b4b1f34a654671a576667b47b9",
+          "phase": "running",
+          "winner": null,
+          "rng": 3109435188,
+          "moveId": 0,
+          "captures": 0
+        },
+        {
+          "requestedTick": 100,
+          "ticks": 100,
+          "sha256": "045d7840b509df480c5a48e79b897673583935f08a2a05a72d47647479c01061",
+          "phase": "running",
+          "winner": null,
+          "rng": 976646787,
+          "moveId": 18,
+          "captures": 7
+        },
+        {
+          "requestedTick": 600,
+          "ticks": 600,
+          "sha256": "08fd1dae1ec85636ec652e9a9eaca95d9a15c0f2302a477ded064bdf9e74c3fe",
+          "phase": "running",
+          "winner": null,
+          "rng": 1365126151,
+          "moveId": 200,
+          "captures": 54
+        },
+        {
+          "requestedTick": 1800,
+          "ticks": 1800,
+          "sha256": "892ee4cf9c1c150a48bf4f0b8401c92fc57664e7a29d8c62a698bcbeddc333c0",
+          "phase": "running",
+          "winner": null,
+          "rng": 2062663055,
+          "moveId": 836,
+          "captures": 171
+        },
+        {
+          "requestedTick": 6000,
+          "ticks": 4138,
+          "sha256": "20407e48ab4f617d42acde69fcf7959e309c418e5ba76e837bc5376a6b8ba2cf",
+          "phase": "finished",
+          "winner": 3,
+          "rng": 3858366057,
+          "moveId": 2658,
+          "captures": 337
+        }
+      ]
+    },
+    {
+      "options": {
+        "seed": 2026,
+        "layout": "landscape",
+        "incomeMultiplier": 1.3,
+        "aggression": 0.8,
+        "offensiveInterval": 2.5,
+        "marchDuration": 2.2
+      },
+      "states": [
+        {
+          "requestedTick": 0,
+          "ticks": 0,
+          "sha256": "0e31760dd1110650f0095bff4bc3446f36035a8d38ace43ba611070bf287339f",
+          "phase": "running",
+          "winner": null,
+          "rng": 3109436303,
+          "moveId": 0,
+          "captures": 0
+        },
+        {
+          "requestedTick": 100,
+          "ticks": 100,
+          "sha256": "1e82f6ee21a1fdf0764d79baecbc1c84fe12663d3f32e89e54b790394e0fee89",
+          "phase": "running",
+          "winner": null,
+          "rng": 201777238,
+          "moveId": 32,
+          "captures": 8
+        },
+        {
+          "requestedTick": 600,
+          "ticks": 600,
+          "sha256": "038e05bfce829acbb1fa483a9f2d429d15ac8c5d2a1d71c310b28c761391b135",
+          "phase": "running",
+          "winner": null,
+          "rng": 2755766294,
+          "moveId": 364,
+          "captures": 75
+        },
+        {
+          "requestedTick": 1800,
+          "ticks": 1781,
+          "sha256": "1cf904b83af154b4f3ebfe9cefd135cf1c8027d5e831ebbaa949c4a35e13ae0a",
+          "phase": "finished",
+          "winner": 3,
+          "rng": 2270555067,
+          "moveId": 1323,
+          "captures": 195
+        },
+        {
+          "requestedTick": 6000,
+          "ticks": 1781,
+          "sha256": "1cf904b83af154b4f3ebfe9cefd135cf1c8027d5e831ebbaa949c4a35e13ae0a",
+          "phase": "finished",
+          "winner": 3,
+          "rng": 2270555067,
+          "moveId": 1323,
+          "captures": 195
+        }
+      ]
+    },
+    {
+      "options": {
+        "seed": 2026,
+        "layout": "portrait",
+        "incomeMultiplier": 1.3,
+        "aggression": 0.8,
+        "offensiveInterval": 2.5,
+        "marchDuration": 2.2
+      },
+      "states": [
+        {
+          "requestedTick": 0,
+          "ticks": 0,
+          "sha256": "02fd736dec5cfec2df9ea9b3d4c24d9da78db0807fcb05807e02e80d4e28d681",
+          "phase": "running",
+          "winner": null,
+          "rng": 3109436303,
+          "moveId": 0,
+          "captures": 0
+        },
+        {
+          "requestedTick": 100,
+          "ticks": 100,
+          "sha256": "2ad67ff7e48c7770a30e6c76dee5181dfeb9626bb641e55e851f6e6de70a5ceb",
+          "phase": "running",
+          "winner": null,
+          "rng": 408753429,
+          "moveId": 31,
+          "captures": 8
+        },
+        {
+          "requestedTick": 600,
+          "ticks": 600,
+          "sha256": "35e45f601db75afe40d49b78f7d9b7662f999446f6bd29a24770441c16beaefe",
+          "phase": "running",
+          "winner": null,
+          "rng": 654197799,
+          "moveId": 305,
+          "captures": 70
+        },
+        {
+          "requestedTick": 1800,
+          "ticks": 1800,
+          "sha256": "e628ef8efe69d561af09517d89e355b89c0d2b4588393450b165cf8c5c8cc8c7",
+          "phase": "running",
+          "winner": null,
+          "rng": 2855431552,
+          "moveId": 1390,
+          "captures": 180
+        },
+        {
+          "requestedTick": 6000,
+          "ticks": 3779,
+          "sha256": "0adbae1535669b73332461bb17e106dc5c8bdd5ab058ef8c5de2e9b021c97ae9",
+          "phase": "finished",
+          "winner": 3,
+          "rng": 143772206,
+          "moveId": 3760,
+          "captures": 321
+        }
+      ]
+    }
+  ]
+}

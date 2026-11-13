@@ -10,7 +10,7 @@ before(async () => { browser = await launchBrowser({ gpu: false }); });
 after(async () => { await browser?.close(); });
 const base = pathToFileURL(INDEX).href;
 const ready = page => page.waitForFunction(() => window.EBS?.app?.sim);
-const ids = ['naval', 'marble', 'scrap', 'mycelium', 'pyramid'];
+const ids = ['naval', 'marble', 'scrap', 'mycelium', 'pyramid', 'territory'];
 
 test('Einstellungsdatei bewahrt Qualitätswerte und Namen; der PC-Exportbefehl übernimmt die Qualität', async t => {
   const ctx = await browser.newContext(); t.after(() => ctx.close());
@@ -33,7 +33,7 @@ test('Einstellungsdatei bewahrt Qualitätswerte und Namen; der PC-Exportbefehl �
   assert.deepEqual(await loaded.evaluate(() => EBS.app.cfg), expected);
 });
 
-test('Zehn Produktionsdateien entsprechen den UI-Vorlagen und definierten Videoeinstellungen', async t => {
+test('Zwölf Produktionsdateien entsprechen den UI-Vorlagen und definierten Videoeinstellungen', async t => {
   const ctx = await browser.newContext(); t.after(() => ctx.close());
   const page = await ctx.newPage(); await page.goto(base + '?paused=1'); await ready(page);
   assert.deepEqual(await page.locator('#scenario option').evaluateAll(options => options.map(o => o.value)), ids);
@@ -44,7 +44,7 @@ test('Zehn Produktionsdateien entsprechen den UI-Vorlagen und definierten Videoe
     const normalized = await page.evaluate(config => EBS.normalizeConfig(config), file);
     assert.deepEqual([normalized.scenario, normalized.video.aspect, normalized.video.durationSec, normalized.video.resolution,
       normalized.video.fps, normalized.video.audio, normalized.video.tempo],
-    [id, kind === 'short' ? '9:16' : '16:9', kind === 'short' ? 60 : 600, 1080, 30, true, 1]);
+    [id, kind === 'short' ? '9:16' : '16:9', kind === 'short' ? 60 : 600, 1080, 30, true, id === 'territory' ? .75 : 1]);
     assert.deepEqual(normalized.video.quality, { crf: 20, preset: 'medium', bitrate: null });
     assert.ok(Object.values(normalized.video.volume).every(v => v === 100));
     if (id === 'pyramid') assert.equal(normalized.params.dayMinutes, kind === 'short' ? 1 : 0);
@@ -52,7 +52,7 @@ test('Zehn Produktionsdateien entsprechen den UI-Vorlagen und definierten Videoe
   }
 });
 
-test('Vorlagenknöpfe erhalten den Seed und laden alle fünf Szenarien mit speicherbaren Einstellungen', async t => {
+test('Vorlagenknöpfe erhalten den Seed und laden alle sechs Szenarien mit speicherbaren Einstellungen', async t => {
   const ctx = await browser.newContext(); t.after(() => ctx.close());
   const page = await ctx.newPage(), errors = [];
   page.on('pageerror', e => errors.push(e.message));
@@ -72,6 +72,6 @@ test('Vorlagenknöpfe erhalten den Seed und laden alle fünf Szenarien mit speic
     }
   }
   await page.reload(); await ready(page);
-  assert.deepEqual(await page.evaluate(() => [EBS.app.cfg.scenario, EBS.app.cfg.seed, EBS.app.cfg.video.durationSec]), ['pyramid', 731, 600]);
+  assert.deepEqual(await page.evaluate(() => [EBS.app.cfg.scenario, EBS.app.cfg.seed, EBS.app.cfg.video.durationSec]), ['territory', 731, 600]);
   assert.deepEqual(errors, []);
 });

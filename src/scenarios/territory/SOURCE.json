@@ -1,0 +1,10 @@
+{
+  "title": "Territory Wars / Hex Dominion V0.3",
+  "source": "C:/Users/madde/Downloads/07-Territory_Wars_Hex_Dominion_V0.3.html",
+  "identicalSource": "C:/Users/madde/Downloads/Territory_Wars_Hex_Dominion_V0.3.html",
+  "sha256": "4bdee96025a22bab270c2575eaf71c49a81bb50938f90d1ad11c1d4028c91ea8",
+  "verified": "2026-11-13",
+  "archive": "docs/reference/territory-wars-hex-dominion-v0.3.source.html",
+  "simulation": "First inline script, extracted without changes. Passive observations and episode scheduling live in episode.js.",
+  "baseline": "test/fixtures/territory-prototype.json: captured from archived source before adaptation; all own simulation fields and Map lookup entries."
+}

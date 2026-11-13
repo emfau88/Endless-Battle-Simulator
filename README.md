@@ -7,7 +7,7 @@ Direkt zur Kugelfabrik: [hochkant](https://emfau88.github.io/Endless-Battle-Simu
 Vorschau und Regler laufen im Browser, auch am Handy. Videos entstehen am eigenen PC (`start.bat`).
 
 Deterministische 2D-Physiksimulation im Stil von Algodoo-/„Satisfying Physics“-Videos mit automatischem MP4-Export.
-Dieser Arbeitsstand vereint fünf Szenarien im selben Generator:
+Dieser Arbeitsstand vereint sechs Szenarien im selben Generator:
 
 | Szenario | Inhalt |
 |---|---|
@@ -16,6 +16,7 @@ Dieser Arbeitsstand vereint fünf Szenarien im selben Generator:
 | Scrap Wars | Roboterkämpfe mit Deckung, Waffen und Folgerunden |
 | Endless Mycelium | Pilzgeflecht, Laub, Pilze und neue Sporengenerationen |
 | Endless Pyramid | Glaspyramide mit Becherwerk, Leuchtkugeln oder Tierchen, Tageslauf und Finale |
+| Territory Wars / Hex Dominion V0.3 | Vier Reiche auf der originalen Hexkarte, Garnisonen, Märsche und deterministische Folgerunden |
 
 Alle verwenden dieselbe Bedienoberfläche und den MP4-Export mit Ton. Integrationsnachweise und noch offene
 Abnahmen stehen im [Integrationsbericht](docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
@@ -47,6 +48,10 @@ Videoeinstellungen auf Standardwerte zurück und erhält den gewählten Seed. Si
 Beide Vorlagen verwenden 1080p, 30 fps, H.264 (CRF 20, `medium`) und AAC-Ton. Das Short ist hochkant (9:16),
 das Langvideo quer (16:9). Bei Pyramid dauert der Short-Tag eine Minute, damit das Finale am Ende liegt;
 beim Langvideo folgt er der Videolänge. Scrap verwendet Sunny Yard im Endlosmodus.
+Territory verwendet das originale Gebietskrieg-Profil mit 0,75× Filmtempo und passender Hoch-/Querformatkarte.
+Ein Ausgabeformatwechsel erhält dort die laufende Karte; erst **Karte anwenden** erzeugt sie neu.
+Regeln, Profile, Kamerawerte und Anzeigeoptionen werden mit der Konfiguration gespeichert.
+Ausschnittsexport bleibt für Territory gesperrt. [Quelle, Tests und Grenzen](docs/TERRITORY_INTEGRATION_2026-11-13.md).
 
 | Szene | Short-Datei | Langvideo-Datei |
 |---|---|---|
@@ -55,6 +60,7 @@ beim Langvideo folgt er der Videolänge. Scrap verwendet Sunny Yard im Endlosmod
 | Scrap Wars | [scrap-short.json](presets/production/scrap-short.json) | [scrap-long.json](presets/production/scrap-long.json) |
 | Myzel | [mycelium-short.json](presets/production/mycelium-short.json) | [mycelium-long.json](presets/production/mycelium-long.json) |
 | Pyramide | [pyramid-short.json](presets/production/pyramid-short.json) | [pyramid-long.json](presets/production/pyramid-long.json) |
+| Territory | [territory-short.json](presets/production/territory-short.json) | [territory-long.json](presets/production/territory-long.json) |
 
 Die bisherigen Spezialvorlagen bleiben verfügbar. Vorlagendauer und tatsächlich geprüfte Filmlänge sind
 getrennte Angaben; der [Integrationsbericht](docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md) dokumentiert die Abnahme.
