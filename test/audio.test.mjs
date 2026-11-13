@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { INDEX, ROOT, launchBrowser } from '../lib/browser.mjs';
 import { exportVideo, ffmpegBin, run, verifyResult } from '../lib/exporter.mjs';
-import { CEILING_DB, SAMPLE_RATE, TARGET_LUFS, buildVoices, decodeSample, loadSamples, processTrack, renderTrack } from '../lib/audio.mjs';
+import { CEILING_DB, SAMPLE_RATE, TARGET_LUFS, buildVoices, decodeSample, loadSamples, measureEncodedAudio, processTrack, renderTrack } from '../lib/audio.mjs';
 
 const dir = mkdtempSync(join(tmpdir(), 'ebs-audio-'));
 process.on('exit', () => rmSync(dir, { recursive: true, force: true }));
@@ -26,9 +26,23 @@ async function assertYouTubeLoudness(r) {
   assert.ok(Math.abs(r.audio.lufs - TARGET_LUFS) <= 0.15, `eigene Messung ${r.audio.lufs} LUFS statt ${TARGET_LUFS}`);
   assert.ok(r.audio.peakOutDb <= CEILING_DB + 0.01, `Spitze ${r.audio.peakOutDb} dBFS über ${CEILING_DB}`);
   const m = await ebur128(r.file);
+  assert.deepEqual(r.audio.encoded, { lufs: m.lufs, truePeakDb: m.truePeak, silent: false });
   assert.ok(Math.abs(m.lufs - TARGET_LUFS) <= 1, `FFmpeg misst ${m.lufs} LUFS statt ${TARGET_LUFS}`);
   assert.ok(m.truePeak <= -1, `True Peak ${m.truePeak} dBTP (YouTube empfiehlt höchstens −1)`);
 }
+
+test('AAC-Nachmessung unterscheidet Stille und echte Spitzen; fehlende Audiodatei ist kein bestandener Check', async () => {
+  for(const [name,source,silent] of [['silence','anullsrc=r=48000:cl=stereo',true],['loud','sine=frequency=997:sample_rate=48000',false]]) {
+    const file=join(dir,name+'.m4a');
+    const result=await run(ffmpegBin(),['-y','-v','error','-f','lavfi','-i',source,'-t','1','-af','volume=16','-ac','2','-c:a','aac','-b:a','192k',file]);
+    assert.equal(result.code,0,result.stderr);
+    const measured=await measureEncodedAudio(file,{ffmpeg:ffmpegBin()});
+    assert.equal(measured.silent,silent);
+    if(silent)assert.equal(measured.truePeakDb,null);
+    else assert.ok(measured.truePeakDb>-1,JSON.stringify(measured));
+  }
+  await assert.rejects(measureEncodedAudio(join(dir,'missing.mp4'),{ffmpeg:ffmpegBin()}),/nicht messbar/);
+});
 
 test('Mischer: Ereignisse landen abtastgenau, WAV ist korrekt, Ergebnis ist reproduzierbar und begrenzt', async () => {
   const audio = { events: { a: { samples: ['impactGlass_light_000'], gain: 0.5 }, loud: { samples: ['impactGlass_medium_000'], gain: 3 } } };
@@ -132,6 +146,8 @@ for (const tempo of [1, 0.8]) {
     assert.ok(lag >= -1 && lag <= 4, `Ton liegt ${lag * 5} ms neben den Ereignissen`);
     const side = JSON.parse(readFileSync(r.sidecar, 'utf8'));
     assert.deepEqual([side.audio.codec, side.audio.events, side.audio.digest], ['aac', r.audio.events, r.audio.digest]);
+    assert.deepEqual(side.audio.encoded,r.audio.encoded);
+    assert.ok(verifyResult({...r,audio:{...r.audio,encoded:{silent:false,truePeakDb:-.7}}}).some(e=>e.includes('True-Peak')));
   });
 }
 

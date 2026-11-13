@@ -207,14 +207,16 @@ test('Oberfläche zeigt Audiophase und angeforderten Abbruch, ohne fertigen Expo
 test('Echter Server beantwortet Status und Abbruch während des Audiomischens und räumt vollständig auf', async () => {
   const before = new Set(readdirSync(join(ROOT, 'output')));
   const res = await fetch(BASE + '/api/export', { method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ scenario: 'marble', seed: 73, video: { durationSec: 20, resolution: 720, aspect: '16:9', quality: { preset: 'ultrafast' } } }) });
+    // The assertion concerns a real running mixer, not 600 frames of software
+    // rendering beforehand. Eight seconds retain the full path and worker.
+    body: JSON.stringify({ scenario: 'marble', seed: 73, video: { durationSec: 8, resolution: 720, aspect: '16:9', quality: { preset: 'ultrafast' } } }) });
   assert.equal(res.status, 202);
   let s, requestedAt;
   try {
     const deadline = Date.now() + 110000;
     while (Date.now() < deadline) {
       s = await (await fetch(BASE + '/api/export')).json();
-      if (s.phase === 'audio-mixing' && s.state === 'running') {
+      if (s.phase === 'audio-mixing' && s.state === 'running' && s.audioProgress > 0) {
         requestedAt = Date.now();
         const cancel = await fetch(BASE + '/api/export/cancel', { method: 'POST' });
         assert.equal(cancel.status, 200);

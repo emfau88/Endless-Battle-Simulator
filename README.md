@@ -187,10 +187,12 @@ atomare Transaktion über beide Dateien abgesichert. Scheitert die Wiederherstel
 im gemeldeten `.ebs-export-*`-Ordner zur manuellen Wiederherstellung erhalten.
 
 Der Workflow [Production checks](.github/workflows/ci.yml) installiert Node 22.17.1, die per Lockfile gebundene
-Playwright-/Chromium-Fassung und FFmpeg auf Ubuntu 24.04. Er führt bei Push/PR die vollständige Suite mit
-Software-Rendering (`EBS_GPU=0`) aus und bewahrt Versions- und Testprotokolle auf. Die Golden-Prüfung ist Teil
-der Suite; Referenzen werden dabei nicht neu geschrieben. Der erste GitHub-Runnerlauf bleibt bis zum Push offen.
-Aktueller Prüfstand und Grenzen: [Produktionsabsicherung](docs/PRODUKTIONSSICHERUNG_2026-11-12.md).
+Playwright-/Chromium-Fassung und FFmpeg auf Ubuntu 24.04. Er führt bei Pull Requests und Push auf `main` die
+vollständige Suite mit Software-Rendering (`EBS_GPU=0`) in vier getrennten Gruppen aus: Kern/Referenzen, Audio,
+Produktion und Scrap. Jede Testdatei gehört genau einer Gruppe an; `node scripts/test-ci.mjs --list` zeigt die
+Zuordnung. Pro Gruppe gelten 25 Minuten, Fehler beenden keine andere Gruppe. Versions- und Testprotokolle
+bleiben erhalten; Bash mit `pipefail` erhält Fehlercodes trotz `tee`. Referenzen werden nicht neu geschrieben.
+Aktueller Prüfstand und Grenzen: [Audio und Produktionsabsicherung](docs/SCRAP_AUDIO_PRODUKTION_2026-11-13.md).
 
 ## Aufbau
 
@@ -423,7 +425,11 @@ bleibt stumm.
 
 **Lautheit nach YouTube-Standard:** Jede Tonspur wird beim Export eingemessen, sodass die Standardmischung (alle
 Regler 100 %) **−14 LUFS** integriert erreicht (Messung nach ITU-R BS.1770 / EBU R128, für jedes Video einzeln). Ein
-Spitzenbegrenzer mit 5 ms Vorausschau hält die Spitzen bei höchstens −1,5 dBFS (True Peak nach AAC unter −1 dBTP).
+Spitzenbegrenzer mit 5 ms Vorausschau hält PCM-Spitzen bei höchstens −2 dBFS, für Scrap bei −3 dBFS wegen
+der größeren AAC-Spitzen einzelner Kampfeffekte. Anschließend wird die **fertige
+AAC-Spur** mit FFmpeg nachgemessen: Über −1 dBTP oder bei fehlgeschlagener Messung wird der Export nicht
+veröffentlicht. Vorhandene MP4/JSON bleiben erhalten. Die Messwerte stehen unter `audio.encoded` im Sidecar;
+bei Ausschnitten betreffen sie den Clip, während die übrigen Mischwerte weiterhin die gesamte Episode beschreiben.
 
 **Lautstärke regeln:** In der Karte „Ton“ gibt es einen Gesamtregler und einen Regler je Klang (Seeschlacht:
 Kanonenschuss, Treffer, Platscher, Kugel am Grund, Nachladen; Kugelfabrik: neun Klänge), jeweils **0–200 %**, Standard 100 % = YouTube-Ziel.
@@ -445,7 +451,8 @@ Per Kommandozeile: `--volume master=80 --volume splash=150`. Die Simulation blei
 - **Sounds:** 17 Dateien aus Kenney Impact Sounds (CC0), dazu zwei im Code erzeugte Klänge der Seeschlacht; siehe
   `assets/audio/README.md`.
 
-Mit FFmpeg (`ebur128`) nachgemessen an zwei 12-s-Clips mit Standardreglern (Seeschlacht quer, Kugelfabrik hochkant):
+Historischer Nachweis vor der zusätzlichen AAC-Prüfung: Mit FFmpeg (`ebur128`) nachgemessen an zwei
+12-s-Clips mit Standardreglern (Seeschlacht quer, Kugelfabrik hochkant):
 je −14,1 LUFS, True Peak −1,2 dBTP. Die Seeschlacht braucht dafür bis zu 5 dB Begrenzung, die Kugelfabrik wegen des
 impulsiven Glasklirrens bis zu 19 dB an den lautesten Stellen. Motor- und Rollgeräusche fehlen.
 

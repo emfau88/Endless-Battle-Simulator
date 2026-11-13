@@ -43,8 +43,9 @@
     _hurtBlock(b, amount, color) {
       const hp = b.hp, alive = b.alive;
       super._hurtBlock(b, amount, color);
-      if (b.hp < hp) this.emit?.('cover_hit', b.x + b.w / 2, b.y + b.h / 2, { block: b.id, p: hp - b.hp });
-      if (alive && !b.alive) this.emit?.('break', b.x + b.w / 2, b.y + b.h / 2, { block: b.id });
+      const material = b.material ? { material: b.material } : {};
+      if (b.hp < hp) this.emit?.('cover_hit', b.x + b.w / 2, b.y + b.h / 2, { block: b.id, p: hp - b.hp, ...material });
+      if (alive && !b.alive) this.emit?.('break', b.x + b.w / 2, b.y + b.h / 2, { block: b.id, ...material });
     }
     _explode(p, directRobot, directBlock) {
       this.emit?.('blast', p.x, p.y, { owner: p.owner });

@@ -2,6 +2,7 @@ name: Production checks
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -14,8 +15,13 @@ concurrency:
 
 jobs:
   test:
+    name: ${{ matrix.suite }}
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [core, audio, production, scrap]
     defaults:
       run:
         shell: bash # Explizit: -eo pipefail; tee darf fehlgeschlagene Tests nicht verdecken.
@@ -38,10 +44,10 @@ jobs:
           ffmpeg -version | tee -a output/ci-versions.log
           ffprobe -version | tee -a output/ci-versions.log
       - name: Tests, short exports and golden references
-        run: npm test 2>&1 | tee output/ci-tests.log
+        run: node scripts/test-ci.mjs ${{ matrix.suite }} 2>&1 | tee output/ci-tests.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: production-checks-${{ github.sha }}
+          name: production-checks-${{ matrix.suite }}-${{ github.sha }}
           path: output/ci-*.log
           if-no-files-found: ignore
