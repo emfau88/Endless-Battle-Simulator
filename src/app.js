@@ -287,6 +287,7 @@ async function bootLive() {
     for (const ctl of session.scenario.controls) {
       const el = $('p-' + ctl.key), v = c.params[ctl.key];
       if (!el) continue;
+      el.disabled = ctl.enabled ? !ctl.enabled(c.params) : false;
       if (ctl.type === 'check') el.checked = !!v; else el.value = String(v);
       const o = $('o-' + ctl.key);
       if (o && ctl.format) o.textContent = ctl.format(+v);

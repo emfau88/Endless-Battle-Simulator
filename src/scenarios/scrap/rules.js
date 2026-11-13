@@ -13,8 +13,13 @@
       [190,255,90,50],[620,255,90,50],[190,595,90,50],[620,595,90,50],
     ] },
   };
+  const modules = {
+    plating: { name: 'PLATING', note: '+15% ARMOR / -8% SPEED', hp: 1.15, speed: .92, cooldown: 1 },
+    drive: { name: 'DRIVE', note: '+12% SPEED / -10% ARMOR', hp: .90, speed: 1.12, cooldown: 1 },
+    capacitor: { name: 'CAPACITOR', note: '-12% RELOAD / -8% ARMOR', hp: .92, speed: 1, cooldown: .88 },
+  };
   class Round extends ScrapArena.Sim {
-    constructor({ seed, rulesVersion = 'v2', arena = 'yard' }) {
+    constructor({ seed, rulesVersion = 'v2', arena = 'yard', upgrades = [] }) {
       super({ seed });
       this.rulesVersion = rulesVersion;
       this.arena = arena;
@@ -26,6 +31,18 @@
         // weapons, ammunition and global weapon cap as the original round.
         for (const pad of this.pads) pad.period *= .75;
       }
+      for (const robot of this.robots) {
+        const key = upgrades[robot.id], module = modules[key];
+        if (!module) continue;
+        robot.module = key;
+        robot.maxHp = robot.hp = 125 * module.hp;
+        robot.speed *= module.speed; robot.vx *= module.speed; robot.vy *= module.speed;
+      }
+    }
+    _shoot(robot) {
+      const shots = this.stats.shots;
+      super._shoot(robot);
+      if (this.stats.shots !== shots && robot.module) robot.cooldown *= modules[robot.module].cooldown;
     }
     _think(robot) {
       super._think(robot);
@@ -43,5 +60,5 @@
       if (goal) { robot.goalX = goal.x; robot.goalY = goal.y; }
     }
   }
-  EBS.ScrapRules = { Round, arenas };
+  EBS.ScrapRules = { Round, arenas, modules };
 })();

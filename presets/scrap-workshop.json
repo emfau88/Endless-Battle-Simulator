@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "name": "Scrap Wars – Foundry-Turnier mit Werkstatt (experimentell)",
+  "scenario": "scrap",
+  "seed": 42,
+  "params": { "rulesVersion": "v2", "episodeMode": "tournament", "arena": "foundry", "workshop": true, "repeatRounds": true, "endPauseSec": 5 },
+  "video": { "aspect": "16:9", "resolution": 1080, "fps": 30, "durationSec": 1, "tempo": 1, "audio": true },
+  "view": { "hud": true, "camera": true }
+}

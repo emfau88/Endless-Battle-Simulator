@@ -80,6 +80,18 @@
           g.fillStyle = `rgba(126,137,143,${(1 - age) * .28})`; g.fill();
         }
       }
+      if (robot.module) {
+        // One visible attachment per robot, below the name and outside the gun.
+        g.save(); g.rotate(Math.atan2(robot.vy, robot.vx));
+        if (robot.module === 'plating') {
+          path(g,[[-24,-13],[-17,-17],[-17,17],[-24,13]]); g.fillStyle = '#d6e0df'; g.fill();
+        } else if (robot.module === 'drive') {
+          for(const y of [-22,22]) { box(g,-27,y-4,13,8,2); g.fillStyle='#8fe0e5';g.fill(); }
+        } else {
+          box(g,-29,-8,10,16,3);g.fillStyle='#ffce63';g.fill();g.fillStyle='#394452';g.fillRect(-27,-4,6,8);
+        }
+        g.restore();
+      }
       const y = -robot.r - 25;
       box(g, -34, y - 8, 68, 15, 4); g.fillStyle = '#10202be8'; g.fill();
       text(g, robot.name, 0, y, 10, color, 'center', 800);
@@ -133,6 +145,11 @@
       const weapon = robot.weapon, label = !alive ? 'KNOCKED OUT' : this.sim.phase !== 'running' ? 'SURVIVED' : weapon ? `${weapon.kind.toUpperCase()}  ${weapon.ammo}/${weapon.maxAmmo}` : 'SEARCHING';
       text(g, label, x + 20, y + h - 43, compact ? 15 : 21, alive ? '#dce8e9' : '#7a8f9a', 'left', 650);
       text(g, `${this.sim.wins[robot.id]} WINS`, right, y + h - 20, compact ? 14 : 18, color, 'right');
+      if (this.sim.cfg.workshop) {
+        const module = robot.module || this.sim.workshop.modules[robot.id];
+        const label = module ? EBS.ScrapRules.modules[module].name + (robot.module ? '' : ' NEXT') : `${this.sim.workshop.balances[robot.id]}/4 SCRAP`;
+        text(g, label, x + 20, y + h - 20, compact ? 12 : 15, '#d3bc91', 'left');
+      }
     }
     scores(g, x, y, w, horizontal) {
       text(g, this.sim.cfg.episodeMode === 'tournament' ? 'TOURNAMENT WINS · FIRST = LEADER' : 'MATCH WINS', x, y, 17, '#8096a2');
@@ -164,6 +181,20 @@
       text(g, `${s.draws} DRAW${s.draws === 1 ? '' : 'S'}  ·  SEE YOU IN THE NEXT ARENA`, 500, 793, 21, '#9eb4bf', 'center');
       g.restore();
     }
+    workshopPanel(g) {
+      const s=this.sim, l=this.layout;
+      if (!s.cfg.workshop || s.phase !== 'pause' || !s.workshop.lastAwards.length) return;
+      g.save(); g.translate(l.x,l.y); g.scale(l.size/1000,l.size/1000);
+      const awards=s.workshop.lastAwards, height=80+awards.length*58, y=940-height;
+      box(g,120,y,760,height,14);g.fillStyle='#132633f5';g.fill();g.strokeStyle='#e0bc73';g.lineWidth=1.5;g.stroke();
+      text(g,'WORKSHOP · READY NEXT ROUND',500,y+33,22,'#ffce63','center');
+      awards.forEach((a,i)=>{
+        const robot=s.roundSim.robots[a.team], mod=EBS.ScrapRules.modules[a.module], yy=y+77+i*58;
+        text(g,`${robot.name} + ${mod.name}`,150,yy,23,colorOf(robot));
+        text(g,mod.note,150,yy+23,16,'#b7cbd4','left',550);
+      });
+      g.restore();
+    }
     paint(g) {
       const s = this.sim, r = s.roundSim, l = this.layout, { w, h } = this.world;
       const bg = g.createLinearGradient(0, 0, w, h);
@@ -186,6 +217,7 @@
         this.arena._result(g, r); g.restore();
       }
       if (final) this.finale(g);
+      else this.workshopPanel(g);
       if (!this.view.hud) return;
       const clock = final ? 'END' : EBS.util.fmtTime(Math.ceil(Math.max(0, r.duration - r.t)));
       const roundLabel = s.cfg.episodeMode === 'tournament' ? `ROUND ${s.roundNumber}/8${s.roundNumber === 8 ? ' · FINAL' : ''}` : `ROUND ${String(s.roundNumber).padStart(2, '0')}`;
@@ -225,12 +257,13 @@
   EBS.registerScenario({
     id: 'scrap', title: 'Scrap Wars',
     supportsClips: true,
-    defaults: { rulesVersion: 'classic', episodeMode: 'endless', arena: 'yard', repeatRounds: true, endPauseSec: 3 },
+    defaults: { rulesVersion: 'classic', episodeMode: 'endless', arena: 'yard', workshop: false, repeatRounds: true, endPauseSec: 3 },
     controls: [
       { key: 'episodeMode', label: 'Format', type: 'select', options: [['endless', 'Freie Videolänge'], ['tournament', 'Turnier · 8 Runden + Finale']], restart: true },
       { key: 'rulesVersion', label: 'Kampfregeln', type: 'select', options: [['classic', 'Original'], ['v2', 'Flüssiger Kampf (empfohlen)']], restart: true },
       { key: 'arena', label: 'Arena', type: 'select', options: [['yard', 'Scrapyard · ausgewogen'], ['foundry', 'Foundry · Deckungsgassen'], ['crossroads', 'Crossroads · offenes Zentrum']], restart: true },
-      { key: 'repeatRounds', label: 'Weitere Runden spielen', type: 'check', restart: true },
+      { key: 'workshop', label: 'Werkstatt (experimentell, ein Modul je Roboter)', type: 'check', enabled: p => p.episodeMode === 'tournament', restart: true },
+      { key: 'repeatRounds', label: 'Weitere Runden spielen', type: 'check', enabled: p => p.episodeMode !== 'tournament', restart: true },
       { key: 'endPauseSec', label: 'Ergebnis zeigen', type: 'range', min: 2, max: 8, step: 1, restart: true, format: v => `${v} s` },
     ],
     normalizeParams,
@@ -258,6 +291,7 @@
       blast: { label: 'Explosion', samples: ['synth:cannon'], gain: .40, semis: 2, minGap: .10 },
       break: { label: 'Deckung zerstört', samples: ['impactWood_heavy_000'], gain: .24, detune: .8 },
       pickup: { label: 'Waffenaufnahme', samples: ['synth:scrap-pickup'], gain: .22 },
+      upgrade: { label: 'Werkstattmodul', samples: ['synth:scrap-pickup'], gain: .28, semis: -2, minGap: .12 },
       drop: { label: 'Waffenabwurf', samples: ['impactTin_medium_000'], gain: .08, detune: .8 },
       ko: { label: 'Roboter ausgeschaltet', samples: ['impactMetal_light_003'], gain: .65, semis: -9 },
     } },

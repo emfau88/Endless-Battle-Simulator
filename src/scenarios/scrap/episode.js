@@ -10,6 +10,7 @@
     rulesVersion: p.rulesVersion === 'v2' ? 'v2' : 'classic',
     episodeMode: p.episodeMode === 'tournament' ? 'tournament' : 'endless',
     arena: Object.hasOwn(EBS.ScrapRules.arenas, p.arena) ? p.arena : 'yard',
+    workshop: p.episodeMode === 'tournament' && bool(p.workshop, false),
     repeatRounds: bool(p.repeatRounds, true),
     endPauseSec: clamp(Math.round(num(p.endPauseSec, 3)), 2, 8),
   });
@@ -69,6 +70,7 @@
       this.roundNumber = 0; this.completedRounds = 0; this.phase = 'running'; this.pauseUntil = 0;
       this.wins = [0, 0, 0, 0]; this.draws = 0;
       this.roundResults = []; this.outroUntil = 0;
+      this.workshop = { balances: [0,0,0,0], modules: [null,null,null,null], installed: [0,0,0,0], lastAwards: [] };
       this.events = []; this.eventSeq = 0; this.eventDigest = 0; this.eventStep = 0;
       this._startRound();
     }
@@ -87,8 +89,8 @@
     _startRound() {
       this.roundNumber++;
       this.roundSeed = this.roundNumber === 1 ? this.seed : hashSeed('scrap-round-v1', this.seed, this.roundNumber);
-      const Round = this.cfg.rulesVersion === 'classic' && this.cfg.arena === 'yard' ? ObservedRound : ImprovedRound;
-      this.roundSim = new Round({ seed: this.roundSeed, rulesVersion: this.cfg.rulesVersion, arena: this.cfg.arena });
+      const Round = this.cfg.rulesVersion === 'classic' && this.cfg.arena === 'yard' && !this.cfg.workshop ? ObservedRound : ImprovedRound;
+      this.roundSim = new Round({ seed: this.roundSeed, rulesVersion: this.cfg.rulesVersion, arena: this.cfg.arena, upgrades: this.workshop.modules });
       // Non-enumerable: JSON of the round stays byte-identical to the source.
       Object.defineProperty(this.roundSim, 'emit', { value: (...args) => this._event(...args) });
       this.phase = 'running'; this.pauseUntil = 0; this.accumulator = 0;
@@ -120,6 +122,7 @@
           this.roundResults.push({ round: this.roundNumber, winner });
           if (this.roundResults.length > 8) this.roundResults.shift();
           this._event('round_end', 450, 450, { winner });
+          if (this.cfg.workshop && this.completedRounds < 8) this._awardModules();
           const tournament = this.cfg.episodeMode === 'tournament';
           if (tournament && this.completedRounds === 8) {
             this.phase = 'outro'; this.outroUntil = this.step + 5 * 60;
@@ -131,6 +134,22 @@
           this.accumulator = 0;
           break;
         }
+      }
+    }
+    _awardModules() {
+      const w = this.workshop, keys = Object.keys(EBS.ScrapRules.modules);
+      w.lastAwards = [];
+      for (const robot of this.roundSim.robots) {
+        const id = robot.id;
+        if (w.modules[id]) continue;
+        // Participation plus one damage milestone, not a winner-only jackpot.
+        // Four credits buys the only slot; no balance accumulates afterwards.
+        w.balances[id] = Math.min(4, w.balances[id] + 1 + (robot.damage >= 100 ? 1 : 0));
+        if (w.balances[id] < 4) continue;
+        const module = keys[(hashSeed('scrap-module-v1', this.seed) + id) % keys.length];
+        w.modules[id] = module; w.installed[id]++; w.balances[id] = 0;
+        w.lastAwards.push({ team: id, module });
+        this._event('upgrade', robot.x, robot.y, { team: id, module, appliesFromRound: this.roundNumber + 1 });
       }
     }
     _updateCamera() {
@@ -168,20 +187,24 @@
         roundResults: this.roundResults.map(r => ({ ...r })), champions: this.champions(),
         tournament: this.cfg.episodeMode === 'tournament', outroUntil: this.outroUntil,
         arena: this.cfg.arena, camera: { ...this.camera },
+        workshop: JSON.parse(JSON.stringify(this.workshop)),
         pauseRemaining: this.phase === 'pause' ? (this.pauseUntil - this.step) / 60 : 0,
         roundHash: this.roundSim.stateHash(), eventSeq: this.eventSeq,
-        summary: `Runde ${this.roundNumber} · ${s.summary}` };
+        summary: this.cfg.episodeMode === 'tournament' && this.completedRounds === 8
+          ? `Turnier beendet · ${this.champions().map(id => this.roundSim.robots[id].name).join(' + ')} · ${Math.max(...this.wins)} Siege`
+          : `Runde ${this.roundNumber} · ${s.summary}` };
     }
     stateHash() {
       // Full round state (AI targets/cooldowns, both RNGs, objects, effects, UI
       // feed) plus episode scheduling and a rolling digest of ALL past events.
-      const state = { version: 'scrap-episode-v1', seed: this.seed, cfg: this.cfg, world: this.world,
+      const state = { version: 'scrap-episode-v2', seed: this.seed, cfg: this.cfg, world: this.world,
         timeScale: this.timeScale, unitsPerStep: this.unitsPerStep, step: this.step, simTicks: this.simTicks,
         accumulator: this.accumulator, round: this.roundNumber, roundSeed: this.roundSeed,
         phase: this.phase, pauseUntil: this.pauseUntil, completed: this.completedRounds,
         wins: this.wins, draws: this.draws, roundResults: this.roundResults, outroUntil: this.outroUntil,
         eventSeq: this.eventSeq, eventDigest: this.eventDigest,
         camera: this.camera,
+        workshop: this.workshop,
         roundState: this.roundSim };
       return fnv1a(JSON.stringify(state, (_, v) => typeof v === 'number' && !Number.isFinite(v) ? String(v) : v)).toString(16).padStart(8, '0');
     }
@@ -203,6 +226,10 @@
       if (this.phase === 'running' && this.roundSim.phase !== 'running') errors.push('Aktive Runde bereits beendet');
       if (this.phase === 'pause' && this.pauseUntil <= this.step) errors.push('Rundenpause überschritten');
       if (this.cfg.episodeMode === 'tournament' && (this.completedRounds > 8 || this.roundNumber > 8)) errors.push('Turnier hat mehr als acht Runden');
+      if (![this.camera.x,this.camera.y,this.camera.zoom].every(Number.isFinite) || this.camera.zoom < 1 || this.camera.zoom > 1.4) errors.push('Kamerazustand ungültig');
+      if (this.workshop.installed.some(n => !Number.isInteger(n) || n < 0 || n > 1) || this.workshop.balances.some(n => !Number.isInteger(n) || n < 0 || n > 3) ||
+          this.workshop.modules.some(m => m !== null && !Object.hasOwn(EBS.ScrapRules.modules, m))) errors.push('Werkstattgrenzen verletzt');
+      if (!this.cfg.workshop && this.workshop.installed.some(Boolean)) errors.push('Werkstatt unerwartet aktiv');
       if (this.events.length > EVENT_LIMIT) errors.push('Ereignispuffer zu groß');
       for (let i = 0; i < this.events.length; i++) {
         const e = this.events[i], prev = this.events[i - 1];

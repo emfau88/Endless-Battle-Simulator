@@ -52,8 +52,14 @@ test('Scrap: UI-Regler, Teilen-Link und JSON bewahren Runde, Pause, Tempo, Bild 
     await page.uncheck('#p-repeatRounds');
     await page.locator('#p-endPauseSec').evaluate(el => { el.value = '7'; el.dispatchEvent(new Event('change')); });
     await page.locator('#vol-rocket').evaluate(el => { el.value = '135'; el.dispatchEvent(new Event('input')); });
+    await page.selectOption('#p-rulesVersion', 'v2');
+    await page.selectOption('#p-arena', 'crossroads');
+    await page.selectOption('#p-episodeMode', 'tournament');
+    await page.check('#p-workshop');
+    await page.waitForFunction(() => document.querySelector('#durationHint').textContent.startsWith('Automatisch:'));
     const expected = await page.evaluate(() => EBS.app.cfg);
     assert.equal(expected.params.repeatRounds, false); assert.equal(expected.params.endPauseSec, 7);
+    assert.equal(expected.params.workshop,true); assert.equal(expected.params.arena,'crossroads');
     assert.equal(expected.video.tempo, .8); assert.equal(expected.video.volume.rocket, 135);
     await page.waitForFunction(() => document.querySelector('#shareLink').value.includes('vol.rocket=135'));
     const link = await page.inputValue('#shareLink');
@@ -154,6 +160,8 @@ test('Scrap-Turnier: UI berechnet die Dauer, Export endet nach dem Finale und Pl
     await page.waitForFunction(() => window.EBS?.app?.cfg.scenario === 'scrap');
     await page.selectOption('#p-rulesVersion', 'v2');
     await page.selectOption('#p-episodeMode', 'tournament');
+    await page.selectOption('#p-arena', 'foundry');
+    await page.check('#p-workshop');
     await page.waitForFunction(() => document.querySelector('#durationHint').textContent.startsWith('Automatisch:'));
     const cfg = await page.evaluate(() => EBS.app.cfg);
     assert.ok(cfg.video.durationSec > 200 && cfg.video.durationSec < 800);

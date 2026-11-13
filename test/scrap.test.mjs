@@ -120,7 +120,7 @@ test('Scrap: Parameter normalisieren und kollidieren nicht mit Video-/Tonwerten'
   assert.equal(cfg.params.repeatRounds, false); assert.equal(cfg.params.endPauseSec, 7);
   assert.equal(cfg.video.volume.rocket, 130);
   assert.deepEqual(plain(EBS.normalizeConfig(plain(cfg))), plain(cfg));
-  assert.deepEqual(plain(EBS.Scrap.normalizeParams({ endPauseSec: 99, repeatRounds: 'false' })), { rulesVersion: 'classic', episodeMode: 'endless', arena: 'yard', repeatRounds: false, endPauseSec: 8 });
+  assert.deepEqual(plain(EBS.Scrap.normalizeParams({ endPauseSec: 99, repeatRounds: 'false' })), { rulesVersion: 'classic', episodeMode: 'endless', arena: 'yard', workshop: false, repeatRounds: false, endPauseSec: 8 });
 });
 
 test('Scrap-Turnier: genau acht Runden, echte fünf Sekunden Finale und gleiche UI-/Exportdauer', () => {
@@ -188,4 +188,40 @@ test('Scrap-Arenen: alle Starts und Waffen erreichbar; drei Seeds bleiben gülti
     }
   }
   assert.ok(maximumZoom > 1.2, 'Kamera hat tatsächlich eingezoomt');
+});
+
+test('Scrap-Werkstatt: drei Module, ein Slot, spätere Wirkung, Reset und reproduzierbare Turniere', () => {
+  assert.equal(EBS.Scrap.normalizeParams({workshop:true}).workshop,false);
+  const used = new Set();
+  for(const seed of [42,7,314]) {
+    const options={seed,params:{rulesVersion:'v2',episodeMode:'tournament',workshop:true}};
+    const a=make(options), b=make({...options,timeScale:.8});
+    while(a.phase!=='ended') {
+      a.stepOnce();
+      if(a.step%60===0) assert.equal(a.checkInvariants().ok,true);
+      if(a.phase==='running') a.roundSim.robots.forEach(r=>{
+        const module=a.workshop.modules[r.id];
+        assert.equal(r.module||null,module);
+        if(module) {
+          used.add(module);
+          const spec=EBS.ScrapRules.modules[module];
+          assert.equal(r.maxHp,125*spec.hp);
+          assert.ok(r.speed>=118*.92 && r.speed<=132*1.12);
+        }
+      });
+    }
+    while(b.phase!=='ended') b.stepOnce();
+    assert.deepEqual(plain(a.workshop.installed),[1,1,1,1]);
+    assert.deepEqual(plain(a.workshop),plain(b.workshop));
+    assert.deepEqual(plain(a.roundResults),plain(b.roundResults));
+    assert.equal(JSON.stringify(a.roundSim),JSON.stringify(b.roundSim));
+    const reset=make(options);
+    assert.deepEqual(plain(reset.workshop.installed),[0,0,0,0]);
+    assert.equal(reset.roundSim.robots.some(r=>r.module),false);
+  }
+  assert.equal(used.size,3);
+  for(const module of Object.values(EBS.ScrapRules.modules)) {
+    assert.ok(module.hp<1 || module.speed<1, 'jedes Modul hat einen Nachteil');
+    assert.ok(module.hp>1 || module.speed>1 || module.cooldown<1, 'jedes Modul hat einen Vorteil');
+  }
 });
