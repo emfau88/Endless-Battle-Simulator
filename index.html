@@ -128,6 +128,11 @@
 
     <div class="card">
       <h2>Video</h2>
+      <div class="ctl">
+        <label>YouTube-Vorlage für die gewählte Szene</label>
+        <div class="row"><button id="btnShortPreset" class="grow">Short · 1 Minute</button><button id="btnLongPreset" class="grow">Langvideo · 10 Minuten</button></div>
+        <div class="hint">1080p, 30 fps, mit Ton. Setzt Szenen- und Videoeinstellungen auf Standardwerte; der Seed bleibt erhalten. Startet noch keinen Export.</div>
+      </div>
       <div class="ctl"><label>Format</label><div class="seg" id="segFormat"></div></div>
       <div class="ctl"><label for="resolution">Auflösung und Bildrate <output id="resolutionOut"></output></label>
         <div class="row"><select id="resolution" aria-label="Auflösung des exportierten Videos"></select>
@@ -144,12 +149,10 @@
     </div>
 
     <div class="card">
-      <h2>Einstellungen teilen</h2>
-      <div class="row"><input type="text" id="shareLink" readonly aria-label="Link mit den aktuellen Einstellungen">
-        <button id="btnCopy" class="small">Kopieren</button></div>
-      <div class="row" style="margin-top:8px"><button id="btnSaveCfg" class="grow">⬇ JSON speichern</button><button id="btnLoadCfg" class="grow">⬆ JSON laden</button></div>
+      <h2>Einstellungen speichern</h2>
+      <div class="row"><button id="btnSaveCfg" class="grow">⬇ Datei speichern</button><button id="btnLoadCfg" class="grow">⬆ Datei laden</button></div>
       <input type="file" id="cfgFile" accept="application/json,.json" hidden>
-      <div class="hint" id="shareMsg">Der Link öffnet diese Szene mit denselben Einstellungen. Die JSON-Datei passt auch zu <code>npm run export -- --config</code>.</div>
+      <div class="hint" id="configMsg">Szene, Seed und alle Einstellungen als JSON-Datei aufbewahren. Auch die Einstellungsdatei neben einem exportierten Video lässt sich hier laden.</div>
     </div>
   </aside>
 </div>
@@ -174,6 +177,7 @@
 <script src="src/scenarios/mycelium/simulation.js"></script>
 <script src="src/scenarios/mycelium.js"></script>
 <script src="src/scenarios/pyramid.js"></script>
+<script src="src/production-presets.js"></script>
 <!-- Anwendung (Live-Bedienfeld + Export-Modus) -->
 <script src="src/app.js"></script>
 </body>

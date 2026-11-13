@@ -1,10 +1,11 @@
 # Roadmap
 
-**Aktueller Prüfstand · 13.11.2026:** Die erste Browser-Korrektur bestand im PR mit 134/134 Tests.
-Der Main-Nachlauf bestand mit 133/134; die früheren Ladefehler traten nicht mehr auf, ein anderer
-Konfigurationstest schlug fehl. Dessen Vorbereitung und Speicherprüfungen werden gezielt abgesichert;
-R02 bleibt bis zum vollständig grünen Main-Nachlauf offen.
-Prüfung und Abschluss: [Browser-Teststabilität](BROWSER_TESTSTABILITAET_2026-11-13.md).
+**Aktueller Auftrag · 13.11.2026:** R26 führt die fünf vorhandenen Szenarien schrittweise in einem
+gemeinsamen Produktionsgenerator zusammen. Auf Wunsch des Nutzers entfällt die Teilen-Link-Oberfläche;
+Seed, Feinjustierungen sowie Speichern/Laden von Einstellungen bleiben erhalten.
+[Integrationsbericht und offene Abnahmen](ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
+Der letzte vollständige Main-Lauf an `cc1bc7c` bestand mit **133/134 Tests**: offen ist der
+Sunny-Yard-MP4-Bytevergleich, nicht der frühere Konfigurationstest. **R02 bleibt offen.**
 
 **Vorheriger Nachweis:** Produktionsabsicherung und Scrap-Ton an `bc0bf61` abgeschlossen.
 Der vollständige [Linux-Lauf](https://github.com/emfau88/Endless-Battle-Simulator/actions/runs/43431587775)
@@ -70,7 +71,7 @@ neu sind **R20 für Scrap Wars / Scrap Arena**, **R21 für Naval-Zustandsabsiche
 **R22 für den begrenzten Scrap-Qualitätsausbau**, **R23 für den Pyramiden-Ausbau**,
 **R24 als Merkposten (Pyramiden-Melodie)** und **R25 für Endless Mycelium**.
 Mycelium hieß im isolierten Featurebranch ebenfalls R23; bei der Integration wird diese Doppelbelegung aufgelöst.
-Nächste freie ID: R26.
+**R26** bezeichnet den gemeinsamen Produktionsgenerator. Nächste freie ID: R27.
 Frühere B-/Schritt-Bezeichnungen sind Herkunftsverweise, keine zweite Aufgabenliste.
 
 ## 1 · Quellen und belastbarer Stand
@@ -304,6 +305,18 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   Notwendige Fehlerkorrekturen und Prüfungen zählen nicht als neue Gestaltungsvarianten. Kein Engine-/3D-Umbau,
   allgemeines Grafikframework, 4K-Leistungsprojekt oder paralleler Hex-/Marble-Ausbau. Einen guten Clip bereits
   nach P1/P2 veröffentlichungsreif beurteilen; die Werkstatt darf die erste Produktion nicht blockieren.
+
+- [ ] **R26 · Gemeinsamer Produktionsgenerator mit allen fünf Szenarien.**
+  **Auftrag:** vorhandene Szenarien nacheinander integrieren, gemeinsame Short-/Langvideo-Vorlagen,
+  Bedienung und Export prüfen. Keine neuen Szenariomechaniken. Arbeitsbranch: `codex/all-scenarios-production`.
+  **Umgesetzt:** Mycelium und Pyramid zusammengeführt; Vorlagen für alle fünf Szenarien; auf ausdrücklichen
+  Nutzerwunsch Teilen-Link-Oberfläche entfernt, Einstellungsdateien erhalten.
+  **Abnahme:** kurze echte Exporte beider Formate, vollständige Windows-/Linux-Prüfung, echte Langvideos,
+  Sicht-/Hörprüfung, danach freigegebener Main-Merge samt vollständigem Main-Nachlauf.
+  Der offene Pyramid-Finale-Tonbefund wird erst an einem echten vollständigen Film eingeordnet;
+  keine weitere Änderung auf Grundlage des separat normalisierten Stressfensters.
+  Exporte über 20 Sekunden benötigen die bereits besprochene Erweiterung der Freigabe.
+  [Messungen und Grenzen](ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
 
 - [ ] **R25 · Endless Mycelium ist im Integrationsbranch enthalten – Sicht-/Hörabnahme am Gerät abschließen.**
   **Ziel:** ruhiges Satisfying-Szenario (Myzel wächst, frisst Laub, Pilze, Sporen, nächste Generation in neuer Farbe)

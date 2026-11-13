@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "name": "Scrap Wars – Short (1 Minute)",
+  "scenario": "scrap",
+  "seed": 42,
+  "params": {
+    "arena": "sunshine",
+    "rulesVersion": "v3",
+    "episodeMode": "endless",
+    "repeatRounds": true
+  },
+  "video": {
+    "aspect": "9:16",
+    "resolution": 1080,
+    "fps": 30,
+    "durationSec": 60,
+    "tempo": 1,
+    "audio": true,
+    "volume": {
+      "master": 100
+    },
+    "quality": {
+      "crf": 20,
+      "preset": "medium",
+      "bitrate": null
+    }
+  },
+  "view": {
+    "hud": true,
+    "camera": false
+  }
+}

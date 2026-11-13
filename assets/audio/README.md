@@ -64,6 +64,11 @@ Glockenton, je Blatt einen Ton weiter auf der Dur-Pentatonik), `synth:myco-pop` 
 `synth:myco-breeze` (Sporenwolke: an- und abschwellendes Rauschen) und `synth:myco-night` (leise Nachtluft, 12 s mit
 weicher Ein-/Ausblendung, alle 10 s ausgelöst und dadurch nahtlos).
 
+Bei der Integration in den aktuellen Exporter wurde für Mycelium ein eigenes AAC-Profil gemessen:
+keine M/S-/Intensitätsstereo-Kodierung und kein Rauschersatz, PCM-Grenze −3 dBFS. Die Einmessung auf
+−14 LUFS und die strenge Nachprüfung des fertigen AAC bleiben erhalten. Dies gilt nur für Mycelium;
+[Messung und gezielte Tests](../../docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
+
 ## Endless Pyramid
 
 Die Klangtabelle in `src/scenarios/pyramid.js` verwendet dieselben unveränderten CC0-Dateien:

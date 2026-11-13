@@ -117,9 +117,65 @@ vollständiger normaler Einmessung und Messung der fertigen AAC-Spur. Er entsche
 ob die beobachtete Spitze den unterstützten Produktionsweg tatsächlich betrifft.
 Dieser Nachweis benötigt die Erweiterung der bisherigen 20-Sekunden-Exportgrenze.
 
+## Schritt 3: Produktionsvorlagen und vereinfachte Bedienung
+
+`src/production-presets.js` und zehn entsprechende JSON-Dateien unter `presets/production/`
+bieten pro Szenario ein Short (60 s, 9:16) und ein Langvideo (600 s, 16:9): 1080p30,
+CRF 20/medium, Ton und Standardlautstärke. Die UI-Knöpfe erhalten den Seed und setzen
+die übrigen Einstellungen auf die ausdrücklich beschriebenen Vorlagenwerte. Sie lösen
+keinen Export aus. Pyramid erhält für das Short einen 1-Minuten-Tag; Scrap Sunny Yard
+im Endlosmodus. Bestehende Spezialvorlagen bleiben erhalten.
+
+**Änderung durch den Nutzer während der Umsetzung:** Die bereits vorhandene
+Teilen-Link-Funktion wird nicht benötigt. Deshalb sind Linkfeld, Kopierknopf und
+laufende Linkerzeugung entfernt. Es entsteht keine neue Teilen-Funktion und keine
+Reparatur dieser Funktion. Das zuvor beobachtete Wegfallen der Qualitätswerte im
+Link ist nur ein Befund am verworfenen Bedienweg (`presets-before.log`).
+Direktaufrufe mit URL-Parametern bleiben aus Kompatibilitätsgründen lesbar.
+
+Speichern/Laden von Einstellungsdateien bleibt erhalten. Die bisherigen Übertragungs-
+prüfungen verwenden nun diesen tatsächlichen Bedienweg und vergleichen weiterhin
+vollständige Konfigurationen bzw. den Simulationszustand. Der MP4-Bytevergleich im
+Sunny-Yard-Test bleibt unverändert streng. Bei einem Fehlschlag werden Original,
+Replay, beide JSON-Dateien und Hashes erst **nach** den Exports gesichert; keine
+Diagnosewiederholungen oder Änderungen am Capture-/Kodierablauf.
+
+Der lokale PC-Befehl übernimmt jetzt auch CRF, Encoder-Preset und gegebenenfalls die
+Bitrate, damit eine gewählte Produktionsvorlage beim Export über diesen Weg erhalten
+bleibt. Das ist besonders für den Mycelium-Standard CRF 16 gegenüber der gemeinsamen
+Vorlage CRF 20 relevant.
+
+**Gezielte Bedienprüfung: 11/11 bestanden**, einschließlich beider Vorlagen für alle
+fünf Szenarien, vollständigem JSON-Roundtrip, Handyansicht, Fehlereingaben und dem
+weiterhin bytegenauen Sunny-Yard-Replay. Das Bestehen des Replays erklärt dessen
+historischen Linux-Fehler nicht. Log: `output/integration/settings-presets.log`.
+
+## Schritt 4: vollständiger Produktionsweg und CI
+
+`test/presets-export.test.mjs` prüft alle fünf Szenarien in beiden Vorlagen über
+einen eigenen lokalen Server: UI-Auswahl → vollständiger API-Auftrag → MP4/JSON →
+Nachmessung → bytegleicher Download. Nur die Dauer wird auf drei Sekunden verkürzt.
+MP4, JSON, extrahiertes Bild, Serverlog und Jobstatus werden als Belege gesichert.
+Damit wird nicht behauptet, bereits komplette 60-/600-Sekunden-Filme geprüft zu haben.
+
+**Gezielte Produktionsprüfung unter Windows: 10/10 bestanden** (541 Sekunden Testlauf).
+Alle zehn Dateien enthalten 90 Bilder bei 1080p/30 fps und eine geprüfte AAC-Tonspur;
+der HTTP-Download stimmt bytegenau mit der geprüften MP4 überein. Die Bildstichproben
+bei 2,5 Sekunden zeigen die erwarteten Szenen. Das ist keine vollständige Sicht- oder
+Hörabnahme. Log: `output/integration/production-paths.log`; MP4-/JSON-/Bildbelege:
+`output/production-checks/1794596464826/`.
+
+Die CI erhält eigene Gruppen für Mycelium, Pyramid und diese Produktionsvorlagen,
+damit die bisherigen Gruppen nicht um sämtliche neuen Browser-/Exporttests wachsen.
+Alle bisherigen Zeitgrenzen bleiben unverändert. Fehlerpaare und Produktionsbelege
+werden zusätzlich zu den Test-/Versionslogs als Artefakte hochgeladen.
+
+Prüfergebnisse des vollständigen Windows-/Linux-Laufs werden am Arbeitsbranch bzw.
+im zugehörigen Pull Request und im Abschlussbericht mit dem tatsächlich geprüften
+Commit festgehalten. Dieser Bericht dokumentiert die Umsetzung vor dieser Gesamtfreigabe.
+
 ## Noch offen
 
-Gemeinsame Produktionsvorlagen/Bedienung prüfen, gezielte Exporte
-aller fünf Szenarien, vollständige Windows-/Linux-Prüfung und Sicht-/Hörabnahme.
+Vollständige Windows-/Linux-Prüfung und Sicht-/Hörabnahme der vollständigen Filme.
 Echte Langexports über 20 Sekunden benötigen die zuvor besprochene Erweiterung der
 Freigabe. Main-Merge und anschließender Main-Nachlauf sind noch nicht erfolgt.

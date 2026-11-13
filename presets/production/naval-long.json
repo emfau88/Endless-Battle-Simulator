@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "Seeschlacht – Langvideo (10 Minuten)",
+  "scenario": "naval",
+  "seed": 42,
+  "params": {},
+  "video": {
+    "aspect": "16:9",
+    "resolution": 1080,
+    "fps": 30,
+    "durationSec": 600,
+    "tempo": 1,
+    "audio": true,
+    "volume": {
+      "master": 100
+    },
+    "quality": {
+      "crf": 20,
+      "preset": "medium",
+      "bitrate": null
+    }
+  },
+  "view": {
+    "hud": true,
+    "camera": true
+  }
+}

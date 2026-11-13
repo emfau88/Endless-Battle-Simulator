@@ -7,24 +7,18 @@ Direkt zur Kugelfabrik: [hochkant](https://emfau88.github.io/Endless-Battle-Simu
 Vorschau und Regler laufen im Browser, auch am Handy. Videos entstehen am eigenen PC (`start.bat`).
 
 Deterministische 2D-Physiksimulation im Stil von Algodoo-/„Satisfying Physics“-Videos mit automatischem MP4-Export.
-Erstes Szenario: **Endless Naval Battle** – zwei Schiffe beschießen sich endlos, jede Kanonenkugel läuft in einem
-geschlossenen, sichtbaren Kreislauf zurück ins Magazin.
+Dieser Arbeitsstand vereint fünf Szenarien im selben Generator:
 
-Zweites Szenario: **Endless Marble Factory** – eine Kugelfabrik mit geschlossenem Kreislauf, deren Grafik vollständig
-im Code entsteht (siehe [Endless Marble Factory](#endless-marble-factory)).
+| Szenario | Inhalt |
+|---|---|
+| Endless Naval Battle | Seeschlacht mit sichtbarem Kreislauf der Kanonenkugeln |
+| Endless Marble Factory | Kugelfabrik mit geschlossenem Kreislauf |
+| Scrap Wars | Roboterkämpfe mit Deckung, Waffen und Folgerunden |
+| Endless Mycelium | Pilzgeflecht, Laub, Pilze und neue Sporengenerationen |
+| Endless Pyramid | Glaspyramide mit Becherwerk, Leuchtkugeln oder Tierchen, Tageslauf und Finale |
 
-Viertes Szenario: **Endless Mycelium** – ein leuchtendes Pilzgeflecht wächst, frisst Laub, bildet Pilze und Sporen,
-vergeht und keimt in der nächsten Farbe neu; ruhiges Satisfying-Video mit eigenen Reglern und YouTube-Standard 1440p60
-(siehe [Endless Mycelium](#endless-mycelium)).
-
-Drittes Szenario: **Scrap Wars** – vier Roboter, zerstörbare Deckung, Waffenaufnahme und deterministische
-Folgerunden mit Punktestand. Die Arena aus dem bereitgestellten Scrap-Prototyp nutzt den gemeinsamen
-Konfigurations-, Vorschau- und MP4-Weg. Alle drei Szenarien exportieren mit Ton,
-eingemessen auf YouTube-Lautheit (siehe [Ton](#ton)).
-
-Viertes Szenario: **Endless Pyramid** – Figuren laufen endlos über eine begrünte Glaspyramide: Becherwerk im
-Glasschacht, Murmelbahn mit Wendekappen außen, Lagune unten. Wahlweise als Leuchtkugeln oder als runde Tierchen mit
-Ärmchen und Beinchen (siehe [Endless Pyramid](#endless-pyramid)).
+Alle verwenden dieselbe Bedienoberfläche und den MP4-Export mit Ton. Integrationsnachweise und noch offene
+Abnahmen stehen im [Integrationsbericht](docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
 
 Die Architektur ist für weitere Szenarien und Videoformate vorbereitet (siehe [Erweiterbarkeit](#erweiterbarkeit));
 der aktuelle Gesamtzustand steht im [Audit vom 12.11.2026](docs/AUDIT_2026-11-12.md). Offene Punkte:
@@ -36,8 +30,29 @@ der aktuelle Gesamtzustand steht im [Audit vom 12.11.2026](docs/AUDIT_2026-11-12
   laufen im Browser, auch am Handy. Ein Video entsteht dort nicht; der Export braucht den eigenen PC.
 - **Am PC:** `start.bat` doppelklicken. Der Server startet, der Browser öffnet `http://localhost:8080`, und der Knopf
   „Video exportieren“ funktioniert. Das Fenster offen lassen; Schließen beendet den Server.
-- **Einstellungen mitnehmen:** Im Bedienfeld unter „Einstellungen teilen“ den Link kopieren oder eine JSON-Datei
-  speichern und am PC wieder laden (auch als `--config` für die Kommandozeile).
+- **Einstellungen aufbewahren:** Unter „Einstellungen speichern“ eine JSON-Datei speichern und später wieder
+  laden. Sie enthält Szene, Seed und Feinjustierungen; auch als `--config` für die Kommandozeile verwendbar.
+
+## Gemeinsame YouTube-Vorlagen
+
+Szene auswählen, unter „Video“ **Short · 1 Minute** oder **Langvideo · 10 Minuten** anklicken,
+bei Bedarf Einstellungen anpassen und **Video exportieren** drücken. Die Vorlage setzt Szenen- und
+Videoeinstellungen auf Standardwerte zurück und erhält den gewählten Seed. Sie startet keinen Export.
+
+Beide Vorlagen verwenden 1080p, 30 fps, H.264 (CRF 20, `medium`) und AAC-Ton. Das Short ist hochkant (9:16),
+das Langvideo quer (16:9). Bei Pyramid dauert der Short-Tag eine Minute, damit das Finale am Ende liegt;
+beim Langvideo folgt er der Videolänge. Scrap verwendet Sunny Yard im Endlosmodus.
+
+| Szene | Short-Datei | Langvideo-Datei |
+|---|---|---|
+| Seeschlacht | [naval-short.json](presets/production/naval-short.json) | [naval-long.json](presets/production/naval-long.json) |
+| Kugelfabrik | [marble-short.json](presets/production/marble-short.json) | [marble-long.json](presets/production/marble-long.json) |
+| Scrap Wars | [scrap-short.json](presets/production/scrap-short.json) | [scrap-long.json](presets/production/scrap-long.json) |
+| Myzel | [mycelium-short.json](presets/production/mycelium-short.json) | [mycelium-long.json](presets/production/mycelium-long.json) |
+| Pyramide | [pyramid-short.json](presets/production/pyramid-short.json) | [pyramid-long.json](presets/production/pyramid-long.json) |
+
+Die bisherigen Spezialvorlagen bleiben verfügbar. Vorlagendauer und tatsächlich geprüfte Filmlänge sind
+getrennte Angaben; der [Integrationsbericht](docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md) dokumentiert die Abnahme.
 
 ## Voraussetzungen
 
@@ -332,7 +347,7 @@ Schlagseite und dunklerer Rumpf. Gemessener Verlauf bei 35 %: **1 min ≈ 3 % ·
 | Videoqualität / Bitrate | CRF, x264-Preset, feste Bitrate in CLI und Schema (nicht in der Oberfläche) | `video.quality`; `encoderArgs()` in `lib/exporter.mjs` |
 | Frei wählbare Dauer | CLI, Schema und Oberfläche frei (1 s – 4 h); Oberfläche zusätzlich mit Schnellwahl | `UI_DURATIONS`, `parseDuration()` in `src/app.js` |
 | Ton und Lautstärke | Tonspur aus Ereignissen, −14 LUFS, Regler gesamt und je Klang in Oberfläche, CLI und Schema | `audio` in der Szenario-Registrierung; `lib/audio.mjs` |
-| Vorlagen und Seeds speichern | `presets/*.json`, `--config`, JSON neben jedem Video; Oberfläche: Teilen-Link, JSON speichern und laden, letzte Konfiguration bleibt erhalten | „Einstellungen teilen“ in `src/app.js` |
+| Vorlagen und Seeds speichern | `presets/*.json`, `--config`, JSON neben jedem Video; Oberfläche: Einstellungsdateien speichern und laden, letzte Konfiguration bleibt erhalten | „Einstellungen speichern“ in `src/app.js` |
 | Modulare Szenarien | Registry + Schnittstelle fertig; Bedienfeld, Statistiken, Ton-Regler, Export und Tests arbeiten szenariounabhängig | `EBS.registerScenario(...)` |
 
 ### Neues Szenario anlegen
@@ -365,7 +380,7 @@ Keimstelle; dicke Stränge entstehen von selbst dort, wo viel dahinter gewachsen
 Generation nach (groß und unscharf, sie drehen sich und landen mit Schatten). Totes Geflecht bleibt kurz als Narbe
 sichtbar und wird dann aus dem Speicher entfernt – auch ein Video über Stunden wächst nicht in den Speicher.
 
-**Regler** (alle in Oberfläche, Teilen-Link, JSON und `--param key=wert`):
+**Regler** (alle in Oberfläche, JSON und `--param key=wert`):
 
 | Regler | Schlüssel | Bereich (Standard) | Wirkung |
 |---|---|---|---|
@@ -494,7 +509,7 @@ Schiene überschlagen sie sich physikalisch korrekt (Drehung = Weg ÷ Radius, Ri
 bei hohem Tempo Spiralaugen. Im Becher winken sie, beim Fallen reißen sie die Arme hoch und richten sich auf, in der
 Lagune paddeln sie mit geschlossenen Glücksaugen. Wackelaugen und Blinzeln sind deterministisch.
 
-**Regler** (alle in Oberfläche, Teilen-Link, JSON und CLI-Konfiguration):
+**Regler** (alle in Oberfläche, JSON und CLI-Konfiguration):
 
 | Regler | Wirkung | Bereich |
 |---|---|---|
@@ -535,7 +550,7 @@ an den Kappen, dazu „Juhu“ beim Fallen und „Quiek“, wenn der Becher zugr
 
 Reine Darstellung – der Physikverlauf und die Referenz-Hashes bleiben unverändert. Die Standardwerte sind so gewählt,
 dass jedes Video je nach Länge das passende Maß bekommt; alles ist im Bedienfeld einzeln schalt- und einstellbar und
-steht in `params` (Teilen-Link, JSON, `--param`).
+steht in `params` (JSON, `--param`).
 
 | Was | Standard | Einstellbar |
 |---|---|---|
@@ -570,8 +585,8 @@ bei Ausschnitten betreffen sie den Clip, während die übrigen Mischwerte weiter
 Kanonenschuss, Treffer, Platscher, Kugel am Grund, Nachladen; Kugelfabrik: neun Klänge), jeweils **0–200 %**, Standard 100 % = YouTube-Ziel.
 Nach links leiser, nach rechts lauter (200 % = +6 dB, 50 % = −6 dB, 0 % = Klang aus). Der Gesamtregler wirkt unter
 100 % hinter dem Begrenzer (50 % ergibt genau −20 LUFS), darüber treibt er in den Begrenzer: lauter, die Spitzen
-bleiben begrenzt. Die Werte gelten für jedes Format (Hoch- und Querformat), werden gespeichert und stehen im
-Teilen-Link (`vol.splash=40`) und in der JSON-Datei (`"video": { "volume": { "master": 80, "splash": 150 } }`).
+bleiben begrenzt. Die Werte gelten für jedes Format (Hoch- und Querformat), werden gespeichert und stehen in der
+JSON-Datei (`"video": { "volume": { "master": 80, "splash": 150 } }`).
 Per Kommandozeile: `--volume master=80 --volume splash=150`. Die Simulation bleibt davon unberührt.
 
 - **Ereignisse statt Aufnahme:** Die Simulation protokolliert, was passiert (Aufnahme am Zellenrad, Landung auf dem

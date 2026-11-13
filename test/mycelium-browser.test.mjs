@@ -1,4 +1,4 @@
-// Endless Mycelium im Browser: Rendern in allen Formaten, 30/60 fps, Bedienfeld/Teilen-Link und echte kurze MP4s.
+// Endless Mycelium im Browser: Rendern in allen Formaten, 30/60 fps, Einstellungsdateien und echte kurze MP4s.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
@@ -49,7 +49,7 @@ test('Myzel: alle Formate, 30/60 fps und Rendern verändern weder Ablauf noch Er
   }
 });
 
-test('Myzel: Bedienfeld – YouTube-Standard beim Wechsel, Farbauswahl ohne Neustart, Teilen-Link vollständig', async () => {
+test('Myzel: Bedienfeld – YouTube-Standard beim Wechsel, Farbauswahl ohne Neustart, Einstellungsdatei vollständig', async () => {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   const loaded = await browser.newPage();
   try {
@@ -83,8 +83,12 @@ test('Myzel: Bedienfeld – YouTube-Standard beim Wechsel, Farbauswahl ohne Neus
     await page.locator('#vol-leaf_eaten').evaluate((el) => { el.value = '140'; el.dispatchEvent(new Event('input')); });
     const expected = await page.evaluate(() => EBS.app.cfg);
     assert.equal(expected.params.cycleSec, 60); assert.equal(expected.video.volume.leaf_eaten, 140);
-    await page.waitForFunction(() => document.querySelector('#shareLink').value.includes('vol.leaf_eaten=140'));
-    await loaded.goto(await page.inputValue('#shareLink'));
+    const [download] = await Promise.all([page.waitForEvent('download'), page.click('#btnSaveCfg')]);
+    const settings = join(dir, 'mycelium-settings.json'); await download.saveAs(settings);
+    assert.deepEqual(JSON.parse(readFileSync(settings, 'utf8')), expected);
+    await loaded.goto(pathToFileURL(INDEX).href + '?paused=1');
+    await loaded.waitForFunction(() => window.EBS?.app?.sim);
+    await loaded.setInputFiles('#cfgFile', settings);
     await loaded.waitForFunction(() => window.EBS?.app?.cfg.scenario === 'mycelium');
     assert.deepEqual(await loaded.evaluate(() => EBS.app.cfg), expected);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);

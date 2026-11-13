@@ -109,6 +109,12 @@ async function bootLive() {
     session.start({ scenario: scSel.value, seed: c.seed, video, view: c.view }); // neue Standardwerte des Szenarios
     acc = 0; fit(); save(); buildScenarioUi(); syncUi();
   });
+  for (const [id, kind] of [['btnShortPreset', 'short'], ['btnLongPreset', 'long']]) {
+    $(id).addEventListener('click', () => {
+      session.start(normalizeConfig(EBS.productionPreset(session.cfg.scenario, kind, session.cfg.seed)));
+      speed = 1; acc = 0; fit(); save(); buildScenarioUi(); syncUi();
+    });
+  }
   function buildScenarioUi() {
     const sc = session.scenario, box = $('scenarioControls');
     box.innerHTML = '';
@@ -322,14 +328,16 @@ async function bootLive() {
     const c = session.cfg;
     const p = Object.entries(c.params).map(([k, v]) => `--param ${k}=${v}`).join(' ');
     const vol = c.video.audio ? Object.entries(c.video.volume).filter(([, v]) => v !== 100).map(([k, v]) => ` --volume ${k}=${v}`).join('') : '';
-    return `npm run export -- --scenario ${c.scenario} --seed ${c.seed} --aspect ${c.video.aspect} --resolution ${c.video.resolution} --fps ${c.video.fps} --duration ${c.video.durationSec}${c.video.tempo !== 1 ? ' --tempo ' + c.video.tempo : ''} ${p}${c.view.hud ? '' : ' --no-hud'}${c.view.camera ? '' : ' --no-camera'}${c.video.audio ? vol : ' --no-audio'}`;
+    const q = c.video.quality;
+    const quality = ` --crf ${q.crf} --preset ${q.preset}${q.bitrate ? ' --bitrate ' + q.bitrate + 'k' : ''}`;
+    return `npm run export -- --scenario ${c.scenario} --seed ${c.seed} --aspect ${c.video.aspect} --resolution ${c.video.resolution} --fps ${c.video.fps} --duration ${c.video.durationSec}${c.video.tempo !== 1 ? ' --tempo ' + c.video.tempo : ''}${quality} ${p}${c.view.hud ? '' : ' --no-hud'}${c.view.camera ? '' : ' --no-camera'}${c.video.audio ? vol : ' --no-audio'}`;
   };
   // Gibt es den lokalen Export-Server? (null = noch unbekannt; false z. B. beim Öffnen als Datei oder über GitHub Pages)
   let hasServer = location.protocol === 'file:' ? false : null;
   const showOffline = () => {
     btnExp.textContent = '⬇ Export nur am eigenen PC – Befehl anzeigen';
     const h = $('exportHint');
-    h.textContent = 'Vorschau ohne Export-Server: Regler und Vorschau funktionieren hier, das Video entsteht am eigenen PC (Node.js, Chromium, FFmpeg). Einstellungen per Link oder JSON mitnehmen.';
+    h.textContent = 'Vorschau ohne Export-Server: Regler und Vorschau funktionieren hier, das Video entsteht am eigenen PC (Node.js, Chromium, FFmpeg). Einstellungen als Datei speichern und am PC wieder laden.';
     h.hidden = false;
   };
   if (hasServer === false) showOffline();
@@ -379,30 +387,15 @@ async function bootLive() {
     fetch('/api/export').then((r) => r.json()).then((s) => { showStatus(s); if (s.state === 'running') polling = setInterval(poll, 1000); }).catch(() => {});
   }
 
-  // ---- Einstellungen teilen: Link mit allen Werten, JSON speichern und laden
-  const shareUrl = () => {
-    const c = session.cfg, q = new URLSearchParams();
-    const put = (k, v) => q.set(k, String(v));
-    put('scenario', c.scenario); put('seed', c.seed);
-    for (const [k, v] of Object.entries(c.params)) put(k, v);
-    for (const k of ['aspect', 'resolution', 'fps', 'durationSec', 'tempo', 'audio']) put(k, c.video[k]);
-    for (const [k, v] of Object.entries(c.video.volume)) put(EBS.VOLUME_PREFIX + k, v);
-    put('hud', c.view.hud); put('camera', c.view.camera);
-    return location.href.split(/[?#]/)[0] + '?' + q.toString();
-  };
-  const shareMsg = $('shareMsg');
-  const sayShare = (text, isError) => { shareMsg.textContent = text; shareMsg.classList.toggle('err', !!isError); };
-  $('btnCopy').addEventListener('click', async () => {
-    const link = $('shareLink'); link.value = shareUrl(); link.select();
-    try { await navigator.clipboard.writeText(link.value); sayShare('Link kopiert.'); }
-    catch { sayShare('Link ist markiert – bitte mit Strg+C bzw. „Kopieren“ übernehmen.'); }
-  });
+  // ---- Einstellungen als Datei speichern und laden
+  const configMsg = $('configMsg');
+  const sayConfig = (text, isError) => { configMsg.textContent = text; configMsg.classList.toggle('err', !!isError); };
   $('btnSaveCfg').addEventListener('click', () => {
     const c = session.cfg, a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(c, null, 2) + '\n'], { type: 'application/json' }));
     a.download = `${c.scenario}_seed${c.seed}_${c.video.aspect.replace(':', 'x')}.json`;
     a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    sayShare(`Gespeichert als ${a.download}.`);
+    sayConfig(`Gespeichert als ${a.download}.`);
   });
   $('btnLoadCfg').addEventListener('click', () => $('cfgFile').click());
   $('cfgFile').addEventListener('change', async () => {
@@ -414,11 +407,9 @@ async function bootLive() {
       // sowohl gespeicherte Einstellungen als auch die JSON-Datei neben einem Video ("config") werden akzeptiert
       session.start(normalizeConfig(j && typeof j.config === 'object' && j.config ? j.config : j));
       acc = 0; fit(); save(); buildScenarioUi(); syncUi();
-      sayShare(`Einstellungen aus ${file.name} geladen.`);
-    } catch (e) { sayShare(`${file.name} konnte nicht geladen werden: ${e.message}`, true); }
+      sayConfig(`Einstellungen aus ${file.name} geladen.`);
+    } catch (e) { sayConfig(`${file.name} konnte nicht geladen werden: ${e.message}`, true); }
   });
-  const refreshShare = () => { const l = $('shareLink'); if (document.activeElement !== l) l.value = shareUrl(); };
-  refreshShare();
 
   // ---- Hauptschleife: feste Physikschritte, Rendering entkoppelt
   function frame(now) {
@@ -438,7 +429,6 @@ async function bootLive() {
       const sc = session.scenario;
       if (sc.panelStats) for (const s of sc.panelStats(session.sim)) { const el = $('stat-' + s.key); if (el) el.textContent = s.value; }
       $('scenarioNote').textContent = sc.panelNote ? sc.panelNote(session.sim) : '';
-      refreshShare();
     }
     requestAnimationFrame(frame);
   }

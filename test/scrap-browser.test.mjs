@@ -1,6 +1,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, readdirSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, readdirSync, mkdirSync, copyFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -44,7 +45,7 @@ test('Scrap: Canvas-Upload, beide Formate/Quadrat und 30/60 fps erhalten Simulat
   }
 });
 
-test('Scrap: UI-Regler, Teilen-Link und JSON bewahren Runde, Pause, Tempo, Bild und Ton', async () => {
+test('Scrap: UI-Regler, Neuladen und JSON bewahren Runde, Pause, Tempo, Bild und Ton', async () => {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, acceptDownloads: true });
   try {
     await page.goto(pathToFileURL(INDEX).href + '?scenario=scrap&seed=314&tempo=0.8');
@@ -61,17 +62,9 @@ test('Scrap: UI-Regler, Teilen-Link und JSON bewahren Runde, Pause, Tempo, Bild 
     assert.equal(expected.params.repeatRounds, false); assert.equal(expected.params.endPauseSec, 7);
     assert.equal(expected.params.workshop,true); assert.equal(expected.params.arena,'crossroads');
     assert.equal(expected.video.tempo, .8); assert.equal(expected.video.volume.rocket, 135);
-    // The link refreshes separately from the asynchronous tournament preflight.
-    // Wait for all new params AND the resolved duration, not an earlier volume edit.
-    await page.waitForFunction(cfg => {
-      const q = new URL(document.querySelector('#shareLink').value).searchParams;
-      return q.get('vol.rocket') === '135' && Number(q.get('durationSec')) === cfg.video.durationSec
-        && Object.entries(cfg.params).every(([key, value]) => q.get(key) === String(value));
-    }, expected);
-    const link = await page.inputValue('#shareLink');
-    // Reload in the same tab: two continuously painted software-WebGL previews
-    // needlessly compete for the renderer on slow CI machines.
-    await page.goto(link); await page.waitForFunction(() => window.EBS?.app?.cfg.scenario === 'scrap');
+    await page.reload();
+    await page.waitForFunction(() => window.EBS?.app?.cfg.scenario === 'scrap'
+      && document.querySelector('#durationHint').textContent.startsWith('Automatisch:'));
     assert.deepEqual(await page.evaluate(() => EBS.app.cfg), expected);
     const [download] = await Promise.all([page.waitForEvent('download'), page.click('#btnSaveCfg')]);
     const file = join(dir, 'scrap-config.json'); await download.saveAs(file);
@@ -121,7 +114,7 @@ test('Scrap v3: Materialkarten bleiben auch beim letzten Duell fest; identische 
   }
 });
 
-test('Sunny Yard: Auswahl aus Originalregeln, Teilen-Link und kurzer MP4-Replay bewahren die neue Karte', async () => {
+test('Sunny Yard: Auswahl aus Originalregeln, Einstellungsdatei und kurzer MP4-Replay bewahren die neue Karte', async () => {
   const page=await browser.newPage();
   try {
     await page.goto(pathToFileURL(INDEX).href+'?scenario=scrap&rulesVersion=classic&paused=1');
@@ -131,13 +124,14 @@ test('Sunny Yard: Auswahl aus Originalregeln, Teilen-Link und kurzer MP4-Replay 
     await page.selectOption('#p-arena','sunshine');
     await page.waitForFunction(()=>EBS.app.cfg.params.arena==='sunshine'&&EBS.app.cfg.params.rulesVersion==='v3');
     assert.equal(await page.isDisabled('#p-rulesVersion'),true);
-    await page.waitForFunction(()=>{
-      const q=new URL(document.querySelector('#shareLink').value).searchParams;
-      return q.get('arena')==='sunshine'&&q.get('rulesVersion')==='v3';
-    });
-    const expected=await page.evaluate(()=>EBS.app.cfg.params),link=await page.inputValue('#shareLink');
-    await page.goto(link);await page.waitForFunction(()=>window.EBS?.app?.cfg.params.arena==='sunshine');
-    assert.deepEqual(await page.evaluate(()=>EBS.app.cfg.params),expected);
+    const expected=await page.evaluate(()=>EBS.app.cfg);
+    const [download]=await Promise.all([page.waitForEvent('download'),page.click('#btnSaveCfg')]);
+    const settings=join(dir,'sunny-ui.json');await download.saveAs(settings);
+    assert.deepEqual(JSON.parse(readFileSync(settings,'utf8')),expected);
+    await page.goto(pathToFileURL(INDEX).href+'?scenario=naval&paused=1');
+    await page.waitForFunction(()=>window.EBS?.app?.cfg.scenario==='naval');
+    await page.setInputFiles('#cfgFile',settings);await page.waitForFunction(()=>window.EBS?.app?.cfg.params.arena==='sunshine');
+    assert.deepEqual(await page.evaluate(()=>EBS.app.cfg),expected);
     await page.selectOption('#p-arena','yard');assert.equal(await page.isDisabled('#p-rulesVersion'),false);
     await page.selectOption('#p-rulesVersion','v2');
     assert.equal(await page.evaluate(()=>EBS.app.cfg.params.rulesVersion),'v2');
@@ -149,8 +143,21 @@ test('Sunny Yard: Auswahl aus Originalregeln, Teilen-Link und kurzer MP4-Replay 
     const first=await exportVideo(cfg,options('sunny-'+aspect.replace(':','x')));
     assert.deepEqual(verifyResult(first),[]);assert.equal(first.cfg.params.rulesVersion,'v3');assert.equal(first.audio.lost,0);
     const replay=await exportVideo(JSON.parse(readFileSync(first.sidecar,'utf8')),options('sunny-replay-'+aspect.replace(':','x')));
+    const a=readFileSync(first.file),b=readFileSync(replay.file),equal=a.equals(b);
+    if(!equal||first.stateHash!==replay.stateHash||first.audio.eventHash!==replay.audio.eventHash) {
+      // Capture only after both exports have finished; the measured export path is unchanged.
+      const evidence=join(ROOT,'output','test-failures',`sunny-${aspect.replace(':','x')}-${Date.now()}`);
+      mkdirSync(evidence,{recursive:true});
+      for(const [name,result] of [['original',first],['replay',replay]]) {
+        copyFileSync(result.file,join(evidence,name+'.mp4'));copyFileSync(result.sidecar,join(evidence,name+'.json'));
+      }
+      writeFileSync(join(evidence,'comparison.json'),JSON.stringify({aspect,
+        stateHashes:[first.stateHash,replay.stateHash],eventHashes:[first.audio.eventHash,replay.audio.eventHash],
+        mp4Sha256:[a,b].map(bytes=>createHash('sha256').update(bytes).digest('hex'))},null,2));
+      console.error('Sunny-Yard-Replaybelege: '+evidence);
+    }
     assert.equal(first.stateHash,replay.stateHash);assert.equal(first.audio.eventHash,replay.audio.eventHash);
-    assert.ok(readFileSync(first.file).equals(readFileSync(replay.file)),aspect+': bytegleiche Wiederholung');
+    assert.ok(equal,aspect+': bytegleiche Wiederholung');
   }
 });
 
