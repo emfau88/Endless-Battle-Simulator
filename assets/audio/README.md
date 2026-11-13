@@ -28,11 +28,13 @@ Rollgeräusche enthält das Paket nicht; sie fehlen vorerst.
 Die Klangtabelle in `src/scenarios/scrap.js` verwendet dieselben unveränderten CC0-Dateien:
 `impactMetal_light_000/001` für Robotertreffer, `impactPlate_light_000` für Deckungstreffer,
 `impactWood_heavy_000` für zerstörte Deckung und `impactTin_medium_000` für Waffenabwurf.
-Explosion und KO nutzen den vorhandenen erzeugten Klang `synth:cannon` mit unterschiedlicher Stimmung.
+Explosionen nutzen `synth:cannon`; KOs verwenden `impactMetal_light_003` neun Halbtöne tiefer.
+Die Werkstatt verwendet den vorhandenen Pickup-Klang zwei Halbtöne tiefer.
 
 `synth:scrap-blaster`, `synth:scrap-rocket` und `synth:scrap-pickup` werden deterministisch in
 `lib/audio.mjs` erzeugt. Die kurzen abfallenden bzw. ansteigenden Oszillatorklänge orientieren sich am
 bereitgestellten Scrap-Prototyp; sie sind keine extern geladenen Samples und keine bitgleiche Kopie seiner
 WebAudio-Ausgabe. Waffenarten werden aus dem Schussereignis gelesen (der Prototyp unterschied sie anhand
 einer Effektgröße, die bei beiden Waffen über seiner Klangschwelle lag). Die vollständige Ereignisfolge
-bleibt erhalten; nur dicht aufeinanderfolgende Deckungstreffer werden im Mischer klanglich ausgedünnt.
+bleibt erhalten; dicht aufeinanderfolgende Blaster-, Treffer-, Deckungs-, Explosions- und Modulklänge
+werden je Klangtyp im vorhandenen Mischer begrenzt. KOs werden dabei nicht unterdrückt.

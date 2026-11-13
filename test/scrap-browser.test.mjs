@@ -33,7 +33,7 @@ test('Scrap: Canvas-Upload, beide Formate/Quadrat und 30/60 fps erhalten Simulat
       const readOnly = await page.evaluate(() => {
         const cfg = exportAPI.config(), world = exportAPI.info().world, sc = EBS.getScenario('scrap');
         const sim = sc.create({ seed: cfg.seed, params: cfg.params, world, timeScale: cfg.video.tempo });
-        for (let i = 0; i < 54 * 60; i++) sim.stepOnce(); // result banner during pause
+        while (sim.phase === 'running' && sim.step < 91 * 60) sim.stepOnce(); // first result banner, independent of arena duration
         const renderer = sc.createRenderer({ sim, world, renderScale: .5, view: cfg.view });
         const before = sim.stateHash(); renderer.draw(); renderer.draw(); const after = sim.stateHash();
         renderer.destroy(); return { before, after, phase: sim.phase };
@@ -46,20 +46,33 @@ test('Scrap: Canvas-Upload, beide Formate/Quadrat und 30/60 fps erhalten Simulat
 
 test('Scrap: UI-Regler, Teilen-Link und JSON bewahren Runde, Pause, Tempo, Bild und Ton', async () => {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, acceptDownloads: true });
-  const loaded = await browser.newPage();
   try {
     await page.goto(pathToFileURL(INDEX).href + '?scenario=scrap&seed=314&tempo=0.8');
     await page.waitForFunction(() => window.EBS?.app?.cfg.scenario === 'scrap');
     await page.uncheck('#p-repeatRounds');
     await page.locator('#p-endPauseSec').evaluate(el => { el.value = '7'; el.dispatchEvent(new Event('change')); });
     await page.locator('#vol-rocket').evaluate(el => { el.value = '135'; el.dispatchEvent(new Event('input')); });
+    await page.selectOption('#p-rulesVersion', 'v3');
+    await page.selectOption('#p-arena', 'crossroads');
+    await page.selectOption('#p-episodeMode', 'tournament');
+    await page.check('#p-workshop');
+    await page.waitForFunction(() => document.querySelector('#durationHint').textContent.startsWith('Automatisch:'));
     const expected = await page.evaluate(() => EBS.app.cfg);
-    assert.deepEqual(expected.params, { repeatRounds: false, endPauseSec: 7 });
+    assert.equal(expected.params.repeatRounds, false); assert.equal(expected.params.endPauseSec, 7);
+    assert.equal(expected.params.workshop,true); assert.equal(expected.params.arena,'crossroads');
     assert.equal(expected.video.tempo, .8); assert.equal(expected.video.volume.rocket, 135);
-    await page.waitForFunction(() => document.querySelector('#shareLink').value.includes('vol.rocket=135'));
+    // The link refreshes separately from the asynchronous tournament preflight.
+    // Wait for all new params AND the resolved duration, not an earlier volume edit.
+    await page.waitForFunction(cfg => {
+      const q = new URL(document.querySelector('#shareLink').value).searchParams;
+      return q.get('vol.rocket') === '135' && Number(q.get('durationSec')) === cfg.video.durationSec
+        && Object.entries(cfg.params).every(([key, value]) => q.get(key) === String(value));
+    }, expected);
     const link = await page.inputValue('#shareLink');
-    await loaded.goto(link); await loaded.waitForFunction(() => window.EBS?.app?.cfg.scenario === 'scrap');
-    assert.deepEqual(await loaded.evaluate(() => EBS.app.cfg), expected);
+    // Reload in the same tab: two continuously painted software-WebGL previews
+    // needlessly compete for the renderer on slow CI machines.
+    await page.goto(link); await page.waitForFunction(() => window.EBS?.app?.cfg.scenario === 'scrap');
+    assert.deepEqual(await page.evaluate(() => EBS.app.cfg), expected);
     const [download] = await Promise.all([page.waitForEvent('download'), page.click('#btnSaveCfg')]);
     const file = join(dir, 'scrap-config.json'); await download.saveAs(file);
     assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')), expected);
@@ -67,7 +80,7 @@ test('Scrap: UI-Regler, Teilen-Link und JSON bewahren Runde, Pause, Tempo, Bild 
     await page.waitForFunction(() => EBS.app.cfg.scenario === 'scrap');
     assert.deepEqual(await page.evaluate(() => EBS.app.cfg), expected);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-  } finally { await page.close(); await loaded.close(); }
+  } finally { await page.close(); }
 });
 
 test('Scrap: echte kurze MP4s beider Formate entsprechen der Simulation; Exportrezept reproduziert Ton und Bild', async () => {
@@ -87,6 +100,57 @@ test('Scrap: echte kurze MP4s beider Formate entsprechen der Simulation; Exportr
         assert.ok(readFileSync(replay.file).equals(readFileSync(r.file)), 'MP4-Wiederholung nicht bytegleich');
       } else assert.equal(r.audioStream, null);
     } finally { await page.close(); }
+  }
+});
+
+test('Scrap v3: Materialkarten bleiben auch beim letzten Duell fest; identische Bilder aus Vorlauf und 30/60 fps', async () => {
+  for(const arena of ['yard','foundry','crossroads','sunshine'])for(const aspect of ['16:9','9:16']) {
+    const {page,errors}=await openExportPage(browser,config({aspect,resolution:720,durationSec:90},{rulesVersion:'v3',arena}));
+    try {
+      const at=await page.evaluate(()=>{
+        const cfg=exportAPI.config(),sim=new EBS.Scrap.Episode({seed:cfg.seed,params:cfg.params,world:exportAPI.info().world});
+        while(sim.phase==='running'&&sim.roundSim.robots.filter(r=>r.alive).length>2)sim.stepOnce();
+        return Math.ceil((sim.step/60+1)*30)/30;
+      });
+      const drawn=await page.evaluate(at=>{exportAPI.simulate(at-1);const frames=exportAPI.renderFrames(30,1,'image/png');return{frame:frames.at(-1),hash:exportAPI.hash()};},at);
+      await page.evaluate(()=>exportAPI.restart({video:{fps:60}}));
+      const seek=await page.evaluate(at=>{exportAPI.simulate(at-1/30);return{frame:exportAPI.renderFrames(2,1,'image/png').at(-1),hash:exportAPI.hash(),check:exportAPI.check()};},at);
+      assert.equal(seek.frame,drawn.frame,`${arena}/${aspect}: exaktes Kamerabild`);
+      assert.equal(seek.hash,drawn.hash);assert.equal(seek.check.ok,true);assert.deepEqual(errors.map(e=>e.message),[]);
+    } finally {await page.close();}
+  }
+});
+
+test('Sunny Yard: Auswahl aus Originalregeln, Teilen-Link und kurzer MP4-Replay bewahren die neue Karte', async () => {
+  const page=await browser.newPage();
+  try {
+    await page.goto(pathToFileURL(INDEX).href+'?scenario=scrap&rulesVersion=classic&paused=1');
+    await page.waitForFunction(()=>window.EBS?.app?.cfg.scenario==='scrap');
+    assert.equal(await page.isDisabled('#camera'),true);
+    assert.equal(await page.isChecked('#camera'),false);
+    await page.selectOption('#p-arena','sunshine');
+    await page.waitForFunction(()=>EBS.app.cfg.params.arena==='sunshine'&&EBS.app.cfg.params.rulesVersion==='v3');
+    assert.equal(await page.isDisabled('#p-rulesVersion'),true);
+    await page.waitForFunction(()=>{
+      const q=new URL(document.querySelector('#shareLink').value).searchParams;
+      return q.get('arena')==='sunshine'&&q.get('rulesVersion')==='v3';
+    });
+    const expected=await page.evaluate(()=>EBS.app.cfg.params),link=await page.inputValue('#shareLink');
+    await page.goto(link);await page.waitForFunction(()=>window.EBS?.app?.cfg.params.arena==='sunshine');
+    assert.deepEqual(await page.evaluate(()=>EBS.app.cfg.params),expected);
+    await page.selectOption('#p-arena','yard');assert.equal(await page.isDisabled('#p-rulesVersion'),false);
+    await page.selectOption('#p-rulesVersion','v2');
+    assert.equal(await page.evaluate(()=>EBS.app.cfg.params.rulesVersion),'v2');
+    await page.selectOption('#scenario','naval');
+    assert.equal(await page.isDisabled('#camera'),false,'andere Szenarien behalten ihre Kameraoption');
+  } finally {await page.close();}
+  for(const aspect of ['16:9','9:16']) {
+    const cfg=config({aspect,durationSec:2,audio:true},{arena:'sunshine'});
+    const first=await exportVideo(cfg,options('sunny-'+aspect.replace(':','x')));
+    assert.deepEqual(verifyResult(first),[]);assert.equal(first.cfg.params.rulesVersion,'v3');assert.equal(first.audio.lost,0);
+    const replay=await exportVideo(JSON.parse(readFileSync(first.sidecar,'utf8')),options('sunny-replay-'+aspect.replace(':','x')));
+    assert.equal(first.stateHash,replay.stateHash);assert.equal(first.audio.eventHash,replay.audio.eventHash);
+    assert.ok(readFileSync(first.file).equals(readFileSync(replay.file)),aspect+': bytegleiche Wiederholung');
   }
 });
 
@@ -125,7 +189,7 @@ test('Ausschnitt: Originalepisode, voller Ton samt Nachklang/Normalisierung und 
 });
 
 test('Scrap: Rundenwechsel im kurzen Clip und Abbruch im Vorlauf/Tonmischer verwenden den gemeinsamen Produktionsweg', async () => {
-  const c = config({ durationSec: 60, aspect: '16:9' });
+  const c = config({ durationSec: 60, aspect: '16:9' }, { rulesVersion: 'classic' }); // historical 52–57 s transition
   const r = await exportVideo(c, { ...options('transition'), clip: { startSec: 52, durationSec: 5 } });
   assert.deepEqual(verifyResult(r), []); assert.equal(r.snapshot.round, 2);
   assert.ok(r.audioEvents.some(e => e.type === 'round_end' && e.step / 60 > 52));
@@ -144,4 +208,67 @@ test('Ausschnitt: ungültige Grenzen werden ohne Veröffentlichung abgewiesen', 
   }
   await assert.rejects(exportVideo({ ...config(), scenario: 'naval' }, { ...options('invalid'), clip: { startSec: 0, durationSec: 1 } }), /noch nicht freigegeben/);
   assert.ok(!readdirSync(dir).some(f => f.startsWith('invalid') || f.startsWith('.ebs-export-')));
+});
+
+test('Scrap-Turnier: UI berechnet die Dauer, Export endet nach dem Finale und Planung ist abbrechbar', async () => {
+  const page = await browser.newPage();
+  try {
+    await page.goto(pathToFileURL(INDEX).href + '?scenario=scrap&paused=1');
+    await page.waitForFunction(() => window.EBS?.app?.cfg.scenario === 'scrap');
+    await page.selectOption('#p-rulesVersion', 'v2');
+    await page.selectOption('#p-episodeMode', 'tournament');
+    await page.selectOption('#p-arena', 'foundry');
+    await page.check('#p-workshop');
+    await page.waitForFunction(() => document.querySelector('#durationHint').textContent.startsWith('Automatisch:'));
+    const cfg = await page.evaluate(() => EBS.app.cfg);
+    assert.ok(cfg.video.durationSec > 200 && cfg.video.durationSec < 800);
+    assert.equal(await page.isDisabled('#durationText'), true);
+    const end = cfg.video.durationSec;
+    const r = await exportVideo({ ...cfg, video: { ...cfg.video, durationSec: 1, resolution: 720, audio: false } },
+      { ...options('finale'), clip: { startSec: end - 2, durationSec: 2 } });
+    assert.equal(r.cfg.video.durationSec, end); assert.equal(r.snapshot.phase, 'ended');
+    assert.equal(r.snapshot.completedRounds, 8); assert.deepEqual(verifyResult(r), []);
+    const ac = new AbortController();
+    await assert.rejects(exportVideo(cfg, { ...options('abort-planning'), signal: ac.signal,
+      onProgress: p => { if (p.phase === 'planning') ac.abort(); } }), e => e.name === 'AbortError');
+    assert.ok(!readdirSync(dir).some(f => f.startsWith('abort-planning') || f.startsWith('.ebs-export-')));
+  } finally { await page.close(); }
+});
+
+test('Scrap-Duellkamera: Bild nach Vorlauf entspricht 30/60-fps-Capture auf allen drei Karten', async () => {
+  for(const arena of ['yard','foundry','crossroads']) {
+    const {page,errors}=await openExportPage(browser,config({aspect:'16:9',resolution:720},{rulesVersion:'v2',arena}));
+    try {
+      const compare=await page.evaluate(()=>{
+        exportAPI.simulate(34);
+        const continuous=exportAPI.renderFrames(30,1,'image/png').at(-1), hash=exportAPI.hash();
+        exportAPI.restart(); exportAPI.simulate(35-1/30);
+        const sought=exportAPI.renderFrames(1,1,'image/png')[0];
+        exportAPI.restart({video:{fps:60}}); exportAPI.simulate(35-1/60);
+        const sixty=exportAPI.renderFrames(1,1,'image/png')[0];
+        return {same:continuous===sought&&sought===sixty,hash,after:exportAPI.hash(),checks:exportAPI.check()};
+      });
+      assert.equal(compare.same,true); assert.equal(compare.hash,compare.after); assert.equal(compare.checks.ok,true);
+      assert.equal(errors.length,0);
+    } finally {await page.close();}
+  }
+});
+
+test('Scrap-Turnierton: alle acht Runden und vier Module im vollständigen Mix eines kurzen Finale-Clips', async () => {
+  const c=config({aspect:'16:9'},{rulesVersion:'v2',episodeMode:'tournament',workshop:true});
+  const {page}=await openExportPage(browser,c);
+  let duration;
+  try { duration=await page.evaluate(()=>{let p;do{p=exportAPI.planEpisode();}while(!p.done);return p.durationSec;}); }
+  finally {await page.close();}
+  const r=await exportVideo(c,{...options('finale-audio'),clip:{startSec:duration-2,durationSec:2}});
+  assert.deepEqual(verifyResult(r),[]);assert.equal(r.audio.lost,0);
+  assert.equal(r.cfg.video.durationSec,duration);assert.equal(r.audio.episodeDurationSec,duration);
+  const count=type=>r.audioEvents.filter(e=>e.type===type).length;
+  assert.equal(count('round_start'),8);assert.equal(count('round_end'),8);
+  assert.equal(count('upgrade'),4);assert.equal(count('tournament_end'),1);
+  assert.equal(r.snapshot.phase,'ended');assert.equal(r.snapshot.round,8);
+  assert.match(r.snapshot.summary,/Turnier beendet/);
+  const replay=await exportVideo(JSON.parse(readFileSync(r.sidecar,'utf8')),{...options('finale-audio-replay')});
+  assert.equal(replay.stateHash,r.stateHash);assert.equal(replay.audio.eventHash,r.audio.eventHash);
+  assert.ok(readFileSync(r.file).equals(readFileSync(replay.file)));
 });

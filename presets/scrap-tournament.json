@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "name": "Scrap Wars – acht Runden mit automatischem Abschluss",
+  "scenario": "scrap",
+  "seed": 42,
+  "params": { "rulesVersion": "v3", "episodeMode": "tournament", "arena": "yard", "workshop": false, "repeatRounds": true, "endPauseSec": 3 },
+  "video": { "aspect": "16:9", "resolution": 1080, "fps": 30, "durationSec": 1, "tempo": 1, "audio": true },
+  "view": { "hud": true, "camera": false }
+}

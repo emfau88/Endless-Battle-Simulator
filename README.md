@@ -94,14 +94,65 @@ Renderer oder Programmversionen hinweg sind damit nicht zugesichert.
 In der Szenarioauswahl **Scrap Wars** wählen oder lokal
 `http://localhost:8080/?scenario=scrap` öffnen. Vier Roboter starten mit Blastern und je 125 Lebenspunkten.
 Leere Waffen werden abgeworfen, neue aufgesammelt; Raketen zerstören auch Deckung und öffnen Wege.
-Die ursprünglichen Kampfregeln bleiben erhalten. Nach höchstens 90 Simulationssekunden endet eine Runde.
+Standard ist **Große Arena · Holz, Stein, Beton** (`rulesVersion=v3`): eine echte 1040×540-Arena,
+die in 16:9 rund 90 % des Bildes belegt, mit schmaler Kopfzeile und klaren Deckungsgruppen.
+Holzkisten benötigen 2, Steinblöcke 5 und Betonblöcke 10 direkte Blastertreffer; direkte Raketen benötigen
+1/1/2 Treffer. Splitter und Bruchstücke bleiben sichtbar, zerstörte Blöcke geben den Weg physisch frei.
+Hochformat lässt Namen/HUD aufrecht. Scrapyard, Foundry und Crossroads drehen dieselbe Arena um 90°,
+Sunny Yard besitzt einen eigenen Hochformat-Grundriss mit Nord-/Südstarts.
+Quadrat zeigt die vollständige breite Arena mit freien Rändern. Kurzprobe: [scrap-materials.json](presets/scrap-materials.json).
+
+Die bisherigen Varianten bleiben als **Originalprototyp** (`rulesVersion=classic`) und
+**Bisherige Arena · flüssiger Kampf** (`rulesVersion=v2`) erhalten. V2 und V3 berücksichtigen Hindernisse und
+Wartezeit bei der Waffenwahl; die beiden Nachschubstationen laden 25 % schneller nach.
+V3 verändert Geometrie und Deckung, deshalb auch Rundenausgänge. Gespeicherte Regelversionen bleiben erhalten;
+alte Links/JSON ohne `rulesVersion` verwenden jetzt V3 – für frühere Originalresultate `classic` ausdrücklich setzen.
+Die beiden alten 20-s-Kurzvorlagen sind dafür ausdrücklich auf `classic` festgelegt.
+Nach höchstens 90 Simulationssekunden endet eine Runde.
 Ein alleiniger Überlebender gewinnt; mehrere Überlebende am Zeitlimit ergeben ein Unentschieden.
 
 Standardmäßig folgt nach drei **Videosekunden** Ergebnisanzeige eine neue Runde mit reproduzierbar abgeleitetem
 Seed. Siege werden über die Episode gezählt. `repeatRounds=false` hält das Ergebnis der ersten Runde;
 `endPauseSec=2…8` steuert die Endpause. Beide Regler starten die Episode neu. Filmtempo 1/0,8/0,64 verändert
 die Zuordnung zur Videozeit, nicht die festen 120-Hz-Physikschritte. Runde und Rundenzeit stehen zusätzlich
-zur gesamten Simulationszeit im Bedienfeld. Gleiche Arena und Regeln gelten für Hoch-, Quer- und Quadratformat.
+zur gesamten Simulationszeit im Bedienfeld. Die Regeln gelten für alle Formate; Sunny Yard verwendet im
+Hochformat einen eigenen Grundriss, die anderen Karten behalten beim Formatwechsel dieselbe Physik.
+
+**Neu für Videos:** vier deutlich gefärbte Chassis, kompakte Anzeigen und drei sichtbare Schadensstufen.
+Scrapyard, Foundry, Crossroads und **Sunny Yard** sind die vier verfügbaren Karten.
+Sunny Yard ist ein heller Betonhof mit Naturholz, rauem Stein, gegossenem Beton und kleinen bepflanzten
+Trögen am Rand. Materialtiefe, Schäden und einheitliche Schatten machen die Deckungen unterscheidbar.
+Im Querformat führen offene Mittelwege zwischen vier Deckungsgruppen hindurch; Waffen liegen näher am Kampf.
+Im Hochformat gibt es eine eigene Nord-/Süd-Arena: je zwei Roboter starten oben und unten, versetzte Deckungen
+nutzen die Bildhöhe, Nachschub steht in der Mitte. Der Formatwechsel verändert hier bewusst den Kampfverlauf
+und gegebenenfalls die Turnierlänge. Haltbarkeit und Waffenwerte bleiben gleich; es bleibt jeder gegen jeden.
+Die Auswahl aktiviert automatisch die große V3-Arena. Vorlage: [scrap-sunny-yard.json](presets/scrap-sunny-yard.json).
+Scrap verwendet eine feste Gesamtansicht ohne automatische Kamerafahrten oder Zoomwechsel, auch im letzten
+Duell und beim Rundenwechsel. Der Kameraschalter ist für Scrap deaktiviert; alte Links/JSON mit
+`camera=true` werden entsprechend normalisiert. Andere Szenarien behalten ihre Kameraoption.
+
+**Turnier:** `episodeMode=tournament` spielt genau acht Runden, zeigt den sortierten Zwischenstand und
+endet mit fünf Sekunden Gesamtergebnis. Gleichstände ergeben geteilte Sieger. Oberfläche und Export
+berechnen die tatsächliche Länge aus Seed, Regeln, Karte und Tempo. Diese Dauer ersetzt im Turnier die
+freie Dauerangabe; `repeatRounds` gilt dort nicht. Vorlage: [scrap-tournament.json](presets/scrap-tournament.json).
+Acht Runden sind keine feste Zehn-Minuten-Länge. Für kurze Proben weiterhin `--clip-start`/`--clip-duration` verwenden.
+
+**Werkstatt (optional, experimentell):** nur im Turnier, ein Modul und höchstens eine Aufrüstung je Roboter.
+Eine abgeschlossene Runde gibt einen Scrap-Punkt, mindestens 100 verursachter Schaden einen weiteren.
+Vier Punkte kaufen automatisch ein per Seed festgelegtes Modul; es wirkt ab der Folgerunde. Danach werden
+keine weiteren Punkte gesammelt. Alles wird beim Neustart zurückgesetzt. Die drei Module sind:
+
+| Modul | Vorteil | Nachteil |
+|---|---|---|
+| Plating | 15 % mehr maximale HP | 8 % weniger Tempo |
+| Drive | 12 % mehr Tempo | 10 % weniger maximale HP |
+| Capacitor | 12 % kürzere Schusspause | 8 % weniger maximale HP |
+
+Vorlage mit längerer Ergebnis-/Werkstattpause: [scrap-workshop.json](presets/scrap-workshop.json).
+Die begrenzten Vergleichsläufe ersetzen noch keine breite Balance- oder persönliche Hörabnahme.
+Umsetzung, Messwerte und Vorher/Nachher-Nachweise: [Scrap-Videoqualität](docs/SCRAP_VIDEOQUALITAET_2026-11-13.md).
+Die danach ausdrücklich verlangte Arena-Neufassung ist separat dokumentiert:
+[Große Arena und drei Materialien](docs/SCRAP_MATERIALARENA_2026-11-13.md).
 
 Der Canvas-Renderer liefert Welt, Roboterdaten und vergrößertes Ergebnisbanner an die gemeinsame Pixi-Capturebühne.
 Die Vorschau ist wie bei den anderen Szenarien stumm; die MP4-Tonspur enthält Blaster, Raketen, Treffer,

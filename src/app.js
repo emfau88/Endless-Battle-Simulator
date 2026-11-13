@@ -25,7 +25,7 @@ function parseDuration(text) {
   const sec = Math.round(parseFloat(m[1]) * (m[2] === 'h' || m[2] === 'std' ? 3600 : m[2] === 'm' || m[2] === 'min' ? 60 : 1));
   return sec > 0 ? sec : null;
 }
-const fmtDuration = (s) => (s % 3600 === 0 ? s / 3600 + 'h' : s % 60 === 0 ? s / 60 + 'm' : s + 's');
+const fmtDuration = (s) => (s % 3600 === 0 ? s / 3600 + 'h' : s % 60 === 0 ? s / 60 + 'm' : Number(s.toFixed(2)) + 's');
 
 // ---------------- Export-Modus ----------------
 async function bootExport() {
@@ -124,12 +124,13 @@ async function bootLive() {
         Object.assign(el, { min: c.min, max: c.max, step: c.step });
       }
       el.id = id; d.appendChild(el); box.appendChild(d);
+      const value = () => c.type === 'select' ? c.options.find(([v]) => String(v) === el.value)[0] : +el.value;
       el.addEventListener('input', () => {
-        const v = +el.value;
+        const v = value();
         if (c.format) $('o-' + c.key).textContent = c.format(v);
         if (!c.restart) onParam(c, v);
       });
-      el.addEventListener('change', () => { if (c.restart) onParam(c, +el.value); });
+      el.addEventListener('change', () => { if (c.restart) onParam(c, value()); });
     }
     if (checks.children.length) box.appendChild(checks);
     buildVolumeUi();
@@ -223,18 +224,41 @@ async function bootLive() {
   for (const [v, t] of Object.entries(EBS.RESOLUTIONS)) resSel.add(new Option(t, v));
   const showSize = () => { const vs = videoSize(cfg().video); $('resolutionOut').textContent = `${vs.width}×${vs.height}`; };
   resSel.addEventListener('change', () => { session.cfg.video.resolution = +resSel.value; save(); showSize(); });
-  const markFps = seg('segFps', EBS.FPS_OPTIONS.map((f) => [f, f + ' fps']), cfg().video.fps, (v) => { session.cfg.video.fps = v; save(); });
+  const markFps = seg('segFps', EBS.FPS_OPTIONS.map((f) => [f, f + ' fps']), cfg().video.fps, (v) => { session.cfg.video.fps = v; save(); showDuration(); });
   // Videolänge: freie Eingabe (1 s bis 4 h) plus Schnellwahl; beide zeigen stets den Wert der Konfiguration
   const dur = $('duration'), durText = $('durationText'), durHint = $('durationHint'), DUR_HINT = durHint.textContent;
   dur.add(new Option('Eigene Dauer', ''));
   for (const [v, t] of UI_DURATIONS) dur.add(new Option(t, v));
+  let durationPlanKey = '', durationGeneration = 0, durationPending = false;
   const showDuration = (note, isError) => {
+    const natural = !!session.scenario.hasNaturalDuration?.(cfg());
+    const key = natural ? JSON.stringify([cfg().scenario, cfg().seed, cfg().params, cfg().video.tempo, cfg().video.fps]) : '';
+    dur.disabled = durText.disabled = natural;
+    if (key !== durationPlanKey) {
+      durationPlanKey = key;
+      const generation = ++durationGeneration;
+      durationPending = natural;
+      if (natural) {
+        const plan = session.scenario.createExportPlan(cfg(), session.world);
+        const tick = () => {
+          if (generation !== durationGeneration) return;
+          try {
+            const result = plan.advance();
+            if (!result.done) { setTimeout(tick, 0); return; }
+            session.cfg.video.durationSec = result.durationSec; durationPending = false; save(); showDuration();
+          } catch (e) { durationPending = false; durHint.textContent = e.message; durHint.classList.add('err'); }
+        };
+        setTimeout(tick, 0);
+      }
+    }
     const d = cfg().video.durationSec;
     if (!isError) durText.value = fmtDuration(d);
     durText.classList.toggle('bad', !!isError);
     $('durationOut').textContent = fmtTime(d);
     dur.value = UI_DURATIONS.some(([v]) => v === d) ? String(d) : '';
-    durHint.textContent = note || DUR_HINT; durHint.classList.toggle('err', !!isError);
+    durHint.textContent = natural ? (durationPending ? 'Turnierdauer wird berechnet …' : 'Automatisch: acht vollständige Runden und 5 Sekunden Gesamtergebnis.') : note || DUR_HINT;
+    $('durationOut').textContent = durationPending ? '…' : fmtTime(d);
+    durHint.classList.toggle('err', !!isError);
   };
   const setDuration = (sec, note) => { session.cfg.video.durationSec = sec; save(); showDuration(note); };
   dur.addEventListener('change', () => { if (dur.value) setDuration(+dur.value); else showDuration(); });
@@ -263,11 +287,14 @@ async function bootLive() {
     for (const ctl of session.scenario.controls) {
       const el = $('p-' + ctl.key), v = c.params[ctl.key];
       if (!el) continue;
+      el.disabled = ctl.enabled ? !ctl.enabled(c.params) : false;
       if (ctl.type === 'check') el.checked = !!v; else el.value = String(v);
       const o = $('o-' + ctl.key);
       if (o && ctl.format) o.textContent = ctl.format(+v);
     }
     $('hud').checked = c.view.hud; $('camera').checked = c.view.camera;
+    $('camera').disabled = session.scenario.supportsCamera === false;
+    $('camera').parentElement.title = $('camera').disabled ? 'Dieses Szenario zeigt eine feste Gesamtansicht.' : '';
     // Ton gibt es nur für Szenarien mit Klangtabelle; die Vorschau selbst bleibt stumm
     const hasAudio = !!session.scenario.audio;
     $('audio').checked = hasAudio && c.video.audio; $('audio').disabled = !hasAudio;
@@ -305,7 +332,7 @@ async function bootLive() {
     $('btnCancel').disabled = !!s.cancelRequested;
     msg.classList.toggle('err', s.state === 'error');
     if (s.state === 'running') {
-      const phases = { starting: 'Starte Renderer …', simulating: 'Berechne den Episodenverlauf …', encoding: 'Schließe die Bildspur ab …',
+      const phases = { starting: 'Starte Renderer …', planning: 'Ermittle das Turnierende …', simulating: 'Berechne den Episodenverlauf …', encoding: 'Schließe die Bildspur ab …',
         'audio-loading': 'Lade die Klänge …', 'audio-mixing': 'Mische und prüfe die Tonspur …',
         muxing: 'Verbinde Bild und Ton …', verifying: 'Prüfe die fertige Videodatei …', saving: 'Speichere Video und Einstellungen …' };
       msg.textContent = s.cancelRequested ? 'Abbruch angefordert – räume auf …'

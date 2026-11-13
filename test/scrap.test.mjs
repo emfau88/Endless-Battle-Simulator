@@ -6,7 +6,7 @@ import vm from 'node:vm';
 
 const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const context = vm.createContext({}); context.window = context;
-for (const path of ['core.js', 'canvas-scene.js', 'scenarios/scrap/simulation.js', 'scenarios/scrap/renderer.js', 'scenarios/scrap/episode.js', 'scenarios/scrap.js']) {
+for (const path of ['core.js', 'canvas-scene.js', 'scenarios/scrap/simulation.js', 'scenarios/scrap/renderer.js', 'scenarios/scrap/rules.js', 'scenarios/scrap/materials.js', 'scenarios/scrap/daylight-art.js', 'scenarios/scrap/material-art.js', 'scenarios/scrap/episode.js', 'scenarios/scrap.js']) {
   vm.runInContext(read('src/' + path), context, { filename: path });
 }
 const { EBS } = context;
@@ -14,6 +14,102 @@ const make = (overrides = {}) => new EBS.Scrap.Episode({ seed: 42, params: {}, w
 const advance = (s, seconds) => { for (let i = 0; i < Math.round(seconds * 60); i++) s.stepOnce(); };
 const plain = o => JSON.parse(JSON.stringify(o));
 const sha = data => createHash('sha256').update(data).digest('hex');
+
+test('Scrap v3: Holz, Stein und Beton brauchen 2/5/10 Blaster oder 1/1/2 direkte Raketen; zerstörte Deckung gibt Wege frei', () => {
+  for(const [material,blaster,rocket] of [['wood',2,1],['stone',5,1],['concrete',10,2]])for(const [kind,hits] of [['blaster',blaster],['rocket',rocket]]) {
+    const s=make({params:{rulesVersion:'v3',repeatRounds:false}}),r=s.roundSim;
+    const b={...r.blocks.find(b=>b.material===material),x:200,y:200,w:64,h:64};r.blocks=[b];
+    for(let shot=1;shot<=hits;shot++) {
+      r.projectiles=[{id:100+shot,x:140,y:232,px:140,py:232,vx:1000,vy:0,kind,owner:0,life:2,radius:kind==='rocket'?7:4}];
+      r._moveProjectiles(1); // crosses the entire block in one step: swept collision required
+      assert.equal(b.alive,shot<hits,`${material}/${kind}/${shot}`);
+      assert.equal(r.projectiles.length,0);
+      assert.equal(r._blocked(140,232,320,232,24),shot<hits,'echte Kollisionsdeckung, nach Zerstörung passierbar');
+    }
+    assert.equal(r.stats.destroyed,1);assert.equal(s.events.filter(e=>e.type==='break').length,1);
+    assert.equal(r.effects.find(e=>e.type==='break').material,material);
+  }
+  const r=make({params:{rulesVersion:'v3'}}).roundSim;
+  r.projectiles=[{id:100,x:950,y:270,px:950,py:270,vx:650,vy:0,kind:'blaster',owner:0,life:2,radius:4}];
+  r._moveProjectiles(.05);assert.equal(r.projectiles.length,1,'östlich der alten 900er-Grenze frei');
+  r._moveProjectiles(.1);assert.equal(r.projectiles.length,0,'neue Außenwand stoppt Projektil');
+  r.robots[0].x=1100;assert.equal(r.checkInvariants().ok,false,'Rechteckgrenze tatsächlich geprüft');
+});
+
+test('Scrap v3: alle vier Karten samt eigener Nord-/Süd-Arena begehbar; drei Seeds kollisionsfrei und im Kamerabild', () => {
+  for(const [arena,portrait] of [['yard',false],['foundry',false],['crossroads',false],['sunshine',false],['sunshine',true]]) {
+    const world=portrait?{w:1080,h:1920}:{w:1920,h:1080};
+    const initial=make({params:{rulesVersion:'v3',arena},world}).roundSim;
+    const free=(x,y)=>!initial.blocks.some(b=>Math.hypot(x-Math.max(b.x,Math.min(x,b.x+b.w)),y-Math.max(b.y,Math.min(y,b.y+b.h)))<25);
+    const cells=new Map();for(let x=50;x<=990;x+=10)for(let y=50;y<=490;y+=10)if(free(x,y))cells.set(`${x},${y}`,{x,y});
+    const queue=[cells.get('110,80')],seen=new Set(['110,80']);
+    for(let i=0;i<queue.length;i++)for(const [dx,dy] of [[10,0],[-10,0],[0,10],[0,-10]]) {
+      const key=`${queue[i].x+dx},${queue[i].y+dy}`;if(cells.has(key)&&!seen.has(key)){seen.add(key);queue.push(cells.get(key));}
+    }
+    assert.equal(seen.size,cells.size,`${arena}: keine abgetrennte begehbare Zelle`);
+    for(const p of [...initial.robots,...initial.pickups,...initial.pads])assert.ok(queue.some(c=>Math.hypot(c.x-p.x,c.y-p.y)<15),`${arena}: Start/Nachschub erreichbar`);
+    for(const seed of [42,7,314]) {
+      const s=make({seed,params:{rulesVersion:'v3',arena,repeatRounds:false},world});
+      while(s.phase==='running') {
+        s.stepOnce();
+        assert.equal(s.camera.zoom,1);assert.equal(s.camera.x,520);assert.equal(s.camera.y,270);
+        if(s.step%30===0)assert.equal(s.checkInvariants().ok,true,`${arena}/${seed}: ${JSON.stringify(s.checkInvariants())}`);
+        for(const r of s.roundSim.robots.filter(r=>r.alive)) {
+          assert.ok(Math.abs(r.x-s.camera.x)*s.camera.zoom<=520-r.r,`${arena}/${seed}: X im Bild`);
+          assert.ok(Math.abs(r.y-s.camera.y)*s.camera.zoom<=270-r.r,`${arena}/${seed}: Y im Bild`);
+        }
+      }
+      assert.equal(s.checkInvariants().ok,true);
+      assert.ok(s.roundSim.stats.destroyed>0,`${arena}/${seed}: Zerstörung findet statt`);
+    }
+  }
+});
+
+test('Scrap v3: 90% Arena im Querformat; Hochformat, Tempo und Turnierplanung ändern weder Rundenausgang noch Module', () => {
+  const params={rulesVersion:'v3',episodeMode:'tournament',workshop:true},world={w:1920,h:1080};
+  const l=EBS.Scrap.layout(world,params);
+  assert.ok(l.width*l.height/(world.w*world.h)>.89);
+  const a=make({params,world}),b=make({params,timeScale:.64});
+  while(a.phase!=='ended')a.stepOnce();while(b.phase!=='ended')b.stepOnce();
+  assert.equal(a.completedRounds,8);assert.equal(a.roundNumber,8);
+  assert.equal(JSON.stringify(a.roundSim),JSON.stringify(b.roundSim));
+  assert.deepEqual(plain(a.roundResults),plain(b.roundResults));assert.deepEqual(plain(a.workshop),plain(b.workshop));
+  assert.equal(a.checkInvariants().ok,true);assert.equal(b.checkInvariants().ok,true);
+  const cfg=EBS.normalizeConfig({scenario:'scrap',params,video:{aspect:'16:9',fps:30}});
+  const plan=EBS.Scrap.createExportPlan(cfg,world);let progress;do{progress=plan.advance();}while(!progress.done);
+  assert.equal(progress.durationSec,Math.ceil(a.step/60*30)/30);
+  const low=make({params,world:{w:1920,h:1080},view:{camera:false}}),portrait=make({params,view:{camera:false}});
+  advance(low,12);advance(portrait,12);
+  const lp=EBS.Scrap.layout(portrait.world,params);
+  low.events.forEach((e,i)=>{
+    const p=portrait.events[i];assert.equal(e.type,p.type);assert.equal(e.arenaX,p.arenaX);assert.equal(e.arenaY,p.arenaY);
+    assert.ok(Math.abs((e.x-l.x)/l.width-(p.y-lp.y)/lp.height)<1e-9);
+    assert.ok(Math.abs((e.y-l.y)/l.height+(p.x-lp.x)/lp.width-1)<1e-9);
+  });
+});
+
+test('Sunny Yard: eigene Nord-/Südstarts im Hochformat; beide Grundrisse bewahren Tempo, Acht-Runden-Ergebnis und Exportplanung', () => {
+  const params={rulesVersion:'v3',arena:'sunshine',episodeMode:'tournament',workshop:true};
+  for(const aspect of ['16:9','9:16']) {
+    const world=aspect==='16:9'?{w:1920,h:1080}:{w:1080,h:1920};
+    const a=make({params,world}),b=make({params,world,timeScale:.64});
+    if(aspect==='9:16') {
+      assert.equal(a.roundSim.arenaVariant,'north-south');
+      // In the fixed physics coordinates X becomes screen Y in portrait.
+      const starts=a.roundSim.robots.map(r=>r.x/a.roundSim.bounds.w);
+      assert.equal(starts.filter(y=>y<.2).length,2,'zwei Starts oben');
+      assert.equal(starts.filter(y=>y>.8).length,2,'zwei Starts unten');
+      assert.ok(a.roundSim.blocks.some(block=>block.x<200)&&a.roundSim.blocks.some(block=>block.x>800),'Deckung nutzt die Bildhöhe');
+    }
+    while(a.phase!=='ended')a.stepOnce();while(b.phase!=='ended')b.stepOnce();
+    assert.equal(a.completedRounds,8);assert.equal(a.checkInvariants().ok,true);assert.equal(b.checkInvariants().ok,true);
+    assert.equal(JSON.stringify(a.roundSim),JSON.stringify(b.roundSim));
+    assert.deepEqual(plain(a.roundResults),plain(b.roundResults));assert.deepEqual(plain(a.workshop),plain(b.workshop));
+    const cfg=EBS.normalizeConfig({scenario:'scrap',params,video:{aspect,fps:30}});
+    const plan=EBS.Scrap.createExportPlan(cfg,world);let result;do{result=plan.advance();}while(!result.done);
+    assert.equal(result.durationSec,Math.ceil(a.step/60*30)/30);
+  }
+});
 
 test('Scrap: Quelle und extrahierte Simulation/Renderer sind unverändert', () => {
   const source = readFileSync(new URL('../docs/reference/scrap-arena.source.html', import.meta.url));
@@ -115,10 +211,114 @@ test('Scrap: 20 Minuten reine Simulation bleiben begrenzt, lückenlos abrufbar u
 });
 
 test('Scrap: Parameter normalisieren und kollidieren nicht mit Video-/Tonwerten', () => {
+  for(const rulesVersion of ['classic','v2','v3'])assert.equal(EBS.normalizeConfig({scenario:'scrap',params:{rulesVersion},view:{camera:true}}).view.camera,false,'alte Kameraangabe wird zur festen Gesamtansicht');
   const cfg = EBS.normalizeConfig({ scenario: 'scrap', repeatRounds: 'false', endPauseSec: 7,
     video: { tempo: .8, volume: { rocket: 130, pickup: 65 } }, view: { camera: false, hud: true } });
   assert.equal(cfg.params.repeatRounds, false); assert.equal(cfg.params.endPauseSec, 7);
   assert.equal(cfg.video.volume.rocket, 130);
   assert.deepEqual(plain(EBS.normalizeConfig(plain(cfg))), plain(cfg));
-  assert.deepEqual(plain(EBS.Scrap.normalizeParams({ endPauseSec: 99, repeatRounds: 'false' })), { repeatRounds: false, endPauseSec: 8 });
+  assert.deepEqual(plain(EBS.Scrap.normalizeParams({ endPauseSec: 99, repeatRounds: 'false' })), { rulesVersion: 'classic', episodeMode: 'endless', arena: 'yard', workshop: false, repeatRounds: false, endPauseSec: 8 });
+});
+
+test('Scrap-Turnier: genau acht Runden, echte fünf Sekunden Finale und gleiche UI-/Exportdauer', () => {
+  for (const [tempo, fps] of [[1,30],[.8,60],[.64,30]]) {
+    const cfg = EBS.normalizeConfig({ scenario: 'scrap', seed: 42, params: { rulesVersion: 'v2', episodeMode: 'tournament', repeatRounds: false }, video: { tempo, fps } });
+    const s = make({ params: cfg.params, timeScale: tempo });
+    while (s.phase !== 'outro') s.stepOnce();
+    assert.equal(s.completedRounds, 8); assert.equal(s.roundResults.length, 8);
+    assert.equal(s.events.filter(e => e.type === 'tournament_end').length, 1);
+    assert.ok(s.champions().length >= 1);
+    const end = s.step; advance(s, 299 / 60); assert.equal(s.phase, 'outro'); s.stepOnce(); assert.equal(s.phase, 'ended');
+    const plan = EBS.Scrap.createExportPlan(cfg, s.world); let result;
+    do { result = plan.advance(); } while (!result.done);
+    assert.equal(result.durationSec, Math.ceil((end + 300) / 60 * fps) / fps);
+    advance(s, 20); assert.equal(s.roundNumber, 8); assert.equal(s.checkInvariants().ok, true);
+    s.wins = [2,2,2,2]; assert.deepEqual(plain(s.champions()), [0,1,2,3]);
+  }
+});
+
+test('Scrap v2: drei Prüfseeds ohne lange Feuerpausen, reproduzierbar bei Zeitlupe', () => {
+  for (const seed of [42, 7, 314]) {
+    const s = make({ seed, params: { rulesVersion: 'v2', repeatRounds: false } });
+    let shots = 0, last = 0, longest = 0;
+    while (s.phase === 'running') {
+      s.stepOnce();
+      if (s.roundSim.stats.shots !== shots) {
+        longest = Math.max(longest, s.t - last); last = s.t; shots = s.roundSim.stats.shots;
+      }
+    }
+    assert.ok(Math.max(longest, s.t - last) < 3, `Seed ${seed}: Feuerpause`);
+    assert.equal(s.checkInvariants().ok, true);
+    const slow = make({ seed, params: s.cfg, timeScale: .64 });
+    while (slow.phase === 'running') slow.stepOnce();
+    assert.equal(JSON.stringify(s.roundSim), JSON.stringify(slow.roundSim));
+  }
+});
+
+test('Scrap-Arenen: alle Starts und Waffen erreichbar; drei Seeds bleiben gültig, Duellkamera hält das Geschehen im Bild', () => {
+  let maximumZoom = 1;
+  for (const arena of ['yard','foundry','crossroads']) {
+    const initial = make({ params: { arena, rulesVersion: 'v2' } }).roundSim;
+    // Independent clearance-grid flood fill, not the robots' steering code.
+    const free = (x,y) => !initial.blocks.some(b => Math.hypot(x - Math.max(b.x, Math.min(x,b.x+b.w)), y - Math.max(b.y,Math.min(y,b.y+b.h))) < 25);
+    const cells = new Map();
+    for (let x=60;x<=840;x+=20) for(let y=60;y<=840;y+=20) if(free(x,y)) cells.set(`${x},${y}`,{x,y});
+    const queue = [cells.get('140,140')], seen = new Set(['140,140']);
+    for (let i=0;i<queue.length;i++) for(const [dx,dy] of [[20,0],[-20,0],[0,20],[0,-20]]) {
+      const key = `${queue[i].x+dx},${queue[i].y+dy}`;
+      if(cells.has(key)&&!seen.has(key)) { seen.add(key); queue.push(cells.get(key)); }
+    }
+    for(const p of [...initial.robots,...initial.pickups,...initial.pads]) assert.ok(queue.some(c=>Math.hypot(c.x-p.x,c.y-p.y)<25), `${arena}: ${p.x},${p.y} erreichbar`);
+    for(const seed of [42,7,314]) {
+      const s=make({seed,params:{arena,rulesVersion:'v2',repeatRounds:false}});
+      while(s.phase==='running') {
+        s.stepOnce();
+        maximumZoom=Math.max(maximumZoom,s.camera.zoom);
+        if(s.step%60===0) assert.equal(s.checkInvariants().ok,true,`${arena}/${seed}: ${JSON.stringify(s.checkInvariants())}`);
+        for(const r of s.roundSim.robots.filter(r=>r.alive)) {
+          assert.ok(Math.abs(r.x-s.camera.x)*s.camera.zoom < 468-r.r, `${arena}: X im Bild`);
+          assert.ok(Math.abs(r.y-s.camera.y)*s.camera.zoom < 468-r.r, `${arena}: Y im Bild`);
+        }
+      }
+      assert.equal(s.roundSim.arena,arena);
+      assert.equal(s.checkInvariants().ok,true);
+    }
+  }
+  assert.equal(maximumZoom,1,'auch beim letzten Duell bleibt die Kamera fest');
+});
+
+test('Scrap-Werkstatt: drei Module, ein Slot, spätere Wirkung, Reset und reproduzierbare Turniere', () => {
+  assert.equal(EBS.Scrap.normalizeParams({workshop:true}).workshop,false);
+  const used = new Set();
+  for(const seed of [42,7,314]) {
+    const options={seed,params:{rulesVersion:'v2',episodeMode:'tournament',workshop:true}};
+    const a=make(options), b=make({...options,timeScale:.8});
+    while(a.phase!=='ended') {
+      a.stepOnce();
+      if(a.step%60===0) assert.equal(a.checkInvariants().ok,true);
+      if(a.phase==='running') a.roundSim.robots.forEach(r=>{
+        const module=a.workshop.modules[r.id];
+        assert.equal(r.module||null,module);
+        if(module) {
+          used.add(module);
+          const spec=EBS.ScrapRules.modules[module];
+          assert.equal(r.maxHp,125*spec.hp);
+          assert.ok(r.speed>=118*.92 && r.speed<=132*1.12);
+        }
+      });
+    }
+    while(b.phase!=='ended') b.stepOnce();
+    assert.deepEqual(plain(a.workshop.installed),[1,1,1,1]);
+    assert.deepEqual(plain(a.workshop),plain(b.workshop));
+    assert.deepEqual(plain(a.roundResults),plain(b.roundResults));
+    assert.equal(JSON.stringify(a.roundSim),JSON.stringify(b.roundSim));
+    const reset=make(options);
+    assert.deepEqual(plain(reset.workshop.installed),[0,0,0,0]);
+    assert.equal(reset.roundSim.robots.some(r=>r.module),false);
+  }
+  assert.equal(used.size,3);
+  for(const module of Object.values(EBS.ScrapRules.modules)) {
+    assert.ok(module.hp<1 || module.speed<1, 'jedes Modul hat einen Nachteil');
+    assert.ok(module.hp>1 || module.speed>1 || module.cooldown<1, 'jedes Modul hat einen Vorteil');
+  }
 });

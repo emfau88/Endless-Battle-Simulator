@@ -209,7 +209,7 @@ function normalizeConfig(input) {
         bitrate: parseBitrate(q.bitrate),
       },
     },
-    view: { hud: bool(o.view.hud, true), camera: bool(o.view.camera, true) },
+    view: { hud: bool(o.view.hud, true), camera: sc.supportsCamera !== false && bool(o.view.camera, true) },
   };
 }
 /** Überschreibt eine bestehende Konfiguration teilweise (flach oder verschachtelt). */
@@ -395,6 +395,7 @@ class Session {
 /** Steuerschnittstelle für den Node-Exporter (window.exportAPI). Szenariounabhängig. */
 function installExportAPI(session, extra = {}) {
   const api = global.exportAPI || (global.exportAPI = {});
+  let episodePlan = null;
   Object.assign(api, {
     info: () => {
       const vs = videoSize(session.cfg.video);
@@ -403,6 +404,7 @@ function installExportAPI(session, extra = {}) {
         // Opt-in after comparing captured frames with a continuous run. Some
         // legacy renderers retain frame-dependent HUD state during simulation-only seek.
         supportsClips: session.scenario.supportsClips === true,
+        naturalDuration: !!session.scenario.hasNaturalDuration?.(session.cfg),
         audio: session.scenario.audio || null, world: session.world,
         width: session.app.canvas.width, height: session.app.canvas.height, expected: vs,
         fps: session.cfg.video.fps, physHz: PHYS_HZ, pixi: PIXI.VERSION, matter: global.Matter ? Matter.version : null,
@@ -425,7 +427,14 @@ function installExportAPI(session, extra = {}) {
     check: () => session.sim.checkInvariants(),
     hash: () => session.sim.stateHash(),
     config: () => session.cfg,
-    restart(c) { session.start(mergeConfig(session.cfg, c || {})); return session.sim.snapshot(); },
+    planEpisode() {
+      episodePlan ||= session.scenario.createExportPlan?.(session.cfg, session.world);
+      if (!episodePlan) return { done: true, durationSec: session.cfg.video.durationSec };
+      const result = episodePlan.advance();
+      if (result.done) session.cfg.video.durationSec = result.durationSec;
+      return result;
+    },
+    restart(c) { episodePlan = null; session.start(mergeConfig(session.cfg, c || {})); return session.sim.snapshot(); },
     heap: () => (performance.memory ? performance.memory.usedJSHeapSize : null),
     events: (since) => (session.sim.events || []).filter((e) => e && e.seq >= since).sort((a, b) => a.seq - b.seq),
     scenarios: () => [...scenarios.values()].map((s) => ({ id: s.id, title: s.title })),
