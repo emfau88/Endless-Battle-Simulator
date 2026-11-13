@@ -1,5 +1,9 @@
 # Erster GitHub-CI-Lauf · 13.11.2026
 
+**Späterer Abschluss:** R02 wurde im Folgeauftrag an `bc0bf61` mit einem vollständigen grünen Linux-Lauf
+(133/133 Tests) abgeschlossen. Aktueller Nachweis: [Audio-/Produktionsbericht](SCRAP_AUDIO_PRODUKTION_2026-11-13.md).
+Die folgenden Befunde bleiben als historischer Erstlauf erhalten.
+
 Der vorhandene Scrap-/Produktionsstand `5cec854c262d5a5f24e88cdc1689491677a445c4` wurde wie beauftragt
 gepusht und in [PR #3](https://github.com/emfau88/Endless-Battle-Simulator/pull/3) zur Zusammenführung vorbereitet.
 **Zum Zeitpunkt des Erstlaufs keine CI-Abnahme und kein Merge:** beide Ubuntu-Läufe endeten am 25-Minuten-Joblimit, nachdem bereits

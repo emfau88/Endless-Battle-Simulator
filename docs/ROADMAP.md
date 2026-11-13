@@ -1,6 +1,13 @@
 # Roadmap
 
-**Stand:** 13.11.2026 · ursprüngliche Einarbeitung an `main`, Commit `0f87887bd28cad2e0a4524067b723981f0272857`.
+**Aktueller Stand · 13.11.2026:** Produktionsabsicherung und Scrap-Ton an `bc0bf61` abgeschlossen.
+Der vollständige [Linux-Lauf](https://github.com/emfau88/Endless-Battle-Simulator/actions/runs/43431587775)
+bestand mit **133/133 Tests**; R02 ist erledigt. Eigene Materialklänge, abgestimmte Kampfklänge und
+geprüfte AAC-Spitzen sind umgesetzt. 15 Minuten reine Tonproduktion und kurze 1080p-Filmproben sind nachgewiesen;
+persönliche Film-/Hör-/Handyabnahme bleibt R20. Details: [Audio-/Produktionsbericht](SCRAP_AUDIO_PRODUKTION_2026-11-13.md).
+Über [PR #6](https://github.com/emfau88/Endless-Battle-Simulator/pull/6) in `main` übernommen, Merge `7cfb1fb`.
+
+**Historischer Ausgangspunkt:** ursprüngliche Einarbeitung an `main`, Commit `0f87887bd28cad2e0a4524067b723981f0272857`.
 GitHub-`main` entsprach bei dieser Abfrage dem Commit. Die Roadmap wurde anschließend in `c72cf78` aktualisiert.
 Die nun ausdrücklich beauftragte Produktionsabsicherung baut auf diesem Stand im Branch `codex/production-safety`
 auf; Nachweise stehen im [Produktionsbericht](PRODUKTIONSSICHERUNG_2026-11-12.md). Arbeitsverzeichnis jeweils zu Beginn
@@ -11,7 +18,7 @@ GitHub-`main` wurde erneut mit `0f87887` abgeglichen. Aktueller Anschluss- und P
 Die acht vorhandenen Commits bis `5cec854` sind über [PR #3](https://github.com/emfau88/Endless-Battle-Simulator/pull/3)
 in `main` gemergt (`34c63aa`). Grundlage war die anschließend beauftragte Minimalprüfung: Live-Abbruch bestanden,
 Audio-Spitzenabweichung identisch auf dem alten `main` reproduziert. Die ersten vollständigen CI-Läufe waren
-unvollständig; R02 bleibt offen. Nachweise und Grenzen: [CI-Erstlauf und Nachtrag](CI_ERSTLAUF_2026-11-13.md).
+unvollständig; R02 blieb damals offen. Nachweise und Grenzen: [CI-Erstlauf und Nachtrag](CI_ERSTLAUF_2026-11-13.md).
 Der Ausbauplan wurde über [PR #4](https://github.com/emfau88/Endless-Battle-Simulator/pull/4) nach `main` übernommen (`247992a`).
 Der anschließend ausdrücklich beauftragte Ausbau startet von diesem sauberen, mit origin abgeglichenen Stand
 im Branch `codex/scrap-video-quality`. Umsetzung und aktuelle Prüfgrenzen:
@@ -46,8 +53,8 @@ und Produktionsaufwand bestimmen die Länge. Der bereits laufende Kanalpilot R04
 **Reihenfolge des beauftragten Ausbaus:** Lesbarkeit → Kampfablauf → Turnier → Treffer/Klang → Arenen/Kamera → Werkstatt.
 Die sechs Schritte sind implementiert; die visuelle Abnahme der ersten Fassung ist ausdrücklich nicht erfolgt.
 Die neue Materialarena folgt auf dieses Feedback. Persönliche Film-/Hör-/Handyabnahme bleibt unter R20;
-die vollständige plattformübergreifende CI-Abnahme unter R02. Sie wurde durch den ausdrücklichen Folgeauftrag
-nicht mehr zur Vorbedingung für die Umsetzung gemacht.
+die vollständige Linux-CI-Abnahme unter R02 ist inzwischen erfolgt. Sie war durch den ausdrücklichen Folgeauftrag
+zuvor nicht mehr zur Vorbedingung für die Umsetzung gemacht worden.
 Hex Dominion V0.3/R17 bleibt nach der Scrap-Abnahme der nächste neue Szenariokandidat.
 Naval hat nach dem gemeldeten Short und 10-Minuten-Upload keinen Vorrang; offene Abnahmen und R21 bleiben erhalten.
 Allgemeiner Engine-Umbau, Spielmechaniken außerhalb R22, 4K-Optimierung und 60-Minuten-Produktion haben keinen Vorrang.
@@ -126,31 +133,16 @@ R08 (Wiederholungsrezept) und R11 A/B/C (Status, abbrechbarer Audiomix, geprüft
 Nachweis und Grenzen stehen im [Produktionsbericht](PRODUKTIONSSICHERUNG_2026-11-12.md) und im [CHANGELOG](CHANGELOG.md).
 Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechaniken sind kein Teil dieser Umsetzung.
 
-- [ ] **R02 · CI auf GitHub abnehmen (früher B10).**
-  **Vorhanden:** eigener [Prüfworkflow](../.github/workflows/ci.yml) für Push/PR, Node 22.17.1, `npm ci`,
-  Playwright-Chromium, FFmpeg/ffprobe, Software-Rendering, gesamte Suite einschließlich Golden-Prüfung und Protokolle.
-  Das Testdatei-Limit beträgt zehn Minuten, das Job-Limit 25 Minuten. Explizites Bash/`pipefail` erhält den
-  Testfehlercode trotz `tee`; lokale Negativprobe bestand. Es wird kein `golden:write` ausgeführt.
-  **Aktueller Befund:** Push- und PR-Lauf an `5cec854` wurden am 25-Minuten-Limit abgebrochen. In beiden scheiterten
-  zuvor der Audioexport mit Tempo 0,8 und der Live-Abbruchtest; im PR-Lauf zusätzlich der Scrap-Konfigurations-/UI-Test.
-  Versions- und Teilprotokolle sind gesichert; vollständige Assertions fehlen wegen des vorzeitigen Endes.
-  [CI-Bericht mit Laufverweisen](CI_ERSTLAUF_2026-11-13.md). **R02 bleibt offen.** Der spätere ausdrückliche
-  Umsetzungsauftrag hat R22 unabhängig davon freigegeben; der lokale Abschlussnachweis steht im
-  [Qualitätsbericht](SCRAP_VIDEOQUALITAET_2026-11-13.md).
-  **Nachtrag nach beauftragter Minimalprüfung:** Live-Abbruch einschließlich 2,5-s-Reaktionsgrenze und Aufräumen
-  bestanden. Der Audiotest meldet −0,7 dBTP statt höchstens −1 dBTP, **identisch auf dem bisherigen `main`**;
-  somit keine neue Abweichung durch die Integration. Details und Grenzen im CI-Bericht. Diese beiden Befunde
-  gelten nicht mehr als Merge-Sperre für PR #3; ein vollständig grüner CI-Lauf ist damit nicht behauptet.
-  **Lokaler Nachtrag aus R22:** Windows-Gesamtlauf 119/120, anschließend korrigierter Scrap-Linktest 1/1.
-  Ein zweiter unnötiger Live-Tab wurde aus diesem Test entfernt; zusätzlich wartet er nun auf den automatisch
-  berechneten Dauerwert im Teilen-Link. Linux-CI-Zuverlässigkeit bleibt separat zu bestätigen.
-  **Begrenzte Nacharbeit:** bestehende Audio-Spitzenreserve unter FFmpeg 6.1.1 prüfen, die knappe 110-s-Wartefrist
-  vor dem Audiomix vom unverändert strengen 2,5-s-Abbruchziel trennen und den sporadischen Scrap-UI-Fall gezielt
-  reproduzieren. Nur belegte Ursachen korrigieren. Danach die vollständige Suite innerhalb eines begründeten Laufzeitbudgets
-  abschließen, bei Bedarf in wenige Prüfgruppen aufteilen. Ein höheres Joblimit allein behebt keine Einzeltestfehler.
-  **Abnahme von R02:** vollständiger grüner Runnerlauf, Versionsnachweis, wirksames `pipefail` und
-  erhaltene Referenzprüfungen. Keine Tests ausblenden, Grenzwerte grundlos lockern oder Golden-Werte neu setzen.
-  Keine zusätzlichen Langexporte, Leistungsbenchmarks oder Änderungen an den sechs Ausbaupaketen erforderlich.
+- [x] **R02 · CI auf GitHub abgenommen (früher B10).**
+  **Abschluss 13.11.2026 an `bc0bf61`:** vollständiger Linux-Lauf mit **133/133 Tests** in vier Gruppen,
+  einschließlich Golden-Referenzen, früher fehlerhaftem Marble-AAC-Fall, Scrap-UI und echtem HTTP-Abbruch.
+  Node 22.17.1, Playwright 1.60.0, FFmpeg 6.1.1-3ubuntu5, Ubuntu 24.04, Software-Rendering und Protokolle gesichert.
+  `pipefail`, zehn Minuten Testdatei-Limit, 25 Minuten je Job und 2,5 s für Abbruch/Aufräumen bleiben erhalten.
+  AAC wird vor Veröffentlichung nachgemessen; zu hohe Spitzen oder Messfehler bewahren vorhandene Dateien.
+  Die gemeinsame PCM-Reserve beträgt −2 dBFS, Scrap benötigt −3 dBFS. Die AAC-Grenze bleibt **−1 dBTP**.
+  Alle Testdateien werden ausgeführt; keine Golden-Referenzen neu gesetzt. Lokal zusätzlich Produktionsgruppe 33/33.
+  Nachweis und begrenzte 15-Minuten-Audioprüfung: [Abschlussbericht](SCRAP_AUDIO_PRODUKTION_2026-11-13.md).
+  Frühere fehlgeschlagene/unvollständige Läufe bleiben historische Nachweise im [CI-Erstbericht](CI_ERSTLAUF_2026-11-13.md).
 
 ## 3 · Szenarien: Scrap anschließen, gezielt ausbauen, danach Hex
 
@@ -432,15 +424,14 @@ Getroffene Entscheidungen einschließlich E2 und der Umsetzung von R19 stehen im
 
 ## 7 · Die nächsten drei Schritte
 
-1. **R02 – verbleibende CI-Nacharbeit:** vorhandene Audio-Spitzenabweichung, Laufzeitreserve und sporadischen UI-Fall
-   begrenzt bearbeiten. Die Minimalprüfung hat Abbruch bestätigt und den Audio-Befund auf dem alten `main` reproduziert;
-   sie erlaubt die Integration, ersetzt aber keine vollständige CI-Abnahme.
-2. **R20/R22 P1–P2 – erste Qualitätsstufe:** vorhandene Filmproben als Vergleich beurteilen, dann Roboter/HUD
-   und Treffer/Klang getrennt verbessern. Das ist das erste kleine Produktionsziel vor zusätzlichen Regeln.
-3. **R22 P3–P6 – nacheinander erweitern:** belegte Ablaufprobleme, endliches Turnier, zwei zusätzliche Arenen
-   mit ruhiger Kamera, zuletzt optionale Werkstatt. Jeweils beim definierten Abschlusskriterium stoppen.
+1. **R20 – aktuelle Scrap-Proben sehen und hören:** Quer-/Hochformat, feste Kamera, Materialwirkung und neue
+   Mischung auf PC/Kopfhörer sowie Handy beurteilen. Nur konkret auffällige Stellen gezielt korrigieren.
+2. **R04 – Scrap als nächste Kanalprobe:** nach dieser Abnahme ein Short und ein längeres Format auswählen.
+   Die geprüfte 15-Minuten-Tonspur ersetzt keine Sichtung eines vollständigen langen Films; einen Langexport separat beauftragen.
+3. **R17 – danach Hex Dominion V0.3 planen:** vorhandene Quelle und Integrationslücken anhand des jetzt abgesicherten
+   Produktionswegs prüfen. Keine parallele neue Mechanik im laufenden Scrap-Abnahmeschritt.
 
-Der aktuelle Auftrag liefert den Plan; die sechs Pakete sind noch nicht implementiert.
+R02 und die sechs R22-Pakete sind technisch umgesetzt; die persönliche Qualitätsabnahme bleibt gesondert.
 Marble bleibt isolierter Prototyp, Hex wird nicht gleichzeitig begonnen.
 
 R04 läuft mit den vorhandenen Uploads weiter. Naval wird gezielt bei Bedarf verbessert; aus einer offenen
