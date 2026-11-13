@@ -25,7 +25,8 @@ for (const aspect of ['16x9', '9x16']) {
     writeFileSync(join(root, name + '-frames.txt'), video);
     writeFileSync(join(root, name + '-audio.f32le'), audio);
     writeFileSync(join(root, name + '-probe.json'), JSON.stringify(probe, null, 2));
-    pair.push({ name, mp4: digest(readFileSync(file)), decodedVideo: digest(video), decodedAudio: digest(audio), sidecar, probe });
+    const input = existsSync(file + '.input.json') ? JSON.parse(readFileSync(file + '.input.json')) : null;
+    pair.push({ name, mp4: digest(readFileSync(file)), decodedVideo: digest(video), decodedAudio: digest(audio), sidecar, probe, input });
   }
   if (pair.length !== 2) { summary.push({ aspect, complete: false }); continue; }
   const [a, b] = pair;
@@ -47,6 +48,13 @@ for (const aspect of ['16x9', '9x16']) {
     streamMetadata: isDeepStrictEqual(a.probe.streams, b.probe.streams),
     containerMetadata: isDeepStrictEqual(container(a), container(b)),
   };
+  if (a.input && b.input) {
+    same.inputJpegFrames = isDeepStrictEqual(a.input.frames, b.input.frames);
+    same.inputPcm = a.input.pcm === b.input.pcm;
+    const args = input => JSON.stringify([input.videoArgs, input.muxArgs]).replace(/\.ebs-export-[^/]+/g, '.ebs-export-DIR');
+    same.ffmpegArgs = args(a.input) === args(b.input);
+    same.inputFrameDifferences = a.input.frames.flatMap((frame, i) => isDeepStrictEqual(frame, b.input.frames[i]) ? [] : [i]);
+  }
   summary.push({ aspect, complete: true, same, hashes: pair.map(({ name, mp4, decodedVideo, decodedAudio }) => ({ name, mp4, decodedVideo, decodedAudio })) });
 }
 writeFileSync(join(root, 'comparison.json'), JSON.stringify(summary, null, 2));
