@@ -12,6 +12,7 @@
   }
   const palette = ['#ff725e', '#54dce8', '#ffce63', '#b0e779'];
   const colorOf = robot => palette[robot.id % 4];
+  const damageStage = robot => robot.hp / robot.maxHp > 2 / 3 ? 0 : robot.hp / robot.maxHp > 1 / 3 ? 1 : 2;
   const path = (g, points) => { g.beginPath(); points.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); };
   const circle = (g, x, y, radius) => { g.beginPath(); g.arc(x, y, radius, 0, Math.PI * 2); };
   class ArenaRenderer extends ScrapArena.Renderer {
@@ -56,9 +57,46 @@
       super._robot(g, { ...robot, color }, t);
       if (!robot.alive) return;
       g.save(); g.translate(robot.x, robot.y);
+      const stage = damageStage(robot);
+      if (stage) {
+        g.save(); g.rotate(Math.hypot(robot.vx, robot.vy) > 8 ? Math.atan2(robot.vy, robot.vx) : robot.angle);
+        // Fixed scars preserve team paint and weapon readability. Damage is a
+        // view of HP, never an extra physics state or a source of random calls.
+        g.strokeStyle = '#17212ce0'; g.lineWidth = 3;
+        for (let i = 0; i < stage + 1; i++) {
+          g.beginPath(); g.moveTo(-18 + i * 12, -19); g.lineTo(-13 + i * 12, -13); g.lineTo(-17 + i * 12, -5); g.stroke();
+        }
+        if (stage === 2) {
+          box(g, -23, 9, 18, 10, 2); g.fillStyle = '#281c19'; g.fill();
+          g.strokeStyle = '#eaa56a'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(-21, 11); g.lineTo(-12, 16); g.lineTo(-7, 11); g.stroke();
+        }
+        g.restore();
+      }
+      if (stage === 2) {
+        // Three analytic puffs at most per robot; no accumulating particle pool.
+        for (let i = 0; i < 3; i++) {
+          const age = (t * .7 + i / 3 + robot.id * .13) % 1;
+          circle(g, -14 + Math.sin(age * 4 + i) * 5, -9 - age * 35, 4 + age * 9);
+          g.fillStyle = `rgba(126,137,143,${(1 - age) * .28})`; g.fill();
+        }
+      }
       const y = -robot.r - 25;
       box(g, -34, y - 8, 68, 15, 4); g.fillStyle = '#10202be8'; g.fill();
       text(g, robot.name, 0, y, 10, color, 'center', 800);
+      g.restore();
+    }
+    _effect(g, e, under = false) {
+      if (e.type === 'shot') return; // The weapon already supplies its muzzle flash.
+      if (e.type !== 'hit') { super._effect(g, e, under); return; }
+      if (under || e.age >= e.ttl) return;
+      const u = e.age / e.ttl;
+      g.save(); g.translate(e.x, e.y); g.globalAlpha = (1 - u) ** 2;
+      g.strokeStyle = '#ffe5aa'; g.lineWidth = 1.8;
+      for (let i = 0; i < 3; i++) {
+        const a = (e.seed % 628) / 100 + i * 2.1, d = 2 + u * 13;
+        g.beginPath(); g.moveTo(Math.cos(a) * d, Math.sin(a) * d);
+        g.lineTo(Math.cos(a) * (d + 5), Math.sin(a) * (d + 5)); g.stroke();
+      }
       g.restore();
     }
     _result(g, round) {
@@ -89,6 +127,8 @@
       const bw = right - left;
       box(g, left, y + 53, bw, 8, 4); g.fillStyle = '#07131b'; g.fill();
       if (alive) { box(g, left, y + 53, bw * robot.hp / robot.maxHp, 8, 4); g.fillStyle = color; g.fill(); }
+      if (!compact && alive) text(g, ['ARMOR INTACT', 'DAMAGED', 'CRITICAL'][damageStage(robot)], x + 20, y + h - 74, 15,
+        damageStage(robot) === 2 ? '#ffac7d' : '#91a7b4', 'left', 650);
       const weapon = robot.weapon, label = !alive ? 'KNOCKED OUT' : this.sim.phase !== 'running' ? 'SURVIVED' : weapon ? `${weapon.kind.toUpperCase()}  ${weapon.ammo}/${weapon.maxAmmo}` : 'SEARCHING';
       text(g, label, x + 20, y + h - 43, compact ? 15 : 21, alive ? '#dce8e9' : '#7a8f9a', 'left', 650);
       text(g, `${this.sim.wins[robot.id]} WINS`, right, y + h - 20, compact ? 14 : 18, color, 'right');
@@ -198,15 +238,15 @@
     },
     panelNote: sim => sim.phase === 'pause' ? `Ergebnis · nächste Runde in ${Math.ceil((sim.pauseUntil - sim.step) / 60)} s` : sim.snapshot().summary,
     audio: { events: {
-      blaster: { label: 'Blaster', samples: ['synth:scrap-blaster'], gain: .24, detune: .7 },
-      rocket: { label: 'Raketenstart', samples: ['synth:scrap-rocket'], gain: .36, detune: .4 },
-      hit: { label: 'Robotertreffer', samples: ['impactMetal_light_000', 'impactMetal_light_001'], gain: .20, ref: 6, detune: 1 },
-      cover_hit: { label: 'Deckungstreffer', samples: ['impactPlate_light_000'], gain: .13, ref: 19, detune: 1, minGap: .035 },
-      blast: { label: 'Explosion', samples: ['synth:cannon'], gain: .48, semis: 2 },
-      break: { label: 'Deckung zerstört', samples: ['impactWood_heavy_000'], gain: .30, detune: .8 },
+      blaster: { label: 'Blaster', samples: ['synth:scrap-blaster'], gain: .20, detune: .7, minGap: .055 },
+      rocket: { label: 'Raketenstart', samples: ['synth:scrap-rocket'], gain: .26, detune: .4 },
+      hit: { label: 'Robotertreffer', samples: ['impactMetal_light_000', 'impactMetal_light_001'], gain: .29, ref: 6, detune: 1, minGap: .07 },
+      cover_hit: { label: 'Deckungstreffer', samples: ['impactPlate_light_000'], gain: .09, ref: 19, detune: 1, minGap: .09 },
+      blast: { label: 'Explosion', samples: ['synth:cannon'], gain: .40, semis: 2, minGap: .10 },
+      break: { label: 'Deckung zerstört', samples: ['impactWood_heavy_000'], gain: .24, detune: .8 },
       pickup: { label: 'Waffenaufnahme', samples: ['synth:scrap-pickup'], gain: .22 },
-      drop: { label: 'Waffenabwurf', samples: ['impactTin_medium_000'], gain: .12, detune: .8 },
-      ko: { label: 'Roboter ausgeschaltet', samples: ['synth:cannon'], gain: .52, semis: -5 },
+      drop: { label: 'Waffenabwurf', samples: ['impactTin_medium_000'], gain: .08, detune: .8 },
+      ko: { label: 'Roboter ausgeschaltet', samples: ['impactMetal_light_003'], gain: .65, semis: -9 },
     } },
   });
 })();
