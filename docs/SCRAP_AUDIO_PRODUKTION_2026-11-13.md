@@ -1,5 +1,10 @@
 # Scrap-Ton und Produktionsabsicherung · 13.11.2026
 
+**Späterer Prüfstand:** Der automatische Main-Nachlauf bestand mit 130/133 Tests; drei Browser-Lade-Timeouts
+traten in `test/share.test.mjs` auf. Audio, Produktion und Scrap blieben grün. R02 wurde erneut geöffnet.
+Korrektur und aktueller Nachweis: [Browser-Teststabilität](BROWSER_TESTSTABILITAET_2026-11-13.md).
+Die unten genannten 133/133 bleiben der tatsächlich bestandene frühere PR-Lauf.
+
 Ausgangspunkt: `main` / `52b7987b37a75bf85d9325354ad26ddb54d250de`, sauber und mit GitHub abgeglichen.
 Der Folgeauftrag umfasst Produktionsabsicherung und Ton. Umsetzung im Branch `codex/scrap-audio-production`.
 Karten, Kampfregeln, Kamera und der isolierte Marble-Prototyp bleiben unverändert.

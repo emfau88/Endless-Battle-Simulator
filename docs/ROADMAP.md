@@ -1,8 +1,13 @@
 # Roadmap
 
-**Aktueller Stand · 13.11.2026:** Produktionsabsicherung und Scrap-Ton an `bc0bf61` abgeschlossen.
+**Aktueller Prüfstand · 13.11.2026:** Der Main-Nachlauf nach der Audio-Korrektur bestand mit 130/133 Tests;
+drei Browser-Tests scheiterten beim Laden. R02 ist deshalb erneut offen. Die gezielte Korrektur beseitigt
+gleichzeitig rendernde Vorschauen im Teilen-Link-Test und sichert die Kontextfreigabe bei Fehlern ab.
+Prüfung und Abschluss: [Browser-Teststabilität](BROWSER_TESTSTABILITAET_2026-11-13.md).
+
+**Vorheriger Nachweis:** Produktionsabsicherung und Scrap-Ton an `bc0bf61` abgeschlossen.
 Der vollständige [Linux-Lauf](https://github.com/emfau88/Endless-Battle-Simulator/actions/runs/43431587775)
-bestand mit **133/133 Tests**; R02 ist erledigt. Eigene Materialklänge, abgestimmte Kampfklänge und
+bestand mit **133/133 Tests**; R02 wurde zunächst geschlossen. Eigene Materialklänge, abgestimmte Kampfklänge und
 geprüfte AAC-Spitzen sind umgesetzt. 15 Minuten reine Tonproduktion und kurze 1080p-Filmproben sind nachgewiesen;
 persönliche Film-/Hör-/Handyabnahme bleibt R20. Details: [Audio-/Produktionsbericht](SCRAP_AUDIO_PRODUKTION_2026-11-13.md).
 Über [PR #6](https://github.com/emfau88/Endless-Battle-Simulator/pull/6) in `main` übernommen, Merge `7cfb1fb`.
@@ -53,7 +58,7 @@ und Produktionsaufwand bestimmen die Länge. Der bereits laufende Kanalpilot R04
 **Reihenfolge des beauftragten Ausbaus:** Lesbarkeit → Kampfablauf → Turnier → Treffer/Klang → Arenen/Kamera → Werkstatt.
 Die sechs Schritte sind implementiert; die visuelle Abnahme der ersten Fassung ist ausdrücklich nicht erfolgt.
 Die neue Materialarena folgt auf dieses Feedback. Persönliche Film-/Hör-/Handyabnahme bleibt unter R20;
-die vollständige Linux-CI-Abnahme unter R02 ist inzwischen erfolgt. Sie war durch den ausdrücklichen Folgeauftrag
+die vollständige Linux-CI-Abnahme unter R02 wird nach den Timeouts des Main-Nachlaufs erneut abgesichert. Sie war durch den ausdrücklichen Folgeauftrag
 zuvor nicht mehr zur Vorbedingung für die Umsetzung gemacht worden.
 Hex Dominion V0.3/R17 bleibt nach der Scrap-Abnahme der nächste neue Szenariokandidat.
 Naval hat nach dem gemeldeten Short und 10-Minuten-Upload keinen Vorrang; offene Abnahmen und R21 bleiben erhalten.
@@ -133,8 +138,11 @@ R08 (Wiederholungsrezept) und R11 A/B/C (Status, abbrechbarer Audiomix, geprüft
 Nachweis und Grenzen stehen im [Produktionsbericht](PRODUKTIONSSICHERUNG_2026-11-12.md) und im [CHANGELOG](CHANGELOG.md).
 Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechaniken sind kein Teil dieser Umsetzung.
 
-- [x] **R02 · CI auf GitHub abgenommen (früher B10).**
-  **Abschluss 13.11.2026 an `bc0bf61`:** vollständiger Linux-Lauf mit **133/133 Tests** in vier Gruppen,
+- [ ] **R02 · Main-Nachlauf der Browser-Prüfungen absichern (früher B10).**
+  **Aktuell:** drei Lade-Timeouts in `test/share.test.mjs` nach dem Merge. Kontext-Aufräumen bei jedem
+  Testausgang und nacheinander geöffnete Vorschauen sind umgesetzt; Linux-Prüfung und Main-Nachlauf folgen.
+  Grenzen, Assertions und Referenzen bleiben erhalten. [Nachweis](BROWSER_TESTSTABILITAET_2026-11-13.md).
+  **Vorheriger Abschluss 13.11.2026 an `bc0bf61`:** vollständiger Linux-Lauf mit **133/133 Tests** in vier Gruppen,
   einschließlich Golden-Referenzen, früher fehlerhaftem Marble-AAC-Fall, Scrap-UI und echtem HTTP-Abbruch.
   Node 22.17.1, Playwright 1.60.0, FFmpeg 6.1.1-3ubuntu5, Ubuntu 24.04, Software-Rendering und Protokolle gesichert.
   `pipefail`, zehn Minuten Testdatei-Limit, 25 Minuten je Job und 2,5 s für Abbruch/Aufräumen bleiben erhalten.
@@ -424,6 +432,8 @@ Getroffene Entscheidungen einschließlich E2 und der Umsetzung von R19 stehen im
 
 ## 7 · Die nächsten drei Schritte
 
+**Vorausgehend:** R02 mit der gezielten Browser-Testkorrektur und einem erfolgreichen Main-Nachlauf abschließen.
+
 1. **R20 – aktuelle Scrap-Proben sehen und hören:** Quer-/Hochformat, feste Kamera, Materialwirkung und neue
    Mischung auf PC/Kopfhörer sowie Handy beurteilen. Nur konkret auffällige Stellen gezielt korrigieren.
 2. **R04 – Scrap als nächste Kanalprobe:** nach dieser Abnahme ein Short und ein längeres Format auswählen.
@@ -431,7 +441,7 @@ Getroffene Entscheidungen einschließlich E2 und der Umsetzung von R19 stehen im
 3. **R17 – danach Hex Dominion V0.3 planen:** vorhandene Quelle und Integrationslücken anhand des jetzt abgesicherten
    Produktionswegs prüfen. Keine parallele neue Mechanik im laufenden Scrap-Abnahmeschritt.
 
-R02 und die sechs R22-Pakete sind technisch umgesetzt; die persönliche Qualitätsabnahme bleibt gesondert.
+Die sechs R22-Pakete sind technisch umgesetzt; R02 wird nachgeprüft, die persönliche Qualitätsabnahme bleibt gesondert.
 Marble bleibt isolierter Prototyp, Hex wird nicht gleichzeitig begonnen.
 
 R04 läuft mit den vorhandenen Uploads weiter. Naval wird gezielt bei Bedarf verbessert; aus einer offenen

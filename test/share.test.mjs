@@ -30,17 +30,31 @@ before(async () => {
 });
 after(async () => { await browser?.close(); await new Promise((r) => server.close(r)); });
 
-async function open(url, viewport = { width: 1440, height: 1000 }) {
-  const ctx = await browser.newContext({ viewport, acceptDownloads: true }), page = await ctx.newPage(), errors = [];
-  page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(url);
-  await page.waitForFunction(() => window.EBS && window.EBS.app && window.EBS.app.sim, null, { timeout: 30000 });
-  return { ctx, page, errors };
+async function open(t, url, viewport = { width: 1440, height: 1000 }) {
+  const ctx = await browser.newContext({ viewport, acceptDownloads: true });
+  // Register before creating/navigating a page: failed assertions must also release WebGL and timers.
+  t.after(() => ctx.close());
+  try {
+    const page = await ctx.newPage(), errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.goto(url);
+    await page.waitForFunction(() => window.EBS && window.EBS.app && window.EBS.app.sim, null, { timeout: 30000 });
+    return { ctx, page, errors };
+  } catch (error) {
+    // A caller may catch a navigation error and continue within the same test.
+    await ctx.close();
+    throw error;
+  }
 }
 const cfg = (page) => page.evaluate(() => window.EBS.app.cfg);
+const hashAfter300Steps = (page) => page.evaluate(() => {
+  const s = window.EBS.app.session; s.start(s.cfg);
+  for (let i = 0; i < 300; i++) s.step();
+  return s.sim.stateHash();
+});
 
-test('Statische Auslieferung unter einem Unterpfad: Vorschau läuft, Export wird klar als „nur am eigenen PC“ gezeigt', async () => {
-  const { ctx, page, errors } = await open(base);
+test('Statische Auslieferung unter einem Unterpfad: Vorschau läuft, Export wird klar als „nur am eigenen PC“ gezeigt', async (t) => {
+  const { page, errors } = await open(t, base);
   await page.waitForFunction(() => !document.querySelector('#exportHint').hidden, null, { timeout: 10000 });
   assert.match(await page.textContent('#btnExport'), /nur am eigenen PC/);
   assert.match(await page.textContent('#exportHint'), /ohne Export-Server.*am eigenen PC/);
@@ -53,11 +67,10 @@ test('Statische Auslieferung unter einem Unterpfad: Vorschau läuft, Export wird
   assert.match(msg, /start\.bat/); assert.match(msg, /npm run export -- --scenario marble/);
   assert.equal(await page.evaluate(() => document.querySelector('#exportBar').hidden), true, 'Fortschrittsbalken ohne Export');
   assert.deepEqual(errors, []);
-  await ctx.close();
 });
 
-test('Teilen-Link stellt in einem frischen Browser dieselbe Szene her', async () => {
-  const a = await open(base);
+test('Teilen-Link stellt in einem frischen Browser dieselbe Szene her', async (t) => {
+  const a = await open(t, base);
   await a.page.selectOption('#scenario', 'marble');
   await a.page.click('#segFormat button[data-v="16:9"]');
   await a.page.fill('#seed', '123'); await a.page.dispatchEvent('#seed', 'change');
@@ -69,16 +82,20 @@ test('Teilen-Link stellt in einem frischen Browser dieselbe Szene her', async ()
   const link = await a.page.inputValue('#shareLink'), want = await cfg(a.page);
   assert.ok(link.startsWith(base + '?'), `Link zeigt nicht auf die Seite: ${link}`);
   assert.deepEqual([want.scenario, want.seed, want.video.durationSec, want.video.tempo, want.video.audio, want.view.camera, want.params.buffer], ['marble', 123, 37, 0.8, false, false, 3]);
-  const b = await open(link);
+  const ha = await hashAfter300Steps(a.page);
+  assert.deepEqual(a.errors, []);
+  // The comparison needs a fresh storage context, not two simultaneous software-WebGL render loops.
+  await a.ctx.close();
+  assert.equal(browser.contexts().length, 0, 'Quellvorschau vor dem neuen Kontext vollständig schließen');
+  const b = await open(t, link);
   assert.deepEqual(await cfg(b.page), want, 'geteilter Link ergibt eine andere Konfiguration');
-  const [ha, hb] = await Promise.all([a.page, b.page].map((p) => p.evaluate(() => { const s = window.EBS.app.session; s.start(s.cfg); for (let i = 0; i < 300; i++) s.step(); return s.sim.stateHash(); })));
+  const hb = await hashAfter300Steps(b.page);
   assert.equal(ha, hb, 'gleicher Link, anderer Simulationsverlauf');
-  assert.deepEqual([...a.errors, ...b.errors], []);
-  await a.ctx.close(); await b.ctx.close();
+  assert.deepEqual(b.errors, []);
 });
 
-test('Einstellungen als JSON speichern und laden (auch die JSON-Datei neben einem Video)', async () => {
-  const { ctx, page, errors } = await open(pathToFileURL(INDEX).href);
+test('Einstellungen als JSON speichern und laden (auch die JSON-Datei neben einem Video)', async (t) => {
+  const { page, errors } = await open(t, pathToFileURL(INDEX).href);
   await page.selectOption('#scenario', 'marble');
   await page.fill('#durationText', '37'); await page.dispatchEvent('#durationText', 'change');
   const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#btnSaveCfg')]);
@@ -104,11 +121,10 @@ test('Einstellungen als JSON speichern und laden (auch die JSON-Datei neben eine
     assert.equal((await cfg(page)).seed, 77, 'fehlerhafte Datei hat die Einstellungen verändert');
   }
   assert.deepEqual(errors, []);
-  await ctx.close();
 });
 
-test('Handyansicht (390×844): Bedienfeld unter der Vorschau, kein seitliches Scrollen, fingergroße Bedienflächen', async () => {
-  const { ctx, page, errors } = await open(base + '?scenario=marble', { width: 390, height: 844 });
+test('Handyansicht (390×844): Bedienfeld unter der Vorschau, kein seitliches Scrollen, fingergroße Bedienflächen', async (t) => {
+  const { page, errors } = await open(t, base + '?scenario=marble', { width: 390, height: 844 });
   const m = await page.evaluate(() => {
     const r = (sel) => { const b = document.querySelector(sel).getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height, r: b.right }; };
     return { vw: innerWidth, scrollW: document.documentElement.scrollWidth, canvas: r('#stage canvas'), panel: r('#panel'),
@@ -124,5 +140,13 @@ test('Handyansicht (390×844): Bedienfeld unter der Vorschau, kein seitliches Sc
   await page.selectOption('#scenario', 'naval');
   assert.equal((await cfg(page)).scenario, 'naval');
   assert.deepEqual(errors, []);
-  await ctx.close();
+});
+
+test('Fehlgeschlagene Navigation schließt ihren Kontext; die nächste Vorschau startet ohne Altlasten', async (t) => {
+  assert.equal(browser.contexts().length, 0, 'vorherige Tests haben alle Kontexte geschlossen');
+  await assert.rejects(open(t, 'not-a-valid-url'), /invalid URL/i);
+  assert.equal(browser.contexts().length, 0, 'Navigationfehler darf keinen Kontext behalten');
+  const { page, errors } = await open(t, base);
+  assert.equal((await cfg(page)).scenario, 'naval');
+  assert.deepEqual(errors, []);
 });
