@@ -384,6 +384,7 @@ Lagune paddeln sie mit geschlossenen Glücksaugen. Wackelaugen und Blinzeln sind
 | Vögel · Strömungsspur im Wasser | an/aus | – |
 | Tageslauf · Länge eines Tages · Tageszeit beim Start · Dunkelheit der Nacht | siehe „Tageslauf“ | an/aus · automatisch, 1–60 min · 0–95 % · 0–100 % |
 | Sterne und Mond · Tierchen werden abends müde | an/aus | – |
+| Pyramide füllt sich mit Licht · Finale mit Feuerwerk · Leuchtkraft der Glasfelder · Menge Feuerwerk | siehe „Licht-Füllung und Finale“ | an/aus · an/aus · 0–150 % · 0,5–2× |
 
 **Tageslauf.** Über die Videolänge wird es Morgen, Tag, goldene Stunde, Sonnenuntergang, Dämmerung und Nacht
 („automatisch“ = Videolänge, mindestens 5 Minuten; in der Vorschau beginnt danach ein neuer Tag). Die ganze Szene
@@ -392,6 +393,15 @@ unter. Alles, was selbst leuchtet – Stern an der Spitze, Lichtimpulse, Figuren
 Sterne –, wird erst danach gezeichnet und strahlt nachts. Tierchen gähnen in der Dämmerung, tragen nachts
 Schlafmützen und schlafen im Wasser („z z z“). Ohne Tageslauf bleibt die gewählte Tageszeit stehen. Reine
 Darstellung: Die Simulation ist mit und ohne Tageslauf identisch.
+
+**Licht-Füllung und Finale.** Jeder Lichtimpuls lässt Glasfelder dauerhaft goldgelb aufleuchten – Reihe für Reihe
+von unten, innerhalb einer Reihe in fester Zufallsreihenfolge; neue Felder blitzen kurz auf. Der Füllstand folgt der
+Tageslänge, sodass die Pyramide zwei Sekunden vor dem Finale voll ist (Fanfare, Schriftzug „PYRAMID FULLY LIT!“,
+Balken „PYRAMID LIT … %“ im HUD). Das Finale dauert 6 % der Tageslänge (5–10 s): Raketen steigen vom Ufer auf und
+explodieren in den Figurenfarben, zuletzt groß und golden über der Spitze; die Tierchen wachen auf und jubeln.
+Bei „automatisch“ endet der Tag mit dem Video – ein 10-Minuten-Video hat sein Feuerwerk in den letzten 10 Sekunden.
+In der Vorschau beginnt danach ein neuer Tag mit leerer Pyramide. Zeitpunkt und Ablauf des Feuerwerks folgen aus
+Seed und Videozeit; Füllung und Finale verändern die Simulation nicht.
 
 **Ton** mit eigenem Lautstärkeregler je Klang: Becher schöpft, Lichtimpuls (Glockenton, je Farbe eine andere Stufe
 des Dur-Akkords), Becher kippt aus, Wendekappe, Platscher; in der Darstellung „Tierchen“ statt Glasklang ein „Boing“

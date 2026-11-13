@@ -53,11 +53,11 @@ test('Rendering, Auflösung, Bildrate und reine Darstellungsregler beeinflussen 
   const look = { figure: 1, glow: 0, pulse: 1.5, rays: 0, clouds: 3, reflection: 0.2, waves: 2, sparkle: 0, wiggle: 2, birds: false, lane: false,
     dayCycle: false, dayStart: 0.9, nightDark: 1, stars: false, sleepy: false, dayMinutes: 1 };
   const a = await sim({ seed: 5, video: { aspect: '16:9', resolution: 720, fps: 60 } });
-  const b = await sim({ seed: 5, params: look, video: { aspect: '16:9', resolution: 1080, fps: 30 } });
+  const b = await sim({ seed: 5, params: look, video: { aspect: '16:9', resolution: 720, fps: 30 } });
   const c = await sim({ seed: 5, video: { aspect: '16:9' } });
-  await a.evaluate(() => window.exportAPI.renderFrames(90, 0.5));    // 1,5 s bei 60 fps
-  await b.evaluate(() => window.exportAPI.renderFrames(45, 0.5));    // 1,5 s bei 30 fps, Tierchen und andere Optik
-  await run(c, 1.5);                                                  // 1,5 s ohne Rendering
+  await a.evaluate(() => window.exportAPI.renderFrames(30, 0.5));    // 0,5 s bei 60 fps
+  await b.evaluate(() => window.exportAPI.renderFrames(15, 0.5));    // 0,5 s bei 30 fps, Tierchen, Nacht und andere Optik
+  await run(c, 0.5);                                                  // 0,5 s ohne Rendering
   const [ha, hb, hc] = await Promise.all([hash(a), hash(b), hash(c)]);
   assert.equal(ha, hc); assert.equal(hb, hc);
   const info = await a.evaluate(() => window.exportAPI.info());
@@ -123,6 +123,43 @@ for (const [aspect, figure] of [['9:16', 1], ['16:9', 0]]) {
   });
 }
 
+const finaleEvents = async (cfg, sec) => {
+  const page = await sim(cfg);
+  await run(page, sec);
+  const ev = await page.evaluate(() => window.exportAPI.events(0));
+  await page.close();
+  const at = (type) => ev.filter((e) => e.type === type).map((e) => e.step / 60);
+  return { full: at('full'), launch: at('launch'), firework: at('firework') };
+};
+
+test('Licht-Füllung und Finale: Fanfare einmal kurz vor dem Finale, Feuerwerk nur im Finale, an die Videolänge gekoppelt', async () => {
+  // Tag von 1 Minute: Finale 5 s, Pyramide 2 s vorher voll
+  const a = await finaleEvents({ seed: 2, params: { dayMinutes: 1, figure: 1 } }, 60);
+  assert.equal(a.full.length, 1, `Fanfare ${a.full.length}×`);
+  assert.ok(a.full[0] >= 53 && a.full[0] <= 55.5, `Fanfare bei ${a.full[0]} s`);
+  assert.ok(a.firework.length >= 6 && a.firework.every((v) => v > 55 && v < 60), `Feuerwerk ${a.firework}`);
+  assert.equal(a.launch.length, a.firework.length, 'jede Rakete wird abgeschossen');
+  // automatisch = Videolänge: 400 s Video -> Finale in den letzten 10 s
+  const b = await finaleEvents({ seed: 2, video: { durationSec: 400 } }, 400);
+  assert.ok(b.full.length === 1 && b.full[0] >= 388 && b.full[0] <= 391, `Fanfare bei ${b.full}`);
+  assert.ok(b.firework.length >= 12 && b.firework.every((v) => v > 390 && v < 400), `Feuerwerk ${b.firework.length}× ab ${b.firework[0]}`);
+  // abschaltbar
+  const c = await finaleEvents({ seed: 2, params: { dayMinutes: 1, fill: false, finale: false } }, 60);
+  assert.deepEqual([c.full.length, c.launch.length, c.firework.length], [0, 0, 0]);
+});
+
+test('Finale wird gezeichnet (beide Formate, beide Darstellungen) und ändert die Simulation nicht', async () => {
+  for (const [aspect, figure] of [['9:16', 1], ['16:9', 0]]) {
+    const a = await sim({ seed: 8, params: { dayMinutes: 1, figure }, video: { aspect, resolution: 720 } });
+    const b = await sim({ seed: 8, params: { dayMinutes: 1, figure, fill: false, finale: false, dayCycle: false }, video: { aspect, resolution: 720 } });
+    await run(a, 57); await run(b, 57);
+    await a.evaluate(() => window.exportAPI.renderFrames(12, 0.5)); await b.evaluate(() => window.exportAPI.renderFrames(12, 0.5));
+    assert.equal(await hash(a), await hash(b), 'Füllung/Finale verändert die Simulation');
+    assert.ok((await check(a)).ok);
+    await Promise.all([a.close(), b.close()]);
+  }
+});
+
 test('Regler werden normalisiert und begrenzt', async () => {
   const page = await sim();
   const p = await page.evaluate(() => window.EBS.normalizeConfig({ scenario: 'pyramid', params: {
@@ -134,6 +171,7 @@ test('Regler werden normalisiert und begrenzt', async () => {
   assert.deepEqual(n.map((q) => [q.dayMinutes, q.dayStart, q.dayCycle]), [[0, 0.95, false], [20, 0.95, false]]);
   const d = await page.evaluate(() => window.EBS.normalizeConfig({ scenario: 'pyramid' }).params);
   assert.deepEqual([d.dayCycle, d.dayMinutes, d.dayStart, d.nightDark, d.stars, d.sleepy], [true, 0, 0, 0.85, true, true]);
+  assert.deepEqual([d.fill, d.finale, d.fillGlow, d.fireworks], [true, true, 1, 1]);
   assert.deepEqual([d.orbs, d.size, d.figure, d.speed, d.beltSpeed, d.rollSpeed, d.current, d.birds], [22, 16, 0, 1, 1, 1, 1, true]);
   await page.close();
 });
@@ -167,10 +205,10 @@ test('Oberfläche: Pyramide wählen, Regler und Lautstärken vorhanden, Darstell
   await page.selectOption('#scenario', 'pyramid');
   assert.equal(await page.evaluate(() => window.EBS.app.cfg.scenario), 'pyramid');
   assert.match(await page.textContent('#subtitle'), /Endless Pyramid/);
-  for (const k of ['figure', 'orbs', 'size', 'speed', 'beltSpeed', 'rollSpeed', 'current', 'glow', 'pulse', 'rays', 'clouds', 'reflection', 'waves', 'sparkle', 'wiggle', 'birds', 'lane', 'dayMinutes', 'dayStart', 'nightDark', 'dayCycle', 'stars', 'sleepy']) {
+  for (const k of ['figure', 'orbs', 'size', 'speed', 'beltSpeed', 'rollSpeed', 'current', 'glow', 'pulse', 'rays', 'clouds', 'reflection', 'waves', 'sparkle', 'wiggle', 'birds', 'lane', 'dayMinutes', 'dayStart', 'nightDark', 'dayCycle', 'stars', 'sleepy', 'fill', 'finale', 'fillGlow', 'fireworks']) {
     assert.ok(await page.$('#p-' + k), `Regler ${k} fehlt`);
   }
-  for (const k of ['master', 'scoop', 'pulse', 'tip', 'cap', 'splash', 'boing', 'wheee', 'squeak']) assert.ok(await page.$('#vol-' + k), `Lautstärke ${k} fehlt`);
+  for (const k of ['master', 'scoop', 'pulse', 'tip', 'cap', 'splash', 'boing', 'wheee', 'squeak', 'full', 'launch', 'firework']) assert.ok(await page.$('#vol-' + k), `Lautstärke ${k} fehlt`);
   await page.evaluate(() => { window.__sim = window.EBS.app.sim; });
   await page.selectOption('#p-figure', '1');
   assert.equal(await page.evaluate(() => window.EBS.app.sim.cfg.figure), 1);

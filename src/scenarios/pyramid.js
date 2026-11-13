@@ -210,12 +210,36 @@ function computeLayout(world, size = 16) {
 }
 
 // =====================================================================
+//  Licht-Füllung und Finale: Ablauf über die Videolänge (Simulation für Ton, Renderer fürs Bild)
+// =====================================================================
+const PANEL_ROWS = 30, PANEL_COLS = [10, 20], ROW_CELLS = 30, PANELS = PANEL_ROWS * ROW_CELLS;
+const finaleSec = (D) => clamp(D * 0.06, 5, 10);
+/** Füllstand beim Physikschritt step: Zyklus (Tag) und Zahl leuchtender Glasfelder; voll kurz vor dem Finale. */
+function fillAt(D, step) {
+  if (step < 0) return { cycle: -1, lit: 0 };
+  const v = step / 60, cycle = Math.floor(v / D), ct = v - cycle * D;
+  return { cycle, lit: Math.floor(PANELS * clamp(ct / Math.max(1, D - finaleSec(D) - 2), 0, 1)) };
+}
+/** Feuerwerk im Finale eines Zyklus (Videosekunden): Raketen mit Ort, Farbe, Größe – aus Seed und Zyklus. */
+function fireworkPlan(L, seed, cycle, D, amount) {
+  const rng = new RNG(hashSeed('pyramid-fw', seed, cycle)), F = finaleSec(D), n = Math.max(3, Math.round(F / 0.6 * amount));
+  const start = cycle * D + D - F + 0.4, span = F - 1.6, out = [];
+  const box = L.land ? [140, L.W - 140, 90, 430] : [110, L.W - 110, 300, 900];
+  for (let i = 0; i < n; i++) {
+    const last = i === n - 1, at = start + span * (last ? 1 : (i + rng.range(0.1, 0.9)) / n);
+    const x = last ? L.apex[0] : rng.range(box[0], box[1]), y = last ? box[2] + (box[3] - box[2]) * 0.35 : rng.range(box[2], box[3]);
+    out.push({ at, x, y, c: last ? 0 : rng.int(0, 3), big: last ? 1.8 : rng.range(0.8, 1.25), x0: x + rng.range(-60, 60), seed: rng.int(1, 1e6) });
+  }
+  return out.sort((a, b) => a.at - b.at);
+}
+
+// =====================================================================
 //  Simulation
 // =====================================================================
 const VISUAL_FX = new Set(['pulse', 'splash']);
 class PyramidSim {
-  constructor({ seed, params, world, timeScale = 1 }) {
-    this.cfg = { ...params }; this.world = world; this.L = computeLayout(world, params.size);
+  constructor({ seed, params, world, timeScale = 1, video = null }) {
+    this.cfg = { ...params }; this.world = world; this.video = video; this.seed = seed; this.L = computeLayout(world, params.size);
     this.dt = DT * (timeScale || 1);
     this.rng = new RNG(hashSeed('pyramid', seed));
     this.events = new Array(512); this.eventSeq = 0; this.fxSeq = 0; this.recent = [];
@@ -230,7 +254,8 @@ class PyramidSim {
     // Einlaufphase: das Video beginnt mit einem bereits laufenden Kreislauf (Schritt 0 = Videobeginn)
     // Simulationszeit t läuft mit dem Gesamttempo; die Einlaufphase deckt immer gleich viel Simulationszeit ab
     const warm = Math.round(this.cfg.warmup / (this.dt * this.cfg.speed));
-    this.step = -warm; this.t = -warm * this.dt * this.cfg.speed; this.lastPulse = { t: -99, color: 0 };
+    this.step = -warm; this.t = -warm * this.dt * this.cfg.speed;
+    this.lastPulse = { t: -99, step: -1e9, color: 0 }; this.prevPulse = this.lastPulse;
     this.quiet = true;
     for (let i = 0; i < warm; i++) this.stepOnce();
     this.quiet = false; this._newStats(); this.t = 0;
@@ -261,6 +286,7 @@ class PyramidSim {
     const T = TUNE, L = this.L, P = L.paths, E = L.lift, cfg = this.cfg, critters = cfg.figure === 1, GAP = L.GAP;
     const dt = this.dt * cfg.speed, dtR = dt * cfg.rollSpeed;
     this.step++; this.t += dt;
+    if (this.step > 0 && !this.quiet) this._finaleEvents();
     // --- Schienenbahn (Führende zuerst)
     let ahead = null;
     for (const b of this._list(RAMP)) {
@@ -297,8 +323,13 @@ class PyramidSim {
     for (const b of lift) {
       const s0 = b.s; b.s += dl;
       if (s0 < E.pTop && b.s >= E.pTop) {
-        this.stats.pulses++; b.laps++; this.lastPulse = { t: this.t, color: b.color };
+        this.stats.pulses++; b.laps++;
+        this.prevPulse = this.lastPulse; this.lastPulse = { t: this.t, step: this.step, color: b.color };
         this._emit('pulse', L.apex[0], L.apex[1], b.color);
+        if (cfg.fill && this.step > 0) {                         // letzte Glasfelder: Fanfare
+          const D = cycleSec(cfg, this.video), a = fillAt(D, this.step), z = fillAt(D, this.prevPulse.step);
+          if (a.lit === PANELS && (z.cycle !== a.cycle || z.lit < PANELS)) this._emit('full', L.apex[0], L.apex[1], b.color);
+        }
       }
       if (b.s >= E.pD) {
         b.state = RAMP; b.s = 0; b.v = belt * (RP + E.bo) / RP * 0.8; rampMin = 0;
@@ -315,6 +346,18 @@ class PyramidSim {
         this._emit('scoop', L.pick[0], L.pick[1], head.color);
         if (critters) this._emit('squeak', L.pick[0], L.pick[1], head.color);
       }
+    }
+  }
+  /** Abschuss und Knall der Raketen im Finale (nur Ton-Ereignisse; die Physik bleibt unberührt). */
+  _finaleEvents() {
+    const cfg = this.cfg;
+    if (!cfg.finale) return;
+    const D = cycleSec(cfg, this.video), v = this.step / 60, v0 = (this.step - 1) / 60, cycle = Math.floor(v / D);
+    const f = this._fw;
+    if (!f || f.cycle !== cycle || f.D !== D || f.amount !== cfg.fireworks) this._fw = { cycle, D, amount: cfg.fireworks, list: fireworkPlan(this.L, this.seed, cycle, D, cfg.fireworks) };
+    for (const b of this._fw.list) {
+      if (v0 < b.at - 0.6 && v >= b.at - 0.6) this._emit('launch', b.x0, this.L.shore, b.c, b.big);
+      if (v0 < b.at && v >= b.at) this._emit('firework', b.x, b.y, b.c, b.big);
     }
   }
   counts() {
@@ -530,7 +573,8 @@ function limb(g, a, b, col, end, foot, k) {
 const CAPS = [['#3f6fe0', '#ffffff'], ['#e8484f', '#ffffff'], ['#58b7f0', '#ffffff'], ['#9a5fd6', '#ffe36a']];
 function drawCritter(g, sprite, kind, id, x, y, ang, mode, t, speed, look, wig, R, mood = null) {
   const sp = SPECIES[kind], ph = t * 9 + id * 1.7, w = wig, lk = R / 16;
-  const yawn = mood ? mood.yawn : 0, sleep = mood && mood.sleep && mode === 'pool';
+  const cheer = mood && mood.cheer && (mode === 'lift' || mode === 'pool');
+  const yawn = mood && !cheer ? mood.yawn : 0, sleep = mood && !cheer && mood.sleep && mode === 'pool';
   g.save(); g.translate(x, y); g.rotate(ang);
   g.lineCap = 'round'; g.lineJoin = 'round';
   // Glieder (hinter dem Körper)
@@ -539,6 +583,9 @@ function drawCritter(g, sprite, kind, id, x, y, ang, mode, t, speed, look, wig, 
   if (mode === 'fall') {
     aL = [-R * 1.02, -R * 0.78 + Math.sin(ph * 1.7) * 2.5 * w]; aR = [R * 1.02, -R * 0.78 + Math.sin(ph * 1.7 + 1.3) * 2.5 * w];
     lL = [-R * 0.66, R * 1.16 + Math.sin(ph * 2) * 1.5 * w]; lR = [R * 0.66, R * 1.16 - Math.sin(ph * 2) * 1.5 * w];
+  } else if (cheer) {                                                  // Finale: Arme hoch und winken
+    aL = [-R * 1.0 + Math.sin(ph * 1.4) * 2, -R * 1.0 + Math.cos(ph * 1.4) * 3]; aR = [R * 1.0 - Math.sin(ph * 1.4 + 1) * 2, -R * 1.0 + Math.cos(ph * 1.4 + 1) * 3];
+    if (mode === 'lift') { lL = [-R * 0.46, R * 1.14]; lR = [R * 0.46, R * 1.14]; }
   } else if (yawn > 0.25 && (mode === 'lift' || mode === 'pool')) {   // gähnen und strecken
     aL = [-R * 1.0, -R * (0.55 + 0.45 * yawn)]; aR = [R * 1.0, -R * (0.55 + 0.45 * yawn)];
     if (mode === 'lift') { lL = [-R * 0.46, R * 1.14]; lR = [R * 0.46, R * 1.14]; }
@@ -583,7 +630,8 @@ function drawCritter(g, sprite, kind, id, x, y, ang, mode, t, speed, look, wig, 
   // Mund
   const my = kind === 3 ? R * 0.05 : kind === 2 ? R * 0.42 : R * 0.42;
   g.strokeStyle = OUTLINE; g.lineWidth = 1.5 * lk;
-  if (yawn > 0.25 && mode !== 'fall' && mode !== 'roll') { g.fillStyle = '#5a1630'; g.beginPath(); g.ellipse(0, my + R * 0.08, R * 0.16 + R * 0.06 * yawn, R * 0.12 + R * 0.2 * yawn, 0, 0, TAU); g.fill(); g.stroke(); }
+  if (cheer) { g.fillStyle = '#5a1630'; g.beginPath(); g.arc(0, my - R * 0.04, R * 0.2, 0, Math.PI); g.closePath(); g.fill(); g.stroke(); }
+  else if (yawn > 0.25 && mode !== 'fall' && mode !== 'roll') { g.fillStyle = '#5a1630'; g.beginPath(); g.ellipse(0, my + R * 0.08, R * 0.16 + R * 0.06 * yawn, R * 0.12 + R * 0.2 * yawn, 0, 0, TAU); g.fill(); g.stroke(); }
   else if (mode === 'fall' || (mode === 'roll' && speed > 330)) { g.fillStyle = '#5a1630'; g.beginPath(); g.ellipse(0, my + R * 0.05, R * 0.15, R * 0.19, 0, 0, TAU); g.fill(); g.stroke(); }
   else if (kind === 3) { g.beginPath(); g.arc(0, -R * 0.15, R * 0.62, Math.PI * 0.22, Math.PI * 0.78); g.stroke(); }
   else if (kind === 2) { g.beginPath(); g.arc(0, R * 0.3, R * 0.2, Math.PI * 0.2, Math.PI * 0.8); g.stroke(); }
@@ -678,6 +726,20 @@ function drawGlass(g, L, rng, alpha) {
     g.restore();
   }
   g.restore();
+}
+/** Glasfeld gi (0–9 linke Fläche, 10–29 rechte Fläche) in Reihe row (0 = unten). */
+function cellQuad(L, row, gi) {
+  const left = gi < PANEL_COLS[0], cols = left ? PANEL_COLS[0] : PANEL_COLS[1], j = left ? gi : gi - PANEL_COLS[0], u0 = left ? 0 : 1;
+  const v0 = row / PANEL_ROWS, v1 = (row + 1) / PANEL_ROWS, ua = u0 + j / cols, ub = u0 + (j + 1) / cols;
+  return [L.face(ua, v0), L.face(ub, v0), L.face(ub, v1), L.face(ua, v1)];
+}
+const shrink = (q, k) => { const cx = (q[0][0] + q[1][0] + q[2][0] + q[3][0]) / 4, cy = (q[0][1] + q[1][1] + q[2][1] + q[3][1]) / 4; return q.map(([x, y]) => [cx + (x - cx) * k, cy + (y - cy) * k]); };
+function drawLitPanels(g, L) {
+  for (let row = 0; row < PANEL_ROWS; row++) for (let gi = 0; gi < ROW_CELLS; gi++) {
+    const q = cellQuad(L, row, gi);
+    g.fillStyle = 'rgba(255,206,110,.92)'; poly(g, shrink(q, 0.86)); g.fill();
+    g.fillStyle = 'rgba(255,246,210,.55)'; poly(g, shrink(q, 0.5)); g.fill();
+  }
 }
 function drawRidge(g, L) {
   const F = L.front, A = L.apex;
@@ -809,6 +871,17 @@ class PyramidRenderer extends EBS.CanvasScene {
     const srng = new RNG(hashSeed('pyramid-stars', 3));
     this.stars = Array.from({ length: L.land ? 190 : 170 }, () => [srng.range(0, L.W), Math.pow(srng.next(), 1.4) * (L.horizon - 30), srng.range(1.1, 2.8), srng.range(0, TAU)]);
     this.moon = L.land ? [300, 210, 34] : [190, 430, 30];
+    // Licht-Füllung: Bild aller leuchtenden Glasfelder, Reihenfolge innerhalb jeder Reihe aus festem Seed
+    this.litCanvas = this.layer((g) => drawLitPanels(g, L));
+    this.litGlow = this.layer((g) => {                              // Nachtleuchten: spart Schienen, Pflanzkästen, Ufer aus
+      g.drawImage(this.litCanvas, 0, 0, L.W, L.H); g.globalCompositeOperation = 'destination-out';
+      g.drawImage(this.front, 0, 0, L.W, L.H); g.drawImage(this.fore, 0, 0, L.W, L.H);
+    });
+    this.fillPerm = Array.from({ length: PANEL_ROWS }, (_, i) => {
+      const r = new RNG(hashSeed('pyramid-fill', i)), a = Array.from({ length: ROW_CELLS }, (_, k) => k);
+      for (let k = a.length - 1; k > 0; k--) { const j = r.int(0, k); [a[k], a[j]] = [a[j], a[k]]; }
+      return a;
+    });
   }
   layer(draw) {
     const c = document.createElement('canvas');
@@ -854,12 +927,81 @@ class PyramidRenderer extends EBS.CanvasScene {
   /** Müdigkeit der Tierchen: in der Dämmerung Gähnen, nachts Schlafmütze und Schlaf im Wasser. */
   mood(b) {
     const d = this.day, cfg = this.sim.cfg;
+    if (this.finale && this.finale.on) return { cheer: true, cap: !!(d && cfg.sleepy && (d.p > 0.8 || d.p < 0.03)) };
     if (!d || !cfg.sleepy) return null;
     const p = d.p, t = this.sim.t, per = 6 + (b.id % 4) * 1.3, ph = (t + b.id * 1.37) % per;
     const dusk = p > 0.66 && p < 0.9, yawn = dusk && ph < 1.4 ? Math.sin(Math.PI * ph / 1.4) : 0;
     return { yawn, cap: p > 0.8 || p < 0.03, sleep: p > 0.84 || p < 0.02 };
   }
   pulseAge() { return this.sim.t - this.sim.lastPulse.t - PULSE_TRAVEL; }
+  /** Stand von Füllung und Finale für das aktuelle Bild (rein aus Simulationszustand und Videolänge). */
+  fillState() {
+    const s = this.sim, cfg = s.cfg, D = cycleSec(cfg, this.video), now = fillAt(D, s.step);
+    const a = fillAt(D, s.lastPulse.step), z = fillAt(D, s.prevPulse.step);
+    const lit = cfg.fill && a.cycle === now.cycle ? a.lit : 0, prev = cfg.fill && z.cycle === now.cycle ? z.lit : 0;
+    const v = Math.max(0, s.step) / 60, ct = v - Math.max(0, now.cycle) * D, F = finaleSec(D);
+    return { D, v, cycle: Math.max(0, now.cycle), lit, prev: Math.min(prev, lit), on: cfg.finale && s.step > 0 && ct >= D - F, ct, F };
+  }
+  /** Leuchtende Glasfelder: volle Reihen per Ausschnitt, angebrochene Reihe feldweise. */
+  drawLit(g, lit, alpha, op, src = this.litCanvas) {
+    if (lit <= 0 || alpha <= 0.01) return;
+    const L = this.L, ls = this.ls, rows = Math.floor(lit / ROW_CELLS), rem = lit % ROW_CELLS, v = rows / PANEL_ROWS;
+    g.save(); g.globalAlpha = Math.min(1, alpha); g.globalCompositeOperation = op;
+    if (rows > 0) { g.save(); poly(g, [L.left, L.front, L.right, L.Rv(v), L.Fv(v), L.Lv(v)]); g.clip(); g.drawImage(src, 0, 0, L.W, L.H); g.restore(); }
+    for (let k = 0; k < rem && rows < PANEL_ROWS; k++) {
+      const q = cellQuad(L, rows, this.fillPerm[rows][k]), xs = q.map((p) => p[0]), ys = q.map((p) => p[1]);
+      const x0 = Math.floor(Math.min(...xs)) - 1, y0 = Math.floor(Math.min(...ys)) - 1, w = Math.ceil(Math.max(...xs)) + 1 - x0, h = Math.ceil(Math.max(...ys)) + 1 - y0;
+      g.save(); poly(g, q); g.clip(); g.drawImage(src, x0 * ls, y0 * ls, w * ls, h * ls, x0, y0, w, h); g.restore();
+    }
+    g.restore();
+  }
+  /** Gerade eingeschaltete Felder blitzen kurz weiß auf; im Finale pulsiert die volle Pyramide. */
+  drawFillLights(g, t, fs, day) {
+    const cfg = this.sim.cfg, k = cfg.fillGlow;
+    this.drawLit(g, fs.lit, (0.08 + 0.32 * day.night) * k, 'lighter', this.litGlow);
+    const age = this.pulseAge();
+    if (age >= 0 && age < 1.2 && fs.lit > fs.prev) {               // neu eingeschaltete Felder blitzen auf
+      const L = this.L, ls = this.ls;
+      g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = Math.min(1, Math.exp(-age * 3) * 0.9 * Math.max(0.4, k));
+      g.beginPath();
+      for (let i = fs.prev; i < fs.lit && i < fs.prev + 150; i++) { const row = Math.floor(i / ROW_CELLS), q = cellQuad(L, row, this.fillPerm[row][i % ROW_CELLS]); q.forEach(([x, y], j) => (j ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); }
+      g.clip(); g.drawImage(this.litGlow, 0, 0, L.W, L.H); g.drawImage(this.litGlow, 0, 0, L.W, L.H);
+      g.restore();
+    }
+    if (fs.on && fs.lit === PANELS) this.drawLit(g, PANELS, (0.1 + 0.08 * Math.sin(t * 6)) * k, 'lighter', this.litGlow);
+  }
+  /** Raketen steigen vom Ufer auf und explodieren; die letzte groß und golden über der Spitze. */
+  drawFireworks(g, fs) {
+    const s = this.sim, cfg = s.cfg;
+    if (!cfg.finale || fs.ct < fs.D - fs.F - 1) return;
+    const key = `${fs.cycle}|${fs.D}|${cfg.fireworks}`;
+    if (!this.fwPlan || this.fwPlan.key !== key) this.fwPlan = { key, list: fireworkPlan(this.L, s.seed, fs.cycle, fs.D, cfg.fireworks) };
+    g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
+    for (const b of this.fwPlan.list) {
+      const age = fs.v - b.at;
+      if (age < -0.6 || age > 2.4) continue;
+      if (age < 0) {                                              // Rakete steigt auf
+        const f = (age + 0.6) / 0.6, e = (u) => 1 - (1 - u) * (1 - u), y0 = this.L.shore;
+        const px = b.x0 + (b.x - b.x0) * e(f), py = y0 + (b.y - y0) * e(f), qx = b.x0 + (b.x - b.x0) * e(Math.max(0, f - 0.18)), qy = y0 + (b.y - y0) * e(Math.max(0, f - 0.18));
+        g.globalAlpha = 0.9; g.strokeStyle = 'rgba(255,230,180,.9)'; g.lineWidth = 2.4; g.beginPath(); g.moveTo(qx, qy); g.lineTo(px, py); g.stroke();
+        this.sprite(g, this.white, px, py, 0.25);
+        continue;
+      }
+      const col = COLORS[b.c].rgb, n = Math.round(54 * b.big), rng = new RNG(b.seed), kd = 1.5, fade = Math.pow(1 - age / 2.4, 1.3);
+      if (age < 0.25) { g.globalAlpha = 1 - age / 0.25; this.sprite(g, this.white, b.x, b.y, 1.6 * b.big); }
+      if (age < 1.2) { g.globalAlpha = 0.6 * (1 - age / 1.2); this.sprite(g, this.glow[b.c], b.x, b.y, 3.2 * b.big); }
+      const pos = (a, sp, tt) => { const d = sp / kd * (1 - Math.exp(-kd * tt)); return [b.x + Math.cos(a) * d, b.y + Math.sin(a) * d + 45 * tt * tt]; };
+      for (let i = 0; i < n; i++) {
+        const a = i / n * TAU + rng.range(-0.08, 0.08), sp = rng.range(0.72, 1) * 240 * b.big;
+        const [x1, y1] = pos(a, sp, age), [x0, y0] = pos(a, sp, Math.max(0, age - 0.09));
+        g.globalAlpha = fade; g.strokeStyle = rgba(age < 0.4 ? mix(col, [255, 255, 255], 0.6) : col, 0.95); g.lineWidth = 3.4;
+        g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+        g.fillStyle = rgba(mix(col, [255, 255, 255], 0.7), 1); g.fillRect(x1 - 1.8, y1 - 1.8, 3.6, 3.6);
+        if (b.big > 1.5 && age > 0.8 && rng.next() < 0.5) { g.globalAlpha = fade * Math.max(0, Math.sin(age * 40 + i)); g.fillStyle = '#fff4c8'; g.fillRect(x1 + rng.range(-8, 8), y1 + rng.range(-8, 8), 2.2, 2.2); }
+      }
+    }
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  }
   paint(g) {
     const s = this.sim, L = this.L, R = L.R, t = s.t, cfg = s.cfg, ww = this.world.w, wh = this.world.h;
     if (L.oy > 0) { g.fillStyle = '#0b3a9e'; g.fillRect(0, 0, ww, L.oy + 1); g.fillStyle = '#093c7c'; g.fillRect(0, wh - L.oy - 1, ww, L.oy + 1); }
@@ -872,6 +1014,7 @@ class PyramidRenderer extends EBS.CanvasScene {
       g.translate(L.W / 2 + Math.sin(t * 0.13) * 3, L.H / 2 + Math.cos(t * 0.17) * 2.5); g.scale(k, k); g.translate(-L.W / 2, -L.H / 2);
     }
     const day = (this.day = dayState(dayPhase(cfg, this.video, s.step), cfg.nightDark));
+    const fs = (this.finale = this.fillState());
     g.drawImage(this.sky, 0, 0, L.W, L.H);
     this.drawSun(g, day);
     this.drawRays(g, t, cfg.rays * day.rays);
@@ -880,6 +1023,7 @@ class PyramidRenderer extends EBS.CanvasScene {
     this.drawWater(g, t);
     this.drawLift(g, t);
     const c = this.col; g.drawImage(this.colCanvas, c.x, c.y, c.w, c.h);
+    this.drawLit(g, fs.lit, 0.5 * cfg.fillGlow, 'source-over');
     g.drawImage(this.front, 0, 0, L.W, L.H);
     for (const b of s.orbs) if (b.state === RAMP) {
       const q = this.pose(b, t);
@@ -893,9 +1037,11 @@ class PyramidRenderer extends EBS.CanvasScene {
     // Tageszeit: ganze Szene einfärben, danach alles, was selbst leuchtet
     this.grade(g, day);
     this.drawNight(g, t, day);
+    this.drawFillLights(g, t, fs, day);
     this.drawGlassFlash(g);
     this.drawPulseDot(g);
     this.drawApex(g, t);
+    this.drawFireworks(g, fs);
     g.restore();
     if (this.view.hud) this.drawHud(g);
     g.restore();
@@ -1188,6 +1334,23 @@ class PyramidRenderer extends EBS.CanvasScene {
       g.letterSpacing = '3px'; g.font = font(600, 26); g.fillStyle = '#d7ecff'; g.fillText('SUN PULSES', L.W / 2, 192);
       g.letterSpacing = '1px'; g.font = font(700, 56); g.fillStyle = '#ffd25a'; g.fillText(n, L.W / 2, 246);
     }
+    const fs = this.finale, cfg = this.sim.cfg;
+    if (fs && cfg.fill) {
+      const f = fs.lit / PANELS, bw = L.land ? 260 : 360, bx = L.land ? L.W - 60 - bw : (L.W - bw) / 2, by = L.land ? 150 : 292;
+      g.shadowBlur = 8; g.fillStyle = 'rgba(10,30,70,.45)'; g.beginPath(); g.roundRect(bx, by, bw, 10, 5); g.fill();
+      g.shadowBlur = 0;
+      if (f > 0) { const gr = g.createLinearGradient(bx, 0, bx + bw, 0); gr.addColorStop(0, '#ffb43c'); gr.addColorStop(1, '#fff1b0'); g.fillStyle = gr; g.beginPath(); g.roundRect(bx, by, Math.max(10, bw * f), 10, 5); g.fill(); }
+      g.letterSpacing = '2px'; g.font = font(600, L.land ? 16 : 20); g.fillStyle = '#ffe9b0'; g.textAlign = L.land ? 'right' : 'center';
+      const banner = fs.on && fs.lit === PANELS;
+      if (!banner || L.land) g.fillText(`PYRAMID LIT ${Math.floor(f * 100)} %`, L.land ? L.W - 60 : L.W / 2, by + (L.land ? 30 : 36));
+      if (banner) {
+        const a = Math.min(1, (fs.ct - (fs.D - fs.F)) / 0.6), sc = 1 + 0.04 * Math.sin(fs.v * 5);
+        g.save(); g.globalAlpha = a; g.translate(L.W / 2, L.land ? 62 : 372); g.scale(sc, sc);
+        g.shadowColor = 'rgba(255,170,40,.9)'; g.shadowBlur = 24; g.letterSpacing = '4px'; g.textAlign = 'center';
+        g.font = font(800, L.land ? 46 : 54); g.fillStyle = '#fff3c4'; g.fillText('PYRAMID FULLY LIT!', 0, 0);
+        g.restore();
+      }
+    }
     g.restore();
   }
   destroy() {
@@ -1205,6 +1368,7 @@ EBS.registerScenario({
     orbs: 22, size: 16, warmup: 30, figure: 0, speed: 1, beltSpeed: 1, rollSpeed: 1, current: 1,
     glow: 1, pulse: 1, rays: 1, clouds: 1, reflection: 1, waves: 1, sparkle: 1, wiggle: 1, birds: true, lane: true,
     dayCycle: true, dayMinutes: 0, dayStart: 0, nightDark: 0.85, stars: true, sleepy: true,
+    fill: true, finale: true, fillGlow: 1, fireworks: 1,
   },
   controls: [
     { key: 'figure', label: 'Figuren', type: 'select', options: [[0, 'Leuchtkugeln'], [1, 'Tierchen (Küken, Pinguin, Schweinchen, Frosch)']] },
@@ -1225,7 +1389,11 @@ EBS.registerScenario({
     { key: 'dayMinutes', label: 'Länge eines Tages (Morgen bis Nacht)', type: 'select', options: DAY_OPTIONS },
     { key: 'dayStart', label: 'Tageszeit beim Start', type: 'range', min: 0, max: 0.95, step: 0.01, format: (v) => `${Math.round(v * 100)} % · ${phaseName(v)}` },
     { key: 'nightDark', label: 'Dunkelheit der Nacht', type: 'range', min: 0, max: 1, step: 0.05, format: pct },
+    { key: 'fillGlow', label: 'Leuchtkraft der Glasfelder', type: 'range', min: 0, max: 1.5, step: 0.05, format: pct },
+    { key: 'fireworks', label: 'Menge Feuerwerk im Finale', type: 'range', min: 0.5, max: 2, step: 0.1, format: times },
     { key: 'dayCycle', label: 'Tageslauf (Morgen → Nacht)', type: 'check' },
+    { key: 'fill', label: 'Pyramide füllt sich mit Licht', type: 'check' },
+    { key: 'finale', label: 'Finale mit Feuerwerk am Tagesende', type: 'check' },
     { key: 'stars', label: 'Sterne und Mond', type: 'check' },
     { key: 'sleepy', label: 'Tierchen werden abends müde', type: 'check' },
     { key: 'birds', label: 'Vögel', type: 'check' },
@@ -1243,6 +1411,7 @@ EBS.registerScenario({
       birds: bool(p.birds, true), lane: bool(p.lane, true),
       dayCycle: bool(p.dayCycle, true), dayMinutes: DAY_OPTIONS.some(([v]) => v === +p.dayMinutes) ? +p.dayMinutes : 0,
       dayStart: r('dayStart', 0, 0, 0.95), nightDark: r('nightDark', 0.85, 0, 1), stars: bool(p.stars, true), sleepy: bool(p.sleepy, true),
+      fill: bool(p.fill, true), finale: bool(p.finale, true), fillGlow: r('fillGlow', 1, 0, 1.5), fireworks: r('fireworks', 1, 0.5, 2),
     };
   },
   create: (ctx) => new PyramidSim(ctx),
@@ -1269,6 +1438,9 @@ EBS.registerScenario({
       boing: { label: 'Tierchen: Boing', samples: ['synth:boing'], gain: 0.2, ref: 420, detune: 1.5, minGap: 0.05 },
       wheee: { label: 'Tierchen: Juhu', samples: ['synth:wheee'], gain: 0.1, detune: 2.5, minGap: 0.2 },
       squeak: { label: 'Tierchen: Quiek', samples: ['synth:squeak'], gain: 0.09, detune: 3 },
+      full: { label: 'Pyramide voll: Fanfare', samples: ['synth:fanfare'], gain: 0.24 },
+      launch: { label: 'Feuerwerk: Abschuss', samples: ['synth:launch'], gain: 0.06, detune: 2 },
+      firework: { label: 'Feuerwerk: Knall', samples: ['synth:firework'], gain: 0.3, ref: 1.2, detune: 1.5 },
     },
   },
 });

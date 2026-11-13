@@ -48,3 +48,7 @@ Neu in `lib/audio.mjs` und deterministisch im Code erzeugt: `synth:chime` (Glock
 Teiltöne mit Abklingen; je Farbe um 0/4/7/12 Halbtöne versetzt), `synth:boing` (federnder Ton der Tierchen an
 den Wendekappen), `synth:wheee` (auf- und absteigender Pfiff beim Fallen) und `synth:squeak` (kurzes Quieken,
 wenn ein Becher ein Tierchen aufnimmt). Die drei Tierchen-Klänge erklingen nur in der Darstellung „Tierchen“.
+
+Für Licht-Füllung und Finale, ebenfalls im Code erzeugt: `synth:fanfare` (aufsteigender Dur-Akkord aus vier
+Glockentönen, wenn die Pyramide voll ist), `synth:launch` (leises Pfeifen der aufsteigenden Rakete) und
+`synth:firework` (Knall mit Knistern; die große Schlussrakete klingt lauter).

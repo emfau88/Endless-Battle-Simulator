@@ -369,7 +369,8 @@ class Session {
     if (r.width !== world.w || r.height !== world.h || r.resolution !== this.renderScale) r.resize(world.w, world.h, this.renderScale);
     this.cfg = cfg; this.scenario = sc; this.world = world;
     this.view = { ...cfg.view };
-    this.sim = sc.create({ seed: cfg.seed, params: { ...cfg.params }, world, view: this.view, timeScale: cfg.video.tempo });
+    // video: Verweis auf die Videoeinstellungen (z. B. Videolänge für Abläufe, die genau am Videoende enden sollen)
+    this.sim = sc.create({ seed: cfg.seed, params: { ...cfg.params }, world, view: this.view, timeScale: cfg.video.tempo, video: cfg.video });
     // video: Verweis auf die Videoeinstellungen (z. B. Videolänge für den Himmelsverlauf); Änderungen gelten sofort
     this.renderer = sc.createRenderer({ app: this.app, sim: this.sim, view: this.view, world, renderScale: this.renderScale, video: cfg.video });
     this.app.stage.addChild(this.renderer.root);

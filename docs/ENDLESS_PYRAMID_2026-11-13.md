@@ -90,6 +90,23 @@ Gesamttempo und Filmtempo. Einfärben per Multiplikation und warmem Licht; Licht
 Tests: Nacht < 60 % der Mittagshelligkeit, neuer Morgen nach Tagesende, Zustands-Hash mit und ohne Tageslauf gleich
 (beide Formate, beide Darstellungen); 19/19 Pyramiden-Tests bestanden. Hör-/Sichtprobe im laufenden Clip offen.
 
+## Nachtrag: Licht-Füllung und Finale (R23 P3)
+
+![Füllung hochkant](nachweise/pyramid_fuellung_9x16.jpg)
+
+![Finale quer](nachweise/pyramid_finale_16x9.jpg)
+
+Tag von 1 Minute, hochkant mit Tierchen bei 20 s, 45 s, 57 s und 59 s; quer mit Leuchtkugeln bei 59 s.
+900 Glasfelder (30 Reihen × 30), Füllstand aus der Videozeit des letzten Lichtimpulses, voll 2 s vor dem Finale.
+Finale = 6 % der Tageslänge (5–10 s), Raketen aus Seed und Zyklus. Damit Abschuss, Knall und Fanfare im Ton
+liegen, übergibt der Kern die Videoeinstellungen jetzt auch an `create()` (eine Zeile in `src/core.js`; andere
+Szenarien ignorieren sie). Nachts spart das Leuchten Schienen, Pflanzkästen und Ufer aus.
+
+Prüfung: Fanfare genau einmal kurz vor dem Finale, Feuerwerk nur im Finale, an die Videolänge gekoppelt (400-s-Video:
+Fanfare 388–391 s, Feuerwerk 390–400 s), abschaltbar; Zustands-Hash mit und ohne Füllung/Finale gleich. 21/21
+Pyramiden-Tests. Renderzeit je 1080p-Bild inklusive JPEG: 45 ms am Tag, bis 64 ms im nächtlichen Finale mit
+Tierchen (Kugelfabrik 26 ms, Scrap Wars 56 ms). Hörprobe von Fanfare und Feuerwerk offen.
+
 ## Offen
 
 - **Hörabnahme** der vier neuen Klänge und der Mischung (bisher nur technisch geprüft).
