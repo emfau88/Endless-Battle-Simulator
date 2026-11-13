@@ -80,7 +80,7 @@ test('Quadrat 1:1 läuft stabil', async () => {
 test('Szenario-Registry: weiteres Szenario nachladen und mit derselben Technik rendern', async () => {
   await page.addScriptTag({ path: join(ROOT, 'test', 'fixtures', 'dummy-scenario.js') });
   const ids = (await page.evaluate(() => window.exportAPI.scenarios())).map((s) => s.id);
-  assert.deepEqual(ids, ['naval', 'marble', 'scrap', 'dummy']);
+  assert.deepEqual(ids, ['naval', 'marble', 'scrap', 'mycelium', 'pyramid', 'dummy']);
   await page.evaluate(() => window.exportAPI.restart({ scenario: 'dummy', params: { speed: 500 }, video: { aspect: '16:9', resolution: 720 } }));
   const frames = await page.evaluate(() => window.exportAPI.renderFrames(3, 0.8));
   assert.equal(frames.length, 3);

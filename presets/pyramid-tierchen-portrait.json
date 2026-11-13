@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "name": "Endless Pyramid – Tierchen hochkant (20 Sekunden)",
+  "scenario": "pyramid",
+  "seed": 42,
+  "params": { "figure": 1, "orbs": 22, "size": 22, "glow": 1, "wiggle": 1.2 },
+  "video": { "aspect": "9:16", "resolution": 1080, "fps": 30, "durationSec": 20, "tempo": 1, "audio": true },
+  "view": { "hud": true, "camera": true }
+}

@@ -1,4 +1,4 @@
-// Playlink und Handybedienung: statische Auslieferung ohne Export-Server (wie GitHub Pages), Teilen-Link, JSON, Handyansicht.
+// Statische Vorschau ohne Export-Server (wie GitHub Pages), Einstellungsdateien und Handyansicht.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
@@ -69,7 +69,7 @@ test('Statische Auslieferung unter einem Unterpfad: Vorschau läuft, Export wird
   assert.deepEqual(errors, []);
 });
 
-test('Teilen-Link stellt in einem frischen Browser dieselbe Szene her', async (t) => {
+test('Gespeicherte Einstellungen stellen in einem frischen Browser dieselbe Szene her', async (t) => {
   const a = await open(t, base);
   await a.page.selectOption('#scenario', 'marble');
   await a.page.click('#segFormat button[data-v="16:9"]');
@@ -78,19 +78,22 @@ test('Teilen-Link stellt in einem frischen Browser dieselbe Szene her', async (t
   await a.page.fill('#p-buffer', '3'); await a.page.dispatchEvent('#p-buffer', 'input');
   await a.page.click('#segSpeed button[data-v="0.8"]');
   await a.page.uncheck('#audio'); await a.page.uncheck('#camera');
-  await a.page.click('#btnCopy');
-  const link = await a.page.inputValue('#shareLink'), want = await cfg(a.page);
-  assert.ok(link.startsWith(base + '?'), `Link zeigt nicht auf die Seite: ${link}`);
+  const want = await cfg(a.page);
+  const [download] = await Promise.all([a.page.waitForEvent('download'), a.page.click('#btnSaveCfg')]);
+  const saved = join(dir, 'fresh-context.json'); await download.saveAs(saved);
+  assert.deepEqual(JSON.parse(readFileSync(saved, 'utf8')), want);
   assert.deepEqual([want.scenario, want.seed, want.video.durationSec, want.video.tempo, want.video.audio, want.view.camera, want.params.buffer], ['marble', 123, 37, 0.8, false, false, 3]);
   const ha = await hashAfter300Steps(a.page);
   assert.deepEqual(a.errors, []);
   // The comparison needs a fresh storage context, not two simultaneous software-WebGL render loops.
   await a.ctx.close();
   assert.equal(browser.contexts().length, 0, 'Quellvorschau vor dem neuen Kontext vollständig schließen');
-  const b = await open(t, link);
-  assert.deepEqual(await cfg(b.page), want, 'geteilter Link ergibt eine andere Konfiguration');
+  const b = await open(t, base);
+  await b.page.setInputFiles('#cfgFile', saved);
+  await b.page.waitForFunction(() => EBS.app.cfg.seed === 123);
+  assert.deepEqual(await cfg(b.page), want, 'gespeicherte Datei ergibt eine andere Konfiguration');
   const hb = await hashAfter300Steps(b.page);
-  assert.equal(ha, hb, 'gleicher Link, anderer Simulationsverlauf');
+  assert.equal(ha, hb, 'gleiche Einstellungen, anderer Simulationsverlauf');
   assert.deepEqual(b.errors, []);
 });
 
@@ -110,14 +113,14 @@ test('Einstellungen als JSON speichern und laden (auch die JSON-Datei neben eine
   await page.waitForFunction(() => window.EBS.app.cfg.seed === 77);
   const c = await cfg(page);
   assert.deepEqual([c.scenario, c.video.aspect, c.video.durationSec, c.params.ships], ['naval', '16:9', 12, 3]);
-  assert.match(await page.textContent('#shareMsg'), /video\.json geladen/);
+  assert.match(await page.textContent('#configMsg'), /video\.json geladen/);
   assert.equal(await page.inputValue('#scenario'), 'naval');
   // Fehlerhafte Dateien: Meldung, Zustand bleibt
   for (const [name, body, re] of [['kaputt.json', '{ nicht json', /konnte nicht geladen werden/], ['fremd.json', JSON.stringify({ scenario: 'gibtsnicht' }), /Unbekanntes Szenario "gibtsnicht"/]]) {
     const f = join(dir, name); writeFileSync(f, body);
     await page.setInputFiles('#cfgFile', f);
-    await page.waitForFunction((n) => document.querySelector('#shareMsg').textContent.includes(n), name);
-    assert.match(await page.textContent('#shareMsg'), re);
+    await page.waitForFunction((n) => document.querySelector('#configMsg').textContent.includes(n), name);
+    assert.match(await page.textContent('#configMsg'), re);
     assert.equal((await cfg(page)).seed, 77, 'fehlerhafte Datei hat die Einstellungen verändert');
   }
   assert.deepEqual(errors, []);
@@ -128,7 +131,7 @@ test('Handyansicht (390×844): Bedienfeld unter der Vorschau, kein seitliches Sc
   const m = await page.evaluate(() => {
     const r = (sel) => { const b = document.querySelector(sel).getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height, r: b.right }; };
     return { vw: innerWidth, scrollW: document.documentElement.scrollWidth, canvas: r('#stage canvas'), panel: r('#panel'),
-      controls: ['#btnPlay', '#btnRestart', '#scenario', '#durationText', '#duration', '#btnExport', '#btnCopy', '#btnLoadCfg', '#seed'].map((s) => ({ s, ...r(s) })) };
+      controls: ['#btnPlay', '#btnRestart', '#scenario', '#durationText', '#duration', '#btnExport', '#btnSaveCfg', '#btnLoadCfg', '#btnShortPreset', '#btnLongPreset', '#seed'].map((s) => ({ s, ...r(s) })) };
   });
   assert.ok(m.scrollW <= m.vw + 1, `Seite ist breiter als der Bildschirm: ${m.scrollW} > ${m.vw}`);
   assert.ok(m.canvas.w > 250 && m.canvas.r <= m.vw + 1 && m.canvas.h > 400, `Vorschau ${m.canvas.w}×${m.canvas.h}`);

@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "Myzel – Short (1 Minute)",
+  "scenario": "mycelium",
+  "seed": 42,
+  "params": {},
+  "video": {
+    "aspect": "9:16",
+    "resolution": 1080,
+    "fps": 30,
+    "durationSec": 60,
+    "tempo": 1,
+    "audio": true,
+    "volume": {
+      "master": 100
+    },
+    "quality": {
+      "crf": 20,
+      "preset": "medium",
+      "bitrate": null
+    }
+  },
+  "view": {
+    "hud": true,
+    "camera": true
+  }
+}

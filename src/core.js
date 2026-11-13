@@ -96,6 +96,7 @@ class RNG {
 //    create({ seed, params, world, view }) -> Simulation
 //    createRenderer({ app, sim, view, world, renderScale, video }) -> Renderer
 //    panelStats(sim) -> [{ key, label, value }]
+//    optional: videoDefaults { resolution, fps, quality: { crf, preset } } – eigene Standardwerte des Szenarios
 //  Simulation:  stepOnce(), t, step, snapshot(), checkInvariants(), stateHash(), destroy(),
 //               optional setParam(k, v), events/eventSeq
 //  Renderer:    root (PIXI.Container), draw(), destroy()
@@ -189,6 +190,8 @@ function normalizeConfig(input) {
   const sc = getScenario(wanted);
   if (!sc) throw new Error('Kein Szenario registriert.');
   const v = o.video, q = v.quality;
+  // Optionale Videostandards eines Szenarios (z. B. YouTube-Qualität); ohne Angabe gelten die allgemeinen Standards
+  const vd = sc.videoDefaults || {}, qd = vd.quality || {};
   return {
     version: CONFIG_VERSION,
     ...(o.name ? { name: String(o.name) } : {}),
@@ -197,15 +200,15 @@ function normalizeConfig(input) {
     params: sc.normalizeParams({ ...sc.defaults, ...o.params }),
     video: {
       aspect: ASPECTS[v.aspect] ? v.aspect : '9:16',
-      resolution: RESOLUTIONS[+v.resolution] ? +v.resolution : 1080,
-      fps: FPS_OPTIONS.includes(+v.fps) ? +v.fps : 30,
+      resolution: RESOLUTIONS[+v.resolution] ? +v.resolution : RESOLUTIONS[vd.resolution] ? vd.resolution : 1080,
+      fps: FPS_OPTIONS.includes(+v.fps) ? +v.fps : FPS_OPTIONS.includes(vd.fps) ? vd.fps : 30,
       durationSec: clamp(num(v.durationSec, DEFAULT_DURATION), 1, MAX_DURATION),
       tempo: TEMPO_OPTIONS.includes(+v.tempo) ? +v.tempo : 1,
       audio: bool(v.audio, true),      // Tonspur, sofern das Szenario eine Klangtabelle mitbringt
       volume: normalizeVolume(v.volume, sc),
       quality: {
-        crf: clamp(Math.round(num(q.crf, 20)), 0, 51),
-        preset: X264_PRESETS.includes(q.preset) ? q.preset : 'medium',
+        crf: clamp(Math.round(num(q.crf, num(qd.crf, 20))), 0, 51),
+        preset: X264_PRESETS.includes(q.preset) ? q.preset : X264_PRESETS.includes(qd.preset) ? qd.preset : 'medium',
         bitrate: parseBitrate(q.bitrate),
       },
     },
@@ -369,7 +372,8 @@ class Session {
     if (r.width !== world.w || r.height !== world.h || r.resolution !== this.renderScale) r.resize(world.w, world.h, this.renderScale);
     this.cfg = cfg; this.scenario = sc; this.world = world;
     this.view = { ...cfg.view };
-    this.sim = sc.create({ seed: cfg.seed, params: { ...cfg.params }, world, view: this.view, timeScale: cfg.video.tempo });
+    // video: Verweis auf die Videoeinstellungen (z. B. Videolänge für Abläufe, die genau am Videoende enden sollen)
+    this.sim = sc.create({ seed: cfg.seed, params: { ...cfg.params }, world, view: this.view, timeScale: cfg.video.tempo, video: cfg.video });
     // video: Verweis auf die Videoeinstellungen (z. B. Videolänge für den Himmelsverlauf); Änderungen gelten sofort
     this.renderer = sc.createRenderer({ app: this.app, sim: this.sim, view: this.view, world, renderScale: this.renderScale, video: cfg.video });
     this.app.stage.addChild(this.renderer.root);

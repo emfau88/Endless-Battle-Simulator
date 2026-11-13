@@ -53,3 +53,40 @@ weniger. Nur Scrap verwendet 20 ms Begrenzer-Rücklauf statt 60 ms, damit kurze 
 ohne eine lange Pegelabsenkung auf folgende Klänge zu übertragen. Die PCM-Grenze liegt für Scrap bei −3 dBFS:
 Ein 15-Minuten-Audiolauf zeigte seltene AAC-Spitzen, die in den kurzen Clips nicht vorkamen. Das Ziel −14 LUFS
 und die gemeinsame AAC-Spitzengrenze −1 dBTP bleiben erhalten. Messnachweise: `docs/SCRAP_AUDIO_PRODUKTION_2026-11-13.md`.
+
+## Endless Mycelium
+
+Die Klangtabelle in `src/scenarios/mycelium.js` nutzt aus dem Kenney-Paket nur `impactSoft_medium_000` (Blatt landet,
+etwas höher gestimmt). Alle übrigen Klänge werden deterministisch in `lib/audio.mjs` erzeugt, weil kurze Glasklänge
+bei den seltenen Ereignissen eines ruhigen Videos bis zu 24 dB Begrenzung erzwangen:
+`synth:myco-seed` (Spore landet: schwebender Dur-Dreiklang), `synth:myco-pling` (Blatt aufgefressen: weicher
+Glockenton, je Blatt einen Ton weiter auf der Dur-Pentatonik), `synth:myco-pop` (Pilz ploppt auf),
+`synth:myco-breeze` (Sporenwolke: an- und abschwellendes Rauschen) und `synth:myco-night` (leise Nachtluft, 12 s mit
+weicher Ein-/Ausblendung, alle 10 s ausgelöst und dadurch nahtlos).
+
+Bei der Integration in den aktuellen Exporter wurde für Mycelium ein eigenes AAC-Profil gemessen:
+keine M/S-/Intensitätsstereo-Kodierung und kein Rauschersatz, PCM-Grenze −3 dBFS. Die Einmessung auf
+−14 LUFS und die strenge Nachprüfung des fertigen AAC bleiben erhalten. Dies gilt nur für Mycelium;
+[Messung und gezielte Tests](../../docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
+
+## Endless Pyramid
+
+Bekannter Folgepunkt R27: Beim vollständigen 60-Sekunden-Tierchenablauf wurden bei
+Standardlautstärke −14,1 LUFS einzelne AAC-Spitzen von +0,5 dBTP gemessen (PCM: −1,7 dBTP).
+Die Prüfung kann solche Exporte abbrechen. Es wurde kein neues Pyramid-Audioprofil übernommen;
+der Nutzer hat die Einschränkung für die Integration akzeptiert und weitere Zusatzdiagnosen
+beendet. [Nachweis](../../docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
+
+Die Klangtabelle in `src/scenarios/pyramid.js` verwendet dieselben unveränderten CC0-Dateien:
+`impactSoft_medium_000` (Becher schöpft, höher gestimmt), `impactMetal_light_000` (Becher kippt aus) und
+`impactGlass_light_000/001/002` (Leuchtkugel trifft eine Wendekappe). Der Platscher ist der vorhandene
+erzeugte Klang `synth:splash`.
+
+Neu in `lib/audio.mjs` und deterministisch im Code erzeugt: `synth:chime` (Glockenton des Lichtimpulses, vier
+Teiltöne mit Abklingen; je Farbe um 0/4/7/12 Halbtöne versetzt), `synth:boing` (federnder Ton der Tierchen an
+den Wendekappen), `synth:wheee` (auf- und absteigender Pfiff beim Fallen) und `synth:squeak` (kurzes Quieken,
+wenn ein Becher ein Tierchen aufnimmt). Die drei Tierchen-Klänge erklingen nur in der Darstellung „Tierchen“.
+
+Für Licht-Füllung und Finale, ebenfalls im Code erzeugt: `synth:fanfare` (aufsteigender Dur-Akkord aus vier
+Glockentönen, wenn die Pyramide voll ist), `synth:launch` (leises Pfeifen der aufsteigenden Rakete) und
+`synth:firework` (Knall mit Knistern; die große Schlussrakete klingt lauter).

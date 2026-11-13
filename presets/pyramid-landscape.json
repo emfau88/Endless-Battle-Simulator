@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "name": "Endless Pyramid – Querformat mit Leuchtkugeln (20 Sekunden)",
+  "scenario": "pyramid",
+  "seed": 42,
+  "params": { "figure": 0, "orbs": 22, "size": 16 },
+  "video": { "aspect": "16:9", "resolution": 1080, "fps": 30, "durationSec": 20, "tempo": 1, "audio": true },
+  "view": { "hud": true, "camera": true }
+}

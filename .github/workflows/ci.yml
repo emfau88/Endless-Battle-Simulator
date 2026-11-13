@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [core, audio, production, scrap]
+        suite: [core, audio, production, scrap, mycelium, pyramid, export-naval, export-marble, export-scrap, export-mycelium, export-pyramid]
     defaults:
       run:
         shell: bash # Explizit: -eo pipefail; tee darf fehlgeschlagene Tests nicht verdecken.
@@ -49,5 +49,8 @@ jobs:
         if: always()
         with:
           name: production-checks-${{ matrix.suite }}-${{ github.sha }}
-          path: output/ci-*.log
+          path: |
+            output/ci-*.log
+            output/test-failures/**
+            output/production-checks/**
           if-no-files-found: ignore

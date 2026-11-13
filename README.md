@@ -7,19 +7,25 @@ Direkt zur Kugelfabrik: [hochkant](https://emfau88.github.io/Endless-Battle-Simu
 Vorschau und Regler laufen im Browser, auch am Handy. Videos entstehen am eigenen PC (`start.bat`).
 
 Deterministische 2D-Physiksimulation im Stil von Algodoo-/„Satisfying Physics“-Videos mit automatischem MP4-Export.
-Erstes Szenario: **Endless Naval Battle** – zwei Schiffe beschießen sich endlos, jede Kanonenkugel läuft in einem
-geschlossenen, sichtbaren Kreislauf zurück ins Magazin.
+Dieser Arbeitsstand vereint fünf Szenarien im selben Generator:
 
-Zweites Szenario: **Endless Marble Factory** – eine Kugelfabrik mit geschlossenem Kreislauf, deren Grafik vollständig
-im Code entsteht (siehe [Endless Marble Factory](#endless-marble-factory)).
+| Szenario | Inhalt |
+|---|---|
+| Endless Naval Battle | Seeschlacht mit sichtbarem Kreislauf der Kanonenkugeln |
+| Endless Marble Factory | Kugelfabrik mit geschlossenem Kreislauf |
+| Scrap Wars | Roboterkämpfe mit Deckung, Waffen und Folgerunden |
+| Endless Mycelium | Pilzgeflecht, Laub, Pilze und neue Sporengenerationen |
+| Endless Pyramid | Glaspyramide mit Becherwerk, Leuchtkugeln oder Tierchen, Tageslauf und Finale |
 
-Drittes Szenario: **Scrap Wars** – vier Roboter, zerstörbare Deckung, Waffenaufnahme und deterministische
-Folgerunden mit Punktestand. Die Arena aus dem bereitgestellten Scrap-Prototyp nutzt den gemeinsamen
-Konfigurations-, Vorschau- und MP4-Weg. Alle drei Szenarien exportieren mit Ton,
-eingemessen auf YouTube-Lautheit (siehe [Ton](#ton)).
+Alle verwenden dieselbe Bedienoberfläche und den MP4-Export mit Ton. Integrationsnachweise und noch offene
+Abnahmen stehen im [Integrationsbericht](docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
+
+**Bekannte Einschränkung:** Bei Pyramid mit Tierchen kann ein vollständiges 60-Sekunden-Video auch bei
+100 % Standardlautstärke an einzelnen AAC-Tonspitzen scheitern. Der Export veröffentlicht dann keine
+fertige Datei. Dieser Fall bleibt dokumentiert; eine vollständige Abbruchfreiheit ist nicht nachgewiesen.
 
 Die Architektur ist für weitere Szenarien und Videoformate vorbereitet (siehe [Erweiterbarkeit](#erweiterbarkeit));
-der aktuelle Gesamtzustand steht im [Audit vom 12.11.2026](docs/AUDIT_2026-11-12.md). Offene Punkte:
+der [Audit vom 12.11.2026](docs/AUDIT_2026-11-12.md) dokumentiert den damaligen Ausgangspunkt. Offene Punkte:
 [Roadmap](docs/ROADMAP.md) · Erledigtes: [Changelog](docs/CHANGELOG.md).
 
 ## Schnellstart
@@ -28,8 +34,31 @@ der aktuelle Gesamtzustand steht im [Audit vom 12.11.2026](docs/AUDIT_2026-11-12
   laufen im Browser, auch am Handy. Ein Video entsteht dort nicht; der Export braucht den eigenen PC.
 - **Am PC:** `start.bat` doppelklicken. Der Server startet, der Browser öffnet `http://localhost:8080`, und der Knopf
   „Video exportieren“ funktioniert. Das Fenster offen lassen; Schließen beendet den Server.
-- **Einstellungen mitnehmen:** Im Bedienfeld unter „Einstellungen teilen“ den Link kopieren oder eine JSON-Datei
-  speichern und am PC wieder laden (auch als `--config` für die Kommandozeile).
+- **Einstellungen aufbewahren:** Unter „Einstellungen speichern“ eine JSON-Datei speichern und später wieder
+  laden. Sie enthält Szene, Seed und Feinjustierungen; auch als `--config` für die Kommandozeile verwendbar.
+
+## Gemeinsame YouTube-Vorlagen
+
+Szene auswählen, unter „Video“ **Short · 1 Minute** oder **Langvideo · 10 Minuten** anklicken,
+bei Bedarf Einstellungen anpassen und **Video exportieren** drücken. Die Vorlage setzt Szenen- und
+Videoeinstellungen auf Standardwerte zurück und erhält den gewählten Seed. Sie startet keinen Export.
+
+Beide Vorlagen verwenden 1080p, 30 fps, H.264 (CRF 20, `medium`) und AAC-Ton. Das Short ist hochkant (9:16),
+das Langvideo quer (16:9). Bei Pyramid dauert der Short-Tag eine Minute, damit das Finale am Ende liegt;
+beim Langvideo folgt er der Videolänge. Scrap verwendet Sunny Yard im Endlosmodus.
+
+| Szene | Short-Datei | Langvideo-Datei |
+|---|---|---|
+| Seeschlacht | [naval-short.json](presets/production/naval-short.json) | [naval-long.json](presets/production/naval-long.json) |
+| Kugelfabrik | [marble-short.json](presets/production/marble-short.json) | [marble-long.json](presets/production/marble-long.json) |
+| Scrap Wars | [scrap-short.json](presets/production/scrap-short.json) | [scrap-long.json](presets/production/scrap-long.json) |
+| Myzel | [mycelium-short.json](presets/production/mycelium-short.json) | [mycelium-long.json](presets/production/mycelium-long.json) |
+| Pyramide | [pyramid-short.json](presets/production/pyramid-short.json) | [pyramid-long.json](presets/production/pyramid-long.json) |
+
+Die bisherigen Spezialvorlagen bleiben verfügbar. Vorlagendauer und tatsächlich geprüfte Filmlänge sind
+getrennte Angaben; der [Integrationsbericht](docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md) dokumentiert die Abnahme.
+Es wurden keine fünf vollständigen 10-Minuten-Testvideos erzeugt. Weitere manuelle Film- und
+Extremprüfungen wurden auf Nutzerwunsch beendet; die regulären automatischen Prüfungen bleiben erhalten.
 
 ## Voraussetzungen
 
@@ -58,6 +87,10 @@ npm run golden              # Referenz-Hashes der Simulation prüfen (≈ 1 min)
 npm run marble:test         # Kugelfabrik: 8-s-Testvideo 720p30 -> output/marble_test_8s_720p.mp4
 npm run export -- --config presets/scrap-portrait.json         # Scrap: 20-s-Kurzprobe mit Ton
 npm run export -- --config presets/scrap-landscape.json        # gleiche Arena im Querformat
+npm run export -- --config presets/mycelium-youtube-short.json # Myzel-Short: 30 s, 1440×2560, 60 fps, mit Ton
+npm run export -- --config presets/mycelium-youtube-10min.json # Myzel: 10 Minuten, 2560×1440, 60 fps, mit Ton
+npm run export -- --config presets/pyramid-portrait.json       # Endless Pyramid: 20 s hochkant, Leuchtkugeln, mit Ton
+npm run export -- --config presets/pyramid-tierchen-portrait.json   # dieselbe Anlage mit Tierchen (auch -landscape)
 node scripts/screenshot.mjs --scenario marble --aspect 16:9 --at 9 --out output/marble_16x9.png   # Einzelbild (PNG)
 ```
 
@@ -188,11 +221,12 @@ im gemeldeten `.ebs-export-*`-Ordner zur manuellen Wiederherstellung erhalten.
 
 Der Workflow [Production checks](.github/workflows/ci.yml) installiert Node 22.17.1, die per Lockfile gebundene
 Playwright-/Chromium-Fassung und FFmpeg auf Ubuntu 24.04. Er führt bei Pull Requests und Push auf `main` die
-vollständige Suite mit Software-Rendering (`EBS_GPU=0`) in vier getrennten Gruppen aus: Kern/Referenzen, Audio,
-Produktion und Scrap. Jede Testdatei gehört genau einer Gruppe an; `node scripts/test-ci.mjs --list` zeigt die
+vollständige Suite mit Software-Rendering (`EBS_GPU=0`) in elf getrennten Gruppen aus: Kern/Referenzen, Audio,
+Produktion, Scrap, Mycelium, Pyramid sowie je Szenario ein Job für die beiden kurzen Produktionsproben.
+Jede Testdatei gehört genau einer Gruppe an; `node scripts/test-ci.mjs --list` zeigt die
 Zuordnung. Pro Gruppe gelten 25 Minuten, Fehler beenden keine andere Gruppe. Versions- und Testprotokolle
 bleiben erhalten; Bash mit `pipefail` erhält Fehlercodes trotz `tee`. Referenzen werden nicht neu geschrieben.
-Aktueller Prüfstand und Grenzen: [Audio und Produktionsabsicherung](docs/SCRAP_AUDIO_PRODUKTION_2026-11-13.md).
+Aktueller Prüfstand und Grenzen: [gemeinsame Integration](docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
 
 ## Aufbau
 
@@ -204,6 +238,8 @@ src/scenarios/naval.js     Szenario „Endless Naval Battle“ (Simulation + Ren
 src/scenarios/marble.js    Szenario „Endless Marble Factory“ (Bahnen, Simulation, Canvas-Grafik, Renderer)
 src/scenarios/scrap.js     Scrap-Registrierung, Hoch-/Querformat-HUD und Offline-Klangtabelle
 src/scenarios/scrap/       Gesicherte Simulation/Renderer, Quellenmanifest und Episodenadapter
+src/scenarios/mycelium/simulation.js  Endless Mycelium: Wachstum, Verdauung, Pilze, Sporen, Generationen (ohne Matter.js)
+src/scenarios/mycelium.js  Myzel-Renderer (Canvas, Zwischenspeicher mit Überblendung), Regler, Klangtabelle, YouTube-Standard
 src/canvas-scene.js        Canvas2D als vollständiger Frame auf der gemeinsamen Pixi-Capturebühne
 scripts/screenshot.mjs     Einzelbild der laufenden Simulation als PNG (gleiche Seite wie der Export)
 scripts/golden-hashes.mjs  Referenz-Hashes der Simulation prüfen (npm run golden) oder neu schreiben (npm run golden:write)
@@ -318,14 +354,15 @@ Schlagseite und dunklerer Rumpf. Gemessener Verlauf bei 35 %: **1 min ≈ 3 % ·
 | Videoqualität / Bitrate | CRF, x264-Preset, feste Bitrate in CLI und Schema (nicht in der Oberfläche) | `video.quality`; `encoderArgs()` in `lib/exporter.mjs` |
 | Frei wählbare Dauer | CLI, Schema und Oberfläche frei (1 s – 4 h); Oberfläche zusätzlich mit Schnellwahl | `UI_DURATIONS`, `parseDuration()` in `src/app.js` |
 | Ton und Lautstärke | Tonspur aus Ereignissen, −14 LUFS, Regler gesamt und je Klang in Oberfläche, CLI und Schema | `audio` in der Szenario-Registrierung; `lib/audio.mjs` |
-| Vorlagen und Seeds speichern | `presets/*.json`, `--config`, JSON neben jedem Video; Oberfläche: Teilen-Link, JSON speichern und laden, letzte Konfiguration bleibt erhalten | „Einstellungen teilen“ in `src/app.js` |
+| Vorlagen und Seeds speichern | `presets/*.json`, `--config`, JSON neben jedem Video; Oberfläche: Einstellungsdateien speichern und laden, letzte Konfiguration bleibt erhalten | „Einstellungen speichern“ in `src/app.js` |
 | Modulare Szenarien | Registry + Schnittstelle fertig; Bedienfeld, Statistiken, Ton-Regler, Export und Tests arbeiten szenariounabhängig | `EBS.registerScenario(...)` |
 
 ### Neues Szenario anlegen
 
 1. Datei `src/scenarios/<name>.js` anlegen (Vorlage: `test/fixtures/dummy-scenario.js`, Vollbeispiele: `naval.js`, `marble.js`).
 2. Darin `EBS.registerScenario({ id, title, defaults, controls, normalizeParams, create, createRenderer, panelStats })`,
-   optional `panelNote` und `audio` (Klangtabelle).
+   optional `panelNote`, `audio` (Klangtabelle) und `videoDefaults` (eigene Standardwerte für Auflösung, Bildrate
+   und Qualität, z. B. `{ resolution: 1440, fps: 60, quality: { crf: 16 } }`; ausdrückliche Angaben haben Vorrang).
    - `create({ seed, params, world, view, timeScale })` liefert die Simulation mit `stepOnce()`, `t`, `step`,
      `snapshot()`, `checkInvariants()`, `stateHash()`, `destroy()`; für Ton zusätzlich `events` und `eventSeq`.
    - `createRenderer({ app, sim, view, world, renderScale })` liefert `{ root, draw(), destroy() }`.
@@ -336,6 +373,67 @@ Schlagseite und dunklerer Rumpf. Gemessener Verlauf bei 35 %: **1 min ≈ 3 % ·
 Kern, Partikelpool, Bühne, Export-Pipeline, Mischer, Server und CLI bleiben dabei unverändert. Die vollständige
 Checkliste (Determinismus, Matter.js-Reset, Ereignisformat, Parameternamen) steht im
 [Audit, Abschnitt 4](docs/AUDIT_2026-11-12.md#4--checkliste-für-ein-neues-szenario).
+
+## Endless Mycelium
+
+Viertes Szenario, als ruhiges „Satisfying“-Video gedacht: Auf nächtlichem Waldboden wächst ein leuchtendes Pilzgeflecht.
+Auswahl in der Oberfläche über **Szenario → Endless Mycelium**, per Link `?scenario=mycelium`, per Kommandozeile
+`--scenario mycelium`.
+
+**Kreislauf je Generation.** `Spore landet → Netz wächst zum Laub → Blätter werden bis aufs Adergerippe verdaut →
+Pilze wachsen aus den dicksten Strängen → Sporenwolke → altes Netz verblasst von außen nach innen → Sporen landen
+anderswo → nächste Generation in der nächsten Farbe`. Nährstoffe wandern als Lichtpunkte über die Stränge zur
+Keimstelle; dicke Stränge entstehen von selbst dort, wo viel dahinter gewachsen ist. Blätter fallen während jeder
+Generation nach (groß und unscharf, sie drehen sich und landen mit Schatten). Totes Geflecht bleibt kurz als Narbe
+sichtbar und wird dann aus dem Speicher entfernt – auch ein Video über Stunden wächst nicht in den Speicher.
+
+**Regler** (alle in Oberfläche, JSON und `--param key=wert`):
+
+| Regler | Schlüssel | Bereich (Standard) | Wirkung |
+|---|---|---|---|
+| Dauer einer Generation | `cycleSec` | 12–180 s (24) | Länge eines Kreislaufs in Simulationssekunden; Wachstum, Pilze, Sporenflug und Verblassen skalieren mit |
+| Ausbreitung des Netzes | `spread` | 0,4–1,6 (1) | wie weit das Netz in einer Generation wächst |
+| Verzweigung | `branching` | 0,5–1,6 (1) | dichter oder luftiger |
+| Neue Kolonien je Generation | `colonies` | 1–3 (2) | wie viele Sporen landen und keimen |
+| Laub am Boden zu Beginn | `startLeaves` | 0–16 (8) | Blätter, die beim Start schon liegen |
+| Fallende Blätter je Generation | `leafFall` | 0–10 (5) | Nachschub während des Wachsens |
+| Verdauungstempo | `digest` | 0,4–2,5 (1) | wie schnell Blätter bis aufs Gerippe gefressen werden |
+| Pilze je Generation | `mushrooms` | 1–6 (4) | Fruchtkörper an den dicksten Strängen |
+| Sporen je Pilz | `spores` | 0–250 (110) | Dichte der Sporenwolke |
+| Wind für die Sporen | `wind` | 0–2,5 (1) | wie weit die Wolke treibt |
+| Farben der Generationen | `palette` | `cycle`, `mint`, `cool`, `warm` | Farbfolge; wirkt sofort, ohne Neustart |
+| Leuchtstärke | `glow` | 0,3–1,8 (1) | Stärke des Scheins; wirkt sofort |
+| Nährstoffpulse zeigen | `pulses` | an/aus (an) | Lichtpunkte auf den Strängen; wirkt sofort |
+
+Die letzten drei sind reine Darstellung und verändern den Ablauf nicht (gleicher Zustands-Hash); alle anderen starten
+die Simulation neu. Gleicher Seed und gleiche Regler ergeben bei 30 und 60 fps denselben Ablauf.
+
+**YouTube-Qualität als Standard.** Das Szenario bringt eigene Videostandards mit: **1440p, 60 fps, CRF 16**
+(`videoDefaults` in der Registrierung). Sie gelten, wenn die Konfiguration nichts anderes sagt, und werden beim
+Wechsel auf das Szenario in der Oberfläche gesetzt; Format (hochkant/quer) und Länge bleiben wie gewählt. Fertige
+Vorlagen:
+
+```bash
+npm run export -- --config presets/mycelium-youtube-short.json   # Short: 30 s, 1440×2560, 60 fps, zwei Generationen
+npm run export -- --config presets/mycelium-youtube-10min.json   # 10 Minuten, 2560×1440, 60 fps, 13 Generationen
+```
+
+**Ton.** Weiche, im Code erzeugte Töne statt harter Glasklänge: ein schwebender Dreiklang, wenn eine Spore landet,
+ein Glockenton je gefressenem Blatt (jedes Blatt einen Ton weiter auf der Dur-Pentatonik – es entsteht eine kleine
+Melodie), ein weiches „Blubb“, wenn ein Pilz aufploppt, ein anschwellendes Rauschen für die Sporenwolke und leise
+Nachtluft als Grund. Das Blattrascheln ist `impactSoft_medium_000` (Kenney, CC0). Gemessen an einem 20-s-Export:
+−14,0 LUFS bei nur 1,7 dB Begrenzung (mit Glasklängen waren es 24 dB).
+
+**Darstellung und Leistung.** Zehntausende Fadensegmente mit Leuchten jedes Bild neu zu zeichnen ist teuer. Das Netz
+liegt deshalb in zwei Zwischenspeichern, die über mehrere Bilder verteilt neu entstehen und weich überblendet
+werden; neu Gewachsenes wird direkt gezeichnet, das jüngste Segment jeder Spitze wächst fließend nach. Das Bild bleibt
+eine reine Folge des Simulationszustands (Rendern verändert nichts, per Test geprüft); Ausschnitte (`--clip-start`)
+sind wie bei Seeschlacht und Kugelfabrik noch nicht freigegeben. Gemessen auf diesem Rechner (AMD Radeon iGPU):
+1440p60 hochkant und quer **58–74 ms je Bild** (vorher 180–250 ms), davon ≈ 35 ms Grundkosten von Übertragung und
+JPEG wie bei Scrap. Gemessen einschließlich Encoder: 20 s Short-Vorlage 1440p60 hochkant in 2:08 min (9,4 Bilder/s),
+quer in 1:44 min (11,5 Bilder/s) – ein 30-s-Short also ≈ 3 Minuten, 10 Minuten quer ≈ 50–55 Minuten; 1080p30 ≈ 20 Bilder/s.
+
+Bericht mit Messungen und Grenzen: [Endless Mycelium](docs/MYCELIUM_2026-11-13.md).
 
 ## Endless Marble Factory
 
@@ -396,11 +494,70 @@ Simzeit in 2–3,5 s · JS-Heap nach 30 Minuten Simzeit unverändert ≈ 11 MB.
 - Die grüne Farbe hat bei 35 Kugeln nur 5 statt 6 Kugeln und wird entsprechend seltener sortiert.
 - 1:1 ist nicht eigens gestaltet (verkleinertes Querformat-Layout).
 
+## Endless Pyramid
+
+Auswahl in der Oberfläche über **Szenario**, per Kommandozeile mit `--scenario pyramid`; Vorlagen
+`presets/pyramid-*.json`. Hochkant, quer und quadratisch (Quadrat zeigt die Querformat-Anlage verkleinert).
+
+**Kreislauf.** `Lagune (Strömung) → Tunnel im Pyramidenfuß → Becherwerk im Glasschacht → Lichtimpuls zur Spitze →
+Schienen mit Wendekappen → freier Fall in die Lagune`. Figuren werden nie erzeugt oder gelöscht.
+
+**Physik wie bei einer echten Murmelbahn.** Gerade Schienen mit gleichem Gefälle; an jedem Ende eine halbrunde
+Wendekappe, deren Außenwand die Figur auf die nächste Schiene darunter lenkt. Rollbeschleunigung einer Vollkugel
+(5/7 g · Gefälle), Rollreibung und Luftwiderstand; am Ende freier Fall mit voller Erdbeschleunigung. Das Becherwerk
+ist ein Band über zwei drehenden Rollen: Becher schöpfen die Figur unten aus dem Wasser und kippen sie oben über die
+Rolle auf die erste Schiene; leere Becher fahren umgedreht zurück. Ist die erste Schiene noch belegt, wartet das Band.
+Der Schacht steht innen hinter dem Glas, die Schienen liegen außen davor – nichts kreuzt sich. Wird das Gefälle für
+große Figuren zu flach, baut das Layout drei statt fünf Schienen.
+
+**Leuchtkugeln oder Tierchen.** Der Regler „Figuren“ schaltet live um, ohne Neustart und ohne die Simulation zu
+verändern. Die Tierchen (Küken, Pinguin, Schweinchen, Frosch) sind runde Körper mit Ärmchen und Beinchen. Auf der
+Schiene überschlagen sie sich physikalisch korrekt (Drehung = Weg ÷ Radius, Richtung nach der Auflage) und bekommen
+bei hohem Tempo Spiralaugen. Im Becher winken sie, beim Fallen reißen sie die Arme hoch und richten sich auf, in der
+Lagune paddeln sie mit geschlossenen Glücksaugen. Wackelaugen und Blinzeln sind deterministisch.
+
+**Regler** (alle in Oberfläche, JSON und CLI-Konfiguration):
+
+| Regler | Wirkung | Bereich |
+|---|---|---|
+| Figuren | Leuchtkugeln oder Tierchen (reine Darstellung) | – |
+| Anzahl der Figuren · Größe der Figuren | Neustart; Größe ändert Becher, Kappen, Tunnel und Abstände mit | 12–26 · 24–48 px |
+| Gesamttempo (alles) | Zeitlupe für Physik und Animationen, wirkt sofort | 0,25–1,5× |
+| Tempo des Becherwerks · Rolltempo auf der Bahn · Strömung in der Lagune | je Element, wirkt sofort; das Rolltempo ist eine Zeitlupe nur für die Bahn (gleiche Physik, nie Stillstand) | 0,25–2× · 0,25–1,6× · 0,25–2× |
+| Leuchten · Lichtimpuls · Sonnenstrahlen · Spiegelung | Intensität (reine Darstellung) | 0–150 % bzw. 0–100 % |
+| Wolkentempo · Wellengang · Glitzern · Gezappel der Tierchen | Tempo bzw. Stärke (reine Darstellung) | 0–3× bzw. 0–2× |
+| Vögel · Strömungsspur im Wasser | an/aus | – |
+| Tageslauf · Länge eines Tages · Tageszeit beim Start · Dunkelheit der Nacht | siehe „Tageslauf“ | an/aus · automatisch, 1–60 min · 0–95 % · 0–100 % |
+| Sterne und Mond · Tierchen werden abends müde | an/aus | – |
+| Pyramide füllt sich mit Licht · Finale mit Feuerwerk · Leuchtkraft der Glasfelder · Menge Feuerwerk | siehe „Licht-Füllung und Finale“ | an/aus · an/aus · 0–150 % · 0,5–2× |
+
+**Tageslauf.** Über die Videolänge wird es Morgen, Tag, goldene Stunde, Sonnenuntergang, Dämmerung und Nacht
+(„automatisch“ = Videolänge, mindestens 5 Minuten; in der Vorschau beginnt danach ein neuer Tag). Die ganze Szene
+wird je Tageszeit eingefärbt, dazu Abendrot über Himmel und Wasser; morgens geht rechts die Sonne auf, abends links
+unter. Alles, was selbst leuchtet – Stern an der Spitze, Lichtimpulse, Figuren, Innenlicht der Pyramide, Mond und
+Sterne –, wird erst danach gezeichnet und strahlt nachts. Tierchen gähnen in der Dämmerung, tragen nachts
+Schlafmützen und schlafen im Wasser („z z z“). Ohne Tageslauf bleibt die gewählte Tageszeit stehen. Reine
+Darstellung: Die Simulation ist mit und ohne Tageslauf identisch.
+
+**Licht-Füllung und Finale.** Jeder Lichtimpuls lässt Glasfelder dauerhaft goldgelb aufleuchten – Reihe für Reihe
+von unten, innerhalb einer Reihe in fester Zufallsreihenfolge; neue Felder blitzen kurz auf. Der Füllstand folgt der
+Tageslänge, sodass die Pyramide zwei Sekunden vor dem Finale voll ist (Fanfare, Schriftzug „PYRAMID FULLY LIT!“,
+Balken „PYRAMID LIT … %“ im HUD). Das Finale dauert 6 % der Tageslänge (5–10 s): Raketen steigen vom Ufer auf und
+explodieren in den Figurenfarben, zuletzt groß und golden über der Spitze; die Tierchen wachen auf und jubeln.
+Bei „automatisch“ endet der Tag mit dem Video – ein 10-Minuten-Video hat sein Feuerwerk in den letzten 10 Sekunden.
+In der Vorschau beginnt danach ein neuer Tag mit leerer Pyramide. Zeitpunkt und Ablauf des Feuerwerks folgen aus
+Seed und Videozeit; Füllung und Finale verändern die Simulation nicht.
+
+**Ton** mit eigenem Lautstärkeregler je Klang: Becher schöpft, Lichtimpuls (Glockenton, je Farbe eine andere Stufe
+des Dur-Akkords), Becher kippt aus, Wendekappe, Platscher; in der Darstellung „Tierchen“ statt Glasklang ein „Boing“
+an den Kappen, dazu „Juhu“ beim Fallen und „Quiek“, wenn der Becher zugreift. Herkunft:
+[Klangzuordnung](assets/audio/README.md). Nachweise: [Endless Pyramid](docs/ENDLESS_PYRAMID_2026-11-13.md).
+
 ## Seeschlacht: Himmel, seltene Ereignisse und goldene Kugel
 
 Reine Darstellung – der Physikverlauf und die Referenz-Hashes bleiben unverändert. Die Standardwerte sind so gewählt,
 dass jedes Video je nach Länge das passende Maß bekommt; alles ist im Bedienfeld einzeln schalt- und einstellbar und
-steht in `params` (Teilen-Link, JSON, `--param`).
+steht in `params` (JSON, `--param`).
 
 | Was | Standard | Einstellbar |
 |---|---|---|
@@ -415,7 +572,7 @@ mit `--param skyMinutes=20 --param meteorEvery=40 --param whaleEvery=120`.
 
 ## Ton
 
-Beide Szenarien exportieren mit Tonspur (AAC, 48 kHz, Stereo). Die Seeschlacht nutzt bewusst wenige Klänge:
+Alle Szenarien exportieren mit Tonspur (AAC, 48 kHz, Stereo); zum Myzel siehe [Endless Mycelium](#endless-mycelium). Die Seeschlacht nutzt bewusst wenige Klänge:
 Kanonenschuss und Platscher (im Code erzeugt), Holzaufschlag für Treffer und leise den Kreislauf – ein dumpfes „Tock“,
 wenn eine Kugel am Grund aufsetzt, und ein „Tink“, wenn sie im Regal ankommt (je rund 14 LU unter der Gesamtmischung,
 etwa so leise wie der Platscher); eine Dichtebegrenzung je Klang verhindert
@@ -425,8 +582,9 @@ bleibt stumm.
 
 **Lautheit nach YouTube-Standard:** Jede Tonspur wird beim Export eingemessen, sodass die Standardmischung (alle
 Regler 100 %) **−14 LUFS** integriert erreicht (Messung nach ITU-R BS.1770 / EBU R128, für jedes Video einzeln). Ein
-Spitzenbegrenzer mit 5 ms Vorausschau hält PCM-Spitzen bei höchstens −2 dBFS, für Scrap bei −3 dBFS wegen
-der größeren AAC-Spitzen einzelner Kampfeffekte. Anschließend wird die **fertige
+Spitzenbegrenzer mit 5 ms Vorausschau hält PCM-Spitzen bei höchstens −2 dBFS, für Scrap und Mycelium bei
+−3 dBFS wegen gemessener AAC-Spitzen. Mycelium verwendet zusätzlich ein auf seine Klänge abgestimmtes
+AAC-Profil ([Nachweis](docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md)). Anschließend wird die **fertige
 AAC-Spur** mit FFmpeg nachgemessen: Über −1 dBTP oder bei fehlgeschlagener Messung wird der Export nicht
 veröffentlicht. Vorhandene MP4/JSON bleiben erhalten. Die Messwerte stehen unter `audio.encoded` im Sidecar;
 bei Ausschnitten betreffen sie den Clip, während die übrigen Mischwerte weiterhin die gesamte Episode beschreiben.
@@ -435,8 +593,8 @@ bei Ausschnitten betreffen sie den Clip, während die übrigen Mischwerte weiter
 Kanonenschuss, Treffer, Platscher, Kugel am Grund, Nachladen; Kugelfabrik: neun Klänge), jeweils **0–200 %**, Standard 100 % = YouTube-Ziel.
 Nach links leiser, nach rechts lauter (200 % = +6 dB, 50 % = −6 dB, 0 % = Klang aus). Der Gesamtregler wirkt unter
 100 % hinter dem Begrenzer (50 % ergibt genau −20 LUFS), darüber treibt er in den Begrenzer: lauter, die Spitzen
-bleiben begrenzt. Die Werte gelten für jedes Format (Hoch- und Querformat), werden gespeichert und stehen im
-Teilen-Link (`vol.splash=40`) und in der JSON-Datei (`"video": { "volume": { "master": 80, "splash": 150 } }`).
+bleiben begrenzt. Die Werte gelten für jedes Format (Hoch- und Querformat), werden gespeichert und stehen in der
+JSON-Datei (`"video": { "volume": { "master": 80, "splash": 150 } }`).
 Per Kommandozeile: `--volume master=80 --volume splash=150`. Die Simulation bleibt davon unberührt.
 
 - **Ereignisse statt Aufnahme:** Die Simulation protokolliert, was passiert (Aufnahme am Zellenrad, Landung auf dem

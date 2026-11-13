@@ -1,10 +1,11 @@
 # Roadmap
 
-**Aktueller Prüfstand · 13.11.2026:** Die erste Browser-Korrektur bestand im PR mit 134/134 Tests.
-Der Main-Nachlauf bestand mit 133/134; die früheren Ladefehler traten nicht mehr auf, ein anderer
-Konfigurationstest schlug fehl. Dessen Vorbereitung und Speicherprüfungen werden gezielt abgesichert;
-R02 bleibt bis zum vollständig grünen Main-Nachlauf offen.
-Prüfung und Abschluss: [Browser-Teststabilität](BROWSER_TESTSTABILITAET_2026-11-13.md).
+**Aktueller Stand · 13.11.2026:** R26 vereint die fünf vorhandenen Szenarien in einem
+gemeinsamen Produktionsgenerator. Auf Wunsch des Nutzers entfällt die Teilen-Link-Oberfläche;
+Seed, Feinjustierungen sowie Speichern/Laden von Einstellungen bleiben erhalten.
+[Integrationsbericht und offene Abnahmen](ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
+Der letzte vollständige Main-Lauf an `cc1bc7c` bestand mit **133/134 Tests**: offen ist der
+Sunny-Yard-MP4-Bytevergleich, nicht der frühere Konfigurationstest. **R02 bleibt offen.**
 
 **Vorheriger Nachweis:** Produktionsabsicherung und Scrap-Ton an `bc0bf61` abgeschlossen.
 Der vollständige [Linux-Lauf](https://github.com/emfau88/Endless-Battle-Simulator/actions/runs/43431587775)
@@ -66,8 +67,12 @@ Naval hat nach dem gemeldeten Short und 10-Minuten-Upload keinen Vorrang; offene
 Allgemeiner Engine-Umbau, Spielmechaniken außerhalb R22, 4K-Optimierung und 60-Minuten-Produktion haben keinen Vorrang.
 
 **IDs:** R01–R19 bleiben vergeben, einschließlich des im CHANGELOG erledigten R19. R17 bleibt Territory Wars;
-neu sind **R20 für Scrap Wars / Scrap Arena**, **R21 für Naval-Zustandsabsicherung** und
-**R22 für den begrenzten Scrap-Qualitätsausbau**. Nächste freie ID: R23.
+neu sind **R20 für Scrap Wars / Scrap Arena**, **R21 für Naval-Zustandsabsicherung**,
+**R22 für den begrenzten Scrap-Qualitätsausbau**, **R23 für den Pyramiden-Ausbau**,
+**R24 als Merkposten (Pyramiden-Melodie)** und **R25 für Endless Mycelium**.
+Mycelium hieß im isolierten Featurebranch ebenfalls R23; bei der Integration wird diese Doppelbelegung aufgelöst.
+**R26** bezeichnet den gemeinsamen Produktionsgenerator, **R27** den eingegrenzten Pyramid-Audiofall.
+**R28** hält die abschließenden Linux-Zeitüberschreitungen fest. Nächste freie ID: R29.
 Frühere B-/Schritt-Bezeichnungen sind Herkunftsverweise, keine zweite Aufgabenliste.
 
 ## 1 · Quellen und belastbarer Stand
@@ -140,16 +145,22 @@ Nachweis und Grenzen stehen im [Produktionsbericht](PRODUKTIONSSICHERUNG_2026-11
 Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechaniken sind kein Teil dieser Umsetzung.
 
 - [ ] **R02 · Main-Nachlauf der Browser-Prüfungen absichern (früher B10).**
-  **Aktuell:** `test/share.test.mjs` besteht im PR und auf main. Der Main-Nachlauf scheiterte zusätzlich
-  an einem Fall in `test/config.test.mjs`; einmalige Testvorbereitung, stärkere Speicherprüfungen und
-  verlässliches Kontext-Aufräumen sind ergänzt. Der vollständige grüne Main-Nachweis folgt.
-  Grenzen, Assertions und Referenzen bleiben erhalten. [Nachweis](BROWSER_TESTSTABILITAET_2026-11-13.md).
+  **Aktuell:** Der letzte Main-Lauf an `cc1bc7c` bestand mit 133/134; offen ist der bytegenaue
+  Sunny-Yard-MP4-Replay. Die früheren Lade- und Konfigurationsfälle bestanden dort. Drei gezielte
+  Linux-Diagnosen konnten kein abweichendes Paar sichern. Im Integrationslauf an `43102d9` bestand
+  der Replay, was die frühere Ursache nicht erklärt. Fehlerpaare werden künftig nach Abschluss
+  beider Exporte gesichert. R02 bleibt offen, auch wenn eine Wiederholung grün ist.
+  Die entfernte Teilen-Oberfläche wird durch vollständige Datei-Roundtrips in `test/settings.test.mjs`
+  abgedeckt. Grenzen, Assertions und Referenzen bleiben erhalten.
+  [Historischer Nachweis](BROWSER_TESTSTABILITAET_2026-11-13.md),
+  [aktueller Integrationsstand](ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
   **Vorheriger Abschluss 13.11.2026 an `bc0bf61`:** vollständiger Linux-Lauf mit **133/133 Tests** in vier Gruppen,
   einschließlich Golden-Referenzen, früher fehlerhaftem Marble-AAC-Fall, Scrap-UI und echtem HTTP-Abbruch.
   Node 22.17.1, Playwright 1.60.0, FFmpeg 6.1.1-3ubuntu5, Ubuntu 24.04, Software-Rendering und Protokolle gesichert.
   `pipefail`, zehn Minuten Testdatei-Limit, 25 Minuten je Job und 2,5 s für Abbruch/Aufräumen bleiben erhalten.
   AAC wird vor Veröffentlichung nachgemessen; zu hohe Spitzen oder Messfehler bewahren vorhandene Dateien.
-  Die gemeinsame PCM-Reserve beträgt −2 dBFS, Scrap benötigt −3 dBFS. Die AAC-Grenze bleibt **−1 dBTP**.
+  Die gemeinsame PCM-Reserve beträgt −2 dBFS, Scrap und inzwischen auch Mycelium benötigen −3 dBFS.
+  Die AAC-Grenze bleibt **−1 dBTP**.
   Alle Testdateien werden ausgeführt; keine Golden-Referenzen neu gesetzt. Lokal zusätzlich Produktionsgruppe 33/33.
   Nachweis und begrenzte 15-Minuten-Audioprüfung: [Abschlussbericht](SCRAP_AUDIO_PRODUKTION_2026-11-13.md).
   Frühere fehlgeschlagene/unvollständige Läufe bleiben historische Nachweise im [CI-Erstbericht](CI_ERSTLAUF_2026-11-13.md).
@@ -302,6 +313,50 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   allgemeines Grafikframework, 4K-Leistungsprojekt oder paralleler Hex-/Marble-Ausbau. Einen guten Clip bereits
   nach P1/P2 veröffentlichungsreif beurteilen; die Werkstatt darf die erste Produktion nicht blockieren.
 
+- [x] **R26 · Technische Integration aller fünf Szenarien in einem gemeinsamen Produktionsgenerator.**
+  **Auftrag:** vorhandene Szenarien nacheinander integrieren, gemeinsame Short-/Langvideo-Vorlagen,
+  Bedienung und Export prüfen. Keine neuen Szenariomechaniken. Arbeitsbranch: `codex/all-scenarios-production`.
+  **Umgesetzt:** Mycelium und Pyramid zusammengeführt; Vorlagen für alle fünf Szenarien; auf ausdrücklichen
+  Nutzerwunsch Teilen-Link-Oberfläche entfernt, Einstellungsdateien erhalten.
+  **Prüfstand:** Windows 179/179; neuer Linux-Nachweis nach Aufteilung der unveränderten Exportfälle
+  je Szenario. Kurze echte Exporte beider Formate sind nachgewiesen. Der vollständige Pyramid-Film
+  und die Standard-Tonkontrolle bestätigen einen verbleibenden Tonfehler, siehe R27.
+  **Freigabeumfang:** Auf ausdrücklichen Nutzerwunsch weitere manuelle Film-/Extremprüfungen beendet,
+  kein 60-Sekunden-Mycelium-Nachlauf und keine fünf 10-Minuten-Testvideos. Nach dem abschließenden
+  Linux-Lauf wurde der Merge ausdrücklich trotz der dokumentierten Zeitüberschreitungen freigegeben.
+  R02, R27 und R28 bleiben offen; Main-Nachlauf wird abgewartet. Dessen tatsächlicher Stand wird in
+  [PR #8](https://github.com/emfau88/Endless-Battle-Simulator/pull/8) festgehalten.
+  Die ursprüngliche 20-Sekunden-Grenze wurde für die Filmabnahme ausdrücklich erweitert.
+  [Messungen und Grenzen](ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
+
+- [ ] **R27 · Pyramid: einzelne AAC-Spitzen auch bei Standardlautstärke.**
+  **Beleg:** Seed 42, Tierchen, 9:16, 60 s, 1-Minuten-Tag: Standardmischung −14,1 LUFS,
+  PCM −1,7 dBTP, fertiges AAC +0,5 dBTP statt maximal −1 dBTP. Der Export kann deshalb abbrechen.
+  Die identische PCM-Datei mit ausgeschaltetem AAC-Rauschersatz ergab −1,4 dBTP; eine allgemeine
+  Korrektur ist nicht abgenommen. Pyramid-Code und Schutzgrenze bleiben unverändert.
+  **Entscheidung:** als bekannte Einschränkung für die Integration akzeptiert; keine weiteren
+  Zusatzdiagnosen oder vorsorglichen Reparaturen in diesem Auftrag.
+  [Belege und genaue Abgrenzung](ALLE_SZENARIEN_INTEGRATION_2026-11-13.md#filmabnahme-und-akzeptierte-einschränkung).
+
+- [ ] **R28 · Linux-Prüfung der Integration bleibt wegen Zeitgrenzen rot.**
+  [Lauf an `20ba943`](https://github.com/emfau88/Endless-Battle-Simulator/actions/runs/43498607564):
+  176 bestanden, zwei Mycelium-Exportfälle nach 180 s fehlgeschlagen, eine Scrap-Testdatei nach
+  600 s abgebrochen. Mycelium renderte noch bei 60/90 bzw. 70/90 Bildern; der Test brach die Jobs ab.
+  Keine neue Abweichung des Sunny-Yard-Bytevergleichs. Windows zuvor 179/179 am unveränderten
+  Generatorcode. Auf Nutzerwunsch keine weitere Reparatur-/Testreihe, keine gelockerten Prüfungen.
+  Der Nutzer hat die Ausnahme von der früheren CI-Bedingung ausdrücklich mit
+  „CI-Zeitüberschreitungen akzeptieren und mergen“ freigegeben. Der CI-Lauf bleibt als fehlgeschlagen dokumentiert.
+
+- [ ] **R25 · Endless Mycelium ist im Integrationsbranch enthalten – Sicht-/Hörabnahme am Gerät abschließen.**
+  **Ziel:** ruhiges Satisfying-Szenario (Myzel wächst, frisst Laub, Pilze, Sporen, nächste Generation in neuer Farbe)
+  als Short und als langes Video produzieren.
+  **Stand:** Branch `endless-mycelium` mit Simulation, Renderer, 13 Reglern, Ton, YouTube-Standard 1440p60 und zwei
+  Vorlagen; Prüfungen und Messwerte im [Myzel-Bericht](MYCELIUM_2026-11-13.md).
+  Gemeinsame Veröffentlichung und Prüfstand über [PR #8](https://github.com/emfau88/Endless-Battle-Simulator/pull/8).
+  **Abnahme:** Short-Vorlage und ein kurzer Querformat-Ausschnitt am Handy angesehen und angehört (insbesondere
+  Lautstärke der Nachtluft und Größe der Pilze); danach Merge-Entscheidung. Ein Export über 20 s braucht einen
+  gesonderten Auftrag.
+
 - [ ] **R17 · Territory Wars: nach dem priorisierten Scrap-Ausbau Hex Dominion V0.3 integrieren (früher B12).**
   **Ziel:** den vorhandenen Gebietskrieg mit seinen Anzeigen und Einstellmöglichkeiten reproduzierbar exportieren.
   **Abhängigkeit:** abgenommener Scrap-Produktionsweg/R06; Crystal Front bleibt vorerst zusätzliche Referenz/Variante.
@@ -329,6 +384,28 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   Kamera-Roundtrip und Welt-Erhalt bei Ausgabewechsel nachgewiesen. `0,75×` bei 30/60 fps, Pause der Echtzeitschleife,
   identische Wiederholung, Ereigniszeiten und Rundenübergang gezielt prüfen. Rundendauern für V0.3 neu bestimmen;
   keine alten V0.2-Dauern übernehmen. Vorlauf statt Exporten über 20 s verwenden.
+
+- [ ] **R23 · Endless Pyramid: Ausbau für längere Videos (5, 10, 20 Minuten).**
+  **Quelle:** Auftrag vom 13.11.2026 nach Abnahme des Szenarios (Branch `endless-pyramid`,
+  [Bericht](ENDLESS_PYRAMID_2026-11-13.md)). **Ziel:** sichtbarer Fortschritt und Abwechslung über die ganze
+  Videolänge, damit man bis zum Ende dranbleibt. **Grundsätze:** Der Verlauf koppelt an die Videolänge
+  (`video.durationSec`, wie der Naval-Himmel; wählbar „automatisch (Videolänge)“ oder fest 5/10/20 Minuten);
+  in der Vorschau läuft er in Schleife. Alles ist reine Darstellung oder aus dem Seed abgeleitet. Die
+  Kreislauf-Physik bleibt bei Standardreglern unverändert (gleicher Zustands-Hash); einzige Ausnahme ist P5
+  bei eingeschaltetem Rennen. Jedes Element bekommt einen eigenen Schalter oder Regler, jeder neue Klang einen
+  eigenen Lautstärkeregler. Hoch- und Querformat gleichwertig.
+
+  | Paket | Inhalt | Abnahme |
+  |---|---|---|
+  | P1 · Vorschau | Aus einer Kopie: vier Standbilder eines 10-Minuten-Videos (Anfang, Mitte, Sonnenuntergang, Finale), hoch und quer, Kugeln und Tierchen. | **Stopp:** Freigabe des Aussehens durch den Nutzer. |
+  | P2 · Tag → Nacht ✓ (13.11., siehe CHANGELOG) | Vier Phasen über die Videolänge: Morgen, Mittag, Sonnenuntergang, Nacht. Himmel, Wasser, Spiegelung und Licht färben sich mit; nachts Sterne, stärkeres Leuchten, innen beleuchtete Pyramide. Tierchen gähnen in der Dämmerung und tragen nachts Schlafmützen. Regler: Tageslauf an/aus, Dauer. | Standbilder an den Phasengrenzen für 5/10/20 min; Hash unverändert; 20-s-Probe mit `durationSec` 20 zeigt den ganzen Tag im Zeitraffer. |
+  | P3 · Licht-Füllung + Finale ✓ (13.11., siehe CHANGELOG) | Jeder Lichtimpuls schaltet Glasfelder dauerhaft ein. Der Füllstand folgt der Videozeit, damit die letzte Scheibe in den letzten Sekunden aufleuchtet; danach Feuerwerk über der Spitze (neuer erzeugter Klang). In der Vorschau Neubeginn nach dem Finale. Regler: Füllung an/aus, Feuerwerk an/aus, Stärke. | Füllstand bei 25/50/75/100 % der Länge; Finale genau am Ende bei 5/10/20 min (nur Simulation, kein Langexport); kurze Hörprobe Feuerwerk. |
+  | P4 · Seltene Ereignisse | Goldene Figur mit Krone und Zähler, Delfinsprung in der Lagune, Regenschauer mit Regenbogen, nachts Sternschnuppen und Glühwürmchen. Fahrplan aus dem Seed mit mindestens einem Ereignis je Videoviertel (5 min ≈ 3, 10 min ≈ 5, 20 min ≈ 9). Häufigkeit selten/mittel/oft, jedes Ereignis einzeln schaltbar, Klänge mit Reglern. | Fahrplan-Test (Anzahl und Abstände je Länge und Seed); Standbild je Ereignis; Hash unverändert. |
+  | P5 · Tierchen-Rennen | Gleich große Teams (Farben reihum), Runden je Art, Rangliste im HUD, Meldung bei Führungswechsel, Siegerpodest am Videoende. Damit überholt werden kann: im Renn-Modus zweispurige Lagune, jede Figur paddelt je Runde mit eigenem, aus dem Seed abgeleitetem Tempo; am Tunnel Einfädeln nach fester Regel. | Rangfolge je Seed reproduzierbar; mehrere Führungswechsel in 10 min bei typischen Seeds; keine Überlappung; Rennen aus = bisheriger Hash. |
+  | P6 · Vorlagen und Proben | Vorlagen für 5/10/20 min, hoch und quer, Kugeln und Tierchen. Ausschnittsexport (`supportsClips`) für die Pyramide prüfen und freigeben, damit z. B. das Finale eines 10-Minuten-Videos als 20-s-Ausschnitt angesehen werden kann. | Ausschnitt bildgleich zum durchgehenden Lauf; Kurzproben höchstens 20 s; Langexport nur auf gesonderten Auftrag. **Befund 13.11.:** Erster Freigabeversuch zurückgenommen – bei Dämmerung (`dayStart` 0,8, Tag 1 min) weichen 42 Himmelspixel (max. 16 Stufen) nach reinem Vorlauf ab; tagsüber bildgleich. Ursache offen. |
+
+  **Reihenfolge:** P1 → Freigabe → P2 → P3 → P4 → P5 → P6, je Paket eigener Commit mit Tests; am Ende ein
+  datierter Bericht. Nicht enthalten: Melodie (R24), neue Kulissen, Weichen und andere Bahnelemente.
 
 ## 4 · Parallel: Kanalpilot und begrenzte Nacharbeiten
 
@@ -416,6 +493,10 @@ aufgreifen; R21 spätestens vor Änderungen an Besitz-/Recyclingmechanik schlie�
   Seed/Ausschnitt mit Renderzeit, Dateigröße und Bildqualität fehlt. Mit R04-Profilbewertung bündeln, keine neue Engine.
 - [ ] **R16 · Factory Wars / Robot Wars (früher B11).** Frühestens nach dem Pilot: späteres Konzept mit zwei
   Fabriken, zwei Robotertypen, Produktion und Schrottkreislauf. Eigener Gegenstand, nicht mit Scrap Arena/R20 zusammenlegen.
+- [ ] **R24 · Endless Pyramid: Melodie aus Lichtimpulsen (Merkposten, nicht beauftragt).** Jeder Lichtimpuls
+  spielt den nächsten Ton einer ruhigen Tonfolge statt des festen Glockentons, sodass endlos Musik entsteht.
+  Passt zu einem späteren Ruhemodus für Hintergrundvideos. Quelle: Rückmeldung vom 13.11.2026 („sehr interessant,
+  mal vermerken“).
 
 ## 6 · Offene Entscheidungen und Abnahmen am Gerät
 
