@@ -28,7 +28,8 @@ jobs:
           mkdir -p output/sunny-replay
           { uname -a; cat /etc/os-release; node --version; npx playwright --version; ffmpeg -version; ffprobe -version; lscpu; } > output/sunny-replay/environment.log
       - name: Sunny Yard with its four original predecessors, once
-        run: node --test --test-concurrency=1 --test-timeout=600000 --test-name-pattern='^(Sunny Yard:|Scrap: (Canvas-Upload|UI-Regler|echte kurze)|Scrap v3:)' test/scrap-browser.test.mjs 2>&1 | tee output/sunny-replay/test.log
+        run: |
+          node --test --test-concurrency=1 --test-timeout=600000 --test-name-pattern='^(Sunny Yard:|Scrap: (Canvas-Upload|UI-Regler|echte kurze)|Scrap v3:)' test/scrap-browser.test.mjs 2>&1 | tee output/sunny-replay/test.log
       - name: Separate video, audio and container
         if: always()
         run: node scripts/diagnose-sunny-replay.mjs 2>&1 | tee output/sunny-replay/analysis.log
