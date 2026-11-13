@@ -4,7 +4,10 @@
   "scenario": "pyramid",
   "seed": 42,
   "params": {
-    "dayMinutes": 1
+    "dayMinutes": 1,
+    "figure": 1,
+    "size": 24,
+    "wiggle": 1.2
   },
   "video": {
     "aspect": "9:16",
