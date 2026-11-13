@@ -102,6 +102,10 @@ Beide MP4-Hashes sind auch über beide Runden identisch. WAV-SHA256 für 16:9:
 
 ## Runde 3: zeitliche Zuführung identischer Encodereingaben
 
+Commit `4a6a783b47444a382ecbb40a9a0123d3ab4568ad`,
+[Lauf 43472410952](https://github.com/emfau88/Endless-Battle-Simulator/actions/runs/43472410952),
+[Artefakt 14061522322](https://github.com/emfau88/Endless-Battle-Simulator/actions/runs/43472410952/artifacts/14061522322).
+
 Die unveränderten, mit SHA256 pro Frame und WAV verifizierten Eingaben aus Runde 2
 werden pro Format einmal unmittelbar und einmal in Zehnerpaketen mit jeweils
 2 Sekunden Abstand zu FFmpeg geschrieben. Backpressure wird unverändert beachtet.
@@ -111,3 +115,64 @@ die Ein-/Ausgabepfade zeigen auf die gesicherten Daten und neue Zieldateien.
 Keine Browser-Neuberechnung, keine geänderten Encoderparameter, keine Retries.
 Geprüft wird der strenge MP4-Bytevergleich untereinander und gegen den ursprünglichen
 Export aus Runde 2; die anschließende getrennte Spuranalyse bleibt erhalten.
+
+Ergebnis: **alle vier kontrollierten Kodierungen stimmen exakt mit ihrem
+Referenzexport aus Runde 2 überein**. Auch sämtliche getrennten Bild-, Ton-,
+Paket-, Metadaten- und Eingabevergleiche stimmen überein. Das ist ein kontrollierter
+Encodervergleich, kein zusätzlicher vollständiger Anwendungstestlauf.
+Lokale Sicherung: `output/sunny-replay-investigation/round3/`, insbesondere
+`encoder-timing.json`, `comparison.json`, `source-*` und `exports/`.
+
+Die heruntergeladenen Eingaben aus Runde 2 wurden zusätzlich lokal unabhängig von
+der CI-Auswertung per Python gegen jeden aufgezeichneten SHA256 geprüft: jeweils
+60 Frames; 16:9 umfasst 8.714.033 JPEG-Bytes, 9:16 7.775.517 JPEG-Bytes. Beide WAVs
+haben 384.044 Bytes (Header und 96.000 Stereo-PCM16-Samples). Original und Replay
+haben pro Format identische Eingaben. Die Umgebung der Diagnose ist Ubuntu 24.04.5,
+Node 22.17.1, Playwright 1.60.0, Chromium 148.0.7778.96, FFmpeg/ffprobe
+6.1.1-3ubuntu5 und SwiftShader. Runde 1 lief auf vier CPUs eines AMD EPYC 7763.
+
+## Abschluss: Ursache nicht belegt, keine Reparatur
+
+Nach drei gezielten Diagnoserunden wurde **kein abweichendes Linux-Dateipaar**
+gewonnen. Die Untersuchung stoppt entsprechend der vereinbarten Grenze.
+Kein Produktfix ist begründbar; die erfolgreichen Proben sind ausdrücklich kein
+Ursachenbeweis und kein Nachweis einer Behebung des historischen Fehlers.
+
+Offen bleiben sporadische Unterschiede in Rasterung/JPEG-Erzeugung, PCM-Mischung,
+Kodierung oder Containerdaten beziehungsweise ein nicht erfasster Zustand des
+damaligen Runners. Die Messungen zeigen keine dieser Ursachen. Ein deterministischer
+Unterschied der getesteten Original-/Replay-Konfiguration ist in den gesicherten
+Proben ebenfalls nicht vorhanden. Die beiden geprüften Zuführungszeiten verändern
+das Ergebnis nicht; daraus folgt keine allgemeine Garantie für alle Laufzeitbedingungen.
+
+**Genau der nächste benötigte Nachweis:** ein tatsächlich abweichendes
+Original-/Replay-Paar aus demselben Linux-Lauf des 2-s-Sunny-Yard-Falls, zusammen
+mit den tatsächlich übergebenen JPEG-Frames, der PCM-Datei und den FFmpeg-Argumenten
+beider Exporte. Erst dessen Stufenvergleich erlaubt die Wahl einer verantwortlichen
+Stelle. Es wird hier kein vierter Blindlauf gestartet.
+
+Alle Änderungen liegen ausschließlich auf `codex/sunny-replay-cause` und sind
+**temporäre, nicht zur Übernahme freigegebene Diagnose**, keine endgültige Lösung:
+
+| Datei | Änderung |
+|---|---|
+| `test/scrap-browser.test.mjs` | Fertige Dateien im Abschlusshook vor der Bereinigung sichern; Testkörper/Assertions unverändert |
+| `lib/exporter.mjs` | Mit `EBS_REPLAY_INPUTS=1` tatsächliche Sunshine-Eingaben und Argumente sichern |
+| `scripts/diagnose-sunny-replay.mjs` | Fertige MP4s getrennt nach Bild, Ton, Paketen, Container und Eingaben vergleichen |
+| `scripts/diagnose-sunny-encoder.mjs` | Kontrollierter Vergleich zweier Zuführungszeiten derselben gesicherten Eingaben |
+| `.github/workflows/sunny-replay-diagnosis.yml` | Branchgebundene Linux-Diagnose mit Artefaktsicherung; reine Berichtspushes starten keinen Lauf |
+| `docs/SUNNY_YARD_EXPORTDIAGNOSE_2026-11-13.md` | Audit, Messungen, Grenzen und nächster benötigter Nachweis |
+
+Syntaxprüfungen: `node --check` für geänderte/ergänzte JavaScript-Dateien,
+`git diff --check`, erfolgreiche YAML-Parserprüfung nach dem dokumentierten
+Startfehler. Keine gelockerten Prüfungen, Retries, erhöhten Timeouts oder neuen
+Golden-Referenzen. Kein neuer vollständiger CI-Lauf, kein PR/Merge, keine Änderungen
+an Kampfregeln, Karten, HUD, Kamera oder Marble. Kein Export länger als 2 Sekunden
+im Sunny-Yard-Diagnosefall; auch die Exportfälle seiner Vorgängertests bleiben kurz.
+
+Zum Abschluss erneut remote geprüft: `main` ist unverändert
+`cc1bc7cfb813fe5b29f660814662dd07c11f7e8f`. Sein letzter vollständiger Lauf bleibt
+[43462916717](https://github.com/emfau88/Endless-Battle-Simulator/actions/runs/43462916717)
+mit **133/134**, Pages erfolgreich. Es gibt keinen neuen Main-Nachlauf.
+Der ursprüngliche Arbeitsbaum ist weiterhin sauber auf `727b356`; vorhandene
+Änderungen und Belege sind erhalten. **R02 bleibt offen.**
