@@ -143,7 +143,7 @@ test('Szenarioauswahl in der Oberfläche: Seeschlacht -> Kugelfabrik -> Seeschla
   await page.goto(pathToFileURL(INDEX).href + '?seed=42');
   await page.waitForFunction(() => window.EBS && window.EBS.app && window.EBS.app.sim, null, { timeout: 30000 });
   assert.equal(await page.evaluate(() => window.EBS.app.cfg.scenario), 'naval', 'Standard-Szenario hat sich geändert');
-  assert.deepEqual(await page.$$eval('#scenario option', (o) => o.map((x) => x.value)), ['naval', 'marble', 'scrap', 'mycelium']);
+  assert.deepEqual(await page.$$eval('#scenario option', (o) => o.map((x) => x.value)), ['naval', 'marble', 'scrap', 'mycelium', 'pyramid']);
   await page.selectOption('#scenario', 'marble');
   assert.equal(await page.evaluate(() => window.EBS.app.cfg.scenario), 'marble');
   assert.match(await page.textContent('#subtitle'), /Endless Marble Factory/);

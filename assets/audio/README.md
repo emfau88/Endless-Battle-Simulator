@@ -63,3 +63,19 @@ bei den seltenen Ereignissen eines ruhigen Videos bis zu 24 dB Begrenzung erzwan
 Glockenton, je Blatt einen Ton weiter auf der Dur-Pentatonik), `synth:myco-pop` (Pilz ploppt auf),
 `synth:myco-breeze` (Sporenwolke: an- und abschwellendes Rauschen) und `synth:myco-night` (leise Nachtluft, 12 s mit
 weicher Ein-/Ausblendung, alle 10 s ausgelöst und dadurch nahtlos).
+
+## Endless Pyramid
+
+Die Klangtabelle in `src/scenarios/pyramid.js` verwendet dieselben unveränderten CC0-Dateien:
+`impactSoft_medium_000` (Becher schöpft, höher gestimmt), `impactMetal_light_000` (Becher kippt aus) und
+`impactGlass_light_000/001/002` (Leuchtkugel trifft eine Wendekappe). Der Platscher ist der vorhandene
+erzeugte Klang `synth:splash`.
+
+Neu in `lib/audio.mjs` und deterministisch im Code erzeugt: `synth:chime` (Glockenton des Lichtimpulses, vier
+Teiltöne mit Abklingen; je Farbe um 0/4/7/12 Halbtöne versetzt), `synth:boing` (federnder Ton der Tierchen an
+den Wendekappen), `synth:wheee` (auf- und absteigender Pfiff beim Fallen) und `synth:squeak` (kurzes Quieken,
+wenn ein Becher ein Tierchen aufnimmt). Die drei Tierchen-Klänge erklingen nur in der Darstellung „Tierchen“.
+
+Für Licht-Füllung und Finale, ebenfalls im Code erzeugt: `synth:fanfare` (aufsteigender Dur-Akkord aus vier
+Glockentönen, wenn die Pyramide voll ist), `synth:launch` (leises Pfeifen der aufsteigenden Rakete) und
+`synth:firework` (Knall mit Knistern; die große Schlussrakete klingt lauter).

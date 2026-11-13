@@ -79,9 +79,47 @@ höchstens 20 Sekunden lang; die Vergleiche kodieren dieselbe gespeicherte PCM-D
 - Erneute echte MP4-Prüfung: beide 2,5-Sekunden-Videos bestanden, einschließlich Vergleich
   von Zustand und Audioereignissen mit der Simulation (68 Sekunden Testlauf).
 
+## Schritt 2: Pyramid
+
+Übernommen wird `endless-pyramid` bis `a83f15f`. Der Szenariocode bleibt bytegleich mit
+dem Featurebranch. Beide neuen Szenarien sind gemeinsam registriert; die gemeinsame
+Klangdatei enthält beide Ergänzungen. 14 synthetisierte Klänge wurden vor/nach der
+Zusammenführung bytegleich verglichen. Die doppelte Roadmap-ID wird aufgelöst:
+Pyramid bleibt R23/R24, Mycelium erhält R25; historische Berichte bleiben unverändert.
+
+Gezielte Prüfung: **33/33 bestanden** (Pyramid 21, Core 5, Konfiguration 7), einschließlich
+Kreisläufen über mehrere Minuten, Tag/Nacht, Füllung/Finale, beiden Darstellungen,
+Reglergrenzen und echtem 3-Sekunden-MP4 mit Ton. Log: `output/integration/pyramid.log`.
+
+### Offener Audio-Befund, keine Pyramid-Korrektur übernommen
+
+Eine zusätzliche lokale Diagnose mischte die letzten 20 Sekunden eines simulierten
+60-Sekunden-Tages separat auf −14 LUFS ein. Bei Gesamtlautstärke 200 % überschritt
+diese Stressprobe die AAC-Grenze (z. B. Kugeln, 9:16: −0,8 dBTP). Das ist **kein
+nachgewiesener Fehler eines vollständigen 60-Sekunden-Exports**: Die unabhängige
+Einmessung des Fensters verändert die Verstärkung gegenüber dem vollständigen Film.
+Pyramid unterstützt bisher keinen solchen Ausschnittsexport.
+
+Drei gezielte Diagnosegruppen (zusätzliche PCM-Reserve, AAC-Werkzeuge am identischen
+PCM, Kombination samt allen Reglern auf 200 %) lieferten keine belastbare, durchgehend
+wirksame Korrektur: selbst bei −4 dBFS PCM und abgeschalteten Stereo-/Rauschwerkzeugen
+lag eine Tierchen-Probe noch bei −0,9 dBTP. Die versuchsweise Pyramid-Option wurde
+vollständig zurückgenommen. Keine Änderungen an Szenarioregeln, keine gelockerten
+Assertions und keine weiteren Parametersuchen. Das lokale Diagnoseprogramm samt
+seiner weiterhin strengen, fehlgeschlagenen Prüfung bleibt unter
+`output/integration/pyramid-finale-stress.test.mjs`; es wird nicht als regulärer
+Produkt- oder Ausschnittstest ausgegeben.
+
+Rohbelege: `output/integration/pyramid-audio/`, `pyramid-final-profile/` und zugehörige
+Logs. **Genau der nächste benötigte Nachweis:** ein echter vollständiger 60-Sekunden-
+Pyramid-Export, Seed 42, 9:16, Tierchen, `dayMinutes: 1`, Ton mit Gesamt 200 %, mit
+vollständiger normaler Einmessung und Messung der fertigen AAC-Spur. Er entscheidet,
+ob die beobachtete Spitze den unterstützten Produktionsweg tatsächlich betrifft.
+Dieser Nachweis benötigt die Erweiterung der bisherigen 20-Sekunden-Exportgrenze.
+
 ## Noch offen
 
-Pyramid integrieren, gemeinsame Produktionsvorlagen/Bedienung prüfen, gezielte Exporte
+Gemeinsame Produktionsvorlagen/Bedienung prüfen, gezielte Exporte
 aller fünf Szenarien, vollständige Windows-/Linux-Prüfung und Sicht-/Hörabnahme.
 Echte Langexports über 20 Sekunden benötigen die zuvor besprochene Erweiterung der
 Freigabe. Main-Merge und anschließender Main-Nachlauf sind noch nicht erfolgt.

@@ -67,7 +67,10 @@ Allgemeiner Engine-Umbau, Spielmechaniken außerhalb R22, 4K-Optimierung und 60-
 
 **IDs:** R01–R19 bleiben vergeben, einschließlich des im CHANGELOG erledigten R19. R17 bleibt Territory Wars;
 neu sind **R20 für Scrap Wars / Scrap Arena**, **R21 für Naval-Zustandsabsicherung**,
-**R22 für den begrenzten Scrap-Qualitätsausbau** und **R23 für Endless Mycelium**. Nächste freie ID: R24.
+**R22 für den begrenzten Scrap-Qualitätsausbau**, **R23 für den Pyramiden-Ausbau**,
+**R24 als Merkposten (Pyramiden-Melodie)** und **R25 für Endless Mycelium**.
+Mycelium hieß im isolierten Featurebranch ebenfalls R23; bei der Integration wird diese Doppelbelegung aufgelöst.
+Nächste freie ID: R26.
 Frühere B-/Schritt-Bezeichnungen sind Herkunftsverweise, keine zweite Aufgabenliste.
 
 ## 1 · Quellen und belastbarer Stand
@@ -302,7 +305,7 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   allgemeines Grafikframework, 4K-Leistungsprojekt oder paralleler Hex-/Marble-Ausbau. Einen guten Clip bereits
   nach P1/P2 veröffentlichungsreif beurteilen; die Werkstatt darf die erste Produktion nicht blockieren.
 
-- [ ] **R23 · Endless Mycelium ist integriert – Sicht-/Hörabnahme am Gerät abschließen.**
+- [ ] **R25 · Endless Mycelium ist im Integrationsbranch enthalten – Sicht-/Hörabnahme am Gerät abschließen.**
   **Ziel:** ruhiges Satisfying-Szenario (Myzel wächst, frisst Laub, Pilze, Sporen, nächste Generation in neuer Farbe)
   als Short und als langes Video produzieren.
   **Stand:** Branch `endless-mycelium` mit Simulation, Renderer, 13 Reglern, Ton, YouTube-Standard 1440p60 und zwei
@@ -338,6 +341,28 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   Kamera-Roundtrip und Welt-Erhalt bei Ausgabewechsel nachgewiesen. `0,75×` bei 30/60 fps, Pause der Echtzeitschleife,
   identische Wiederholung, Ereigniszeiten und Rundenübergang gezielt prüfen. Rundendauern für V0.3 neu bestimmen;
   keine alten V0.2-Dauern übernehmen. Vorlauf statt Exporten über 20 s verwenden.
+
+- [ ] **R23 · Endless Pyramid: Ausbau für längere Videos (5, 10, 20 Minuten).**
+  **Quelle:** Auftrag vom 13.11.2026 nach Abnahme des Szenarios (Branch `endless-pyramid`,
+  [Bericht](ENDLESS_PYRAMID_2026-11-13.md)). **Ziel:** sichtbarer Fortschritt und Abwechslung über die ganze
+  Videolänge, damit man bis zum Ende dranbleibt. **Grundsätze:** Der Verlauf koppelt an die Videolänge
+  (`video.durationSec`, wie der Naval-Himmel; wählbar „automatisch (Videolänge)“ oder fest 5/10/20 Minuten);
+  in der Vorschau läuft er in Schleife. Alles ist reine Darstellung oder aus dem Seed abgeleitet. Die
+  Kreislauf-Physik bleibt bei Standardreglern unverändert (gleicher Zustands-Hash); einzige Ausnahme ist P5
+  bei eingeschaltetem Rennen. Jedes Element bekommt einen eigenen Schalter oder Regler, jeder neue Klang einen
+  eigenen Lautstärkeregler. Hoch- und Querformat gleichwertig.
+
+  | Paket | Inhalt | Abnahme |
+  |---|---|---|
+  | P1 · Vorschau | Aus einer Kopie: vier Standbilder eines 10-Minuten-Videos (Anfang, Mitte, Sonnenuntergang, Finale), hoch und quer, Kugeln und Tierchen. | **Stopp:** Freigabe des Aussehens durch den Nutzer. |
+  | P2 · Tag → Nacht ✓ (13.11., siehe CHANGELOG) | Vier Phasen über die Videolänge: Morgen, Mittag, Sonnenuntergang, Nacht. Himmel, Wasser, Spiegelung und Licht färben sich mit; nachts Sterne, stärkeres Leuchten, innen beleuchtete Pyramide. Tierchen gähnen in der Dämmerung und tragen nachts Schlafmützen. Regler: Tageslauf an/aus, Dauer. | Standbilder an den Phasengrenzen für 5/10/20 min; Hash unverändert; 20-s-Probe mit `durationSec` 20 zeigt den ganzen Tag im Zeitraffer. |
+  | P3 · Licht-Füllung + Finale ✓ (13.11., siehe CHANGELOG) | Jeder Lichtimpuls schaltet Glasfelder dauerhaft ein. Der Füllstand folgt der Videozeit, damit die letzte Scheibe in den letzten Sekunden aufleuchtet; danach Feuerwerk über der Spitze (neuer erzeugter Klang). In der Vorschau Neubeginn nach dem Finale. Regler: Füllung an/aus, Feuerwerk an/aus, Stärke. | Füllstand bei 25/50/75/100 % der Länge; Finale genau am Ende bei 5/10/20 min (nur Simulation, kein Langexport); kurze Hörprobe Feuerwerk. |
+  | P4 · Seltene Ereignisse | Goldene Figur mit Krone und Zähler, Delfinsprung in der Lagune, Regenschauer mit Regenbogen, nachts Sternschnuppen und Glühwürmchen. Fahrplan aus dem Seed mit mindestens einem Ereignis je Videoviertel (5 min ≈ 3, 10 min ≈ 5, 20 min ≈ 9). Häufigkeit selten/mittel/oft, jedes Ereignis einzeln schaltbar, Klänge mit Reglern. | Fahrplan-Test (Anzahl und Abstände je Länge und Seed); Standbild je Ereignis; Hash unverändert. |
+  | P5 · Tierchen-Rennen | Gleich große Teams (Farben reihum), Runden je Art, Rangliste im HUD, Meldung bei Führungswechsel, Siegerpodest am Videoende. Damit überholt werden kann: im Renn-Modus zweispurige Lagune, jede Figur paddelt je Runde mit eigenem, aus dem Seed abgeleitetem Tempo; am Tunnel Einfädeln nach fester Regel. | Rangfolge je Seed reproduzierbar; mehrere Führungswechsel in 10 min bei typischen Seeds; keine Überlappung; Rennen aus = bisheriger Hash. |
+  | P6 · Vorlagen und Proben | Vorlagen für 5/10/20 min, hoch und quer, Kugeln und Tierchen. Ausschnittsexport (`supportsClips`) für die Pyramide prüfen und freigeben, damit z. B. das Finale eines 10-Minuten-Videos als 20-s-Ausschnitt angesehen werden kann. | Ausschnitt bildgleich zum durchgehenden Lauf; Kurzproben höchstens 20 s; Langexport nur auf gesonderten Auftrag. **Befund 13.11.:** Erster Freigabeversuch zurückgenommen – bei Dämmerung (`dayStart` 0,8, Tag 1 min) weichen 42 Himmelspixel (max. 16 Stufen) nach reinem Vorlauf ab; tagsüber bildgleich. Ursache offen. |
+
+  **Reihenfolge:** P1 → Freigabe → P2 → P3 → P4 → P5 → P6, je Paket eigener Commit mit Tests; am Ende ein
+  datierter Bericht. Nicht enthalten: Melodie (R24), neue Kulissen, Weichen und andere Bahnelemente.
 
 ## 4 · Parallel: Kanalpilot und begrenzte Nacharbeiten
 
@@ -425,6 +450,10 @@ aufgreifen; R21 spätestens vor Änderungen an Besitz-/Recyclingmechanik schlie�
   Seed/Ausschnitt mit Renderzeit, Dateigröße und Bildqualität fehlt. Mit R04-Profilbewertung bündeln, keine neue Engine.
 - [ ] **R16 · Factory Wars / Robot Wars (früher B11).** Frühestens nach dem Pilot: späteres Konzept mit zwei
   Fabriken, zwei Robotertypen, Produktion und Schrottkreislauf. Eigener Gegenstand, nicht mit Scrap Arena/R20 zusammenlegen.
+- [ ] **R24 · Endless Pyramid: Melodie aus Lichtimpulsen (Merkposten, nicht beauftragt).** Jeder Lichtimpuls
+  spielt den nächsten Ton einer ruhigen Tonfolge statt des festen Glockentons, sodass endlos Musik entsteht.
+  Passt zu einem späteren Ruhemodus für Hintergrundvideos. Quelle: Rückmeldung vom 13.11.2026 („sehr interessant,
+  mal vermerken“).
 
 ## 6 · Offene Entscheidungen und Abnahmen am Gerät
 
