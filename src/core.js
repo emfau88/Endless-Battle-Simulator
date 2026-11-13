@@ -203,7 +203,8 @@ function normalizeConfig(input) {
       resolution: RESOLUTIONS[+v.resolution] ? +v.resolution : RESOLUTIONS[vd.resolution] ? vd.resolution : 1080,
       fps: FPS_OPTIONS.includes(+v.fps) ? +v.fps : FPS_OPTIONS.includes(vd.fps) ? vd.fps : 30,
       durationSec: clamp(num(v.durationSec, DEFAULT_DURATION), 1, MAX_DURATION),
-      tempo: TEMPO_OPTIONS.includes(+v.tempo) ? +v.tempo : 1,
+      tempo: sc.tempoRange ? clamp(num(v.tempo, sc.tempoRange.default), sc.tempoRange.min, sc.tempoRange.max)
+        : TEMPO_OPTIONS.includes(+v.tempo) ? +v.tempo : 1,
       audio: bool(v.audio, true),      // Tonspur, sofern das Szenario eine Klangtabelle mitbringt
       volume: normalizeVolume(v.volume, sc),
       quality: {
@@ -389,6 +390,18 @@ class Session {
     if (this.sim.setParam) this.sim.setParam(key, value); else this.sim.cfg[key] = value;
   }
   setView(key, value) { this.cfg.view[key] = value; this.view[key] = value; }
+  // Only scenarios with an explicit presentation-only hook retain their world.
+  // Legacy scenarios keep their existing restart-on-format-change behavior.
+  setAspect(aspect) {
+    if (!ASPECTS[aspect] || aspect === this.cfg.video.aspect) return;
+    if (!this.scenario.reframe) return this.start(mergeConfig(this.cfg, { video: { aspect } }));
+    this.cfg.video.aspect = aspect;
+    const a = ASPECTS[aspect]; this.world = { w: a.w, h: a.h };
+    this.app.renderer.resize(this.world.w, this.world.h, this.renderScale);
+    this.scenario.reframe(this.renderer, { app: this.app, sim: this.sim, view: this.view,
+      world: this.world, renderScale: this.renderScale, video: this.cfg.video });
+    this.render();
+  }
   dispose() {
     if (this.renderer) { this.app.stage.removeChild(this.renderer.root); this.renderer.destroy(); }
     if (this.sim && this.sim.destroy) this.sim.destroy();

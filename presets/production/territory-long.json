@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "name": "Territory Wars / Hex Dominion – Langvideo (10 Minuten)",
+  "scenario": "territory",
+  "seed": 42,
+  "params": {
+    "layout": "landscape",
+    "repeatRounds": true
+  },
+  "video": {
+    "aspect": "16:9",
+    "resolution": 1080,
+    "fps": 30,
+    "durationSec": 600,
+    "tempo": 0.75,
+    "audio": true,
+    "volume": {
+      "master": 100
+    },
+    "quality": {
+      "crf": 20,
+      "preset": "medium",
+      "bitrate": null
+    }
+  },
+  "view": {
+    "hud": true,
+    "camera": false
+  }
+}

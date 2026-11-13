@@ -1,2 +1,6 @@
 # Preserve the supplied source byte-for-byte on Windows and Linux checkouts.
 docs/reference/scrap-arena.source.html -text
+docs/reference/territory-wars-hex-dominion-v0.3.source.html -text
+src/scenarios/territory/simulation.js text eol=lf
+src/scenarios/territory/renderer.js text eol=lf
+src/scenarios/territory/presentation.js text eol=lf

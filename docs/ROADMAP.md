@@ -63,7 +63,8 @@ Die sechs Schritte sind implementiert; die visuelle Abnahme der ersten Fassung i
 Die neue Materialarena folgt auf dieses Feedback. Persönliche Film-/Hör-/Handyabnahme bleibt unter R20;
 die vollständige Linux-CI-Abnahme unter R02 wird nach den Timeouts des Main-Nachlaufs erneut abgesichert. Sie war durch den ausdrücklichen Folgeauftrag
 zuvor nicht mehr zur Vorbedingung für die Umsetzung gemacht worden.
-Hex Dominion V0.3/R17 bleibt nach der Scrap-Abnahme der nächste neue Szenariokandidat.
+Hex Dominion V0.3/R17 ist auf ausdrücklichen Auftrag als sechstes Szenario integriert;
+technische Nachweise und Abnahmegrenzen stehen im [Territory-Bericht](TERRITORY_INTEGRATION_2026-11-13.md).
 Naval hat nach dem gemeldeten Short und 10-Minuten-Upload keinen Vorrang; offene Abnahmen und R21 bleiben erhalten.
 Allgemeiner Engine-Umbau, Spielmechaniken außerhalb R22, 4K-Optimierung und 60-Minuten-Produktion haben keinen Vorrang.
 
@@ -89,7 +90,7 @@ Ihre früheren Startanweisungen und Prioritäten sind historische Planungsgrundl
 | `SimCascade_Endless_Battle_Roadmap_V1.2_2026-11-10(1).md` | V1.2 vom 10.11.2026 gefunden und gelesen; ihr Codebezug `0f13787` ist älter. Freie GUI-Dauer, Ton, Teilen und Naval-Recycling sind inzwischen umgesetzt. |
 | `02-SimCascade_Kanalstart_Planergaenzung_2026-11-10.md` | Kanalziel, begrenzter Pilot und eigenständige Episodenideen bleiben Grundlage. Die damalige Ausgangslage „kein Video veröffentlicht“ ist laut aktuellem CHANGELOG überholt. Markt- und Monetarisierungsangaben wurden hier nicht neu verifiziert und begründen keine technischen Abnahmen. |
 | `04-scrap-arena.html` | Maßgeblicher Scrap-Prototyp, ohne ausgewiesene Versionsnummer. Identisch zu `scrap-arena.html` (SHA-256 beginnt mit `38e2c7d28c96`). Bytegenaue Kopie und Herkunft: [SCRAP_SOURCE](reference/SCRAP_SOURCE.md). |
-| `07-Territory_Wars_Hex_Dominion_V0.3.html` | Maßgeblicher Kandidat für R17. Identisch zur unpräfixierten V0.3-Datei (SHA-256 beginnt mit `4bdee96025a2`). |
+| `07-Territory_Wars_Hex_Dominion_V0.3.html` | R17-Quelle, erneut bytegleich zur unpräfixierten Datei geprüft. Unverändertes Archiv und volle SHA-256: [TERRITORY_SOURCE](reference/TERRITORY_SOURCE.md). |
 | `Territory_Wars_Hex_Dominion_V0.2.html`, `Territory_Wars_Hex_Dominion.html` | Ältere Vergleichsdateien vorhanden; keine Grundlage für aktuelle Funktions- oder Rundendauerbehauptungen. |
 | Crystal Front | **Quelle fehlt:** im Repository und unter den gesichteten Download-Quellen nicht gefunden. Bleibt Referenz/Variante innerhalb R17, ohne zugeschriebene Funktionen oder Prüfergebnisse. |
 
@@ -371,7 +372,13 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   Lautstärke der Nachtluft und Größe der Pilze); danach Merge-Entscheidung. Ein Export über 20 s braucht einen
   gesonderten Auftrag.
 
-- [ ] **R17 · Territory Wars: nach dem priorisierten Scrap-Ausbau Hex Dominion V0.3 integrieren (früher B12).**
+- [ ] **R17 · Territory Wars / Hex Dominion V0.3 integriert; persönliche Sicht-/Hörabnahme bleibt offen (früher B12).**
+  **Umgesetzt am 13.11.2026:** sechstes Szenario, Originalsimulation und Renderer, getrennte Ausgabe-/Kartenform,
+  Originalprofile und Filmtempo 0,25–2×, vollständige Kamera-/Anzeigeeinstellungen, deterministische Folgerunden,
+  Canvas-/HUD-Capture und Ereigniston über den bestehenden MP4-Weg. Technische Abnahme und konkrete Grenzen:
+  [Territory-Bericht](TERRITORY_INTEGRATION_2026-11-13.md). Ausschnittsexport bleibt gesperrt;
+  keine vollständigen 60-/600-Sekunden-Filme oder persönliche Hörabnahme behauptet.
+  Die folgenden Punkte halten den ursprünglichen Integrationsvertrag als Herkunft fest:
   **Ziel:** den vorhandenen Gebietskrieg mit seinen Anzeigen und Einstellmöglichkeiten reproduzierbar exportieren.
   **Abhängigkeit:** abgenommener Scrap-Produktionsweg/R06; Crystal Front bleibt vorerst zusätzliche Referenz/Variante.
   **Vorhandenes übernehmen:** 9:16/16:9, eigenständige Hoch-/Quer-Kartenformen, Auto-Framing, Filmtempo 0,25–2×,
@@ -535,11 +542,11 @@ Getroffene Entscheidungen einschließlich E2 und der Umsetzung von R19 stehen im
    Mischung auf PC/Kopfhörer sowie Handy beurteilen. Nur konkret auffällige Stellen gezielt korrigieren.
 2. **R04 – Scrap als nächste Kanalprobe:** nach dieser Abnahme ein Short und ein längeres Format auswählen.
    Die geprüfte 15-Minuten-Tonspur ersetzt keine Sichtung eines vollständigen langen Films; einen Langexport separat beauftragen.
-3. **R17 – danach Hex Dominion V0.3 planen:** vorhandene Quelle und Integrationslücken anhand des jetzt abgesicherten
-   Produktionswegs prüfen. Keine parallele neue Mechanik im laufenden Scrap-Abnahmeschritt.
+3. **R17 – integrierte Hex-Proben persönlich beurteilen:** kurze Hoch-/Querformatproben sehen und hören;
+   technische Nachweise stehen im Territory-Bericht. Weitere Mechaniken und Langfilme benötigen einen eigenen Auftrag.
 
 Die sechs R22-Pakete sind technisch umgesetzt; R02 wird nachgeprüft, die persönliche Qualitätsabnahme bleibt gesondert.
-Marble bleibt isolierter Prototyp, Hex wird nicht gleichzeitig begonnen.
+Der zusätzliche Marble-Foundry-Versuch bleibt isoliert; Hex V0.3 wurde separat und ohne neue Spielmechaniken integriert.
 
 R04 läuft mit den vorhandenen Uploads weiter. Naval wird gezielt bei Bedarf verbessert; aus einer offenen
 Abnahme oder Prüflücke folgt kein pauschaler Vorrang vor allen weiteren Szenarien.
