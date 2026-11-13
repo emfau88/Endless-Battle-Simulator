@@ -487,7 +487,7 @@ function cloudSprite(rng, w, sc) {
 }
 
 function orbSprite(col, sc, glow, R) {
-  const r = glow ? R * 3.6 : R + 1, c = document.createElement('canvas');
+  const r = glow ? R * 3.6 : R + 4, c = document.createElement('canvas');
   c.width = c.height = Math.ceil(r * 2 * sc * 2);
   const g = c.getContext('2d'); g.scale(sc * 2, sc * 2); g.translate(r, r);
   if (glow) {
@@ -495,6 +495,9 @@ function orbSprite(col, sc, glow, R) {
     gr.addColorStop(0, rgba(col, 0.85)); gr.addColorStop(0.22, rgba(col, 0.38)); gr.addColorStop(0.55, rgba(col, 0.1)); gr.addColorStop(1, rgba(col, 0));
     g.fillStyle = gr; g.fillRect(-r, -r, r * 2, r * 2);
   } else {
+    const rim = g.createRadialGradient(0, 0, R - 1, 0, 0, R + 3.5);        // weicher dunkler Saum
+    rim.addColorStop(0, 'rgba(8,22,52,.5)'); rim.addColorStop(1, 'rgba(8,22,52,0)');
+    g.fillStyle = rim; dot(g, 0, 0, R + 3.5);
     const gr = g.createRadialGradient(-R * 0.35, -R * 0.4, 0, 0, 0, R * 1.05);
     gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.3, rgba(mix(col, [255, 255, 255], 0.55), 1));
     gr.addColorStop(0.72, rgba(col, 1)); gr.addColorStop(1, rgba(mix(col, [0, 0, 0], 0.45), 1));
@@ -737,8 +740,8 @@ const shrink = (q, k) => { const cx = (q[0][0] + q[1][0] + q[2][0] + q[3][0]) / 
 function drawLitPanels(g, L) {
   for (let row = 0; row < PANEL_ROWS; row++) for (let gi = 0; gi < ROW_CELLS; gi++) {
     const q = cellQuad(L, row, gi);
-    g.fillStyle = 'rgba(255,206,110,.92)'; poly(g, shrink(q, 0.86)); g.fill();
-    g.fillStyle = 'rgba(255,246,210,.55)'; poly(g, shrink(q, 0.5)); g.fill();
+    g.fillStyle = 'rgba(255,186,52,.97)'; poly(g, shrink(q, 0.86)); g.fill();
+    g.fillStyle = 'rgba(255,232,150,.7)'; poly(g, shrink(q, 0.5)); g.fill();
   }
 }
 function drawRidge(g, L) {
@@ -776,13 +779,19 @@ function drawBack(g, L, rng) {
   foliage(g, rng, line(Rc, lerp2(Rc, A, 0.93), 40), 6, 24, inward(Rc), { dens: 3, rMin: 2, rMax: 6 });
   g.strokeStyle = 'rgba(240,248,255,.9)'; g.lineWidth = 1.6;
   for (const p of [lerp2(A, Lc, 0.07), lerp2(A, Rc, 0.07), lerp2(A, F, 0.09)]) { g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(A[0], A[1] - 26); g.stroke(); }
-  // Tunnel im Fuß: hier strömt das Wasser zum Becherwerk
+  drawTunnel(g, L);
+}
+/** Tunnel im Fuß: hier strömt das Wasser zum Becherwerk. */
+function tunnelArch(g, L, close) {
   const { cx: tx, tw, top: tt } = L.tunnel, yb = L.shore + 8;
-  const arch = (close) => { g.beginPath(); g.moveTo(tx - tw, yb); g.lineTo(tx - tw, tt + tw); g.arc(tx, tt + tw, tw, Math.PI, 0); g.lineTo(tx + tw, yb); if (close) g.closePath(); };
-  arch(true); gr = g.createLinearGradient(0, tt, 0, yb); gr.addColorStop(0, '#05151f'); gr.addColorStop(1, '#0e3242'); g.fillStyle = gr; g.fill();
-  arch(true); gr = g.createRadialGradient(tx, yb, 0, tx, yb, tw * 1.5); gr.addColorStop(0, 'rgba(70,210,235,.35)'); gr.addColorStop(1, 'rgba(70,210,235,0)'); g.fillStyle = gr; g.fill();
+  g.beginPath(); g.moveTo(tx - tw, yb); g.lineTo(tx - tw, tt + tw); g.arc(tx, tt + tw, tw, Math.PI, 0); g.lineTo(tx + tw, yb); if (close) g.closePath();
+}
+function drawTunnel(g, L) {
+  const { cx: tx, tw, top: tt } = L.tunnel, yb = L.shore + 8;
+  tunnelArch(g, L, true); let gr = g.createLinearGradient(0, tt, 0, yb); gr.addColorStop(0, '#05151f'); gr.addColorStop(1, '#0e3242'); g.fillStyle = gr; g.fill();
+  tunnelArch(g, L, true); gr = g.createRadialGradient(tx, yb, 0, tx, yb, tw * 1.5); gr.addColorStop(0, 'rgba(70,210,235,.35)'); gr.addColorStop(1, 'rgba(70,210,235,0)'); g.fillStyle = gr; g.fill();
   for (const sg of [-1, 1]) { g.fillStyle = 'rgba(120,235,255,.85)'; dot(g, tx + sg * (tw - 13), tt + tw + 4, 3); }
-  g.strokeStyle = '#eaf3f7'; g.lineWidth = 6; arch(false); g.stroke();
+  g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = '#eaf3f7'; g.lineWidth = 6; tunnelArch(g, L, false); g.stroke();
 }
 
 function drawFront(g, L, rng) {
@@ -837,8 +846,8 @@ class PyramidRenderer extends EBS.CanvasScene {
     const L = this.L, E = L.lift, R = L.R, rng = new RNG(hashSeed('pyramid-art', 7));   // Kulisse unabhängig vom Seed
     this.clouds = [];
     const spots = L.land
-      ? [[-60, 560, 380], [300, 650, 300], [1260, 640, 320], [1500, 520, 420], [180, 300, 240], [1380, 260, 260], [620, 220, 200], [1700, 700, 260]]
-      : [[-80, 760, 340], [600, 820, 320], [-40, 1150, 280], [760, 1120, 300], [60, 440, 260], [740, 400, 240], [330, 330, 200], [880, 640, 200]];
+      ? [[-60, 560, 380], [300, 650, 300], [1260, 640, 320], [1500, 520, 420], [180, 300, 240], [1380, 290, 260], [620, 260, 200], [1700, 700, 260]]
+      : [[-80, 760, 340], [600, 820, 320], [-40, 1150, 280], [760, 1120, 300], [60, 470, 260], [740, 440, 240], [330, 700, 200], [880, 640, 200]];   // hochkant: keine Wolke hinter der Anzeige
     for (const [x, y, w] of spots) this.clouds.push({ ...cloudSprite(rng, w, this.ls), x0: x, y, speed: rng.range(3, 7) });
     this.sky = this.layer((g) => drawSky(g, L));
     this.back = this.layer((g) => drawBack(g, L, rng));
@@ -873,10 +882,19 @@ class PyramidRenderer extends EBS.CanvasScene {
     this.moon = L.land ? [300, 210, 34] : [190, 430, 30];
     // Licht-Füllung: Bild aller leuchtenden Glasfelder, Reihenfolge innerhalb jeder Reihe aus festem Seed
     this.litCanvas = this.layer((g) => drawLitPanels(g, L));
-    this.litGlow = this.layer((g) => {                              // Nachtleuchten: spart Schienen, Pflanzkästen, Ufer aus
+    this.shaft = { x: E.cx - (E.rp + E.bo + R + 6), y: E.yTop - E.rp - E.bo - R - 8, w: 2 * (E.rp + E.bo + R + 6) };
+    this.shaft.h = L.tunnel.top + 6 - this.shaft.y;
+    this.litGlow = this.layer((g) => {                              // Nachtleuchten: spart Schienen, Pflanzkästen, Ufer, Schacht aus
       g.drawImage(this.litCanvas, 0, 0, L.W, L.H); g.globalCompositeOperation = 'destination-out';
       g.drawImage(this.front, 0, 0, L.W, L.H); g.drawImage(this.fore, 0, 0, L.W, L.H);
+      g.fillRect(this.shaft.x, this.shaft.y, this.shaft.w, this.shaft.h);
+      tunnelArch(g, L, true); g.fill();
     });
+    // Arbeitsflächen für alles, was nach dem Einfärben der Szene noch einmal gezeichnet wird (drawSelfLit)
+    this.scratch = document.createElement('canvas'); this.scratch.width = this.scratch.height = Math.ceil(R * 6 * this.ls);
+    this.shaftBox = { x: this.shaft.x - R, y: this.shaft.y - R, w: this.shaft.w + 2 * R, h: L.shore - this.shaft.y + R };
+    this.shaftCanvas = document.createElement('canvas');
+    this.shaftCanvas.width = Math.ceil(this.shaftBox.w * this.ls); this.shaftCanvas.height = Math.ceil(this.shaftBox.h * this.ls);
     this.fillPerm = Array.from({ length: PANEL_ROWS }, (_, i) => {
       const r = new RNG(hashSeed('pyramid-fill', i)), a = Array.from({ length: ROW_CELLS }, (_, k) => k);
       for (let k = a.length - 1; k > 0; k--) { const j = r.int(0, k); [a[k], a[j]] = [a[j], a[k]]; }
@@ -1021,9 +1039,11 @@ class PyramidRenderer extends EBS.CanvasScene {
     this.drawClouds(g, t, cfg.clouds);
     g.drawImage(this.back, 0, 0, L.W, L.H);
     this.drawWater(g, t);
+    this.drawLit(g, fs.lit, Math.min(1, 0.85 * cfg.fillGlow), 'source-over');
+    // Tunnel und Becherwerk nach den Glasfeldern: beide bleiben sichtbar, wenn die Pyramide leuchtet
+    if (fs.lit > 0) { g.save(); g.beginPath(); g.rect(0, 0, L.W, L.shore); g.clip(); drawTunnel(g, L); g.restore(); }
     this.drawLift(g, t);
     const c = this.col; g.drawImage(this.colCanvas, c.x, c.y, c.w, c.h);
-    this.drawLit(g, fs.lit, 0.5 * cfg.fillGlow, 'source-over');
     g.drawImage(this.front, 0, 0, L.W, L.H);
     for (const b of s.orbs) if (b.state === RAMP) {
       const q = this.pose(b, t);
@@ -1036,6 +1056,7 @@ class PyramidRenderer extends EBS.CanvasScene {
     if (cfg.birds && day.night < 0.95) { g.globalAlpha = 1 - day.night; this.drawBirds(g, t); g.globalAlpha = 1; }
     // Tageszeit: ganze Szene einfärben, danach alles, was selbst leuchtet
     this.grade(g, day);
+    this.drawSelfLit(g, t, day);
     this.drawNight(g, t, day);
     this.drawFillLights(g, t, fs, day);
     this.drawGlassFlash(g);
@@ -1072,6 +1093,10 @@ class PyramidRenderer extends EBS.CanvasScene {
       let gr = g.createLinearGradient(0, 0, 0, L.horizon);
       gr.addColorStop(0, rgba(day.warm, 0)); gr.addColorStop(0.55, rgba(day.warm, Math.min(1, 0.18 * day.warmK))); gr.addColorStop(1, rgba(day.warm, Math.min(1, 0.55 * day.warmK)));
       g.fillStyle = gr; g.fillRect(-20, -20, L.W + 40, L.horizon + 20);
+      // zwischen Horizont und Ufer weiterführen – sonst entsteht quer über Insel und Pyramide eine harte Kante
+      gr = g.createLinearGradient(0, L.horizon, 0, L.shore);
+      gr.addColorStop(0, rgba(day.warm, Math.min(1, 0.55 * day.warmK))); gr.addColorStop(1, rgba(day.warm, Math.min(1, 0.4 * day.warmK)));
+      g.fillStyle = gr; g.fillRect(-20, L.horizon, L.W + 40, L.shore - L.horizon);
       gr = g.createLinearGradient(0, L.shore, 0, L.H);
       gr.addColorStop(0, rgba(day.warm, Math.min(1, 0.4 * day.warmK))); gr.addColorStop(1, rgba(day.warm, 0));
       g.fillStyle = gr; g.fillRect(-20, L.shore, L.W + 40, L.H - L.shore + 20);
@@ -1082,6 +1107,36 @@ class PyramidRenderer extends EBS.CanvasScene {
       }
     }
     g.globalCompositeOperation = 'source-over';
+  }
+  /**
+   * Figuren behalten in Dämmerung und Nacht ihre eigene Farbe, statt im Farbstich der Szene zu verschwinden:
+   * Sie werden nach dem Einfärben noch einmal anteilig gezeichnet. Ufer und Palmen verdecken sie weiterhin,
+   * der eingetauchte Teil schwimmender Figuren bleibt eingefärbt.
+   */
+  drawSelfLit(g, t, day) {
+    const cfg = this.sim.cfg, a = clamp(day.warmK * 0.7 + day.night * 0.85, 0, 0.9) * (cfg.figure ? 0.7 : 1);
+    if (a < 0.03) return;
+    const L = this.L, R = L.R, ls = this.ls, half = R * 3, S = this.scratch, sg = S.getContext('2d');
+    // Becherwerk samt Figuren im Schacht (gedämpft, hinter Glas); Schienen und Pflanzkästen verdecken es weiterhin
+    const B = this.shaftBox, C = this.shaftCanvas, cg = C.getContext('2d');
+    cg.setTransform(1, 0, 0, 1, 0, 0); cg.globalCompositeOperation = 'source-over'; cg.globalAlpha = 1;
+    cg.clearRect(0, 0, C.width, C.height);
+    cg.setTransform(ls, 0, 0, ls, -B.x * ls, -B.y * ls);
+    this.drawMech(cg, t, 0);
+    cg.globalCompositeOperation = 'destination-out'; cg.drawImage(this.front, 0, 0, L.W, L.H);
+    g.globalAlpha = a * 0.6; g.drawImage(C, B.x, B.y, B.w, B.h);
+    for (const b of this.sim.orbs) {
+      if (b.state === LIFT) continue;                             // schon mit dem Becherwerk gezeichnet
+      const q = this.pose(b, t);
+      sg.setTransform(1, 0, 0, 1, 0, 0); sg.globalCompositeOperation = 'source-over'; sg.globalAlpha = 1;
+      sg.clearRect(0, 0, S.width, S.height);
+      sg.setTransform(ls, 0, 0, ls, (half - q.x) * ls, (half - q.y) * ls);
+      this.drawFigure(sg, b, q, 0);
+      if (b.state === RAMP) { sg.globalCompositeOperation = 'destination-out'; sg.drawImage(this.fore, 0, 0, L.W, L.H); }
+      else sg.clearRect(q.x - half, q.y + R * 0.35, half * 2, half * 2);
+      g.globalAlpha = a; g.drawImage(S, q.x - half, q.y - half, half * 2, half * 2);
+    }
+    g.globalAlpha = 1;
   }
   /** Nachts: Sterne und Mond, Mondglitzern, Innenlicht der Pyramide, Schein um die Figuren. */
   drawNight(g, t, day) {
@@ -1193,6 +1248,8 @@ class PyramidRenderer extends EBS.CanvasScene {
   drawLift(g, t) {
     const L = this.L, R = L.R, E = L.lift, s = this.sim, cx = E.cx;
     const fx = E.rp + E.bo + R + 6, yA = E.yTop - E.rp - E.bo - R - 8;
+    // dunkler Schacht hinter dem Becherwerk: Becher und Figuren heben sich vom Glas und von leuchtenden Feldern ab
+    g.fillStyle = 'rgba(6,26,60,.4)'; g.beginPath(); g.roundRect(cx - fx, yA, fx * 2, L.tunnel.top + 6 - yA, [fx * 0.5, fx * 0.5, 0, 0]); g.fill();
     g.lineCap = 'round';
     g.strokeStyle = 'rgba(230,242,250,.55)'; g.lineWidth = 2;
     for (const sg of [-1, 1]) { g.beginPath(); g.moveTo(cx + sg * fx, yA); g.lineTo(cx + sg * fx, L.tunnel.top + 6); g.stroke(); }
@@ -1200,29 +1257,31 @@ class PyramidRenderer extends EBS.CanvasScene {
     for (let y = yA + 20; y < L.tunnel.top - 30; y += 70) { g.beginPath(); g.moveTo(cx - fx, y); g.lineTo(cx + fx, y + 35); g.moveTo(cx + fx, y); g.lineTo(cx - fx, y + 35); g.stroke(); }
     const lt = [cx, E.yTop - E.rp - 3];
     g.strokeStyle = 'rgba(255,246,220,.5)'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(lt[0], lt[1]); g.lineTo(L.apex[0], L.apex[1]); g.stroke();
-    const mech = () => {
-      g.lineJoin = 'round';
-      g.strokeStyle = '#26343b'; g.lineWidth = 7; g.stroke(this.belt);
-      g.setLineDash([6, 8]); g.lineDashOffset = -s.beltPos; g.strokeStyle = '#a9bcc4'; g.lineWidth = 2.2; g.stroke(this.belt); g.setLineDash([]);
-      for (const yc of [E.yTop, E.yBot]) {
-        g.fillStyle = '#dfe8ec'; g.strokeStyle = '#43545c'; g.lineWidth = 3; g.beginPath(); g.arc(cx, yc, E.rp + 1, 0, TAU); g.fill(); g.stroke();
-        const a0 = -s.beltPos / E.rp;
-        g.strokeStyle = '#6d818a'; g.lineWidth = 2.5;
-        for (let i = 0; i < 3; i++) { const a = a0 + i * TAU / 3; g.beginPath(); g.moveTo(cx, yc); g.lineTo(cx + Math.cos(a) * (E.rp - 4), yc + Math.sin(a) * (E.rp - 4)); g.stroke(); }
-        g.fillStyle = '#3b4b53'; dot(g, cx, yc, 3.5);
-      }
-      for (const b of s.orbs) if (b.state === LIFT) this.drawFigure(g, b, this.pose(b, t), 0.8);
-      for (let k = 0; k < E.nb; k++) {
-        beltAt(E, s.liftPhase + k * E.spacing, BQ);
-        const ang = Math.atan2(-BQ.ty, -BQ.tx), rr = R + 4;
-        g.beginPath(); g.moveTo(BQ.x, BQ.y); g.lineTo(BQ.bx - BQ.nx * rr * 0.6, BQ.by - BQ.ny * rr * 0.6);
-        g.strokeStyle = '#3d4f58'; g.lineWidth = 4; g.stroke();
-        g.beginPath(); g.arc(BQ.bx, BQ.by, rr, ang - Math.PI / 2, ang + Math.PI / 2); g.closePath();
-        g.fillStyle = 'rgba(214,228,235,.88)'; g.fill(); g.strokeStyle = '#3d4f58'; g.lineWidth = 2.5; g.stroke();
-      }
-    };
-    g.save(); g.beginPath(); g.rect(0, 0, L.W, L.shore); g.clip(); mech(); g.restore();
-    g.save(); g.beginPath(); g.rect(0, L.shore, L.W, L.H - L.shore); g.clip(); g.globalAlpha = 0.3; mech(); g.restore();
+    g.save(); g.beginPath(); g.rect(0, 0, L.W, L.shore); g.clip(); this.drawMech(g, t, 0.8); g.restore();
+    g.save(); g.beginPath(); g.rect(0, L.shore, L.W, L.H - L.shore); g.clip(); g.globalAlpha = 0.3; this.drawMech(g, t, 0.8); g.restore();
+  }
+  /** Band, Rollen, Figuren im Becher und Becher. */
+  drawMech(g, t, glowK) {
+    const L = this.L, R = L.R, E = L.lift, s = this.sim, cx = E.cx;
+    g.lineJoin = 'round'; g.lineCap = 'round';
+    g.strokeStyle = '#26343b'; g.lineWidth = 7; g.stroke(this.belt);
+    g.setLineDash([6, 8]); g.lineDashOffset = -s.beltPos; g.strokeStyle = '#a9bcc4'; g.lineWidth = 2.2; g.stroke(this.belt); g.setLineDash([]);
+    for (const yc of [E.yTop, E.yBot]) {
+      g.fillStyle = '#dfe8ec'; g.strokeStyle = '#43545c'; g.lineWidth = 3; g.beginPath(); g.arc(cx, yc, E.rp + 1, 0, TAU); g.fill(); g.stroke();
+      const a0 = -s.beltPos / E.rp;
+      g.strokeStyle = '#6d818a'; g.lineWidth = 2.5;
+      for (let i = 0; i < 3; i++) { const a = a0 + i * TAU / 3; g.beginPath(); g.moveTo(cx, yc); g.lineTo(cx + Math.cos(a) * (E.rp - 4), yc + Math.sin(a) * (E.rp - 4)); g.stroke(); }
+      g.fillStyle = '#3b4b53'; dot(g, cx, yc, 3.5);
+    }
+    for (const b of s.orbs) if (b.state === LIFT) this.drawFigure(g, b, this.pose(b, t), glowK);
+    for (let k = 0; k < E.nb; k++) {
+      beltAt(E, s.liftPhase + k * E.spacing, BQ);
+      const ang = Math.atan2(-BQ.ty, -BQ.tx), rr = R + 4;
+      g.beginPath(); g.moveTo(BQ.x, BQ.y); g.lineTo(BQ.bx - BQ.nx * rr * 0.6, BQ.by - BQ.ny * rr * 0.6);
+      g.strokeStyle = '#3d4f58'; g.lineWidth = 4; g.stroke();
+      g.beginPath(); g.arc(BQ.bx, BQ.by, rr, ang - Math.PI / 2, ang + Math.PI / 2); g.closePath();
+      g.fillStyle = 'rgba(214,228,235,.88)'; g.fill(); g.strokeStyle = '#3d4f58'; g.lineWidth = 2.5; g.stroke();
+    }
   }
   /** Lichtimpuls steigt vom Scheitel der oberen Rolle zur Spitze. */
   drawPulseDot(g) {
@@ -1252,11 +1311,12 @@ class PyramidRenderer extends EBS.CanvasScene {
     gr.addColorStop(0, rgba([255, 255, 255], 0.95)); gr.addColorStop(0.12, rgba(col, 0.55)); gr.addColorStop(0.45, rgba(col, 0.12)); gr.addColorStop(1, rgba(col, 0));
     g.fillStyle = gr; g.fillRect(ax - hr, ay - hr, hr * 2, hr * 2);
     for (const [ang, kk] of [[0, 1], [Math.PI / 2, 1], [Math.PI / 4 + t * 0.05, 0.45], [-Math.PI / 4 + t * 0.05, 0.45]]) {
-      const len = 340 * I * kk;
+      // Hochkant endet der Strahl nach oben unterhalb der Anzeige, damit er nicht durch Titel und Zähler läuft
+      const len = 340 * I * kk, up = !L.land && ang === Math.PI / 2 ? Math.min(len, ay - 376) : len;
       g.save(); g.translate(ax, ay); g.rotate(ang);
-      gr = g.createLinearGradient(-len, 0, len, 0);
-      gr.addColorStop(0, rgba(col, 0)); gr.addColorStop(0.5, rgba([255, 255, 255], 0.85)); gr.addColorStop(1, rgba(col, 0));
-      g.fillStyle = gr; g.beginPath(); g.moveTo(-len, 0); g.lineTo(0, -2.6 * kk * I); g.lineTo(len, 0); g.lineTo(0, 2.6 * kk * I); g.closePath(); g.fill();
+      gr = g.createLinearGradient(-up, 0, len, 0);
+      gr.addColorStop(0, rgba(col, 0)); gr.addColorStop(up / (up + len), rgba([255, 255, 255], 0.85)); gr.addColorStop(1, rgba(col, 0));
+      g.fillStyle = gr; g.beginPath(); g.moveTo(-up, 0); g.lineTo(0, -2.6 * kk * I); g.lineTo(len, 0); g.lineTo(0, 2.6 * kk * I); g.closePath(); g.fill();
       g.restore();
     }
     this.sprite(g, this.white, ax, ay, 0.55 + 0.25 * flash);
@@ -1321,6 +1381,10 @@ class PyramidRenderer extends EBS.CanvasScene {
   drawHud(g) {
     const L = this.L, n = fmtIntEn(this.sim.stats.pulses);
     g.save();
+    // dunkler Verlauf am oberen Rand: Schrift bleibt über Wolken, Abendrot und Lichtstrahl lesbar
+    const sh = L.land ? 250 : 440, scrim = g.createLinearGradient(0, 0, 0, sh);
+    scrim.addColorStop(0, `rgba(5,20,62,${L.land ? 0.34 : 0.5})`); scrim.addColorStop(0.65, `rgba(5,20,62,${L.land ? 0.14 : 0.26})`); scrim.addColorStop(1, 'rgba(5,20,62,0)');
+    g.fillStyle = scrim; g.fillRect(0, 0, L.W, sh);
     g.shadowColor = 'rgba(0,25,70,.45)'; g.shadowBlur = 14;
     g.textBaseline = 'middle'; g.fillStyle = '#ffffff';
     const font = (w, s) => `${w} ${s}px Bahnschrift, "Segoe UI", Arial, sans-serif`;
@@ -1340,12 +1404,13 @@ class PyramidRenderer extends EBS.CanvasScene {
       g.shadowBlur = 8; g.fillStyle = 'rgba(10,30,70,.45)'; g.beginPath(); g.roundRect(bx, by, bw, 10, 5); g.fill();
       g.shadowBlur = 0;
       if (f > 0) { const gr = g.createLinearGradient(bx, 0, bx + bw, 0); gr.addColorStop(0, '#ffb43c'); gr.addColorStop(1, '#fff1b0'); g.fillStyle = gr; g.beginPath(); g.roundRect(bx, by, Math.max(10, bw * f), 10, 5); g.fill(); }
-      g.letterSpacing = '2px'; g.font = font(600, L.land ? 16 : 20); g.fillStyle = '#ffe9b0'; g.textAlign = L.land ? 'right' : 'center';
+      g.letterSpacing = '2px'; g.font = font(600, L.land ? 17 : 23); g.fillStyle = '#fff0c4'; g.textAlign = L.land ? 'right' : 'center';
+      g.shadowColor = 'rgba(0,18,56,.8)'; g.shadowBlur = 9;
       const banner = fs.on && fs.lit === PANELS;
       if (!banner || L.land) g.fillText(`PYRAMID LIT ${Math.floor(f * 100)} %`, L.land ? L.W - 60 : L.W / 2, by + (L.land ? 30 : 36));
       if (banner) {
         const a = Math.min(1, (fs.ct - (fs.D - fs.F)) / 0.6), sc = 1 + 0.04 * Math.sin(fs.v * 5);
-        g.save(); g.globalAlpha = a; g.translate(L.W / 2, L.land ? 62 : 372); g.scale(sc, sc);
+        g.save(); g.globalAlpha = a; g.translate(L.W / 2, L.land ? 62 : 344); g.scale(sc, sc);
         g.shadowColor = 'rgba(255,170,40,.9)'; g.shadowBlur = 24; g.letterSpacing = '4px'; g.textAlign = 'center';
         g.font = font(800, L.land ? 46 : 54); g.fillStyle = '#fff3c4'; g.fillText('PYRAMID FULLY LIT!', 0, 0);
         g.restore();
@@ -1354,7 +1419,7 @@ class PyramidRenderer extends EBS.CanvasScene {
     g.restore();
   }
   destroy() {
-    for (const c of [this.sky, this.back, this.front, this.fore, this.refl, this.colCanvas, ...this.clouds.map((x) => x.c)]) c.width = c.height = 1;
+    for (const c of [this.sky, this.back, this.front, this.fore, this.refl, this.colCanvas, this.scratch, this.shaftCanvas, ...this.clouds.map((x) => x.c)]) c.width = c.height = 1;
     super.destroy();
   }
 }
@@ -1431,6 +1496,8 @@ EBS.registerScenario({
   audio: {
     // Preserve the standard mix; AAC noise substitution can overshoot during the finale.
     aacNoPns: true,
+    // Etwas mehr Reserve für den Kodierer: mit großen Tierchen lag das fertige AAC sonst genau auf der Grenze (−1 dBTP).
+    ceilingDb: -3,
     events: {
       scoop: { label: 'Becher schöpft', samples: ['impactSoft_medium_000'], gain: 0.14, semis: 3, detune: 1 },
       pulse: { label: 'Lichtimpuls', samples: ['synth:chime'], gain: 0.2, scale: [0, 4, 7, 12] },
