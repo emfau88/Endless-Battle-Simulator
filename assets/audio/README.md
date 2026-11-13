@@ -53,3 +53,13 @@ weniger. Nur Scrap verwendet 20 ms Begrenzer-Rücklauf statt 60 ms, damit kurze 
 ohne eine lange Pegelabsenkung auf folgende Klänge zu übertragen. Die PCM-Grenze liegt für Scrap bei −3 dBFS:
 Ein 15-Minuten-Audiolauf zeigte seltene AAC-Spitzen, die in den kurzen Clips nicht vorkamen. Das Ziel −14 LUFS
 und die gemeinsame AAC-Spitzengrenze −1 dBTP bleiben erhalten. Messnachweise: `docs/SCRAP_AUDIO_PRODUKTION_2026-11-13.md`.
+
+## Endless Mycelium
+
+Die Klangtabelle in `src/scenarios/mycelium.js` nutzt aus dem Kenney-Paket nur `impactSoft_medium_000` (Blatt landet,
+etwas höher gestimmt). Alle übrigen Klänge werden deterministisch in `lib/audio.mjs` erzeugt, weil kurze Glasklänge
+bei den seltenen Ereignissen eines ruhigen Videos bis zu 24 dB Begrenzung erzwangen:
+`synth:myco-seed` (Spore landet: schwebender Dur-Dreiklang), `synth:myco-pling` (Blatt aufgefressen: weicher
+Glockenton, je Blatt einen Ton weiter auf der Dur-Pentatonik), `synth:myco-pop` (Pilz ploppt auf),
+`synth:myco-breeze` (Sporenwolke: an- und abschwellendes Rauschen) und `synth:myco-night` (leise Nachtluft, 12 s mit
+weicher Ein-/Ausblendung, alle 10 s ausgelöst und dadurch nahtlos).

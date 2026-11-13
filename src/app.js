@@ -64,6 +64,14 @@ async function bootLive() {
       if (fromLink) delete fromUrl.scenario; else { delete saved.scenario; staleSaved = true; }
     }
   }
+  // Anderes Szenario als gespeichert (z. B. per Link): dessen Videostandards gelten, sofern der Link sie nicht selbst nennt
+  const sc0 = getScenario(initial.scenario);
+  if (sc0.videoDefaults && saved.scenario !== initial.scenario) {
+    const over = { ...sc0.videoDefaults };
+    for (const k of ['resolution', 'fps']) if (fromUrl[k] !== undefined) delete over[k];
+    if (['crf', 'preset'].some((k) => fromUrl[k] !== undefined)) delete over.quality;
+    initial = mergeConfig(initial, { video: over });
+  }
   const a0 = ASPECTS[initial.video.aspect];
   const app = await createStage({ w: a0.w, h: a0.h }, { renderScale: 1 });
   $('stage').appendChild(app.canvas);
@@ -95,8 +103,10 @@ async function bootLive() {
   const scSel = $('scenario');
   for (const s of scenarios.values()) scSel.add(new Option(s.title, s.id));
   scSel.addEventListener('change', () => {
-    const c = session.cfg;
-    session.start({ scenario: scSel.value, seed: c.seed, video: c.video, view: c.view }); // neue Standardwerte des Szenarios
+    const c = session.cfg, vd = getScenario(scSel.value).videoDefaults;
+    // Bringt das neue Szenario eigene Videostandards mit (z. B. YouTube-Qualität), gelten diese; Format und Länge bleiben
+    const video = vd ? { ...c.video, ...vd, quality: { ...c.video.quality, ...(vd.quality || {}) } } : c.video;
+    session.start({ scenario: scSel.value, seed: c.seed, video, view: c.view }); // neue Standardwerte des Szenarios
     acc = 0; fit(); save(); buildScenarioUi(); syncUi();
   });
   function buildScenarioUi() {

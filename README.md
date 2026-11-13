@@ -13,6 +13,10 @@ geschlossenen, sichtbaren Kreislauf zurück ins Magazin.
 Zweites Szenario: **Endless Marble Factory** – eine Kugelfabrik mit geschlossenem Kreislauf, deren Grafik vollständig
 im Code entsteht (siehe [Endless Marble Factory](#endless-marble-factory)).
 
+Viertes Szenario: **Endless Mycelium** – ein leuchtendes Pilzgeflecht wächst, frisst Laub, bildet Pilze und Sporen,
+vergeht und keimt in der nächsten Farbe neu; ruhiges Satisfying-Video mit eigenen Reglern und YouTube-Standard 1440p60
+(siehe [Endless Mycelium](#endless-mycelium)).
+
 Drittes Szenario: **Scrap Wars** – vier Roboter, zerstörbare Deckung, Waffenaufnahme und deterministische
 Folgerunden mit Punktestand. Die Arena aus dem bereitgestellten Scrap-Prototyp nutzt den gemeinsamen
 Konfigurations-, Vorschau- und MP4-Weg. Alle drei Szenarien exportieren mit Ton,
@@ -58,6 +62,8 @@ npm run golden              # Referenz-Hashes der Simulation prüfen (≈ 1 min)
 npm run marble:test         # Kugelfabrik: 8-s-Testvideo 720p30 -> output/marble_test_8s_720p.mp4
 npm run export -- --config presets/scrap-portrait.json         # Scrap: 20-s-Kurzprobe mit Ton
 npm run export -- --config presets/scrap-landscape.json        # gleiche Arena im Querformat
+npm run export -- --config presets/mycelium-youtube-short.json # Myzel-Short: 30 s, 1440×2560, 60 fps, mit Ton
+npm run export -- --config presets/mycelium-youtube-10min.json # Myzel: 10 Minuten, 2560×1440, 60 fps, mit Ton
 node scripts/screenshot.mjs --scenario marble --aspect 16:9 --at 9 --out output/marble_16x9.png   # Einzelbild (PNG)
 ```
 
@@ -204,6 +210,8 @@ src/scenarios/naval.js     Szenario „Endless Naval Battle“ (Simulation + Ren
 src/scenarios/marble.js    Szenario „Endless Marble Factory“ (Bahnen, Simulation, Canvas-Grafik, Renderer)
 src/scenarios/scrap.js     Scrap-Registrierung, Hoch-/Querformat-HUD und Offline-Klangtabelle
 src/scenarios/scrap/       Gesicherte Simulation/Renderer, Quellenmanifest und Episodenadapter
+src/scenarios/mycelium/simulation.js  Endless Mycelium: Wachstum, Verdauung, Pilze, Sporen, Generationen (ohne Matter.js)
+src/scenarios/mycelium.js  Myzel-Renderer (Canvas, Zwischenspeicher mit Überblendung), Regler, Klangtabelle, YouTube-Standard
 src/canvas-scene.js        Canvas2D als vollständiger Frame auf der gemeinsamen Pixi-Capturebühne
 scripts/screenshot.mjs     Einzelbild der laufenden Simulation als PNG (gleiche Seite wie der Export)
 scripts/golden-hashes.mjs  Referenz-Hashes der Simulation prüfen (npm run golden) oder neu schreiben (npm run golden:write)
@@ -325,7 +333,8 @@ Schlagseite und dunklerer Rumpf. Gemessener Verlauf bei 35 %: **1 min ≈ 3 % ·
 
 1. Datei `src/scenarios/<name>.js` anlegen (Vorlage: `test/fixtures/dummy-scenario.js`, Vollbeispiele: `naval.js`, `marble.js`).
 2. Darin `EBS.registerScenario({ id, title, defaults, controls, normalizeParams, create, createRenderer, panelStats })`,
-   optional `panelNote` und `audio` (Klangtabelle).
+   optional `panelNote`, `audio` (Klangtabelle) und `videoDefaults` (eigene Standardwerte für Auflösung, Bildrate
+   und Qualität, z. B. `{ resolution: 1440, fps: 60, quality: { crf: 16 } }`; ausdrückliche Angaben haben Vorrang).
    - `create({ seed, params, world, view, timeScale })` liefert die Simulation mit `stepOnce()`, `t`, `step`,
      `snapshot()`, `checkInvariants()`, `stateHash()`, `destroy()`; für Ton zusätzlich `events` und `eventSeq`.
    - `createRenderer({ app, sim, view, world, renderScale })` liefert `{ root, draw(), destroy() }`.
@@ -336,6 +345,67 @@ Schlagseite und dunklerer Rumpf. Gemessener Verlauf bei 35 %: **1 min ≈ 3 % ·
 Kern, Partikelpool, Bühne, Export-Pipeline, Mischer, Server und CLI bleiben dabei unverändert. Die vollständige
 Checkliste (Determinismus, Matter.js-Reset, Ereignisformat, Parameternamen) steht im
 [Audit, Abschnitt 4](docs/AUDIT_2026-11-12.md#4--checkliste-für-ein-neues-szenario).
+
+## Endless Mycelium
+
+Viertes Szenario, als ruhiges „Satisfying“-Video gedacht: Auf nächtlichem Waldboden wächst ein leuchtendes Pilzgeflecht.
+Auswahl in der Oberfläche über **Szenario → Endless Mycelium**, per Link `?scenario=mycelium`, per Kommandozeile
+`--scenario mycelium`.
+
+**Kreislauf je Generation.** `Spore landet → Netz wächst zum Laub → Blätter werden bis aufs Adergerippe verdaut →
+Pilze wachsen aus den dicksten Strängen → Sporenwolke → altes Netz verblasst von außen nach innen → Sporen landen
+anderswo → nächste Generation in der nächsten Farbe`. Nährstoffe wandern als Lichtpunkte über die Stränge zur
+Keimstelle; dicke Stränge entstehen von selbst dort, wo viel dahinter gewachsen ist. Blätter fallen während jeder
+Generation nach (groß und unscharf, sie drehen sich und landen mit Schatten). Totes Geflecht bleibt kurz als Narbe
+sichtbar und wird dann aus dem Speicher entfernt – auch ein Video über Stunden wächst nicht in den Speicher.
+
+**Regler** (alle in Oberfläche, Teilen-Link, JSON und `--param key=wert`):
+
+| Regler | Schlüssel | Bereich (Standard) | Wirkung |
+|---|---|---|---|
+| Dauer einer Generation | `cycleSec` | 12–180 s (24) | Länge eines Kreislaufs in Simulationssekunden; Wachstum, Pilze, Sporenflug und Verblassen skalieren mit |
+| Ausbreitung des Netzes | `spread` | 0,4–1,6 (1) | wie weit das Netz in einer Generation wächst |
+| Verzweigung | `branching` | 0,5–1,6 (1) | dichter oder luftiger |
+| Neue Kolonien je Generation | `colonies` | 1–3 (2) | wie viele Sporen landen und keimen |
+| Laub am Boden zu Beginn | `startLeaves` | 0–16 (8) | Blätter, die beim Start schon liegen |
+| Fallende Blätter je Generation | `leafFall` | 0–10 (5) | Nachschub während des Wachsens |
+| Verdauungstempo | `digest` | 0,4–2,5 (1) | wie schnell Blätter bis aufs Gerippe gefressen werden |
+| Pilze je Generation | `mushrooms` | 1–6 (4) | Fruchtkörper an den dicksten Strängen |
+| Sporen je Pilz | `spores` | 0–250 (110) | Dichte der Sporenwolke |
+| Wind für die Sporen | `wind` | 0–2,5 (1) | wie weit die Wolke treibt |
+| Farben der Generationen | `palette` | `cycle`, `mint`, `cool`, `warm` | Farbfolge; wirkt sofort, ohne Neustart |
+| Leuchtstärke | `glow` | 0,3–1,8 (1) | Stärke des Scheins; wirkt sofort |
+| Nährstoffpulse zeigen | `pulses` | an/aus (an) | Lichtpunkte auf den Strängen; wirkt sofort |
+
+Die letzten drei sind reine Darstellung und verändern den Ablauf nicht (gleicher Zustands-Hash); alle anderen starten
+die Simulation neu. Gleicher Seed und gleiche Regler ergeben bei 30 und 60 fps denselben Ablauf.
+
+**YouTube-Qualität als Standard.** Das Szenario bringt eigene Videostandards mit: **1440p, 60 fps, CRF 16**
+(`videoDefaults` in der Registrierung). Sie gelten, wenn die Konfiguration nichts anderes sagt, und werden beim
+Wechsel auf das Szenario in der Oberfläche gesetzt; Format (hochkant/quer) und Länge bleiben wie gewählt. Fertige
+Vorlagen:
+
+```bash
+npm run export -- --config presets/mycelium-youtube-short.json   # Short: 30 s, 1440×2560, 60 fps, zwei Generationen
+npm run export -- --config presets/mycelium-youtube-10min.json   # 10 Minuten, 2560×1440, 60 fps, 13 Generationen
+```
+
+**Ton.** Weiche, im Code erzeugte Töne statt harter Glasklänge: ein schwebender Dreiklang, wenn eine Spore landet,
+ein Glockenton je gefressenem Blatt (jedes Blatt einen Ton weiter auf der Dur-Pentatonik – es entsteht eine kleine
+Melodie), ein weiches „Blubb“, wenn ein Pilz aufploppt, ein anschwellendes Rauschen für die Sporenwolke und leise
+Nachtluft als Grund. Das Blattrascheln ist `impactSoft_medium_000` (Kenney, CC0). Gemessen an einem 20-s-Export:
+−14,0 LUFS bei nur 1,7 dB Begrenzung (mit Glasklängen waren es 24 dB).
+
+**Darstellung und Leistung.** Zehntausende Fadensegmente mit Leuchten jedes Bild neu zu zeichnen ist teuer. Das Netz
+liegt deshalb in zwei Zwischenspeichern, die über mehrere Bilder verteilt neu entstehen und weich überblendet
+werden; neu Gewachsenes wird direkt gezeichnet, das jüngste Segment jeder Spitze wächst fließend nach. Das Bild bleibt
+eine reine Folge des Simulationszustands (Rendern verändert nichts, per Test geprüft); Ausschnitte (`--clip-start`)
+sind wie bei Seeschlacht und Kugelfabrik noch nicht freigegeben. Gemessen auf diesem Rechner (AMD Radeon iGPU):
+1440p60 hochkant und quer **58–74 ms je Bild** (vorher 180–250 ms), davon ≈ 35 ms Grundkosten von Übertragung und
+JPEG wie bei Scrap. Gemessen einschließlich Encoder: 20 s Short-Vorlage 1440p60 hochkant in 2:08 min (9,4 Bilder/s),
+quer in 1:44 min (11,5 Bilder/s) – ein 30-s-Short also ≈ 3 Minuten, 10 Minuten quer ≈ 50–55 Minuten; 1080p30 ≈ 20 Bilder/s.
+
+Bericht mit Messungen und Grenzen: [Endless Mycelium](docs/MYCELIUM_2026-11-13.md).
 
 ## Endless Marble Factory
 
@@ -415,7 +485,7 @@ mit `--param skyMinutes=20 --param meteorEvery=40 --param whaleEvery=120`.
 
 ## Ton
 
-Beide Szenarien exportieren mit Tonspur (AAC, 48 kHz, Stereo). Die Seeschlacht nutzt bewusst wenige Klänge:
+Alle Szenarien exportieren mit Tonspur (AAC, 48 kHz, Stereo); zum Myzel siehe [Endless Mycelium](#endless-mycelium). Die Seeschlacht nutzt bewusst wenige Klänge:
 Kanonenschuss und Platscher (im Code erzeugt), Holzaufschlag für Treffer und leise den Kreislauf – ein dumpfes „Tock“,
 wenn eine Kugel am Grund aufsetzt, und ein „Tink“, wenn sie im Regal ankommt (je rund 14 LU unter der Gesamtmischung,
 etwa so leise wie der Platscher); eine Dichtebegrenzung je Klang verhindert

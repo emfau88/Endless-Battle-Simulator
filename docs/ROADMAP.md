@@ -66,8 +66,8 @@ Naval hat nach dem gemeldeten Short und 10-Minuten-Upload keinen Vorrang; offene
 Allgemeiner Engine-Umbau, Spielmechaniken außerhalb R22, 4K-Optimierung und 60-Minuten-Produktion haben keinen Vorrang.
 
 **IDs:** R01–R19 bleiben vergeben, einschließlich des im CHANGELOG erledigten R19. R17 bleibt Territory Wars;
-neu sind **R20 für Scrap Wars / Scrap Arena**, **R21 für Naval-Zustandsabsicherung** und
-**R22 für den begrenzten Scrap-Qualitätsausbau**. Nächste freie ID: R23.
+neu sind **R20 für Scrap Wars / Scrap Arena**, **R21 für Naval-Zustandsabsicherung**,
+**R22 für den begrenzten Scrap-Qualitätsausbau** und **R23 für Endless Mycelium**. Nächste freie ID: R24.
 Frühere B-/Schritt-Bezeichnungen sind Herkunftsverweise, keine zweite Aufgabenliste.
 
 ## 1 · Quellen und belastbarer Stand
@@ -301,6 +301,15 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   Notwendige Fehlerkorrekturen und Prüfungen zählen nicht als neue Gestaltungsvarianten. Kein Engine-/3D-Umbau,
   allgemeines Grafikframework, 4K-Leistungsprojekt oder paralleler Hex-/Marble-Ausbau. Einen guten Clip bereits
   nach P1/P2 veröffentlichungsreif beurteilen; die Werkstatt darf die erste Produktion nicht blockieren.
+
+- [ ] **R23 · Endless Mycelium ist integriert – Sicht-/Hörabnahme am Gerät abschließen.**
+  **Ziel:** ruhiges Satisfying-Szenario (Myzel wächst, frisst Laub, Pilze, Sporen, nächste Generation in neuer Farbe)
+  als Short und als langes Video produzieren.
+  **Stand:** Branch `endless-mycelium` mit Simulation, Renderer, 13 Reglern, Ton, YouTube-Standard 1440p60 und zwei
+  Vorlagen; Prüfungen und Messwerte im [Myzel-Bericht](MYCELIUM_2026-11-13.md). Noch nicht in `main`.
+  **Abnahme:** Short-Vorlage und ein kurzer Querformat-Ausschnitt am Handy angesehen und angehört (insbesondere
+  Lautstärke der Nachtluft und Größe der Pilze); danach Merge-Entscheidung. Ein Export über 20 s braucht einen
+  gesonderten Auftrag.
 
 - [ ] **R17 · Territory Wars: nach dem priorisierten Scrap-Ausbau Hex Dominion V0.3 integrieren (früher B12).**
   **Ziel:** den vorhandenen Gebietskrieg mit seinen Anzeigen und Einstellmöglichkeiten reproduzierbar exportieren.
