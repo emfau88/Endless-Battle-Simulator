@@ -377,7 +377,8 @@ Lagune paddeln sie mit geschlossenen Glücksaugen. Wackelaugen und Blinzeln sind
 |---|---|---|
 | Figuren | Leuchtkugeln oder Tierchen (reine Darstellung) | – |
 | Anzahl der Figuren · Größe der Figuren | Neustart; Größe ändert Becher, Kappen, Tunnel und Abstände mit | 12–26 · 24–48 px |
-| Tempo des Becherwerks · Rolltempo (Schwerkraft) · Strömung in der Lagune | Physik, wirkt sofort | 0,5–2× · 0,6–1,6× · 0,4–2× |
+| Gesamttempo (alles) | Zeitlupe für Physik und Animationen, wirkt sofort | 0,25–1,5× |
+| Tempo des Becherwerks · Rolltempo auf der Bahn · Strömung in der Lagune | je Element, wirkt sofort; das Rolltempo ist eine Zeitlupe nur für die Bahn (gleiche Physik, nie Stillstand) | 0,25–2× · 0,25–1,6× · 0,25–2× |
 | Leuchten · Lichtimpuls · Sonnenstrahlen · Spiegelung | Intensität (reine Darstellung) | 0–150 % bzw. 0–100 % |
 | Wolkentempo · Wellengang · Glitzern · Gezappel der Tierchen | Tempo bzw. Stärke (reine Darstellung) | 0–3× bzw. 0–2× |
 | Vögel · Strömungsspur im Wasser | an/aus | – |

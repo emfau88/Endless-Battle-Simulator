@@ -66,7 +66,7 @@ test('Rendering, Auflösung, Bildrate und reine Darstellungsregler beeinflussen 
 
 for (const cfg of [
   { params: { size: 12, orbs: 26 } }, { params: { size: 24, orbs: 26 }, video: { aspect: '9:16' } }, { params: { size: 24, orbs: 26 } },
-  { params: { rollSpeed: 0.6, beltSpeed: 0.5, current: 0.4, orbs: 12 }, video: { aspect: '9:16' } },
+  { params: { rollSpeed: 0.25, beltSpeed: 0.25, current: 0.25, orbs: 12 }, video: { aspect: '9:16' } },
   { params: { rollSpeed: 1.6, beltSpeed: 2, current: 2, size: 20 } },
   { params: { figure: 1, size: 22 }, video: { aspect: '1:1' } }, { params: { warmup: 0 }, video: { tempo: 0.64 } },
 ]) {
@@ -76,22 +76,34 @@ for (const cfg of [
     const c = await check(page);
     assert.ok(c.ok, c.errors.join('; '));
     assert.equal(total(s.counts), s.orbs);
-    assert.ok(s.pulses > 30, `Kreislauf steht: ${s.pulses} Lichtimpulse`);
+    assert.ok(s.pulses > 12, `Kreislauf steht: ${s.pulses} Lichtimpulse`);
     assert.ok(s.minLaps >= 1, `eine Figur hängt fest (${s.minLaps} Umläufe)`);
     assert.ok(s.layout.slope >= 0.045, `Gefälle zu flach: ${s.layout.slope}`);
     await page.close();
   });
 }
 
+test('Gesamttempo verlangsamt alles gleichmäßig: halbes Tempo = gleicher Ablauf in doppelter Videozeit', async () => {
+  const a = await sim({ seed: 4, params: { speed: 0.5 } }), b = await sim({ seed: 4 });
+  const [sa, sb] = [await run(a, 240), await run(b, 120)];
+  assert.ok(Math.abs(sa.t - sb.t) < 1e-6, `Simulationszeit ${sa.t} statt ${sb.t}`);
+  assert.ok(Math.abs(sa.pulses - sb.pulses) <= 2, `halbes Tempo verändert den Ablauf: ${sa.pulses} statt ${sb.pulses} Lichtimpulse`);
+  assert.ok((await check(a)).ok);
+  const slow = await sim({ seed: 4, params: { speed: 0.25, beltSpeed: 0.25, rollSpeed: 0.25, current: 0.25 } });
+  const s = await run(slow, 600);
+  assert.ok((await check(slow)).ok && s.pulses >= 3 && s.minLaps >= 0, `langsamste Einstellung steht: ${s.pulses}`);
+  await Promise.all([a.close(), b.close(), slow.close()]);
+});
+
 test('Regler werden normalisiert und begrenzt', async () => {
   const page = await sim();
   const p = await page.evaluate(() => window.EBS.normalizeConfig({ scenario: 'pyramid', params: {
-    orbs: 99, size: 3, figure: 7, beltSpeed: 9, rollSpeed: 0, current: -1, glow: 5, birds: 'false', lane: 0, warmup: 999,
+    orbs: 99, size: 3, figure: 7, speed: 0, beltSpeed: 9, rollSpeed: 0, current: -1, glow: 5, birds: 'false', lane: 0, warmup: 999,
   } }).params);
-  assert.deepEqual([p.orbs, p.size, p.figure, p.beltSpeed, p.rollSpeed, p.current, p.glow, p.birds, p.lane, p.warmup],
-    [26, 12, 1, 2, 0.6, 0.4, 1.5, false, false, 120]);
+  assert.deepEqual([p.orbs, p.size, p.figure, p.speed, p.beltSpeed, p.rollSpeed, p.current, p.glow, p.birds, p.lane, p.warmup],
+    [26, 12, 1, 0.25, 2, 0.25, 0.25, 1.5, false, false, 120]);
   const d = await page.evaluate(() => window.EBS.normalizeConfig({ scenario: 'pyramid' }).params);
-  assert.deepEqual([d.orbs, d.size, d.figure, d.beltSpeed, d.birds], [22, 16, 0, 1, true]);
+  assert.deepEqual([d.orbs, d.size, d.figure, d.speed, d.beltSpeed, d.rollSpeed, d.current, d.birds], [22, 16, 0, 1, 1, 1, 1, true]);
   await page.close();
 });
 
@@ -124,7 +136,7 @@ test('Oberfläche: Pyramide wählen, Regler und Lautstärken vorhanden, Darstell
   await page.selectOption('#scenario', 'pyramid');
   assert.equal(await page.evaluate(() => window.EBS.app.cfg.scenario), 'pyramid');
   assert.match(await page.textContent('#subtitle'), /Endless Pyramid/);
-  for (const k of ['figure', 'orbs', 'size', 'beltSpeed', 'rollSpeed', 'current', 'glow', 'pulse', 'rays', 'clouds', 'reflection', 'waves', 'sparkle', 'wiggle', 'birds', 'lane']) {
+  for (const k of ['figure', 'orbs', 'size', 'speed', 'beltSpeed', 'rollSpeed', 'current', 'glow', 'pulse', 'rays', 'clouds', 'reflection', 'waves', 'sparkle', 'wiggle', 'birds', 'lane']) {
     assert.ok(await page.$('#p-' + k), `Regler ${k} fehlt`);
   }
   for (const k of ['master', 'scoop', 'pulse', 'tip', 'cap', 'splash', 'boing', 'wheee', 'squeak']) assert.ok(await page.$('#vol-' + k), `Lautstärke ${k} fehlt`);

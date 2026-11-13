@@ -20,7 +20,7 @@ const TAU = Math.PI * 2;
 const RP = 18;                                  // Rollenradius des Becherwerks
 const PHI_D = -Math.PI / 2 - 0.5;               // Kippwinkel oben (kurz hinter dem Scheitel)
 const TUNE = { Geff: 1000 * 5 / 7, G: 1000, mu: 12, cd: 0.0008, vMin: 8, vMax: 700, belt: 100, float: 80, spacing: 76 };
-const MIN_SLOPE = 0.045;                        // flachstes Gefälle: auch bei 0,6× Schwerkraft rollt es noch (5/7·g·sin > Rollreibung)
+const MIN_SLOPE = 0.045;                        // flachstes Gefälle: 5/7·g·sin bleibt deutlich über der Rollreibung
 const PULSE_TRAVEL = 0.35;                      // Sekunden, die der Lichtimpuls von der Rolle zur Spitze braucht
 const COLORS = [
   { name: 'Gold', rgb: [255, 196, 52] },
@@ -228,11 +228,12 @@ class PyramidSim {
       this.orbs.push({ id: i, color: c, state: RAMP, s: P.ramp.len * (1 - (i + 0.5) / n) * 0.97, v: 150, laps: 0 });
     }
     // Einlaufphase: das Video beginnt mit einem bereits laufenden Kreislauf (Schritt 0 = Videobeginn)
-    const warm = Math.round(this.cfg.warmup / this.dt);
-    this.step = -warm; this.t = this.step * this.dt; this.lastPulse = { t: -99, color: 0 };
+    // Simulationszeit t läuft mit dem Gesamttempo; die Einlaufphase deckt immer gleich viel Simulationszeit ab
+    const warm = Math.round(this.cfg.warmup / (this.dt * this.cfg.speed));
+    this.step = -warm; this.t = -warm * this.dt * this.cfg.speed; this.lastPulse = { t: -99, color: 0 };
     this.quiet = true;
     for (let i = 0; i < warm; i++) this.stepOnce();
-    this.quiet = false; this._newStats();
+    this.quiet = false; this._newStats(); this.t = 0;
     for (const b of this.orbs) b.laps = 0;
   }
   _newStats() { this.stats = { pulses: 0, splashes: 0, lifted: 0, caps: 0, maxSpeed: 0 }; }
@@ -255,16 +256,18 @@ class PyramidSim {
     for (let i = 1; i < l.length; i++) if (l[i].s < l[i - 1].s + GAP) l[i].s = l[i - 1].s + GAP;
   }
   stepOnce() {
-    const dt = this.dt, T = TUNE, L = this.L, P = L.paths, E = L.lift, cfg = this.cfg, critters = cfg.figure === 1, GAP = L.GAP;
-    this.step++; this.t = this.step * this.dt;
+    // Gesamttempo verlangsamt alles gleichmäßig (Zeitlupe); die Einzeltempi wirken zusätzlich je Element.
+    // Das Rolltempo ist eine Zeitlupe nur für die Bahn: gleiche Physik, langsamer abgespielt – nie Stillstand.
+    const T = TUNE, L = this.L, P = L.paths, E = L.lift, cfg = this.cfg, critters = cfg.figure === 1, GAP = L.GAP;
+    const dt = this.dt * cfg.speed, dtR = dt * cfg.rollSpeed;
+    this.step++; this.t += dt;
     // --- Schienenbahn (Führende zuerst)
-    const gk = cfg.rollSpeed;
     let ahead = null;
     for (const b of this._list(RAMP)) {
       pathAt(P.ramp, b.s, Q);
-      const a = Q.k === KIND_FALL ? T.G * gk * Q.ty : T.Geff * gk * Q.ty - T.mu - T.cd * b.v * b.v;
-      b.v = clamp(b.v + a * dt, T.vMin, T.vMax);
-      const s0 = b.s; b.s += b.v * dt;
+      const a = Q.k === KIND_FALL ? T.G * Q.ty : T.Geff * Q.ty - T.mu - T.cd * b.v * b.v;
+      b.v = clamp(b.v + a * dtR, T.vMin, T.vMax);
+      const s0 = b.s; b.s += b.v * dtR;
       if (b.v > this.stats.maxSpeed) this.stats.maxSpeed = b.v;
       if (ahead && b.s > ahead.s - GAP) { b.s = ahead.s - GAP; b.v = Math.min(b.v, ahead.v); }
       else if (!ahead && b.s >= P.ramp.len) {
@@ -1041,16 +1044,17 @@ EBS.registerScenario({
   id: 'pyramid',
   title: 'Endless Pyramid',
   defaults: {
-    orbs: 22, size: 16, warmup: 30, figure: 0, beltSpeed: 1, rollSpeed: 1, current: 1,
+    orbs: 22, size: 16, warmup: 30, figure: 0, speed: 1, beltSpeed: 1, rollSpeed: 1, current: 1,
     glow: 1, pulse: 1, rays: 1, clouds: 1, reflection: 1, waves: 1, sparkle: 1, wiggle: 1, birds: true, lane: true,
   },
   controls: [
     { key: 'figure', label: 'Figuren', type: 'select', options: [[0, 'Leuchtkugeln'], [1, 'Tierchen (Küken, Pinguin, Schweinchen, Frosch)']] },
     { key: 'orbs', label: 'Anzahl der Figuren', type: 'range', restart: true, min: 12, max: 26, step: 1, format: (v) => String(v) },
     { key: 'size', label: 'Größe der Figuren', type: 'range', restart: true, min: 12, max: 24, step: 1, format: (v) => `${v * 2} px` },
-    { key: 'beltSpeed', label: 'Tempo des Becherwerks', type: 'range', min: 0.5, max: 2, step: 0.05, format: times },
-    { key: 'rollSpeed', label: 'Rolltempo (Schwerkraft)', type: 'range', min: 0.6, max: 1.6, step: 0.05, format: times },
-    { key: 'current', label: 'Strömung in der Lagune', type: 'range', min: 0.4, max: 2, step: 0.05, format: times },
+    { key: 'speed', label: 'Gesamttempo (alles)', type: 'range', min: 0.25, max: 1.5, step: 0.05, format: times },
+    { key: 'beltSpeed', label: 'Tempo des Becherwerks', type: 'range', min: 0.25, max: 2, step: 0.05, format: times },
+    { key: 'rollSpeed', label: 'Rolltempo auf der Bahn', type: 'range', min: 0.25, max: 1.6, step: 0.05, format: times },
+    { key: 'current', label: 'Strömung in der Lagune', type: 'range', min: 0.25, max: 2, step: 0.05, format: times },
     { key: 'glow', label: 'Leuchten der Figuren', type: 'range', min: 0, max: 1.5, step: 0.05, format: pct },
     { key: 'pulse', label: 'Lichtimpuls an der Spitze', type: 'range', min: 0, max: 1.5, step: 0.05, format: pct },
     { key: 'rays', label: 'Sonnenstrahlen', type: 'range', min: 0, max: 1.5, step: 0.05, format: pct },
@@ -1067,7 +1071,8 @@ EBS.registerScenario({
     return {
       orbs: clamp(Math.round(num(p.orbs, 22)), 12, 26), size: clamp(Math.round(num(p.size, 16)), 12, 24), warmup: r('warmup', 30, 0, 120),
       figure: clamp(Math.round(num(p.figure, 0)), 0, 1),
-      beltSpeed: r('beltSpeed', 1, 0.5, 2), rollSpeed: r('rollSpeed', 1, 0.6, 1.6), current: r('current', 1, 0.4, 2),
+      speed: r('speed', 1, 0.25, 1.5),
+      beltSpeed: r('beltSpeed', 1, 0.25, 2), rollSpeed: r('rollSpeed', 1, 0.25, 1.6), current: r('current', 1, 0.25, 2),
       glow: r('glow', 1, 0, 1.5), pulse: r('pulse', 1, 0, 1.5), rays: r('rays', 1, 0, 1.5), clouds: r('clouds', 1, 0, 3),
       reflection: r('reflection', 1, 0, 1), waves: r('waves', 1, 0, 2), sparkle: r('sparkle', 1, 0, 2), wiggle: r('wiggle', 1, 0, 2),
       birds: bool(p.birds, true), lane: bool(p.lane, true),
