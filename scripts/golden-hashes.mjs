@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Referenz-Hashes der Simulation: halten fest, wie sich beide Szenarien bei festen Seeds verhalten.
+// Referenz-Hashes der Simulation: halten fest, wie sich Seeschlacht, Kugelfabrik und Myzel bei festen Seeds verhalten.
 // Damit lässt sich nach einer Änderung belegen, dass die Physik unverändert ist (oder wo sie bewusst abweicht).
 //   node scripts/golden-hashes.mjs           vergleicht den aktuellen Code mit test/fixtures/golden-hashes.json
 //   node scripts/golden-hashes.mjs --write   schreibt die Datei neu (nur nach einer gewollten Verhaltensänderung)
@@ -12,7 +12,7 @@ export const GOLDEN_FILE = join(ROOT, 'test', 'fixtures', 'golden-hashes.json');
 // Prüfpunkte in Physikschritten (60 je Sekunde bei Tempo 1; bei Tempo 0,8 deckt ein Schritt 0,8/60 s ab)
 export const CHECKPOINTS = [1200, 7200];
 export const CASES = [];
-for (const scenario of ['naval', 'marble']) for (const aspect of ['9:16', '16:9']) for (const seed of [42, 7]) for (const tempo of [1, 0.8, 0.64]) {
+for (const scenario of ['naval', 'marble', 'mycelium']) for (const aspect of ['9:16', '16:9']) for (const seed of [42, 7]) for (const tempo of [1, 0.8, 0.64]) {
   CASES.push({ key: `${scenario} ${aspect} seed${seed} tempo${tempo}`, scenario, aspect, seed, tempo });
 }
 

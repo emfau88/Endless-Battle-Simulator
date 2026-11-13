@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "name": "Endless Mycelium – YouTube-Short (30 s, hochkant, 1440×2560, 60 fps, mit Ton)",
+  "description": "Zwei vollständige Generationen in 30 s (Seed 42): Spore landet bei 2,2 s, das Netz wächst und frisst sieben Blätter bis aufs Gerippe (6,5–11,4 s), vier Pilze ab 11,5 s, Sporenwolken ab 13,4 s; bei 16,2 s und 16,8 s keimt die zweite Generation in neuer Farbe, frisst acht weitere Blätter und gibt bei 27,4 s erneut Sporen ab. 1440p, weil YouTube ab 1440p den besseren Codec vergibt.",
+  "scenario": "mycelium",
+  "seed": 42,
+  "params": { "cycleSec": 14, "spread": 1, "branching": 1, "colonies": 2, "startLeaves": 8, "leafFall": 5, "digest": 1.2,
+              "mushrooms": 4, "spores": 120, "wind": 1, "palette": "cycle", "glow": 1, "pulses": true },
+  "video": { "aspect": "9:16", "resolution": 1440, "fps": 60, "durationSec": 30, "tempo": 1, "audio": true,
+             "quality": { "crf": 14, "preset": "medium" } },
+  "view": { "hud": true, "camera": true }
+}

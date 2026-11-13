@@ -26,10 +26,10 @@ Video
   --clip-duration <s>    nur diesen Ausschnitt rendern (beide Clip-Werte erforderlich)
                          Ton wird aus der vollständigen Episodenmischung ausgeschnitten
   --aspect <a>           9:16 | 16:9 | 1:1   (alternativ --format portrait|landscape|square)
-  --resolution <r>       720 | 1080 | 1440 | 2160 (4k)             (kurze Bildseite, Standard 1080)
-  --fps <n>              30 | 60                                   (Standard 30)
+  --resolution <r>       720 | 1080 | 1440 | 2160 (4k)             (kurze Bildseite, Standard 1080; Myzel 1440)
+  --fps <n>              30 | 60                                   (Standard 30; Myzel 60)
   --tempo <t>            0.64 | 0.8 = Zeitlupe | 1                 (Standard 1)
-  --crf <n>              Qualität (kleiner = besser)               (Standard 20)
+  --crf <n>              Qualität (kleiner = besser)               (Standard 20; Myzel 16)
   --bitrate <b>          feste Bitrate statt CRF, z. B. 12M oder 8000k
   --preset <p>           x264-Preset ultrafast … veryslow          (Standard medium)
 
