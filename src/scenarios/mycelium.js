@@ -38,6 +38,7 @@ class MyceliumRenderer extends EBS.CanvasScene {
     this.fresh = { glow: this._buffer(w, h, 0.25), glowB: this._buffer(w, h, 0.25) };
     this.glowTmp = this._buffer(w, h, 0.25);
     this.cache = { prev: this._entry(), cur: this._entry(), next: this._entry(), prevCut: 0, curCut: 0, ready: 0, build: null };
+    this.hyphaeStyle = `${this.sim.cfg.palette}|${this.sim.cfg.glow}`;
     this.leafCache = new Map(); this.sprites = new Map();
     this.capShadow = this._canvas(Math.ceil(80 * this.s), Math.ceil(80 * this.s));
     const cs = this.capShadow.getContext('2d'); cs.setTransform(this.s, 0, 0, this.s, 0, 0); cs.filter = `blur(${5 * this.s}px)`;
@@ -302,6 +303,16 @@ class MyceliumRenderer extends EBS.CanvasScene {
   }
   _drawHyphae(g) {
     const sim = this.sim, C = this.cache, sborn = sim.sborn, cnt = sim.counts(), info = this._colInfo();
+    const style = `${sim.cfg.palette}|${sim.cfg.glow}`;
+    if (style !== this.hyphaeStyle) {
+      // Auch ein einzelnes Bild in Pause muss alle alten Farben/Leuchtwerte ersetzen.
+      // Bei unveränderten Parametern bleibt der bisherige Cache-/Exportablauf gleich.
+      for (const entry of [C.prev, C.cur, C.next]) {
+        this._clear(entry.core); this._clear(entry.glow);
+      }
+      C.prevCut = C.curCut = C.ready = 0; C.build = null;
+      this.hyphaeStyle = style;
+    }
     // 1) nächsten Zwischenspeicher (Leuchten + scharfe Fäden) ein Stück weiter aufbauen
     let b = C.build;
     if (!b || b.compactions !== sim.compactions || b.n0 > sim.NS) {

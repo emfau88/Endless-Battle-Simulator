@@ -4,8 +4,9 @@
 gemeinsamen Produktionsgenerator. Auf Wunsch des Nutzers entfällt die Teilen-Link-Oberfläche;
 Seed, Feinjustierungen sowie Speichern/Laden von Einstellungen bleiben erhalten.
 [Integrationsbericht und offene Abnahmen](ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
-Der letzte vollständige Main-Lauf an `cc1bc7c` bestand mit **133/134 Tests**: offen ist der
-Sunny-Yard-MP4-Bytevergleich, nicht der frühere Konfigurationstest. **R02 bleibt offen.**
+Der letzte vollständige [Main-Lauf an `72d70f0`](https://github.com/emfau88/Endless-Battle-Simulator/actions/runs/43502140470)
+bestand mit **174/179 Tests**: vier Export-Wartezeitüberschreitungen (Myzel/Pyramid) und ein Myzel-Lade-Timeout.
+Scrap bestand mit 29/29 einschließlich Sunny-Yard-Replay; dessen historische Ursache bleibt unter **R02 offen**.
 
 **Vorheriger Nachweis:** Produktionsabsicherung und Scrap-Ton an `bc0bf61` abgeschlossen.
 Der vollständige [Linux-Lauf](https://github.com/emfau88/Endless-Battle-Simulator/actions/runs/43431587775)
@@ -329,14 +330,23 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   Die ursprüngliche 20-Sekunden-Grenze wurde für die Filmabnahme ausdrücklich erweitert.
   [Messungen und Grenzen](ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
 
-- [ ] **R27 · Pyramid: einzelne AAC-Spitzen auch bei Standardlautstärke.**
+<a id="r27-pruefstand"></a>
+
+- [ ] **R27 · Pyramid: AAC-Standardfall korrigiert, Grenzen weiterer Klangkombinationen.**
   **Beleg:** Seed 42, Tierchen, 9:16, 60 s, 1-Minuten-Tag: Standardmischung −14,1 LUFS,
   PCM −1,7 dBTP, fertiges AAC +0,5 dBTP statt maximal −1 dBTP. Der Export kann deshalb abbrechen.
   Die identische PCM-Datei mit ausgeschaltetem AAC-Rauschersatz ergab −1,4 dBTP; eine allgemeine
-  Korrektur ist nicht abgenommen. Pyramid-Code und Schutzgrenze bleiben unverändert.
-  **Entscheidung:** als bekannte Einschränkung für die Integration akzeptiert; keine weiteren
-  Zusatzdiagnosen oder vorsorglichen Reparaturen in diesem Auftrag.
+  Korrektur war bei der Integration noch nicht abgenommen. Pyramid-Code und Schutzgrenze blieben damals unverändert.
+  **Damals getroffene Entscheidung:** als bekannte Einschränkung für die Integration akzeptiert;
+  weitere Zusatzdiagnosen oder vorsorgliche Reparaturen wurden in diesem Auftrag beendet.
   [Belege und genaue Abgrenzung](ALLE_SZENARIEN_INTEGRATION_2026-11-13.md#filmabnahme-und-akzeptierte-einschränkung).
+  **Gezielter Folgeauftrag:** Nur Pyramid deaktiviert nun den AAC-Rauschersatz (`-aac_pns 0`);
+  Klangpegel, −14-LUFS-Einmessung und −1-dBTP-Schutzgrenze bleiben erhalten. Der vollständige bekannte
+  60-s-Export mit Tierchen, Seed 42, 9:16, 1080p30, CRF 20/medium und allen Reglern auf 100 % besteht
+  unter Windows: 1.800 Bilder, 409 Tonereignisse ohne Verlust, −14,1 LUFS / −1,4 dBTP; rund 91 s Laufzeit.
+  Vier vollständige 60-s-Tonmischungen (Kugeln/Tierchen × hoch/quer) bestehen lokal mit −1,7 bis −1,2 dBTP
+  und laufen künftig als Regression in der CI. Keine Langfilm- oder beliebige Extremparameterfreigabe.
+  Lokale Belege: `output/targeted-export-fixes-20261113/`; GitHub-Prüfstatus am jeweiligen Fix-Commit beachten.
 
 - [ ] **R28 · Linux-Prüfung der Integration bleibt wegen Zeitgrenzen rot.**
   [Lauf an `20ba943`](https://github.com/emfau88/Endless-Battle-Simulator/actions/runs/43498607564):
@@ -346,6 +356,10 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   Generatorcode. Auf Nutzerwunsch keine weitere Reparatur-/Testreihe, keine gelockerten Prüfungen.
   Der Nutzer hat die Ausnahme von der früheren CI-Bedingung ausdrücklich mit
   „CI-Zeitüberschreitungen akzeptieren und mergen“ freigegeben. Der CI-Lauf bleibt als fehlgeschlagen dokumentiert.
+  **Gezielter Folgeauftrag:** Pausierte Vorschauen rendern nur bei Bildänderungen; Myzel verwirft dabei
+  veraltete Farb-/Leuchtcaches. Der Myzel-Einstellungsdateitest schließt den Quellkontext vor dem Zielkontext.
+  Exportpfad, Testzeitgrenzen und bestehende Assertions bleiben erhalten. Der vollständige GitHub-Lauf
+  entscheidet über die verbleibenden Linux-Zeitüberschreitungen; lokale Erfolge ersetzen ihn nicht.
 
 - [ ] **R25 · Endless Mycelium ist im Integrationsbranch enthalten – Sicht-/Hörabnahme am Gerät abschließen.**
   **Ziel:** ruhiges Satisfying-Szenario (Myzel wächst, frisst Laub, Pilze, Sporen, nächste Generation in neuer Farbe)

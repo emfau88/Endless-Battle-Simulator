@@ -86,12 +86,17 @@ async function bootLive() {
   }
 
   let running = !params.has('paused'), speed = 1, acc = 0, last = performance.now(), fpsN = 0, fpsT = last, fps = 0, uiT = 0;
+  // Pausierte Vorschauen geben die Grafik frei; Änderungen bleiben im nächsten Bild sichtbar.
+  // Gilt nur für die Live-Ansicht, nicht für die expliziten Renderaufrufe des Exports.
+  let renderDirty = true;
+  const invalidate = () => { renderDirty = true; };
   const fit = () => {
     const st = $('stage'), cs = getComputedStyle(st);
     const aw = st.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     const ah = st.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
     const W = session.world.w, H = session.world.h, s = Math.min(aw / W, ah / H);
     app.canvas.style.width = Math.floor(W * s) + 'px'; app.canvas.style.height = Math.floor(H * s) + 'px';
+    invalidate();
   };
   window.addEventListener('resize', fit);
   const restart = (override) => {
@@ -210,7 +215,7 @@ async function bootLive() {
 
   function onParam(c, v) {
     if (c.restart) restart({ params: { [c.key]: v } });
-    else { session.setParam(c.key, v); save(); }
+    else { session.setParam(c.key, v); invalidate(); save(); }
   }
 
   // ---- allgemeine Regler
@@ -240,7 +245,7 @@ async function bootLive() {
   for (const [v, t] of Object.entries(EBS.RESOLUTIONS)) resSel.add(new Option(t, v));
   const showSize = () => { const vs = videoSize(cfg().video); $('resolutionOut').textContent = `${vs.width}×${vs.height}`; };
   resSel.addEventListener('change', () => { session.cfg.video.resolution = +resSel.value; save(); showSize(); });
-  const markFps = seg('segFps', EBS.FPS_OPTIONS.map((f) => [f, f + ' fps']), cfg().video.fps, (v) => { session.cfg.video.fps = v; save(); showDuration(); });
+  const markFps = seg('segFps', EBS.FPS_OPTIONS.map((f) => [f, f + ' fps']), cfg().video.fps, (v) => { session.cfg.video.fps = v; invalidate(); save(); showDuration(); });
   // Videolänge: freie Eingabe (1 s bis 4 h) plus Schnellwahl; beide zeigen stets den Wert der Konfiguration
   const dur = $('duration'), durText = $('durationText'), durHint = $('durationHint'), DUR_HINT = durHint.textContent;
   dur.add(new Option('Eigene Dauer', ''));
@@ -261,7 +266,7 @@ async function bootLive() {
           try {
             const result = plan.advance();
             if (!result.done) { setTimeout(tick, 0); return; }
-            session.cfg.video.durationSec = result.durationSec; durationPending = false; save(); showDuration();
+            session.cfg.video.durationSec = result.durationSec; durationPending = false; invalidate(); save(); showDuration();
           } catch (e) { durationPending = false; durHint.textContent = e.message; durHint.classList.add('err'); }
         };
         setTimeout(tick, 0);
@@ -276,7 +281,7 @@ async function bootLive() {
     $('durationOut').textContent = durationPending ? '…' : fmtTime(d);
     durHint.classList.toggle('err', !!isError);
   };
-  const setDuration = (sec, note) => { session.cfg.video.durationSec = sec; save(); showDuration(note); };
+  const setDuration = (sec, note) => { session.cfg.video.durationSec = sec; invalidate(); save(); showDuration(note); };
   dur.addEventListener('change', () => { if (dur.value) setDuration(+dur.value); else showDuration(); });
   durText.addEventListener('change', () => {
     const sec = parseDuration(durText.value);
@@ -289,7 +294,7 @@ async function bootLive() {
   });
   $('seed').addEventListener('change', () => restart({ seed: Math.abs(Math.floor(+$('seed').value || 0)) }));
   $('btnSeed').addEventListener('click', () => restart({ seed: Math.floor(Math.random() * 1e6) }));
-  for (const k of ['hud', 'camera']) $(k).addEventListener('change', () => { session.setView(k, $(k).checked); save(); });
+  for (const k of ['hud', 'camera']) $(k).addEventListener('change', () => { session.setView(k, $(k).checked); invalidate(); save(); });
   $('audio').addEventListener('change', () => { session.cfg.video.audio = $('audio').checked; save(); syncVolumeUi(); });
   const playBtn = $('btnPlay');
   const setRun = (r) => { running = r; playBtn.textContent = r ? '⏸ Pause' : '▶ Start'; };
@@ -420,8 +425,10 @@ async function bootLive() {
       while (acc >= DT && n < 40 * speed) { session.step(); acc -= DT; n++; }
       if (n >= 40 * speed) acc = 0;
     }
-    session.render();
-    fpsN++;
+    if (running || renderDirty) {
+      session.render(); renderDirty = false;
+      fpsN++;
+    }
     if (now - fpsT > 500) { fps = (fpsN * 1000) / (now - fpsT); fpsN = 0; fpsT = now; }
     if (now - uiT > 250) {
       uiT = now;
