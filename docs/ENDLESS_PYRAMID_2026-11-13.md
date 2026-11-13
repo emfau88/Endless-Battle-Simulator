@@ -76,6 +76,20 @@ ist der Ablauf unverändert. Test: halbes Gesamttempo ergibt denselben Ablauf in
 
 Weiterer Ausbau für längere Videos: [ROADMAP R23](ROADMAP.md); Melodie als Merkposten R24.
 
+## Nachtrag: Tageslauf (R23 P2)
+
+Auf ausdrücklichen Wunsch ohne vorgeschaltete Vorschau (P1) direkt eingebaut.
+
+![Tageslauf hochkant](nachweise/pyramid_tageslauf_9x16.jpg)
+
+![Tageslauf quer](nachweise/pyramid_tageslauf_16x9.jpg)
+
+Hochkant (Tierchen): Morgen, Tag, goldene Stunde, Sonnenuntergang, Dämmerung, Nacht. Quer (Leuchtkugeln): goldene
+Stunde, Sonnenuntergang, Nacht. Tageszeit aus der Videozeit (60 Schritte je Videosekunde), daher unabhängig von
+Gesamttempo und Filmtempo. Einfärben per Multiplikation und warmem Licht; Lichter werden danach gezeichnet.
+Tests: Nacht < 60 % der Mittagshelligkeit, neuer Morgen nach Tagesende, Zustands-Hash mit und ohne Tageslauf gleich
+(beide Formate, beide Darstellungen); 19/19 Pyramiden-Tests bestanden. Hör-/Sichtprobe im laufenden Clip offen.
+
 ## Offen
 
 - **Hörabnahme** der vier neuen Klänge und der Mischung (bisher nur technisch geprüft).

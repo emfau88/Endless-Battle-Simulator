@@ -50,7 +50,8 @@ test('Gleicher Seed => identischer Ablauf, anderer Seed => anderer Ablauf, Neust
 });
 
 test('Rendering, Auflösung, Bildrate und reine Darstellungsregler beeinflussen die Simulation nicht', async () => {
-  const look = { figure: 1, glow: 0, pulse: 1.5, rays: 0, clouds: 3, reflection: 0.2, waves: 2, sparkle: 0, wiggle: 2, birds: false, lane: false };
+  const look = { figure: 1, glow: 0, pulse: 1.5, rays: 0, clouds: 3, reflection: 0.2, waves: 2, sparkle: 0, wiggle: 2, birds: false, lane: false,
+    dayCycle: false, dayStart: 0.9, nightDark: 1, stars: false, sleepy: false, dayMinutes: 1 };
   const a = await sim({ seed: 5, video: { aspect: '16:9', resolution: 720, fps: 60 } });
   const b = await sim({ seed: 5, params: look, video: { aspect: '16:9', resolution: 1080, fps: 30 } });
   const c = await sim({ seed: 5, video: { aspect: '16:9' } });
@@ -95,6 +96,33 @@ test('Gesamttempo verlangsamt alles gleichmäßig: halbes Tempo = gleicher Ablau
   await Promise.all([a.close(), b.close(), slow.close()]);
 });
 
+// mittlere Helligkeit des zuletzt gerenderten Bildes (0–255)
+const brightness = (page, sec) => page.evaluate(async (s) => {
+  window.exportAPI.simulate(s);
+  const [jpg] = window.exportAPI.renderFrames(1, 0.9);
+  const img = new Image(); img.src = 'data:image/jpeg;base64,' + jpg; await img.decode();
+  const c = document.createElement('canvas'); c.width = 64; c.height = 64;
+  const g = c.getContext('2d'); g.drawImage(img, 0, 0, 64, 64);
+  const d = g.getImageData(0, 0, 64, 64).data; let sum = 0;
+  for (let i = 0; i < d.length; i += 4) sum += (d[i] + d[i + 1] + d[i + 2]) / 3;
+  return sum / (d.length / 4);
+}, sec);
+
+for (const [aspect, figure] of [['9:16', 1], ['16:9', 0]]) {
+  test(`Tageslauf ${aspect} (${figure ? 'Tierchen' : 'Leuchtkugeln'}): folgt der Videozeit, Nacht deutlich dunkler, Simulation unberührt`, async () => {
+    const page = await sim({ seed: 6, params: { figure, dayMinutes: 1 }, video: { aspect, resolution: 720 } });
+    const noon = await brightness(page, 29);                    // ≈ 30 s von 60 s: Mittag
+    const night = await brightness(page, 25);                   // ≈ 55 s: Nacht
+    assert.ok(night < noon * 0.6, `Nacht nicht dunkel genug: ${night.toFixed(1)} gegenüber Mittag ${noon.toFixed(1)}`);
+    const morning = await brightness(page, 8);                  // ≈ 63 s: neuer Tag beginnt (Vorschau läuft in Schleife)
+    assert.ok(morning > night * 1.4, `kein neuer Morgen nach Tagesende: ${morning.toFixed(1)}`);
+    const off = await sim({ seed: 6, params: { figure, dayMinutes: 1, dayCycle: false }, video: { aspect, resolution: 720 } });
+    for (const sec of [29, 25, 8]) await brightness(off, sec);   // gleiche Abfolge wie oben
+    assert.equal(await hash(page), await hash(off), 'Tageslauf verändert die Simulation');
+    await Promise.all([page.close(), off.close()]);
+  });
+}
+
 test('Regler werden normalisiert und begrenzt', async () => {
   const page = await sim();
   const p = await page.evaluate(() => window.EBS.normalizeConfig({ scenario: 'pyramid', params: {
@@ -102,7 +130,10 @@ test('Regler werden normalisiert und begrenzt', async () => {
   } }).params);
   assert.deepEqual([p.orbs, p.size, p.figure, p.speed, p.beltSpeed, p.rollSpeed, p.current, p.glow, p.birds, p.lane, p.warmup],
     [26, 12, 1, 0.25, 2, 0.25, 0.25, 1.5, false, false, 120]);
+  const n = await page.evaluate(() => [7, '20'].map((m) => window.EBS.normalizeConfig({ scenario: 'pyramid', params: { dayMinutes: m, dayStart: 2, dayCycle: 'false' } }).params));
+  assert.deepEqual(n.map((q) => [q.dayMinutes, q.dayStart, q.dayCycle]), [[0, 0.95, false], [20, 0.95, false]]);
   const d = await page.evaluate(() => window.EBS.normalizeConfig({ scenario: 'pyramid' }).params);
+  assert.deepEqual([d.dayCycle, d.dayMinutes, d.dayStart, d.nightDark, d.stars, d.sleepy], [true, 0, 0, 0.85, true, true]);
   assert.deepEqual([d.orbs, d.size, d.figure, d.speed, d.beltSpeed, d.rollSpeed, d.current, d.birds], [22, 16, 0, 1, 1, 1, 1, true]);
   await page.close();
 });
@@ -136,7 +167,7 @@ test('Oberfläche: Pyramide wählen, Regler und Lautstärken vorhanden, Darstell
   await page.selectOption('#scenario', 'pyramid');
   assert.equal(await page.evaluate(() => window.EBS.app.cfg.scenario), 'pyramid');
   assert.match(await page.textContent('#subtitle'), /Endless Pyramid/);
-  for (const k of ['figure', 'orbs', 'size', 'speed', 'beltSpeed', 'rollSpeed', 'current', 'glow', 'pulse', 'rays', 'clouds', 'reflection', 'waves', 'sparkle', 'wiggle', 'birds', 'lane']) {
+  for (const k of ['figure', 'orbs', 'size', 'speed', 'beltSpeed', 'rollSpeed', 'current', 'glow', 'pulse', 'rays', 'clouds', 'reflection', 'waves', 'sparkle', 'wiggle', 'birds', 'lane', 'dayMinutes', 'dayStart', 'nightDark', 'dayCycle', 'stars', 'sleepy']) {
     assert.ok(await page.$('#p-' + k), `Regler ${k} fehlt`);
   }
   for (const k of ['master', 'scoop', 'pulse', 'tip', 'cap', 'splash', 'boing', 'wheee', 'squeak']) assert.ok(await page.$('#vol-' + k), `Lautstärke ${k} fehlt`);

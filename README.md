@@ -382,6 +382,16 @@ Lagune paddeln sie mit geschlossenen Glücksaugen. Wackelaugen und Blinzeln sind
 | Leuchten · Lichtimpuls · Sonnenstrahlen · Spiegelung | Intensität (reine Darstellung) | 0–150 % bzw. 0–100 % |
 | Wolkentempo · Wellengang · Glitzern · Gezappel der Tierchen | Tempo bzw. Stärke (reine Darstellung) | 0–3× bzw. 0–2× |
 | Vögel · Strömungsspur im Wasser | an/aus | – |
+| Tageslauf · Länge eines Tages · Tageszeit beim Start · Dunkelheit der Nacht | siehe „Tageslauf“ | an/aus · automatisch, 1–60 min · 0–95 % · 0–100 % |
+| Sterne und Mond · Tierchen werden abends müde | an/aus | – |
+
+**Tageslauf.** Über die Videolänge wird es Morgen, Tag, goldene Stunde, Sonnenuntergang, Dämmerung und Nacht
+(„automatisch“ = Videolänge, mindestens 5 Minuten; in der Vorschau beginnt danach ein neuer Tag). Die ganze Szene
+wird je Tageszeit eingefärbt, dazu Abendrot über Himmel und Wasser; morgens geht rechts die Sonne auf, abends links
+unter. Alles, was selbst leuchtet – Stern an der Spitze, Lichtimpulse, Figuren, Innenlicht der Pyramide, Mond und
+Sterne –, wird erst danach gezeichnet und strahlt nachts. Tierchen gähnen in der Dämmerung, tragen nachts
+Schlafmützen und schlafen im Wasser („z z z“). Ohne Tageslauf bleibt die gewählte Tageszeit stehen. Reine
+Darstellung: Die Simulation ist mit und ohne Tageslauf identisch.
 
 **Ton** mit eigenem Lautstärkeregler je Klang: Becher schöpft, Lichtimpuls (Glockenton, je Farbe eine andere Stufe
 des Dur-Akkords), Becher kippt aus, Wendekappe, Platscher; in der Darstellung „Tierchen“ statt Glasklang ein „Boing“

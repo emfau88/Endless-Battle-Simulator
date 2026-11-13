@@ -527,8 +527,10 @@ function limb(g, a, b, col, end, foot, k) {
  * Zeichnet ein Tierchen. mode: 'roll' (Schiene), 'fall', 'lift' (im Becher), 'pool' (schwimmt).
  * ang = Körperdrehung (rollt ohne Schlupf), look = Blickrichtung in Weltkoordinaten, wig = Gezappel 0..2.
  */
-function drawCritter(g, sprite, kind, id, x, y, ang, mode, t, speed, look, wig, R) {
+const CAPS = [['#3f6fe0', '#ffffff'], ['#e8484f', '#ffffff'], ['#58b7f0', '#ffffff'], ['#9a5fd6', '#ffe36a']];
+function drawCritter(g, sprite, kind, id, x, y, ang, mode, t, speed, look, wig, R, mood = null) {
   const sp = SPECIES[kind], ph = t * 9 + id * 1.7, w = wig, lk = R / 16;
+  const yawn = mood ? mood.yawn : 0, sleep = mood && mood.sleep && mode === 'pool';
   g.save(); g.translate(x, y); g.rotate(ang);
   g.lineCap = 'round'; g.lineJoin = 'round';
   // Glieder (hinter dem Körper)
@@ -537,6 +539,9 @@ function drawCritter(g, sprite, kind, id, x, y, ang, mode, t, speed, look, wig, 
   if (mode === 'fall') {
     aL = [-R * 1.02, -R * 0.78 + Math.sin(ph * 1.7) * 2.5 * w]; aR = [R * 1.02, -R * 0.78 + Math.sin(ph * 1.7 + 1.3) * 2.5 * w];
     lL = [-R * 0.66, R * 1.16 + Math.sin(ph * 2) * 1.5 * w]; lR = [R * 0.66, R * 1.16 - Math.sin(ph * 2) * 1.5 * w];
+  } else if (yawn > 0.25 && (mode === 'lift' || mode === 'pool')) {   // gähnen und strecken
+    aL = [-R * 1.0, -R * (0.55 + 0.45 * yawn)]; aR = [R * 1.0, -R * (0.55 + 0.45 * yawn)];
+    if (mode === 'lift') { lL = [-R * 0.46, R * 1.14]; lR = [R * 0.46, R * 1.14]; }
   } else if (mode === 'lift') {
     aL = [-R * 1.12, -R * 0.42]; aR = [R * 1.08 + Math.sin(ph * 0.8) * R * 0.1 * w, -R * 0.72 + Math.sin(ph * 0.8) * R * 0.28 * w];
     lL = [-R * 0.46, R * 1.14]; lR = [R * 0.46, R * 1.14];
@@ -557,6 +562,9 @@ function drawCritter(g, sprite, kind, id, x, y, ang, mode, t, speed, look, wig, 
   g.strokeStyle = OUTLINE; g.lineWidth = 1.6 * lk;
   for (const s of [-1, 1]) {
     const cx = s * ex * R, cy = ey * R, rr = er * R * (mode === 'fall' ? 1.15 : 1);
+    if (sleep || (yawn > 0.3 && mode !== 'fall' && mode !== 'roll')) {     // schlafend bzw. gähnend: Augen zu
+      g.beginPath(); g.arc(cx, cy - rr * 0.2, rr * 0.7, Math.PI * 0.15, Math.PI * 0.85); g.stroke(); continue;
+    }
     if (mode === 'pool' || (blink && mode !== 'fall')) {
       g.beginPath();
       if (mode === 'pool') g.arc(cx, cy + rr * 0.35, rr * 0.75, Math.PI * 1.15, Math.PI * 1.85); else { g.moveTo(cx - rr, cy); g.lineTo(cx + rr, cy); }
@@ -575,9 +583,21 @@ function drawCritter(g, sprite, kind, id, x, y, ang, mode, t, speed, look, wig, 
   // Mund
   const my = kind === 3 ? R * 0.05 : kind === 2 ? R * 0.42 : R * 0.42;
   g.strokeStyle = OUTLINE; g.lineWidth = 1.5 * lk;
-  if (mode === 'fall' || (mode === 'roll' && speed > 330)) { g.fillStyle = '#5a1630'; g.beginPath(); g.ellipse(0, my + R * 0.05, R * 0.15, R * 0.19, 0, 0, TAU); g.fill(); g.stroke(); }
+  if (yawn > 0.25 && mode !== 'fall' && mode !== 'roll') { g.fillStyle = '#5a1630'; g.beginPath(); g.ellipse(0, my + R * 0.08, R * 0.16 + R * 0.06 * yawn, R * 0.12 + R * 0.2 * yawn, 0, 0, TAU); g.fill(); g.stroke(); }
+  else if (mode === 'fall' || (mode === 'roll' && speed > 330)) { g.fillStyle = '#5a1630'; g.beginPath(); g.ellipse(0, my + R * 0.05, R * 0.15, R * 0.19, 0, 0, TAU); g.fill(); g.stroke(); }
   else if (kind === 3) { g.beginPath(); g.arc(0, -R * 0.15, R * 0.62, Math.PI * 0.22, Math.PI * 0.78); g.stroke(); }
   else if (kind === 2) { g.beginPath(); g.arc(0, R * 0.3, R * 0.2, Math.PI * 0.2, Math.PI * 0.8); g.stroke(); }
+  // Schlafmütze (nachts): sitzt zwischen den Ohren bzw. Froschaugen und kippt zur Seite
+  if (mood && mood.cap) {
+    const [c0, c1] = CAPS[kind], by = kind === 3 ? -R * 0.55 : -R * 0.74, bw = kind === 3 ? R * 0.34 : R * 0.6;
+    g.lineWidth = 1.3 * lk; g.strokeStyle = OUTLINE;
+    g.fillStyle = c0; g.beginPath(); g.moveTo(-bw, by); g.quadraticCurveTo(-bw * 0.2, by - R * 1.15, R * 0.95, by - R * 0.75);
+    g.quadraticCurveTo(bw * 0.5, by - R * 0.55, bw, by); g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = c1; g.lineWidth = 2.2 * lk; g.beginPath(); g.moveTo(-bw * 0.45, by - R * 0.42); g.quadraticCurveTo(bw * 0.15, by - R * 0.62, bw * 0.75, by - R * 0.38); g.stroke();
+    g.fillStyle = c1; g.strokeStyle = OUTLINE; g.lineWidth = 1.2 * lk;
+    g.beginPath(); g.ellipse(0, by, bw * 1.05, R * 0.13, 0, 0, TAU); g.fill(); g.stroke();
+    g.beginPath(); g.arc(R * 0.95, by - R * 0.75, R * 0.17, 0, TAU); g.fill(); g.stroke();
+  }
   g.restore();
 }
 
@@ -594,6 +614,36 @@ function drawSky(g, L) {
   hz.addColorStop(0, 'rgba(255,255,250,.55)'); hz.addColorStop(0.18, 'rgba(225,240,255,.25)'); hz.addColorStop(1, 'rgba(200,230,255,0)');
   g.fillStyle = hz; g.fillRect(0, 0, W, H);
 }
+/** Länge eines Tages in Videosekunden: fest gewählt oder Videolänge (mindestens 5 Minuten). */
+const cycleSec = (cfg, video) => (cfg.dayMinutes > 0 ? cfg.dayMinutes * 60 : Math.max(300, (video && video.durationSec) || 300));
+/** Tageszeit 0..1 (0 Morgen, 0,5 Mittag, 0,72 Sonnenuntergang, 0,9 Nacht) aus der Videozeit (60 Schritte je Videosekunde). */
+function dayPhase(cfg, video, step) {
+  if (!cfg.dayCycle) return cfg.dayStart;
+  const v = cfg.dayStart + Math.max(0, step) / 60 / cycleSec(cfg, video);
+  return v - Math.floor(v);
+}
+const PHASES = [[0.15, 'Morgen'], [0.58, 'Tag'], [0.78, 'Sonnenuntergang'], [0.86, 'Dämmerung'], [1.01, 'Nacht']];
+const phaseName = (p) => PHASES.find(([e]) => p < e)[1];
+// Stützstellen: p, Farbstich (multipliziert), warmes Licht, dessen Stärke, Nacht 0..1, Sonnenstrahlen 0..1
+const DAY_KEYS = [
+  [0.00, [255, 226, 214], [255, 160, 150], 0.30, 0.00, 0.45],
+  [0.10, [255, 246, 238], [255, 190, 160], 0.10, 0.00, 0.85],
+  [0.22, [255, 255, 255], [255, 220, 180], 0.00, 0.00, 1.00],
+  [0.50, [255, 255, 255], [255, 220, 180], 0.00, 0.00, 1.00],
+  [0.62, [255, 228, 188], [255, 170, 80], 0.45, 0.00, 0.75],
+  [0.72, [255, 186, 150], [255, 110, 40], 0.95, 0.05, 0.30],
+  [0.80, [180, 130, 170], [240, 80, 110], 0.60, 0.35, 0.05],
+  [0.88, null, [120, 90, 200], 0.10, 0.90, 0.00],
+  [1.00, null, [120, 90, 200], 0.00, 1.00, 0.00],
+];
+function dayState(p, nightDark) {
+  const night = mix([255, 255, 255], [34, 46, 110], nightDark);
+  let i = 0; while (i < DAY_KEYS.length - 2 && p > DAY_KEYS[i + 1][0]) i++;
+  const a = DAY_KEYS[i], b = DAY_KEYS[i + 1], f = clamp((p - a[0]) / (b[0] - a[0] || 1), 0, 1);
+  const k = (j) => a[j] + (b[j] - a[j]) * f;
+  return { p, mult: mix(a[1] || night, b[1] || night, f), warm: mix(a[2], b[2], f), warmK: k(3), night: k(4), rays: k(5) };
+}
+
 const RAYS = [[-2.75, 0.07, 0.07], [-2.35, 0.05, 0.05], [-1.95, 0.09, 0.06], [-1.2, 0.06, 0.06], [-0.8, 0.08, 0.05], [-0.38, 0.06, 0.07], [0.12, 0.05, 0.05], [3.0, 0.05, 0.05]];
 
 const GLASS_SEED = 4711;
@@ -720,7 +770,7 @@ function drawFore(g, L, rng) {
 class PyramidRenderer extends EBS.CanvasScene {
   constructor(ctx) {
     super(ctx);
-    this.sim = ctx.sim; this.view = ctx.view; this.L = this.sim.L;
+    this.sim = ctx.sim; this.view = ctx.view; this.video = ctx.video; this.L = this.sim.L;
     this.ls = ctx.renderScale * this.L.fit;                                 // Pixel je Entwurfseinheit
     const L = this.L, E = L.lift, R = L.R, rng = new RNG(hashSeed('pyramid-art', 7));   // Kulisse unabhängig vom Seed
     this.clouds = [];
@@ -755,6 +805,10 @@ class PyramidRenderer extends EBS.CanvasScene {
     this.glow = COLORS.map((c2) => orbSprite(c2.rgb, this.ls, true, R));
     this.white = orbSprite([255, 250, 235], this.ls, true, 16);
     this.critter = SPECIES.map((_, k) => critterSprite(k, this.ls, R));
+    // Sterne: feste Positionen im Himmel (aus festem Seed), funkeln nachts
+    const srng = new RNG(hashSeed('pyramid-stars', 3));
+    this.stars = Array.from({ length: L.land ? 190 : 170 }, () => [srng.range(0, L.W), Math.pow(srng.next(), 1.4) * (L.horizon - 30), srng.range(1.1, 2.8), srng.range(0, TAU)]);
+    this.moon = L.land ? [300, 210, 34] : [190, 430, 30];
   }
   layer(draw) {
     const c = document.createElement('canvas');
@@ -794,8 +848,16 @@ class PyramidRenderer extends EBS.CanvasScene {
       this.sprite(g, this.glow[b.color], q.x, q.y, Math.max(1, glow));
       g.globalCompositeOperation = 'source-over'; g.globalAlpha = a0;
     }
-    if (cfg.figure) drawCritter(g, this.critter[b.color], b.color, b.id, q.x, q.y, q.ang, q.mode, this.sim.t, q.speed, q.look, cfg.wiggle, this.L.R);
+    if (cfg.figure) drawCritter(g, this.critter[b.color], b.color, b.id, q.x, q.y, q.ang, q.mode, this.sim.t, q.speed, q.look, cfg.wiggle, this.L.R, this.mood(b));
     else this.sprite(g, this.orb[b.color], q.x, q.y);
+  }
+  /** Müdigkeit der Tierchen: in der Dämmerung Gähnen, nachts Schlafmütze und Schlaf im Wasser. */
+  mood(b) {
+    const d = this.day, cfg = this.sim.cfg;
+    if (!d || !cfg.sleepy) return null;
+    const p = d.p, t = this.sim.t, per = 6 + (b.id % 4) * 1.3, ph = (t + b.id * 1.37) % per;
+    const dusk = p > 0.66 && p < 0.9, yawn = dusk && ph < 1.4 ? Math.sin(Math.PI * ph / 1.4) : 0;
+    return { yawn, cap: p > 0.8 || p < 0.03, sleep: p > 0.84 || p < 0.02 };
   }
   pulseAge() { return this.sim.t - this.sim.lastPulse.t - PULSE_TRAVEL; }
   paint(g) {
@@ -809,14 +871,15 @@ class PyramidRenderer extends EBS.CanvasScene {
       const k = 1.012 + 0.006 * Math.sin(t * 0.21);
       g.translate(L.W / 2 + Math.sin(t * 0.13) * 3, L.H / 2 + Math.cos(t * 0.17) * 2.5); g.scale(k, k); g.translate(-L.W / 2, -L.H / 2);
     }
+    const day = (this.day = dayState(dayPhase(cfg, this.video, s.step), cfg.nightDark));
     g.drawImage(this.sky, 0, 0, L.W, L.H);
-    this.drawRays(g, t, cfg.rays);
+    this.drawSun(g, day);
+    this.drawRays(g, t, cfg.rays * day.rays);
     this.drawClouds(g, t, cfg.clouds);
     g.drawImage(this.back, 0, 0, L.W, L.H);
     this.drawWater(g, t);
     this.drawLift(g, t);
     const c = this.col; g.drawImage(this.colCanvas, c.x, c.y, c.w, c.h);
-    this.drawGlassFlash(g);
     g.drawImage(this.front, 0, 0, L.W, L.H);
     for (const b of s.orbs) if (b.state === RAMP) {
       const q = this.pose(b, t);
@@ -824,13 +887,94 @@ class PyramidRenderer extends EBS.CanvasScene {
       this.drawFigure(g, b, q, 1);
     }
     g.drawImage(this.fore, 0, 0, L.W, L.H);
-    this.drawApex(g, t);
     this.drawPool(g, t);
     this.drawSplashes(g, t);
-    if (cfg.birds) this.drawBirds(g, t);
+    if (cfg.birds && day.night < 0.95) { g.globalAlpha = 1 - day.night; this.drawBirds(g, t); g.globalAlpha = 1; }
+    // Tageszeit: ganze Szene einfärben, danach alles, was selbst leuchtet
+    this.grade(g, day);
+    this.drawNight(g, t, day);
+    this.drawGlassFlash(g);
+    this.drawPulseDot(g);
+    this.drawApex(g, t);
     g.restore();
     if (this.view.hud) this.drawHud(g);
     g.restore();
+  }
+  /** Morgens geht die Sonne rechts auf, abends links unter (hinter Pyramide und Insel). */
+  drawSun(g, day) {
+    const L = this.L, p = day.p;
+    let x, y, col;
+    if (p < 0.16) { const f = p / 0.16; x = L.W * 0.84; y = L.horizon + 30 - f * 260; col = [255, 214, 170]; }
+    else if (p > 0.55 && p < 0.81) { const f = (p - 0.55) / 0.26; x = L.W * 0.16; y = L.horizon - 280 + f * 320; col = mix([255, 210, 120], [255, 120, 60], f); }
+    else return;
+    this.sunPos = [x, y];
+    const r = L.land ? 44 : 40, gr = g.createRadialGradient(x, y, 0, x, y, r * 5);
+    gr.addColorStop(0, rgba(col, 0.75)); gr.addColorStop(0.2, rgba(col, 0.35)); gr.addColorStop(1, rgba(col, 0));
+    g.fillStyle = gr; g.fillRect(x - r * 5, y - r * 5, r * 10, r * 10);
+    g.fillStyle = rgba(mix(col, [255, 255, 255], 0.5), 1); dot(g, x, y, r);
+  }
+  /** Ganze Szene je Tageszeit einfärben: Farbstich (multipliziert) und warmes Licht von der Sonne bzw. vom Horizont. */
+  grade(g, day) {
+    const L = this.L, m = day.mult;
+    if (m[0] + m[1] + m[2] < 762) {
+      g.globalCompositeOperation = 'multiply'; g.fillStyle = `rgb(${m[0]},${m[1]},${m[2]})`; g.fillRect(-20, -20, L.W + 40, L.H + 40);
+    }
+    if (day.warmK > 0.01) {
+      const sp = day.p > 0.5 && day.p < 0.82 ? [L.W * 0.16, L.horizon - 60] : day.p < 0.2 ? [L.W * 0.84, L.horizon - 60] : [L.W / 2, L.horizon];
+      g.globalCompositeOperation = 'screen';
+      // Horizontband über Himmel und Wasser (Abendrot, Morgenrot)
+      let gr = g.createLinearGradient(0, 0, 0, L.horizon);
+      gr.addColorStop(0, rgba(day.warm, 0)); gr.addColorStop(0.55, rgba(day.warm, Math.min(1, 0.18 * day.warmK))); gr.addColorStop(1, rgba(day.warm, Math.min(1, 0.55 * day.warmK)));
+      g.fillStyle = gr; g.fillRect(-20, -20, L.W + 40, L.horizon + 20);
+      gr = g.createLinearGradient(0, L.shore, 0, L.H);
+      gr.addColorStop(0, rgba(day.warm, Math.min(1, 0.4 * day.warmK))); gr.addColorStop(1, rgba(day.warm, 0));
+      g.fillStyle = gr; g.fillRect(-20, L.shore, L.W + 40, L.H - L.shore + 20);
+      for (const [x, y, a] of [[sp[0], sp[1], 1], [sp[0], 2 * L.shore - sp[1], 0.6]]) {
+        const rr = Math.max(L.W, L.H) * 0.85, gr = g.createRadialGradient(x, y, 0, x, y, rr);
+        gr.addColorStop(0, rgba(day.warm, Math.min(1, 0.6 * day.warmK * a))); gr.addColorStop(0.5, rgba(day.warm, Math.min(1, 0.2 * day.warmK * a))); gr.addColorStop(1, rgba(day.warm, 0));
+        g.fillStyle = gr; g.fillRect(-20, -20, L.W + 40, L.H + 40);
+      }
+    }
+    g.globalCompositeOperation = 'source-over';
+  }
+  /** Nachts: Sterne und Mond, Mondglitzern, Innenlicht der Pyramide, Schein um die Figuren. */
+  drawNight(g, t, day) {
+    const L = this.L, n = day.night, cfg = this.sim.cfg, E = L.lift;
+    if (n < 0.02) return;
+    g.globalCompositeOperation = 'lighter';
+    if (cfg.stars) {
+      g.save(); g.beginPath(); g.rect(0, 0, L.W, L.horizon); g.moveTo(L.left[0], L.left[1]); g.lineTo(L.apex[0], L.apex[1]); g.lineTo(L.right[0], L.right[1]); g.closePath(); g.clip('evenodd');
+      for (const [x, y, r, ph] of this.stars) {
+        g.globalAlpha = n * (0.55 + 0.45 * Math.sin(t * 1.7 + ph)); g.fillStyle = '#fffbe8'; g.fillRect(x - r / 2, y - r / 2, r, r);
+      }
+      const [mx, my, mr] = this.moon;
+      g.globalAlpha = n * 0.5; this.sprite(g, this.white, mx, my, mr / 16 * 0.9);
+      g.globalAlpha = n; g.globalCompositeOperation = 'source-over';
+      g.beginPath(); g.arc(mx, my, mr, 0, TAU); g.moveTo(mx + mr * 1.3, my - mr * 0.2); g.arc(mx + mr * 0.45, my - mr * 0.2, mr * 0.85, 0, TAU, true);
+      g.fillStyle = '#fff6d8'; g.fill('evenodd');
+      g.restore(); g.globalCompositeOperation = 'lighter';
+      // Mondglitzern auf dem Wasser
+      for (let i = 0; i < 26; i++) {
+        const y = L.shore + 8 + i * (L.H - L.shore - 8) / 26, w = 6 + i * 1.6, a = Math.max(0, Math.sin(t * 2.3 + i * 1.9));
+        g.globalAlpha = n * 0.5 * a; g.fillStyle = '#fff2c8'; g.fillRect(mx - w / 2 + Math.sin(t + i) * 6 * cfg.waves, y, w, 1.6);
+      }
+    }
+    // warmes Innenlicht der Pyramide und Lichtleiter im Schacht
+    g.save(); poly(g, [L.left, L.front, L.right, L.apex]); g.clip();
+    const cy = (E.yTop + L.baseY) / 2, rr = (L.baseY - L.apex[1]) * 0.75, gr = g.createRadialGradient(E.cx, cy, 0, E.cx, cy, rr);
+    gr.addColorStop(0, `rgba(255,205,130,${0.22 * n})`); gr.addColorStop(1, 'rgba(255,205,130,0)');
+    g.globalAlpha = 1; g.fillStyle = gr; g.fillRect(E.cx - rr, cy - rr, rr * 2, rr * 2);
+    g.restore();
+    g.globalCompositeOperation = 'lighter'; g.globalAlpha = n * 0.5;
+    g.strokeStyle = 'rgba(255,236,190,.9)'; g.lineWidth = 3; g.beginPath(); g.moveTo(E.cx, E.yTop - E.rp - 3); g.lineTo(L.apex[0], L.apex[1]); g.stroke();
+    for (const sg of [-1, 1]) { g.globalAlpha = n; this.sprite(g, this.white, E.cx + sg * (L.tunnel.tw - 13), L.tunnel.top + L.tunnel.tw + 4, 0.35); }
+    // Schein um die Figuren (Leuchtkugeln stärker als Tierchen)
+    const k = n * 0.7 * cfg.glow * (cfg.figure ? 0.55 : 1);
+    if (k > 0.02) for (const b of this.sim.orbs) {
+      const q = this.pose(b, t);
+      g.globalAlpha = Math.min(1, k); this.sprite(g, this.glow[b.color], q.x, q.y, 1.1 * Math.max(1, k));
+    }
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
   }
   drawRays(g, t, k) {
     if (k <= 0.01) return;
@@ -933,7 +1077,10 @@ class PyramidRenderer extends EBS.CanvasScene {
     };
     g.save(); g.beginPath(); g.rect(0, 0, L.W, L.shore); g.clip(); mech(); g.restore();
     g.save(); g.beginPath(); g.rect(0, L.shore, L.W, L.H - L.shore); g.clip(); g.globalAlpha = 0.3; mech(); g.restore();
-    // Lichtimpuls steigt vom Scheitel der Rolle zur Spitze
+  }
+  /** Lichtimpuls steigt vom Scheitel der oberen Rolle zur Spitze. */
+  drawPulseDot(g) {
+    const L = this.L, E = L.lift, s = this.sim, lt = [E.cx, E.yTop - E.rp - 3];
     const age = s.t - s.lastPulse.t, k = s.cfg.pulse;
     if (age >= 0 && age < PULSE_TRAVEL && k > 0.01) {
       const p = lerp2(lt, L.apex, age / PULSE_TRAVEL), col = COLORS[s.lastPulse.color].rgb;
@@ -980,6 +1127,16 @@ class PyramidRenderer extends EBS.CanvasScene {
       g.save(); g.beginPath(); g.rect(x - R * 2, y + R * 0.35, R * 4, R * 1.2); g.clip();
       g.beginPath(); g.arc(x, y, R + 0.5, 0, TAU); g.fillStyle = 'rgba(20,130,185,.55)'; g.fill();
       g.restore();
+      const m = this.sim.cfg.figure ? this.mood(b) : null;
+      if (m && m.sleep) {                                           // z z z
+        g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        for (let i = 0; i < 3; i++) {
+          const f = ((t * 0.5 + b.id * 0.31 + i / 3) % 1);
+          g.globalAlpha = Math.sin(Math.PI * f) * 0.9; g.font = `700 ${Math.round(R * (0.55 + f * 0.5))}px Bahnschrift, "Segoe UI", Arial`;
+          g.fillText('z', x + R * 0.7 + f * R * 0.9 + Math.sin(f * 6 + b.id) * 3, y - R * 1.1 - f * R * 1.8);
+        }
+        g.globalAlpha = 1;
+      }
     }
   }
   drawSplashes(g, t) {
@@ -1040,12 +1197,14 @@ class PyramidRenderer extends EBS.CanvasScene {
 }
 
 const pct = (v) => Math.round(v * 100) + ' %', times = (v) => v.toFixed(2).replace('.', ',') + '×';
+const DAY_OPTIONS = [[0, 'automatisch (Videolänge, mind. 5 min)'], [1, '1 Minute'], [5, '5 Minuten'], [10, '10 Minuten'], [20, '20 Minuten'], [30, '30 Minuten'], [60, '60 Minuten']];
 EBS.registerScenario({
   id: 'pyramid',
   title: 'Endless Pyramid',
   defaults: {
     orbs: 22, size: 16, warmup: 30, figure: 0, speed: 1, beltSpeed: 1, rollSpeed: 1, current: 1,
     glow: 1, pulse: 1, rays: 1, clouds: 1, reflection: 1, waves: 1, sparkle: 1, wiggle: 1, birds: true, lane: true,
+    dayCycle: true, dayMinutes: 0, dayStart: 0, nightDark: 0.85, stars: true, sleepy: true,
   },
   controls: [
     { key: 'figure', label: 'Figuren', type: 'select', options: [[0, 'Leuchtkugeln'], [1, 'Tierchen (Küken, Pinguin, Schweinchen, Frosch)']] },
@@ -1063,6 +1222,12 @@ EBS.registerScenario({
     { key: 'waves', label: 'Wellengang', type: 'range', min: 0, max: 2, step: 0.05, format: times },
     { key: 'sparkle', label: 'Glitzern auf dem Wasser', type: 'range', min: 0, max: 2, step: 0.05, format: times },
     { key: 'wiggle', label: 'Gezappel der Tierchen', type: 'range', min: 0, max: 2, step: 0.05, format: times },
+    { key: 'dayMinutes', label: 'Länge eines Tages (Morgen bis Nacht)', type: 'select', options: DAY_OPTIONS },
+    { key: 'dayStart', label: 'Tageszeit beim Start', type: 'range', min: 0, max: 0.95, step: 0.01, format: (v) => `${Math.round(v * 100)} % · ${phaseName(v)}` },
+    { key: 'nightDark', label: 'Dunkelheit der Nacht', type: 'range', min: 0, max: 1, step: 0.05, format: pct },
+    { key: 'dayCycle', label: 'Tageslauf (Morgen → Nacht)', type: 'check' },
+    { key: 'stars', label: 'Sterne und Mond', type: 'check' },
+    { key: 'sleepy', label: 'Tierchen werden abends müde', type: 'check' },
     { key: 'birds', label: 'Vögel', type: 'check' },
     { key: 'lane', label: 'Strömungsspur im Wasser', type: 'check' },
   ],
@@ -1076,6 +1241,8 @@ EBS.registerScenario({
       glow: r('glow', 1, 0, 1.5), pulse: r('pulse', 1, 0, 1.5), rays: r('rays', 1, 0, 1.5), clouds: r('clouds', 1, 0, 3),
       reflection: r('reflection', 1, 0, 1), waves: r('waves', 1, 0, 2), sparkle: r('sparkle', 1, 0, 2), wiggle: r('wiggle', 1, 0, 2),
       birds: bool(p.birds, true), lane: bool(p.lane, true),
+      dayCycle: bool(p.dayCycle, true), dayMinutes: DAY_OPTIONS.some(([v]) => v === +p.dayMinutes) ? +p.dayMinutes : 0,
+      dayStart: r('dayStart', 0, 0, 0.95), nightDark: r('nightDark', 0.85, 0, 1), stars: bool(p.stars, true), sleepy: bool(p.sleepy, true),
     };
   },
   create: (ctx) => new PyramidSim(ctx),
