@@ -1429,6 +1429,8 @@ EBS.registerScenario({
   // Tonspur: Ereignistyp -> Samples (assets/audio bzw. im Code erzeugt), Verhältnis der Klänge (gain), Stärkebezug (ref),
   // Verstimmung (detune zufällig, semis fest, scale je Farbe). Tierchen-Klänge erklingen nur in der Darstellung „Tierchen“.
   audio: {
+    // Preserve the standard mix; AAC noise substitution can overshoot during the finale.
+    aacNoPns: true,
     events: {
       scoop: { label: 'Becher schöpft', samples: ['impactSoft_medium_000'], gain: 0.14, semis: 3, detune: 1 },
       pulse: { label: 'Lichtimpuls', samples: ['synth:chime'], gain: 0.2, scale: [0, 4, 7, 12] },

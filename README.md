@@ -20,9 +20,10 @@ Dieser Arbeitsstand vereint fünf Szenarien im selben Generator:
 Alle verwenden dieselbe Bedienoberfläche und den MP4-Export mit Ton. Integrationsnachweise und noch offene
 Abnahmen stehen im [Integrationsbericht](docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
 
-**Bekannte Einschränkung:** Bei Pyramid mit Tierchen kann ein vollständiges 60-Sekunden-Video auch bei
-100 % Standardlautstärke an einzelnen AAC-Tonspitzen scheitern. Der Export veröffentlicht dann keine
-fertige Datei. Dieser Fall bleibt dokumentiert; eine vollständige Abbruchfreiheit ist nicht nachgewiesen.
+**Pyramid-Ton:** Der bekannte 60-Sekunden-Standardfall mit Tierchen besteht nach Abschalten des
+AAC-Rauschersatzes: vollständiger Windows-Export mit −14,1 LUFS und −1,4 dBTP. Vier vollständige
+Finale-Tonmischungen (beide Darstellungen und Formate) sind zusätzlich abgesichert. Die Spitzenprüfung
+bleibt aktiv; beliebige Klangkombinationen sind damit nicht vollständig abgenommen. [Prüfstand und Grenzen](docs/ROADMAP.md#r27-pruefstand).
 
 Die Architektur ist für weitere Szenarien und Videoformate vorbereitet (siehe [Erweiterbarkeit](#erweiterbarkeit));
 der [Audit vom 12.11.2026](docs/AUDIT_2026-11-12.md) dokumentiert den damaligen Ausgangspunkt. Offene Punkte:
