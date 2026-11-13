@@ -12,23 +12,27 @@ Die acht vorhandenen Commits bis `5cec854` sind über [PR #3](https://github.com
 in `main` gemergt (`34c63aa`). Grundlage war die anschließend beauftragte Minimalprüfung: Live-Abbruch bestanden,
 Audio-Spitzenabweichung identisch auf dem alten `main` reproduziert. Die ersten vollständigen CI-Läufe waren
 unvollständig; R02 bleibt offen. Nachweise und Grenzen: [CI-Erstlauf und Nachtrag](CI_ERSTLAUF_2026-11-13.md).
-Der Ausbauplan und diese Nachweise werden separat in [PR #4](https://github.com/emfau88/Endless-Battle-Simulator/pull/4) geführt.
+Der Ausbauplan wurde über [PR #4](https://github.com/emfau88/Endless-Battle-Simulator/pull/4) nach `main` übernommen (`247992a`).
+Der anschließend ausdrücklich beauftragte Ausbau startet von diesem sauberen, mit origin abgeglichenen Stand
+im Branch `codex/scrap-video-quality`. Umsetzung und aktuelle Prüfgrenzen:
+[Scrap-Videoqualität](SCRAP_VIDEOQUALITAET_2026-11-13.md).
 
 **Zweck:** Dies bleibt die **einzige aktive Aufgabenliste**. Erledigtes steht im [CHANGELOG](CHANGELOG.md).
 Berichte dokumentieren ihren damaligen Stand und werden nicht nachträglich als aktuelle Prüfung umgeschrieben.
 Die Marble-Erweiterung bleibt auf ausdrücklichen Wunsch als isolierter lokaler Prototyp stehen.
 Scrap Wars wurde dagegen anschließend zur Integration beauftragt. Produktionsabsicherung und
 Scrap-Integration sind separate Änderungen; ein Video-Langexport wurde nicht beauftragt.
-Der aktuelle Folgeauftrag plant die sechs vorgeschlagenen Scrap-Verbesserungen unter R22; er implementiert sie nicht.
+Der aktuelle Folgeauftrag autorisiert die schrittweise Umsetzung aller sechs Scrap-Pakete und Vorher/Nachher-Bilder.
 
 **Projektziel:** SimCascade soll regelmäßig eigenständige, gut lesbare Simulationsvideos mit sauberem Ton und
 reproduzierbarem MP4-Export ermöglichen: Shorts in 9:16 und längere Videos in 16:9. Inhaltsidee, Zuschauerreaktion
 und Produktionsaufwand bestimmen die Länge. Der bereits laufende Kanalpilot R04 wird parallel fortgesetzt.
 
-**Reihenfolge:** verbleibende CI-Nacharbeit R02 und kurze Filmproben/R20 beurteilen →
-Scrap-Videoqualität in sechs begrenzten Paketen R22 verbessern. Zuerst Lesbarkeit und Treffer/Klang,
-dann Kampfablauf und Turnier; Arenen/Kamera und die kleine Werkstattvariante folgen getrennt.
-Hex Dominion V0.3/R17 bleibt der nächste neue Szenariokandidat, wird während R22 aber nicht parallel integriert.
+**Reihenfolge des beauftragten Ausbaus:** Lesbarkeit → Kampfablauf → Turnier → Treffer/Klang → Arenen/Kamera → Werkstatt.
+Die sechs Schritte sind implementiert. Persönliche Film-/Hör-/Handyabnahme bleibt unter R20;
+die vollständige plattformübergreifende CI-Abnahme unter R02. Sie wurde durch den ausdrücklichen Folgeauftrag
+nicht mehr zur Vorbedingung für die Umsetzung gemacht.
+Hex Dominion V0.3/R17 bleibt nach der Scrap-Abnahme der nächste neue Szenariokandidat.
 Naval hat nach dem gemeldeten Short und 10-Minuten-Upload keinen Vorrang; offene Abnahmen und R21 bleiben erhalten.
 Allgemeiner Engine-Umbau, Spielmechaniken außerhalb R22, 4K-Optimierung und 60-Minuten-Produktion haben keinen Vorrang.
 
@@ -73,7 +77,7 @@ Standbilder, Hashes und Lautheitswerte ersetzen diese Abnahme nicht.
 |---|---|---|---|
 | Naval | Integriert: 2–4 Schiffe, Mulden, Lifte, Beuteprinzip im Duell; Tink/Tock und sämtliche R19-Effekte einschließlich goldener Kugel. | Bestehende Tests und historische Berichte; aktuelle gezielte Zustandsproben zeigen eine Prüflücke, siehe R21. | Frühere Bild-/Vorschaufreigaben gelten für die dortigen Fassungen. Laufende Gesamtfassung samt aktuellem Ton in beiden Formaten noch offen. Schiffsoptik bleibt R01. |
 | Marble | Integriert: Kugelfabrik, konstruktiv entschärfter Trichter, Ereigniston, Lautstärkeregler und MP4-Export. | Historische Kreislauf-, Export- und Lautheitsprüfungen; in diesem Auftrag keine neue Laufzeitabnahme. | Aktuelle Hörprobe, tatsächliche Handyprüfung und einzelne Bewegungsdetails offen. Dramaturgie bleibt R03/E1. |
-| Scrap Wars / Scrap Arena | Integriert als `scrap`: ursprüngliche Kampfregeln und Arena, Hoch-/Querformat-HUD, Ergebnis, Offline-Audio, deterministische Folgerunden und Punktestand. | Drei gesicherte Original-Seeds; vollständiger erster Rundenzustand unverändert. Konfiguration, 30/60 fps, alle Tempi, kurze MP4s, Ausschnitt-/Audiovergleich und 20-min-Simulation geprüft; Einzelheiten im Scrap-Bericht. | Exportierte Einzelbilder betrachtet; kurze MP4s für laufende Sicht-/Hörabnahme bereit. Persönliche Film-/Klangbeurteilung und echtes Handy bleiben offen. |
+| Scrap Wars / Scrap Arena | Integriert als `scrap`; R22 ergänzt Chassis/HUD, Schäden/Klang, versionierte Kampfregeln, Acht-Runden-Turnier, drei Karten, Duellkamera und optionale Werkstatt. | Originalquelle und erster Rundenzustand der drei Referenzseeds unverändert. Aktuelle Nachweise separat im [Qualitätsbericht](SCRAP_VIDEOQUALITAET_2026-11-13.md), historische Integration im älteren Scrap-Bericht. | Neue Vorher/Nachher-Einzelbilder betrachtet und kurze Filmproben erstellt. Persönliche Film-/Klangbeurteilung, breite Werkstatt-Balance und echtes Handy bleiben offen. |
 | Hex Dominion V0.3 | Nur Prototyp: vier Reiche, beide Ausgabeformate, getrennte Kartenformen, Auto-Framing, Filmtempo 0,25–2×, vier Regelparameter, drei Profile, Garnisons-/Marsch-/Routenanzeigen. WebGL2-Renderer mit Canvas-Fallback. | Je zwei reine 20-s-Simulationsläufe mit Seed 42 und Profil `balanced` pro Kartenform identisch (`2e9531d1` hochkant, `4d38cf6c` quer). Keine Kamera-, Audio- oder Exportprüfung. | Keine neue Sicht-/Hörabnahme; kein MP4-/Audiopfad im Prototyp nachgewiesen. |
 
 **Teststände nicht vermischen:** Der Audit an `20ea040` meldet **72/72**, der Lift-Bericht zur Änderung `33f8eb1`
@@ -114,11 +118,16 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   **Aktueller Befund:** Push- und PR-Lauf an `5cec854` wurden am 25-Minuten-Limit abgebrochen. In beiden scheiterten
   zuvor der Audioexport mit Tempo 0,8 und der Live-Abbruchtest; im PR-Lauf zusätzlich der Scrap-Konfigurations-/UI-Test.
   Versions- und Teilprotokolle sind gesichert; vollständige Assertions fehlen wegen des vorzeitigen Endes.
-  [CI-Bericht mit Laufverweisen](CI_ERSTLAUF_2026-11-13.md). **R02 bleibt offen und hat vor R22 Vorrang.**
+  [CI-Bericht mit Laufverweisen](CI_ERSTLAUF_2026-11-13.md). **R02 bleibt offen.** Der spätere ausdrückliche
+  Umsetzungsauftrag hat R22 unabhängig davon freigegeben; der lokale Abschlussnachweis steht im
+  [Qualitätsbericht](SCRAP_VIDEOQUALITAET_2026-11-13.md).
   **Nachtrag nach beauftragter Minimalprüfung:** Live-Abbruch einschließlich 2,5-s-Reaktionsgrenze und Aufräumen
   bestanden. Der Audiotest meldet −0,7 dBTP statt höchstens −1 dBTP, **identisch auf dem bisherigen `main`**;
   somit keine neue Abweichung durch die Integration. Details und Grenzen im CI-Bericht. Diese beiden Befunde
   gelten nicht mehr als Merge-Sperre für PR #3; ein vollständig grüner CI-Lauf ist damit nicht behauptet.
+  **Lokaler Nachtrag aus R22:** Windows-Gesamtlauf 119/120, anschließend korrigierter Scrap-Linktest 1/1.
+  Ein zweiter unnötiger Live-Tab wurde aus diesem Test entfernt; zusätzlich wartet er nun auf den automatisch
+  berechneten Dauerwert im Teilen-Link. Linux-CI-Zuverlässigkeit bleibt separat zu bestätigen.
   **Begrenzte Nacharbeit:** bestehende Audio-Spitzenreserve unter FFmpeg 6.1.1 prüfen, die knappe 110-s-Wartefrist
   vor dem Audiomix vom unverändert strengen 2,5-s-Abbruchziel trennen und den sporadischen Scrap-UI-Fall gezielt
   reproduzieren. Nur belegte Ursachen korrigieren. Danach die vollständige Suite innerhalb eines begründeten Laufzeitbudgets
@@ -187,22 +196,25 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   gegebenenfalls per Simulationsvorlauf und ≤20-s-Clip; mehrere Runden ohne Video-Langexport auf Invarianten,
   Ereignisvollständigkeit und begrenzte Objektzahl prüfen.
 
-- [ ] **R22 · Scrap Wars: Umsetzungsplan für hochwertige Videos, sechs begrenzte Pakete.**
+- [x] **R22 · Scrap Wars: sechs begrenzte Qualitätspakete technisch umgesetzt.**
   **Ziel:** auf kleinem Bildschirm nachvollziehbare Kämpfe, spürbare Treffer und eine abgeschlossene Episode.
-  Die sechs Vorschläge sind zur Planung angenommen; **noch keine Umsetzung dieses Ausbaus**.
-  Ausgangspunkt ist `5cec854` samt [Scrap-Bericht](SCRAP_WARS_INTEGRATION_2026-11-12.md).
-  Vor dem ersten Paket R02 schließen und R20-Proben als Vergleich festhalten; offene Hör-/Handyurteile
-  weiterhin ausdrücklich benennen. Die CI-Nacharbeit ist ein eigener begrenzter Schritt vor diesem Ausbau.
+  Umsetzung in sechs getrennten Commits ab `247992a`; Ergebnisse und Prüfungen im
+  [Qualitätsbericht](SCRAP_VIDEOQUALITAET_2026-11-13.md). Originalregeln und Quellreferenzen bleiben erhalten.
+  Vorherbilder stammen vom unveränderten Ausgangsstand. Persönliche Hör-/Handyurteile bleiben R20,
+  eine breite Werkstatt-Balance ist nicht nachgewiesen; die Variante bleibt ausdrücklich experimentell.
 
-  **Was schon besteht:** vier benannte Roboter, Teamfarben, HP-/Waffenanzeigen, Rückstoß, Mündungslicht,
+  **Basis vor diesem Ausbau:** vier benannte Roboter, Teamfarben, HP-/Waffenanzeigen, Rückstoß, Mündungslicht,
   Treffer-/Explosions-/Wrackdarstellung, zwei Waffentypen und Nachschubstationen. Rundenfolge, Siegzähler,
   Ergebnis-Pause und Ereigniston sind integriert. Der Ausbau verfeinert diese Basis.
   Die Arena ist quadratisch; ein kleineres HUD allein vergrößert sie im Querformat nicht.
-  Der Renderer kennt optionales kurzes Kamerazittern, aber noch keine ruhige Duellverfolgung.
+  Das vorherige kurze Kamerazittern wurde im Adapter durch eine ruhige Duellkamera ersetzt.
 
-  **P1 → P2 ist die erste nutzbare Qualitätsstufe; danach P3 → P4 → P5 → P6.**
-  Jedes Paket wird separat geprüft und committed. Paketgrenzen sind Lieferstände, keine zusätzliche pauschale
+  **Umgesetzt in der vom Nutzer bestätigten Reihenfolge P1 → P3 → P4 → P2 → P5 → P6.**
+  Jedes Paket wurde separat geprüft und committed. Paketgrenzen sind Lieferstände, keine zusätzliche pauschale
   Freigabeschleife. P6 bleibt eine optionale Versuchsvariante und kein Muss für das erste gute Scrap-Video.
+
+  Die Tabelle bewahrt den vereinbarten Umfang und die Prüfziele; erreichte Nachweise und offene persönliche
+  Abnahmen sind im Qualitätsbericht bzw. R20 unterschieden.
 
   | Paket | Begrenzter Lieferumfang | Abschlusskriterium |
   |---|---|---|

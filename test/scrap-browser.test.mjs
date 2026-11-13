@@ -61,7 +61,13 @@ test('Scrap: UI-Regler, Teilen-Link und JSON bewahren Runde, Pause, Tempo, Bild 
     assert.equal(expected.params.repeatRounds, false); assert.equal(expected.params.endPauseSec, 7);
     assert.equal(expected.params.workshop,true); assert.equal(expected.params.arena,'crossroads');
     assert.equal(expected.video.tempo, .8); assert.equal(expected.video.volume.rocket, 135);
-    await page.waitForFunction(() => document.querySelector('#shareLink').value.includes('vol.rocket=135'));
+    // The link refreshes separately from the asynchronous tournament preflight.
+    // Wait for all new params AND the resolved duration, not an earlier volume edit.
+    await page.waitForFunction(cfg => {
+      const q = new URL(document.querySelector('#shareLink').value).searchParams;
+      return q.get('vol.rocket') === '135' && Number(q.get('durationSec')) === cfg.video.durationSec
+        && Object.entries(cfg.params).every(([key, value]) => q.get(key) === String(value));
+    }, expected);
     const link = await page.inputValue('#shareLink');
     // Reload in the same tab: two continuously painted software-WebGL previews
     // needlessly compete for the renderer on slow CI machines.
@@ -195,4 +201,23 @@ test('Scrap-Duellkamera: Bild nach Vorlauf entspricht 30/60-fps-Capture auf alle
       assert.equal(errors.length,0);
     } finally {await page.close();}
   }
+});
+
+test('Scrap-Turnierton: alle acht Runden und vier Module im vollständigen Mix eines kurzen Finale-Clips', async () => {
+  const c=config({aspect:'16:9'},{rulesVersion:'v2',episodeMode:'tournament',workshop:true});
+  const {page}=await openExportPage(browser,c);
+  let duration;
+  try { duration=await page.evaluate(()=>{let p;do{p=exportAPI.planEpisode();}while(!p.done);return p.durationSec;}); }
+  finally {await page.close();}
+  const r=await exportVideo(c,{...options('finale-audio'),clip:{startSec:duration-2,durationSec:2}});
+  assert.deepEqual(verifyResult(r),[]);assert.equal(r.audio.lost,0);
+  assert.equal(r.cfg.video.durationSec,duration);assert.equal(r.audio.episodeDurationSec,duration);
+  const count=type=>r.audioEvents.filter(e=>e.type===type).length;
+  assert.equal(count('round_start'),8);assert.equal(count('round_end'),8);
+  assert.equal(count('upgrade'),4);assert.equal(count('tournament_end'),1);
+  assert.equal(r.snapshot.phase,'ended');assert.equal(r.snapshot.round,8);
+  assert.match(r.snapshot.summary,/Turnier beendet/);
+  const replay=await exportVideo(JSON.parse(readFileSync(r.sidecar,'utf8')),{...options('finale-audio-replay')});
+  assert.equal(replay.stateHash,r.stateHash);assert.equal(replay.audio.eventHash,r.audio.eventHash);
+  assert.ok(readFileSync(r.file).equals(readFileSync(replay.file)));
 });

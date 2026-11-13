@@ -94,7 +94,9 @@ Renderer oder Programmversionen hinweg sind damit nicht zugesichert.
 In der Szenarioauswahl **Scrap Wars** wählen oder lokal
 `http://localhost:8080/?scenario=scrap` öffnen. Vier Roboter starten mit Blastern und je 125 Lebenspunkten.
 Leere Waffen werden abgeworfen, neue aufgesammelt; Raketen zerstören auch Deckung und öffnen Wege.
-Die ursprünglichen Kampfregeln bleiben erhalten. Nach höchstens 90 Simulationssekunden endet eine Runde.
+Die ursprünglichen Kampfregeln bleiben als **Original** erhalten. **Flüssiger Kampf** (`rulesVersion=v2`)
+berücksichtigt Hindernisse und Wartezeit bei der Waffenwahl; die beiden Nachschubstationen laden 25 % schneller nach.
+Nach höchstens 90 Simulationssekunden endet eine Runde.
 Ein alleiniger Überlebender gewinnt; mehrere Überlebende am Zeitlimit ergeben ein Unentschieden.
 
 Standardmäßig folgt nach drei **Videosekunden** Ergebnisanzeige eine neue Runde mit reproduzierbar abgeleitetem
@@ -102,6 +104,31 @@ Seed. Siege werden über die Episode gezählt. `repeatRounds=false` hält das Er
 `endPauseSec=2…8` steuert die Endpause. Beide Regler starten die Episode neu. Filmtempo 1/0,8/0,64 verändert
 die Zuordnung zur Videozeit, nicht die festen 120-Hz-Physikschritte. Runde und Rundenzeit stehen zusätzlich
 zur gesamten Simulationszeit im Bedienfeld. Gleiche Arena und Regeln gelten für Hoch-, Quer- und Quadratformat.
+
+**Neu für Videos:** vier deutlich gefärbte Chassis, kompakte Anzeigen und drei sichtbare Schadensstufen.
+Scrapyard, Foundry und Crossroads sind die drei verfügbaren Karten. Der Kamera-Schalter aktiviert einen
+langsamen gemeinsamen Duellzoom bis 1,4×; Roboter, Geschosse und aktuelle Suchziele bleiben im Ausschnitt.
+
+**Turnier:** `episodeMode=tournament` spielt genau acht Runden, zeigt den sortierten Zwischenstand und
+endet mit fünf Sekunden Gesamtergebnis. Gleichstände ergeben geteilte Sieger. Oberfläche und Export
+berechnen die tatsächliche Länge aus Seed, Regeln, Karte und Tempo. Diese Dauer ersetzt im Turnier die
+freie Dauerangabe; `repeatRounds` gilt dort nicht. Vorlage: [scrap-tournament.json](presets/scrap-tournament.json).
+Acht Runden sind keine feste Zehn-Minuten-Länge. Für kurze Proben weiterhin `--clip-start`/`--clip-duration` verwenden.
+
+**Werkstatt (optional, experimentell):** nur im Turnier, ein Modul und höchstens eine Aufrüstung je Roboter.
+Eine abgeschlossene Runde gibt einen Scrap-Punkt, mindestens 100 verursachter Schaden einen weiteren.
+Vier Punkte kaufen automatisch ein per Seed festgelegtes Modul; es wirkt ab der Folgerunde. Danach werden
+keine weiteren Punkte gesammelt. Alles wird beim Neustart zurückgesetzt. Die drei Module sind:
+
+| Modul | Vorteil | Nachteil |
+|---|---|---|
+| Plating | 15 % mehr maximale HP | 8 % weniger Tempo |
+| Drive | 12 % mehr Tempo | 10 % weniger maximale HP |
+| Capacitor | 12 % kürzere Schusspause | 8 % weniger maximale HP |
+
+Vorlage mit längerer Ergebnis-/Werkstattpause: [scrap-workshop.json](presets/scrap-workshop.json).
+Die begrenzten Vergleichsläufe ersetzen noch keine breite Balance- oder persönliche Hörabnahme.
+Umsetzung, Messwerte und Vorher/Nachher-Nachweise: [Scrap-Videoqualität](docs/SCRAP_VIDEOQUALITAET_2026-11-13.md).
 
 Der Canvas-Renderer liefert Welt, Roboterdaten und vergrößertes Ergebnisbanner an die gemeinsame Pixi-Capturebühne.
 Die Vorschau ist wie bei den anderen Szenarien stumm; die MP4-Tonspur enthält Blaster, Raketen, Treffer,

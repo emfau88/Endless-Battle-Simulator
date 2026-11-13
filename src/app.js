@@ -25,7 +25,7 @@ function parseDuration(text) {
   const sec = Math.round(parseFloat(m[1]) * (m[2] === 'h' || m[2] === 'std' ? 3600 : m[2] === 'm' || m[2] === 'min' ? 60 : 1));
   return sec > 0 ? sec : null;
 }
-const fmtDuration = (s) => (s % 3600 === 0 ? s / 3600 + 'h' : s % 60 === 0 ? s / 60 + 'm' : s + 's');
+const fmtDuration = (s) => (s % 3600 === 0 ? s / 3600 + 'h' : s % 60 === 0 ? s / 60 + 'm' : Number(s.toFixed(2)) + 's');
 
 // ---------------- Export-Modus ----------------
 async function bootExport() {
