@@ -98,7 +98,8 @@ Standard ist **Große Arena · Holz, Stein, Beton** (`rulesVersion=v3`): eine ec
 die in 16:9 rund 90 % des Bildes belegt, mit schmaler Kopfzeile und klaren Deckungsgruppen.
 Holzkisten benötigen 2, Steinblöcke 5 und Betonblöcke 10 direkte Blastertreffer; direkte Raketen benötigen
 1/1/2 Treffer. Splitter und Bruchstücke bleiben sichtbar, zerstörte Blöcke geben den Weg physisch frei.
-Hochformat dreht dieselbe Arena um 90°, lässt Namen/HUD lesbar und verändert den Kampf nicht.
+Hochformat lässt Namen/HUD aufrecht. Scrapyard, Foundry und Crossroads drehen dieselbe Arena um 90°,
+Sunny Yard besitzt einen eigenen Hochformat-Grundriss mit Nord-/Südstarts.
 Quadrat zeigt die vollständige breite Arena mit freien Rändern. Kurzprobe: [scrap-materials.json](presets/scrap-materials.json).
 
 Die bisherigen Varianten bleiben als **Originalprototyp** (`rulesVersion=classic`) und
@@ -114,16 +115,21 @@ Standardmäßig folgt nach drei **Videosekunden** Ergebnisanzeige eine neue Rund
 Seed. Siege werden über die Episode gezählt. `repeatRounds=false` hält das Ergebnis der ersten Runde;
 `endPauseSec=2…8` steuert die Endpause. Beide Regler starten die Episode neu. Filmtempo 1/0,8/0,64 verändert
 die Zuordnung zur Videozeit, nicht die festen 120-Hz-Physikschritte. Runde und Rundenzeit stehen zusätzlich
-zur gesamten Simulationszeit im Bedienfeld. Gleiche Arena und Regeln gelten für Hoch-, Quer- und Quadratformat.
+zur gesamten Simulationszeit im Bedienfeld. Die Regeln gelten für alle Formate; Sunny Yard verwendet im
+Hochformat einen eigenen Grundriss, die anderen Karten behalten beim Formatwechsel dieselbe Physik.
 
 **Neu für Videos:** vier deutlich gefärbte Chassis, kompakte Anzeigen und drei sichtbare Schadensstufen.
 Scrapyard, Foundry, Crossroads und **Sunny Yard** sind die vier verfügbaren Karten.
-Sunny Yard ist die Gute-Laune-Variante: türkisfarbener Boden mit Sonne, Smiley-Holzkisten,
-Blumen-Steinblöcke, Regenbogen-Beton und blütenförmige Nachschubfelder. Eine eigene spiegelgleiche
-Deckungsanordnung lässt Mittelwege und Außenring frei; Haltbarkeit und Waffenwerte bleiben gleich.
+Sunny Yard ist ein heller Betonhof mit Naturholz, rauem Stein, gegossenem Beton und kleinen bepflanzten
+Trögen am Rand. Materialtiefe, Schäden und einheitliche Schatten machen die Deckungen unterscheidbar.
+Im Querformat führen offene Mittelwege zwischen vier Deckungsgruppen hindurch; Waffen liegen näher am Kampf.
+Im Hochformat gibt es eine eigene Nord-/Süd-Arena: je zwei Roboter starten oben und unten, versetzte Deckungen
+nutzen die Bildhöhe, Nachschub steht in der Mitte. Der Formatwechsel verändert hier bewusst den Kampfverlauf
+und gegebenenfalls die Turnierlänge. Haltbarkeit und Waffenwerte bleiben gleich; es bleibt jeder gegen jeden.
 Die Auswahl aktiviert automatisch die große V3-Arena. Vorlage: [scrap-sunny-yard.json](presets/scrap-sunny-yard.json).
-Der Kamera-Schalter aktiviert einen
-langsamen gemeinsamen Duellzoom (V3 bis 1,25×, frühere Regeln bis 1,4×); Roboter, Geschosse und aktuelle Suchziele bleiben im Ausschnitt.
+Scrap verwendet eine feste Gesamtansicht ohne automatische Kamerafahrten oder Zoomwechsel, auch im letzten
+Duell und beim Rundenwechsel. Der Kameraschalter ist für Scrap deaktiviert; alte Links/JSON mit
+`camera=true` werden entsprechend normalisiert. Andere Szenarien behalten ihre Kameraoption.
 
 **Turnier:** `episodeMode=tournament` spielt genau acht Runden, zeigt den sortierten Zwischenstand und
 endet mit fünf Sekunden Gesamtergebnis. Gleichstände ergeben geteilte Sieger. Oberfläche und Export

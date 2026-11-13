@@ -100,7 +100,8 @@
       this.roundNumber++;
       this.roundSeed = this.roundNumber === 1 ? this.seed : hashSeed('scrap-round-v1', this.seed, this.roundNumber);
       const Round = this.cfg.rulesVersion === 'v3' ? MaterialRound : this.cfg.rulesVersion === 'classic' && this.cfg.arena === 'yard' && !this.cfg.workshop ? ObservedRound : ImprovedRound;
-      this.roundSim = new Round({ seed: this.roundSeed, rulesVersion: this.cfg.rulesVersion, arena: this.cfg.arena, upgrades: this.workshop.modules });
+      this.roundSim = new Round({ seed: this.roundSeed, rulesVersion: this.cfg.rulesVersion, arena: this.cfg.arena,
+        portrait: this.world.h > this.world.w, upgrades: this.workshop.modules });
       // Non-enumerable: JSON of the round stays byte-identical to the source.
       Object.defineProperty(this.roundSim, 'emit', { value: (...args) => this._event(...args) });
       this.phase = 'running'; this.pauseUntil = 0; this.accumulator = 0;
@@ -163,45 +164,10 @@
       }
     }
     _updateCamera() {
-      if(this.roundSim.bounds) { this._updateMaterialCamera();return; }
-      const living = this.roundSim.robots.filter(r => r.alive), c = this.camera;
-      const points = this.phase === 'running' && living.length === 2
-        ? living.concat(this.roundSim.projectiles, living.filter(r => !r.weapon).map(r => ({ x:r.goalX, y:r.goalY }))) : [];
-      let zoom = 1, x = 450, y = 450;
-      if (points.length) {
-        const xs = points.map(p => p.x), ys = points.map(p => p.y);
-        const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
-        zoom = clamp(936 / Math.max(maxX - minX + 240, maxY - minY + 240), 1, 1.4);
-        x = (minX + maxX) / 2; y = (minY + maxY) / 2;
-        // Safety wins over smoothing: never crop a competitor or live projectile.
-        c.zoom = Math.min(c.zoom, zoom);
-      }
-      c.zoom += clamp(zoom - c.zoom, -.008, .002);
-      const half = 468 / c.zoom;
-      x = clamp(x, half - 18, 918 - half); y = clamp(y, half - 18, 918 - half);
-      c.x += clamp((x - c.x) * .025, -.75, .75); c.y += clamp((y - c.y) * .025, -.75, .75);
-      if (points.length) {
-        c.x = clamp(c.x, Math.max(...points.map(p => p.x)) + 70 - half, Math.min(...points.map(p => p.x)) - 70 + half);
-        c.y = clamp(c.y, Math.max(...points.map(p => p.y)) + 70 - half, Math.min(...points.map(p => p.y)) - 70 + half);
-      }
-      c.x = clamp(c.x, half - 18, 918 - half); c.y = clamp(c.y, half - 18, 918 - half);
-    }
-    _updateMaterialCamera() {
-      const {w,h}=this.roundSim.bounds,c=this.camera,living=this.roundSim.robots.filter(r=>r.alive);
-      const points=this.phase==='running'&&living.length===2?living.concat(this.roundSim.projectiles,living.filter(r=>!r.weapon).map(r=>({x:r.goalX,y:r.goalY}))):[];
-      let zoom=1,x=w/2,y=h/2,minX,maxX,minY,maxY;
-      if(points.length) {
-        minX=Math.min(...points.map(p=>p.x));maxX=Math.max(...points.map(p=>p.x));
-        minY=Math.min(...points.map(p=>p.y));maxY=Math.max(...points.map(p=>p.y));
-        zoom=clamp(Math.min(w/(maxX-minX+160),h/(maxY-minY+160)),1,1.25);
-        x=(minX+maxX)/2;y=(minY+maxY)/2;c.zoom=Math.min(c.zoom,zoom);
-      }
-      c.zoom+=clamp(zoom-c.zoom,-.008,.002);
-      const hx=w/2/c.zoom,hy=h/2/c.zoom;
-      x=clamp(x,hx,w-hx);y=clamp(y,hy,h-hy);
-      c.x+=clamp((x-c.x)*.025,-.75,.75);c.y+=clamp((y-c.y)*.025,-.75,.75);
-      if(points.length&&c.zoom>1) {c.x=clamp(c.x,maxX+64-hx,minX-64+hx);c.y=clamp(c.y,maxY+64-hy,minY-64+hy);}
-      c.x=clamp(c.x,hx,w-hx);c.y=clamp(c.y,hy,h-hy);
+      // Stable full-arena framing, including the last duel and round transitions.
+      // Old links may still request camera=true; direct Episode callers stay fixed too.
+      const {w=900,h=900}=this.roundSim.bounds||{};
+      this.camera.x=w/2;this.camera.y=h/2;this.camera.zoom=1;
     }
     champions() {
       const best = Math.max(...this.wins);

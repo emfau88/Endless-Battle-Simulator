@@ -22,7 +22,14 @@ sichtbarer Arena/Deckung abgelehnt. Der gezielte Folgeauftrag ersetzt sie durch 
 Spielfeld und Holz, Stein, Beton mit verschiedener Haltbarkeit. Umsetzung und aktuelle Nachweise:
 [Materialarena V3](SCRAP_MATERIALARENA_2026-11-13.md). Keine Maschinenwracks als Arenadekoration.
 Die neue Bildaufteilung wurde danach vom Nutzer als „viel besser“ bewertet. Der anschließende Auftrag
-ergänzt **Sunny Yard** als vierte Karte mit freundlichen Farben und bemalten Materialdeckungen.
+ergänzt **Sunny Yard** als vierte Karte. Dessen verspielte erste Gestaltung wurde als zu kitschig abgelehnt.
+Die Korrektur gestaltet einen sonnigen Betonhof mit natürlichen Materialien, einheitlichen Schatten und
+dezenten Pflanzen am Rand. Nach weiterem Feedback erhält 9:16 einen eigenen Nord-/Süd-Grundriss mit
+je zwei Starts oben und unten; 16:9 behält eine offene Mitte. Die Formatvarianten dürfen deshalb jetzt
+unterschiedliche Kämpfe und Turnierlängen ergeben. Nachweise im
+[Korrektur-Nachtrag](SCRAP_MATERIALARENA_2026-11-13.md#korrektur--sonniger-betonhof-und-eigene-hochformat-arena).
+Auf ausdrückliches weiteres Feedback entfallen Scrap-Kamerafahrten vollständig: feste Gesamtansicht in
+allen Regelversionen, auch beim letzten Duell. Ton entsteht weiterhin im Export; die Livevorschau ist stumm.
 Persönliche Film-/Hör-/Handyprüfung bleibt getrennt davon unter R20.
 
 **Zweck:** Dies bleibt die **einzige aktive Aufgabenliste**. Erledigtes steht im [CHANGELOG](CHANGELOG.md).
@@ -220,18 +227,24 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   [Materialarena-Bericht](SCRAP_MATERIALARENA_2026-11-13.md). Bildaufbau positiv bewertet;
   persönliche Film-/Hör-/Handyprüfung bleibt R20.
 
-  **Folgeauftrag Sunny Yard:** vierte auswählbare Karte mit eigenem symmetrischem Grundriss,
-  Sonne, Smiley-Holzkisten, Blumen-Stein und Regenbogen-Beton. Die Materialwerte bleiben 38/95/190 HP.
-  Die Nutzerbewertung des großen Bildaufbaus ist positiv; der neue Stil wird mit Bild und Kurzprobe gezeigt.
-  Damit erweitert der neue Auftrag die frühere P5-Grenze von drei auf vier Karten. Technische Nachweise:
-  [Sunny-Yard-Nachtrag](SCRAP_MATERIALARENA_2026-11-13.md#nachtrag--sunny-yard).
+  **Folgeauftrag Sunny Yard, nach Nutzerkorrektur:** vierte auswählbare Karte als heller Betonhof mit
+  Holzmaserung, rauem Stein, gegossenem Beton, festen Schatten und kleinen Pflanztrögen am Rand.
+  Smilies, Regenbögen und Blumenbemalung der abgelehnten ersten Fassung entfallen. Die Materialwerte bleiben
+  38/95/190 HP. Querformat mit vier Deckungsgruppen; Hochformat mit eigenem Grundriss, zwei Startzonen an den
+  Enden und versetzten Deckungen über die Bildhöhe. Weiterhin vier Gegner, keine neuen Waffen oder KI-Regeln.
+  Die neuen Aufträge erweitern die frühere P5-Grenze auf vier Karten und heben für Sunny Yard die zuvor
+  gewollte Gleichheit des Kampfverlaufs zwischen den Formaten auf. Technische Nachweise und Messgrenzen:
+  [Korrektur-Nachtrag](SCRAP_MATERIALARENA_2026-11-13.md#korrektur--sonniger-betonhof-und-eigene-hochformat-arena).
+  Nach störenden Schwenks/Zooms wurde außerdem eine feste Gesamtansicht für alle Scrap-Regelversionen
+  beauftragt und umgesetzt; die frühere Duellkamera ist damit abgelöst. Persönliches Gefallen an dieser
+  Fassung ist noch nicht bestätigt.
 
   **Basis vor diesem Ausbau:** vier benannte Roboter, Teamfarben, HP-/Waffenanzeigen, Rückstoß, Mündungslicht,
   Treffer-/Explosions-/Wrackdarstellung, zwei Waffentypen und Nachschubstationen. Rundenfolge, Siegzähler,
   Ergebnis-Pause und Ereigniston sind integriert. Der Ausbau verfeinert diese Basis.
   Die damalige Arena war quadratisch; ein kleineres HUD allein vergrößerte sie im Querformat nicht.
   Die aktuelle V3-Rechteckarena setzt deshalb den ausdrücklich geänderten Folgeauftrag um.
-  Das vorherige kurze Kamerazittern wurde im Adapter durch eine ruhige Duellkamera ersetzt.
+  Die damalige Duellkamera wurde nach erneutem Nutzerfeedback vollständig durch eine feste Gesamtansicht ersetzt.
 
   **Umgesetzt in der vom Nutzer bestätigten Reihenfolge P1 → P3 → P4 → P2 → P5 → P6.**
   Jedes Paket wurde separat geprüft und committed. Paketgrenzen sind Lieferstände, keine zusätzliche pauschale

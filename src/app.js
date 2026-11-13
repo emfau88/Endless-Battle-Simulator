@@ -293,6 +293,8 @@ async function bootLive() {
       if (o && ctl.format) o.textContent = ctl.format(+v);
     }
     $('hud').checked = c.view.hud; $('camera').checked = c.view.camera;
+    $('camera').disabled = session.scenario.supportsCamera === false;
+    $('camera').parentElement.title = $('camera').disabled ? 'Dieses Szenario zeigt eine feste Gesamtansicht.' : '';
     // Ton gibt es nur für Szenarien mit Klangtabelle; die Vorschau selbst bleibt stumm
     const hasAudio = !!session.scenario.audio;
     $('audio').checked = hasAudio && c.video.audio; $('audio').disabled = !hasAudio;

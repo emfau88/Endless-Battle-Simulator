@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "name": "Scrap Wars – Sunny Yard / Gute Laune (12 Sekunden)",
+  "name": "Scrap Wars – Sunny Yard / sonniger Betonhof (12 Sekunden)",
   "scenario": "scrap",
   "seed": 42,
   "params": { "rulesVersion": "v3", "episodeMode": "endless", "arena": "sunshine", "workshop": false, "repeatRounds": true, "endPauseSec": 3 },
   "video": { "aspect": "16:9", "resolution": 1080, "fps": 30, "durationSec": 12, "tempo": 1, "audio": true },
-  "view": { "hud": true, "camera": true }
+  "view": { "hud": true, "camera": false }
 }

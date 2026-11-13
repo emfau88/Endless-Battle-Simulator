@@ -16,6 +16,10 @@
   const path = (g, points) => { g.beginPath(); points.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); };
   const circle = (g, x, y, radius) => { g.beginPath(); g.arc(x, y, radius, 0, Math.PI * 2); };
   class ArenaRenderer extends ScrapArena.Renderer {
+    _pickup(g, p, t) {
+      if (this.sunny) EBS.ScrapDaylightArt.pickup(g, p, t, this);
+      else super._pickup(g, p, t);
+    }
     _bodyTexture(color, dead = false) {
       const id = palette.indexOf(color), key = `painted:${color}:${dead}`;
       if (this._bodies.has(key)) return this._bodies.get(key);
@@ -278,6 +282,9 @@
       const sunny=s.cfg.arena==='sunshine',floorKey=`${r.seed}:${l.arenaW}:${l.arenaH}:${s.cfg.arena}`;
       if(this.materialFloorKey!==floorKey) {this.materialFloor=art.floor(r.seed,l.arenaW,l.arenaH,sunny);this.materialFloorKey=floorKey;}
       g.drawImage(this.materialFloor,0,0,l.arenaW,l.arenaH);
+      if(sunny)for(const b of blocks)if(b.alive) {
+        const t=art.block(b,this.arena._blocks,true);g.drawImage(t.shadow,b.x-t.pad,b.y-t.pad,t.width,t.height);
+      }
       for(const b of blocks)if(!b.alive)art.rubble(g,b,sunny);
       r.pads.forEach((p,i)=>sunny?art.sunnyPad(g,mapPoint(p)):this.arena._pad(g,mapPoint(p),r.t,i));
       for(const e of effects)this.arena._effect(g,e,true);
@@ -335,11 +342,12 @@
   EBS.registerScenario({
     id: 'scrap', title: 'Scrap Wars',
     supportsClips: true,
+    supportsCamera: false,
     defaults: { rulesVersion: 'v3', episodeMode: 'endless', arena: 'yard', workshop: false, repeatRounds: true, endPauseSec: 3 },
     controls: [
       { key: 'episodeMode', label: 'Format', type: 'select', options: [['endless', 'Freie Videolänge'], ['tournament', 'Turnier · 8 Runden + Finale']], restart: true },
       { key: 'rulesVersion', label: 'Arena / Kampfregeln', type: 'select', enabled: p => p.arena !== 'sunshine', options: [['v3', 'Große Arena · Holz, Stein, Beton'], ['v2', 'Bisherige Arena · flüssiger Kampf'], ['classic', 'Originalprototyp']], restart: true },
-      { key: 'arena', label: 'Arena', type: 'select', options: [['yard', 'Scrapyard · ausgewogen'], ['foundry', 'Foundry · Deckungsgassen'], ['crossroads', 'Crossroads · offenes Zentrum'], ['sunshine', 'Sunny Yard · Gute Laune (große Arena)']], restart: true },
+      { key: 'arena', label: 'Arena', type: 'select', options: [['yard', 'Scrapyard · ausgewogen'], ['foundry', 'Foundry · Deckungsgassen'], ['crossroads', 'Crossroads · offenes Zentrum'], ['sunshine', 'Sunny Yard · Tageslicht / Deckungsgassen']], restart: true },
       { key: 'workshop', label: 'Werkstatt (experimentell, ein Modul je Roboter)', type: 'check', enabled: p => p.episodeMode === 'tournament', restart: true },
       { key: 'repeatRounds', label: 'Weitere Runden spielen', type: 'check', enabled: p => p.episodeMode !== 'tournament', restart: true },
       { key: 'endPauseSec', label: 'Ergebnis zeigen', type: 'range', min: 2, max: 8, step: 1, restart: true, format: v => `${v} s` },

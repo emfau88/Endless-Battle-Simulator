@@ -209,7 +209,7 @@ function normalizeConfig(input) {
         bitrate: parseBitrate(q.bitrate),
       },
     },
-    view: { hud: bool(o.view.hud, true), camera: bool(o.view.camera, true) },
+    view: { hud: bool(o.view.hud, true), camera: sc.supportsCamera !== false && bool(o.view.camera, true) },
   };
 }
 /** Überschreibt eine bestehende Konfiguration teilweise (flach oder verschachtelt). */

@@ -16,9 +16,27 @@
     yard: [[250,112,82,64,'stone'],[342,112,64,64,'wood'],[250,186,82,42,'concrete'],[424,186,64,42,'wood']],
     foundry: [[234,108,58,104,'concrete'],[304,108,64,64,'wood'],[390,108,72,64,'stone'],[390,182,72,42,'wood']],
     crossroads: [[232,100,86,60,'stone'],[328,100,64,60,'wood'],[328,170,64,56,'concrete'],[418,184,64,42,'wood']],
-    sunshine: [[220,108,72,64,'wood'],[334,104,104,44,'concrete'],[334,176,68,54,'stone'],[242,188,64,42,'wood']],
+    sunshine: [[314,114,124,44,'concrete'],[232,148,64,76,'stone'],[316,176,56,48,'wood'],[382,176,56,48,'wood']],
   };
-  function cover(arena) {
+  // Authored in portrait screen coordinates: two entry zones at the ends,
+  // staggered cover through the full height and supplies in the middle.
+  // Convert once to the engine's fixed coordinate system, not from the wide map.
+  const portraitHalf = [
+    [250,54,40,152,'concrete'],
+    [112,226,68,48,'wood'],[360,226,68,48,'wood'],
+    [204,312,132,48,'stone'],[396,326,66,60,'stone'],
+    [80,418,96,40,'concrete'],[376,422,56,48,'wood'],[242,452,56,44,'wood'],
+  ];
+  function portraitCover() {
+    const blocks=[];
+    for(const mirror of [false,true])for(const [xx,yy,w,h,material] of portraitHalf) {
+      const x=mirror?HEIGHT-xx-w:xx,y=mirror?WIDTH-yy-h:yy,hp=materials[material].hp;
+      blocks.push({id:blocks.length,x:y,y:HEIGHT-x-w,w:h,h:w,material,hp,maxHp:hp,alive:true});
+    }
+    return blocks;
+  }
+  function cover(arena,portrait) {
+    if(arena==='sunshine'&&portrait)return portraitCover();
     const blocks = [];
     for (const [mx,my] of [[false,false],[true,false],[true,true],[false,true]]) {
       for (const [x,y,w,h,material] of quadrants[arena] || quadrants.yard) {
@@ -50,8 +68,15 @@
     constructor(options) {
       super({ ...options, rulesVersion:'v2' });
       this.rulesVersion='v3'; this.bounds={w:WIDTH,h:HEIGHT,edge:EDGE};
-      this.blocks=cover(this.arena);
-      const starts=[[106,84],[WIDTH-106,84],[WIDTH-106,HEIGHT-84],[106,HEIGHT-84]];
+      const portrait=this.arena==='sunshine'&&!!options.portrait;
+      if(portrait)this.arenaVariant='north-south';
+      this.blocks=cover(this.arena,portrait);
+      // Sunny Yard brings entry points and floor weapons into the fighting
+      // area. The other three maps retain their existing starts and supplies.
+      const sunny=this.arena==='sunshine',startX=sunny?190:106;
+      const fromPortrait=([x,y])=>[y,HEIGHT-x];
+      const starts=portrait?[[176,106],[364,106],[364,934],[176,934]].map(fromPortrait)
+        :[[startX,84],[WIDTH-startX,84],[WIDTH-startX,HEIGHT-84],[startX,HEIGHT-84]];
       for(const r of this.robots) {
         [r.x,r.y]=starts[r.id];r.lastX=r.x;r.lastY=r.y;
         r.goalX=WIDTH/2;r.goalY=HEIGHT/2;
@@ -59,8 +84,12 @@
         r.vx=Math.cos(r.angle)*r.speed;r.vy=Math.sin(r.angle)*r.speed;
       }
       this.pads[0].x=this.pads[1].x=WIDTH/2;
-      this.pads[0].y=96;this.pads[1].y=HEIGHT-96;
-      [[140,HEIGHT/2],[WIDTH-140,HEIGHT/2],[420,HEIGHT/2],[WIDTH-420,HEIGHT/2]].forEach(([x,y],i)=>{
+      this.pads[0].y=sunny?118:96;this.pads[1].y=HEIGHT-this.pads[0].y;
+      if(portrait) [[180,520],[360,520]].map(fromPortrait).forEach(([x,y],i)=>{this.pads[i].x=x;this.pads[i].y=y;});
+      const weapons=portrait?[[270,260],[270,780],[130,354],[410,686]].map(fromPortrait)
+        :sunny?[[360,270],[680,270],[520,178],[520,362]]
+        :[[140,HEIGHT/2],[WIDTH-140,HEIGHT/2],[420,HEIGHT/2],[WIDTH-420,HEIGHT/2]];
+      weapons.forEach(([x,y],i)=>{
         this.pickups[i].x=x;this.pickups[i].y=y;
       });
     }

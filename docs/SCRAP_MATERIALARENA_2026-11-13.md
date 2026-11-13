@@ -129,3 +129,107 @@ Prüfprotokolle in `simulation.tap` und `browser.tap` desselben Verzeichnisses. 
 Sie enthält 360 Frames, 139 Audioereignisse ohne Verlust und eine geprüfte AAC-Spur mit
 −14,1 LUFS / −1,3 dBTP. Eine neue persönliche Hörabnahme ist damit nicht behauptet.
 Der isolierte Marble-Prototyp ist weiterhin unverändert.
+
+## Korrektur – sonniger Betonhof und eigene Hochformat-Arena
+
+Ausgangsstand: `2d89cca`, Branch `codex/scrap-video-quality`, Arbeitsverzeichnis zu Beginn sauber.
+Die verspielte Sunny-Yard-Fassung im vorigen Nachtrag wurde vom Nutzer als zu kitschig abgelehnt.
+Weitere Rückmeldungen betrafen verdrehte Waffenschatten, ungenutzte Bildhöhe in 9:16, Pflanzen am Rand
+und störende Kamerafahrten. Die folgenden Änderungen ersetzen diesen Stil; die vorigen Nachweise
+beschreiben weiterhin ihren damaligen Stand. Commit, Push und anschließender Merge wurden ausdrücklich beauftragt.
+
+### Darstellung und Grundrisse
+
+- Heller, warmer Mineralboden mit Fugen und dezenten Markierungen. Holz mit Brettern, Maserung und
+  Metallbändern, rauer Stein mit Facetten, gegossener Beton mit Poren und Hebeöffnungen. Tiefenkanten,
+  feste Risse und materialspezifische Trümmer zeigen intakte und zerstörte Deckung.
+- Kleine bepflanzte Tröge mit wenigen hellen Blüten sitzen auf dem Arenarand außerhalb der Spielfläche.
+  Die Dekoration fügt keine Kollisionskörper hinzu. Sonne/Smilies, Regenbögen und Blumenbemalung entfallen.
+- Deckungsschatten liegen unter sämtlichen Blöcken und Waffen. Die alte dunkle Ellipse unter Waffen
+  drehte sich mit dem Gegenstand. Nun wirft die tatsächliche Waffenform einen kleinen, stets nach
+  rechts unten versetzten Schatten; auch Trümmer haben eine feste Schattenrichtung. Aufnahmemarkierungen
+  sind davon getrennte feine Bögen. Texturen sind begrenzt zwischengespeichert, ohne Kampf-RNG.
+- **16:9:** vier gespiegelte Gruppen, 92 Einheiten freier horizontaler Mittelweg und 164 Einheiten
+  breite vertikale Mitte. Starts und Bodenwaffen liegen weiter innen. Weiterhin 16 Deckungen:
+  acht Holz-, vier Stein- und vier Betonblöcke, unverändert 38/95/190 HP.
+- **9:16:** separat in Hochformatkoordinaten entworfener Grundriss. Je zwei Roboter starten oben und
+  unten; Trennblöcke am Start, versetzte Deckungen über die Bildhöhe und zwei mittige Nachschubplätze
+  schaffen mehrere Laufwege. Es bleibt jeder gegen jeden, keine neue Team- oder Zweiroboterregel.
+  Die Koordinaten werden einmal in das vorhandene Physiksystem umgerechnet. Es wird weder der
+  Querformat-Grundriss gestaucht noch dessen Kampf unverändert übernommen.
+- Sunny Yard darf beim Formatwechsel ausdrücklich andere Siegerfolgen und Turnierlängen liefern.
+  Seed, Grundriss und Tempo bleiben reproduzierbar. Die drei bisherigen Karten behalten beim
+  Formatwechsel ihre bisherige Physik; quadratisches Sunny Yard verwendet den breiten Grundriss.
+- **Feste Kamera für ganz Scrap:** keine Schwenks, Zooms oder abrupten Ausschnittkorrekturen mehr,
+  auch bei zwei Überlebenden und beim Rundenwechsel. `supportsCamera=false` normalisiert alte
+  `camera=true`-Angaben und deaktiviert den Schalter. Andere Szenarien behalten ihre Kameraoption.
+- Waffen, KI-Regeln, Nachschubintervalle, Module und Audiomischung wurden nicht erweitert. Die Livevorschau
+  ist weiterhin stumm; der vorhandene Ereigniston wird im Videoexport erzeugt.
+
+### Grundrissvergleich und Grenzen
+
+Für 16:9 wurden fünf Anordnungen auf 16 Seeds verglichen. Nach Auswahl der jetzigen Kombination aus
+Deckungen, Starts und Waffenpositionen wurden 16 weitere Seeds mit dem bisherigen Sunny-Grundriss
+verglichen. Die Prozentwerte sind Mittelwerte der jeweiligen Erstrunden, keine Zuschauerbewertung.
+
+| Messung | 16 Auswahl-Seeds vorher → nachher | 16 weitere Seeds vorher → nachher |
+|---|---:|---:|
+| Zeit lebender Roboter ohne Waffe | 43,0 % → 34,3 % | 42,5 % → 37,2 % |
+| Ein-Sekunden-Intervalle mit weniger als 12 Einheiten Ortsänderung | 6,8 % → 1,6 % | 7,7 % → 2,5 % |
+| Roboter-Treffer im festen Zentrum x=180…860 / y=70…470 | 55,8 % → 60,7 % | 54,7 % → 61,6 % |
+
+Eine verworfene Alternative hatte eine Schusspause von 54,85 Sekunden. Bei der gewählten Anordnung
+beträgt die längste Schusspause über alle 32 Seeds 3,90 Sekunden, zuvor 4,05 Sekunden. Der Median der
+je Runde längsten Pause ist jedoch nicht besser; ein durchgehend schnellerer Schussrhythmus wird nicht
+behauptet. Niedrige Ortsänderung ist ebenfalls kein Beweis für dauerhaftes Feststecken.
+
+Für 9:16 fiel die erste Anordnung beim unabhängigen Wegtest durch: Eine Kette zu enger Durchgänge
+teilte die begehbaren Zellen in zwei Hälften. Die Korrektur öffnet die Engstellen und zieht die
+Nachschubplätze nach innen. Alle 2.320 freien Rasterzellen sind jetzt miteinander verbunden.
+Die gewählte Variante wurde auf acht Auswahl-Seeds und acht weiteren Seeds simuliert:
+
+| Messung | 8 Auswahl-Seeds | 8 weitere Seeds |
+|---|---:|---:|
+| Mittlere Rundendauer | 37,43 s | 42,42 s |
+| Längste Schusspause | 4,00 s | 2,13 s |
+| Zeit ohne Waffe | 40,8 % | 36,5 % |
+| Intervalle mit geringer Ortsänderung | 5,1 % | 2,9 % |
+
+Diese begrenzten Stichproben belegen keine optimale oder allgemein ausgeglichene Arena. Die
+Hochformat-Validierung hatte Siege 1/0/5/2; breite Balance- und Zuschauerabnahme bleiben offen.
+Rohdaten: `output/scrap-sunlit/layout-study.json`, `layout-validation.json`, `portrait-candidates.json`
+und `portrait-validation.json`. `portrait-study.json` dokumentiert die verworfene erste Hochformatfassung.
+
+### Abschlussprüfung und Filmproben
+
+- **8/8 betroffene Simulationstests** am korrigierten Stand bestanden: sämtliche Grundrisse und Starts
+  erreichbar, Kollisionen/Kamera über vollständige Runden, Materialtreffer und Wegfreigabe, beide Sunny-
+  Turniere mit Zeitlupe und Exportplanung, unveränderte Originaldateien und drei vollständige
+  Original-Rundenzustände, Normalisierung alter Kameraangaben und feste Übersicht auch unter V2.
+- **3/3 Browser-/Exporttests** bestanden: identische Bilder bei Vorlauf/30/60 fps auf allen vier Karten,
+  beide Formate bis ins letzte Duell, Auswahl aus Originalregeln, Teilen-Link, deaktivierter Scrap-
+  Kameraschalter und wieder aktivierbare Kamera bei Naval, jeweils bytegleicher 2-s-MP4-Replay mit Ton.
+- **18 betroffene gemeinsame Fälle abgedeckt:** Konfiguration, Registry, Exportgrößen, Teilen/JSON/
+  Handyansicht und unveränderte Naval-/Marble-Goldenwerte. Der erste gemeinsame Lauf bestand 15/18;
+  drei localhost-Tests wurden von der Netzwerksandbox abgewehrt. Die vier Teilen-Tests bestanden
+  anschließend außerhalb dieser Einschränkung 4/4. Der zuvor fehlende Browserpfad wurde durch die
+  vorhandene lokale Playwright-Installation behoben; keine Referenzen oder Grenzwerte gelockert.
+- Das Scrapyard-Bild Seed 42 / 12 s / Kamera aus stimmt weiterhin bytegenau mit dem akzeptierten
+  Materialarena-Bild überein. Der isolierte Marble-Prototyp hat unverändert SHA-256
+  `1aba7e335df93cf723297bebf18c40cd645b38c639fa947b43f5a9c88778e24b`.
+
+Protokolle unter `output/scrap-sunlit/`: `simulation-complete.tap`, `browser-complete.tap`,
+`shared-checks.tap`, `share-host.tap`. Dies sind gezielte Prüfungen, kein neuer vollständiger
+Projekt-/Linux-CI-Nachweis. R02 und die persönliche Film-/Hörabnahme R20 bleiben getrennt offen.
+
+`manifest.json` enthält Konfiguration, Zeitpunkt, Snapshot, Hash und Invarianten der abschließend
+gerenderten Bilder `start.png`, `action.png`, `later.png`, `portrait-start.png`, `portrait.png` sowie
+des Scrapyard-Vergleichs. Die Bilder wurden visuell geprüft. Die früheren Vergleichsbilder bleiben
+unter `before-start.png` und `before-action.png` erhalten.
+
+Zwei echte MP4-Proben mit je 360 Frames / 12 Sekunden / 1080p30 liegen unter
+`sunlit-courtyard-12s.mp4` und `sunlit-portrait-12s.mp4`, jeweils mit Exportrezept. `export-report.json`
+belegt gültige Invarianten, 139/145 Audioereignisse, 94/103 gemischte Stimmen und keinen Ereignisverlust.
+Die fertigen AAC-Spuren messen beide −14,1 LUFS, Spitzen −1,3 bzw. −1,2 dBTP. Der bestehende Mischer
+begrenzt maximal 16,3 bzw. 20,77 dB; eine persönliche Hörabnahme wird aus diesen Messungen nicht abgeleitet.
+Kein einzelner Videoexport überschritt 20 Sekunden. Alle Film-/Bilddateien sind lokale generierte Artefakte.

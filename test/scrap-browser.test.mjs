@@ -103,14 +103,14 @@ test('Scrap: echte kurze MP4s beider Formate entsprechen der Simulation; Exportr
   }
 });
 
-test('Scrap v3: Materialkarten und Duellkamera liefern im Quer-/Hochformat identische Bilder aus Vorlauf und 30/60 fps', async () => {
+test('Scrap v3: Materialkarten bleiben auch beim letzten Duell fest; identische Bilder aus Vorlauf und 30/60 fps', async () => {
   for(const arena of ['yard','foundry','crossroads','sunshine'])for(const aspect of ['16:9','9:16']) {
     const {page,errors}=await openExportPage(browser,config({aspect,resolution:720,durationSec:90},{rulesVersion:'v3',arena}));
     try {
       const at=await page.evaluate(()=>{
         const cfg=exportAPI.config(),sim=new EBS.Scrap.Episode({seed:cfg.seed,params:cfg.params,world:exportAPI.info().world});
-        while(sim.phase==='running'&&sim.camera.zoom<1.04)sim.stepOnce();
-        return Math.ceil(sim.step/60*30)/30;
+        while(sim.phase==='running'&&sim.roundSim.robots.filter(r=>r.alive).length>2)sim.stepOnce();
+        return Math.ceil((sim.step/60+1)*30)/30;
       });
       const drawn=await page.evaluate(at=>{exportAPI.simulate(at-1);const frames=exportAPI.renderFrames(30,1,'image/png');return{frame:frames.at(-1),hash:exportAPI.hash()};},at);
       await page.evaluate(()=>exportAPI.restart({video:{fps:60}}));
@@ -126,6 +126,8 @@ test('Sunny Yard: Auswahl aus Originalregeln, Teilen-Link und kurzer MP4-Replay 
   try {
     await page.goto(pathToFileURL(INDEX).href+'?scenario=scrap&rulesVersion=classic&paused=1');
     await page.waitForFunction(()=>window.EBS?.app?.cfg.scenario==='scrap');
+    assert.equal(await page.isDisabled('#camera'),true);
+    assert.equal(await page.isChecked('#camera'),false);
     await page.selectOption('#p-arena','sunshine');
     await page.waitForFunction(()=>EBS.app.cfg.params.arena==='sunshine'&&EBS.app.cfg.params.rulesVersion==='v3');
     assert.equal(await page.isDisabled('#p-rulesVersion'),true);
@@ -139,13 +141,17 @@ test('Sunny Yard: Auswahl aus Originalregeln, Teilen-Link und kurzer MP4-Replay 
     await page.selectOption('#p-arena','yard');assert.equal(await page.isDisabled('#p-rulesVersion'),false);
     await page.selectOption('#p-rulesVersion','v2');
     assert.equal(await page.evaluate(()=>EBS.app.cfg.params.rulesVersion),'v2');
+    await page.selectOption('#scenario','naval');
+    assert.equal(await page.isDisabled('#camera'),false,'andere Szenarien behalten ihre Kameraoption');
   } finally {await page.close();}
-  const cfg=config({aspect:'16:9',durationSec:2,audio:true},{arena:'sunshine'});
-  const first=await exportVideo(cfg,options('sunny'));
-  assert.deepEqual(verifyResult(first),[]);assert.equal(first.cfg.params.rulesVersion,'v3');assert.equal(first.audio.lost,0);
-  const replay=await exportVideo(JSON.parse(readFileSync(first.sidecar,'utf8')),options('sunny-replay'));
-  assert.equal(first.stateHash,replay.stateHash);assert.equal(first.audio.eventHash,replay.audio.eventHash);
-  assert.ok(readFileSync(first.file).equals(readFileSync(replay.file)));
+  for(const aspect of ['16:9','9:16']) {
+    const cfg=config({aspect,durationSec:2,audio:true},{arena:'sunshine'});
+    const first=await exportVideo(cfg,options('sunny-'+aspect.replace(':','x')));
+    assert.deepEqual(verifyResult(first),[]);assert.equal(first.cfg.params.rulesVersion,'v3');assert.equal(first.audio.lost,0);
+    const replay=await exportVideo(JSON.parse(readFileSync(first.sidecar,'utf8')),options('sunny-replay-'+aspect.replace(':','x')));
+    assert.equal(first.stateHash,replay.stateHash);assert.equal(first.audio.eventHash,replay.audio.eventHash);
+    assert.ok(readFileSync(first.file).equals(readFileSync(replay.file)),aspect+': bytegleiche Wiederholung');
+  }
 });
 
 test('Ausschnitt: Originalepisode, voller Ton samt Nachklang/Normalisierung und gespeicherter Versatz bleiben erhalten', async () => {

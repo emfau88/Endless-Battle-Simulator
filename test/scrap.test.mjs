@@ -6,7 +6,7 @@ import vm from 'node:vm';
 
 const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const context = vm.createContext({}); context.window = context;
-for (const path of ['core.js', 'canvas-scene.js', 'scenarios/scrap/simulation.js', 'scenarios/scrap/renderer.js', 'scenarios/scrap/rules.js', 'scenarios/scrap/materials.js', 'scenarios/scrap/material-art.js', 'scenarios/scrap/episode.js', 'scenarios/scrap.js']) {
+for (const path of ['core.js', 'canvas-scene.js', 'scenarios/scrap/simulation.js', 'scenarios/scrap/renderer.js', 'scenarios/scrap/rules.js', 'scenarios/scrap/materials.js', 'scenarios/scrap/daylight-art.js', 'scenarios/scrap/material-art.js', 'scenarios/scrap/episode.js', 'scenarios/scrap.js']) {
   vm.runInContext(read('src/' + path), context, { filename: path });
 }
 const { EBS } = context;
@@ -36,9 +36,10 @@ test('Scrap v3: Holz, Stein und Beton brauchen 2/5/10 Blaster oder 1/1/2 direkte
   r.robots[0].x=1100;assert.equal(r.checkInvariants().ok,false,'Rechteckgrenze tatsächlich geprüft');
 });
 
-test('Scrap v3: alle vier Karten begehbar, drei Seeds kollisionsfrei, Kamera hält aktive Roboter im Bild', () => {
-  for(const arena of ['yard','foundry','crossroads','sunshine']) {
-    const initial=make({params:{rulesVersion:'v3',arena}}).roundSim;
+test('Scrap v3: alle vier Karten samt eigener Nord-/Süd-Arena begehbar; drei Seeds kollisionsfrei und im Kamerabild', () => {
+  for(const [arena,portrait] of [['yard',false],['foundry',false],['crossroads',false],['sunshine',false],['sunshine',true]]) {
+    const world=portrait?{w:1080,h:1920}:{w:1920,h:1080};
+    const initial=make({params:{rulesVersion:'v3',arena},world}).roundSim;
     const free=(x,y)=>!initial.blocks.some(b=>Math.hypot(x-Math.max(b.x,Math.min(x,b.x+b.w)),y-Math.max(b.y,Math.min(y,b.y+b.h)))<25);
     const cells=new Map();for(let x=50;x<=990;x+=10)for(let y=50;y<=490;y+=10)if(free(x,y))cells.set(`${x},${y}`,{x,y});
     const queue=[cells.get('110,80')],seen=new Set(['110,80']);
@@ -48,9 +49,10 @@ test('Scrap v3: alle vier Karten begehbar, drei Seeds kollisionsfrei, Kamera hä
     assert.equal(seen.size,cells.size,`${arena}: keine abgetrennte begehbare Zelle`);
     for(const p of [...initial.robots,...initial.pickups,...initial.pads])assert.ok(queue.some(c=>Math.hypot(c.x-p.x,c.y-p.y)<15),`${arena}: Start/Nachschub erreichbar`);
     for(const seed of [42,7,314]) {
-      const s=make({seed,params:{rulesVersion:'v3',arena,repeatRounds:false}});
+      const s=make({seed,params:{rulesVersion:'v3',arena,repeatRounds:false},world});
       while(s.phase==='running') {
         s.stepOnce();
+        assert.equal(s.camera.zoom,1);assert.equal(s.camera.x,520);assert.equal(s.camera.y,270);
         if(s.step%30===0)assert.equal(s.checkInvariants().ok,true,`${arena}/${seed}: ${JSON.stringify(s.checkInvariants())}`);
         for(const r of s.roundSim.robots.filter(r=>r.alive)) {
           assert.ok(Math.abs(r.x-s.camera.x)*s.camera.zoom<=520-r.r,`${arena}/${seed}: X im Bild`);
@@ -84,6 +86,29 @@ test('Scrap v3: 90% Arena im Querformat; Hochformat, Tempo und Turnierplanung ä
     assert.ok(Math.abs((e.x-l.x)/l.width-(p.y-lp.y)/lp.height)<1e-9);
     assert.ok(Math.abs((e.y-l.y)/l.height+(p.x-lp.x)/lp.width-1)<1e-9);
   });
+});
+
+test('Sunny Yard: eigene Nord-/Südstarts im Hochformat; beide Grundrisse bewahren Tempo, Acht-Runden-Ergebnis und Exportplanung', () => {
+  const params={rulesVersion:'v3',arena:'sunshine',episodeMode:'tournament',workshop:true};
+  for(const aspect of ['16:9','9:16']) {
+    const world=aspect==='16:9'?{w:1920,h:1080}:{w:1080,h:1920};
+    const a=make({params,world}),b=make({params,world,timeScale:.64});
+    if(aspect==='9:16') {
+      assert.equal(a.roundSim.arenaVariant,'north-south');
+      // In the fixed physics coordinates X becomes screen Y in portrait.
+      const starts=a.roundSim.robots.map(r=>r.x/a.roundSim.bounds.w);
+      assert.equal(starts.filter(y=>y<.2).length,2,'zwei Starts oben');
+      assert.equal(starts.filter(y=>y>.8).length,2,'zwei Starts unten');
+      assert.ok(a.roundSim.blocks.some(block=>block.x<200)&&a.roundSim.blocks.some(block=>block.x>800),'Deckung nutzt die Bildhöhe');
+    }
+    while(a.phase!=='ended')a.stepOnce();while(b.phase!=='ended')b.stepOnce();
+    assert.equal(a.completedRounds,8);assert.equal(a.checkInvariants().ok,true);assert.equal(b.checkInvariants().ok,true);
+    assert.equal(JSON.stringify(a.roundSim),JSON.stringify(b.roundSim));
+    assert.deepEqual(plain(a.roundResults),plain(b.roundResults));assert.deepEqual(plain(a.workshop),plain(b.workshop));
+    const cfg=EBS.normalizeConfig({scenario:'scrap',params,video:{aspect,fps:30}});
+    const plan=EBS.Scrap.createExportPlan(cfg,world);let result;do{result=plan.advance();}while(!result.done);
+    assert.equal(result.durationSec,Math.ceil(a.step/60*30)/30);
+  }
 });
 
 test('Scrap: Quelle und extrahierte Simulation/Renderer sind unverändert', () => {
@@ -186,6 +211,7 @@ test('Scrap: 20 Minuten reine Simulation bleiben begrenzt, lückenlos abrufbar u
 });
 
 test('Scrap: Parameter normalisieren und kollidieren nicht mit Video-/Tonwerten', () => {
+  for(const rulesVersion of ['classic','v2','v3'])assert.equal(EBS.normalizeConfig({scenario:'scrap',params:{rulesVersion},view:{camera:true}}).view.camera,false,'alte Kameraangabe wird zur festen Gesamtansicht');
   const cfg = EBS.normalizeConfig({ scenario: 'scrap', repeatRounds: 'false', endPauseSec: 7,
     video: { tempo: .8, volume: { rocket: 130, pickup: 65 } }, view: { camera: false, hud: true } });
   assert.equal(cfg.params.repeatRounds, false); assert.equal(cfg.params.endPauseSec, 7);
@@ -258,7 +284,7 @@ test('Scrap-Arenen: alle Starts und Waffen erreichbar; drei Seeds bleiben gülti
       assert.equal(s.checkInvariants().ok,true);
     }
   }
-  assert.ok(maximumZoom > 1.2, 'Kamera hat tatsächlich eingezoomt');
+  assert.equal(maximumZoom,1,'auch beim letzten Duell bleibt die Kamera fest');
 });
 
 test('Scrap-Werkstatt: drei Module, ein Slot, spätere Wirkung, Reset und reproduzierbare Turniere', () => {
