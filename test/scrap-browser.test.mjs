@@ -1,6 +1,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, readdirSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, readdirSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -16,6 +17,31 @@ const config = (video = {}, params = {}) => ({ scenario: 'scrap', seed: 42, para
   video: { aspect: '9:16', resolution: 720, fps: 30, durationSec: 3, ...video } });
 const options = name => ({ out: join(dir, name + '.mp4'), gpu: false, encoder: { preset: 'ultrafast' } });
 const audit = join(ROOT, 'test', 'fixtures', 'capture-audit.js');
+
+async function checkReplayBytes(first, replay, label) {
+  const same = readFileSync(first.file).equals(readFileSync(replay.file));
+  if (!same) {
+    const target = join(ROOT, 'output', 'ci-replay', label.replace(/[^\w-]/g, '-'));
+    mkdirSync(target, { recursive: true });
+    const details = {};
+    for (const [name, result] of [['first', first], ['replay', replay]]) {
+      copyFileSync(result.file, join(target, name + '.mp4'));
+      copyFileSync(result.sidecar, join(target, name + '.json'));
+      const streams = {};
+      for (const [kind, format] of [['v', 'framemd5'], ['a', 'f32le']]) {
+        const decoded = await run(ffmpegBin(), ['-v', 'error', '-i', result.file, '-map', `0:${kind}:0`, '-f', format, '-'], { encoding: null });
+        assert.equal(decoded.code, 0, 'Replay-Diagnose: Dekodierung');
+        streams[kind] = createHash('sha256').update(decoded.stdout).digest('hex');
+        if (kind === 'v') writeFileSync(join(target, name + '-frames.txt'), decoded.stdout);
+      }
+      details[name] = { streams, stateHash: result.stateHash, cfg: result.cfg, audio: result.audio };
+    }
+    writeFileSync(join(target, 'comparison.json'), JSON.stringify(details, null, 2));
+    console.log('Replay-Diagnose:', JSON.stringify({ label, sameVideo: details.first.streams.v === details.replay.streams.v,
+      sameAudio: details.first.streams.a === details.replay.streams.a, details }));
+  }
+  assert.ok(same, label + ': bytegleiche Wiederholung');
+}
 
 test('Scrap: Canvas-Upload, beide Formate/Quadrat und 30/60 fps erhalten Simulation und Ereignisse', async () => {
   for (const aspect of ['9:16', '16:9', '1:1']) {
@@ -144,13 +170,13 @@ test('Sunny Yard: Auswahl aus Originalregeln, Teilen-Link und kurzer MP4-Replay 
     await page.selectOption('#scenario','naval');
     assert.equal(await page.isDisabled('#camera'),false,'andere Szenarien behalten ihre Kameraoption');
   } finally {await page.close();}
-  for(const aspect of ['16:9','9:16']) {
+  for(const aspect of ['16:9','9:16','16:9','9:16','16:9','9:16','16:9','9:16','16:9','9:16','16:9','9:16']) {
     const cfg=config({aspect,durationSec:2,audio:true},{arena:'sunshine'});
     const first=await exportVideo(cfg,options('sunny-'+aspect.replace(':','x')));
     assert.deepEqual(verifyResult(first),[]);assert.equal(first.cfg.params.rulesVersion,'v3');assert.equal(first.audio.lost,0);
     const replay=await exportVideo(JSON.parse(readFileSync(first.sidecar,'utf8')),options('sunny-replay-'+aspect.replace(':','x')));
     assert.equal(first.stateHash,replay.stateHash);assert.equal(first.audio.eventHash,replay.audio.eventHash);
-    assert.ok(readFileSync(first.file).equals(readFileSync(replay.file)),aspect+': bytegleiche Wiederholung');
+    await checkReplayBytes(first,replay,aspect);
   }
 });
 

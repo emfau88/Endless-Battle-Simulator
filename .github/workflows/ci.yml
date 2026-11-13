@@ -49,5 +49,7 @@ jobs:
         if: always()
         with:
           name: production-checks-${{ matrix.suite }}-${{ github.sha }}
-          path: output/ci-*.log
+          path: |
+            output/ci-*.log
+            output/ci-replay/
           if-no-files-found: ignore

@@ -90,3 +90,19 @@ anschließend `config.test.mjs` in einem frischen Prozess **7/7**, 33,18 s. Prot
 `output/browser-test-stability/config-share-1.log` und `config-2.log`. Kein Fall übersprungen oder abgebrochen.
 Die Ergänzung wird nach dieser gezielten Prüfung per Fast-forward vom eigenen Branch `codex/config-test-fixture`
 nach `main` übernommen. Der dadurch gestartete vollständige Main-Nachlauf wird vor Abschluss ausgewertet.
+
+## Nachtrag: Sunny-Yard-MP4
+
+Die Konfigurationskorrektur liegt als `cc1bc7c` auf main. Im
+[Main-Lauf 43462916717](https://github.com/emfau88/Endless-Battle-Simulator/actions/runs/43462916717)
+bestanden Core **55/55**, Audio **17/17** und Produktion **33/33**. Scrap bestand **28/29**:
+Ein 2-s-Sunny-Yard-Export in 16:9 war trotz gleichen Simulationszustands und gleichen Audioereignissen
+nicht bytegleich zur Wiederholung. Die damalige CI sicherte nur Protokolle; die konkreten MP4-Dateien fehlen.
+Der Gesamtstand ist damit weiterhin **133/134**, R02 bleibt offen.
+
+Vier unabhängige lokale Exportpaare mit derselben Konfiguration waren vollständig bytegleich; zusätzlich
+stimmten die decodierten Videoframes und die decodierten Audiodaten überein. Dateien und Messungen liegen unter
+`output/browser-test-stability/replay-probe/`. Das ist kein Ursachenbeleg für den Linux-Fehler.
+Der separate Branch `codex/scrap-replay-diagnostics` sichert bei Abweichungen beide MP4-/JSON-Dateien,
+Frameprüfsummen und getrennte Audio-/Videodigests als CI-Artefakt. Zusätzliche Durchläufe dort dienen der
+gezielten Reproduktion; ein erster Fehler bleibt ein Testfehler. Der Bytevergleich wird nicht gelockert.

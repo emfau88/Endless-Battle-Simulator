@@ -1,9 +1,9 @@
 # Roadmap
 
-**Aktueller Prüfstand · 13.11.2026:** Die erste Browser-Korrektur bestand im PR mit 134/134 Tests.
-Der Main-Nachlauf bestand mit 133/134; die früheren Ladefehler traten nicht mehr auf, ein anderer
-Konfigurationstest schlug fehl. Dessen Vorbereitung und Speicherprüfungen werden gezielt abgesichert;
-R02 bleibt bis zum vollständig grünen Main-Nachlauf offen.
+**Aktueller Prüfstand · 13.11.2026:** Die Browser-Korrekturen bestehen auf `main` (`cc1bc7c`), Core 55/55.
+Audio 17/17 und Produktion 33/33 sind ebenfalls grün. Scrap bestand 28/29: Eine Sunny-Yard-MP4-Wiederholung
+war unter Linux nicht bytegleich. Vier lokale Exportpaare waren identisch; zusätzliche CI-Diagnose sichert
+abweichende Dateien zur Ursachenklärung. R02 bleibt bis zum vollständig grünen Main-Nachweis offen.
 Prüfung und Abschluss: [Browser-Teststabilität](BROWSER_TESTSTABILITAET_2026-11-13.md).
 
 **Vorheriger Nachweis:** Produktionsabsicherung und Scrap-Ton an `bc0bf61` abgeschlossen.
@@ -140,9 +140,9 @@ Nachweis und Grenzen stehen im [Produktionsbericht](PRODUKTIONSSICHERUNG_2026-11
 Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechaniken sind kein Teil dieser Umsetzung.
 
 - [ ] **R02 · Main-Nachlauf der Browser-Prüfungen absichern (früher B10).**
-  **Aktuell:** `test/share.test.mjs` besteht im PR und auf main. Der Main-Nachlauf scheiterte zusätzlich
-  an einem Fall in `test/config.test.mjs`; einmalige Testvorbereitung, stärkere Speicherprüfungen und
-  verlässliches Kontext-Aufräumen sind ergänzt. Der vollständige grüne Main-Nachweis folgt.
+  **Aktuell:** Browser- und Konfigurationsprüfungen bestehen auf main (Core 55/55). Eine nicht bytegleiche
+  Sunny-Yard-Wiederholung verhindert den vollständigen Abschluss; vier lokale Paare waren identisch.
+  Der separate Diagnosebranch sichert künftig beide Dateien und getrennte Bild-/Tondigests im Fehlerfall.
   Grenzen, Assertions und Referenzen bleiben erhalten. [Nachweis](BROWSER_TESTSTABILITAET_2026-11-13.md).
   **Vorheriger Abschluss 13.11.2026 an `bc0bf61`:** vollständiger Linux-Lauf mit **133/133 Tests** in vier Gruppen,
   einschließlich Golden-Referenzen, früher fehlerhaftem Marble-AAC-Fall, Scrap-UI und echtem HTTP-Abbruch.
