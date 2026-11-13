@@ -1,6 +1,6 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, readdirSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -11,7 +11,14 @@ import { loadSamples, renderTrack, SAMPLE_RATE } from '../lib/audio.mjs';
 const dir = mkdtempSync(join(tmpdir(), 'ebs-scrap-'));
 let browser;
 before(async () => { browser = await launchBrowser({ gpu: false }); });
-after(async () => { await browser?.close(); rmSync(dir, { recursive: true, force: true }); });
+after(async () => {
+  await browser?.close();
+  // Temporary diagnosis: copy only after the test, without touching capture or encoding.
+  const target = join(ROOT, 'output', 'sunny-replay', 'exports');
+  mkdirSync(target, { recursive: true });
+  cpSync(dir, target, { recursive: true });
+  rmSync(dir, { recursive: true, force: true });
+});
 const config = (video = {}, params = {}) => ({ scenario: 'scrap', seed: 42, params,
   video: { aspect: '9:16', resolution: 720, fps: 30, durationSec: 3, ...video } });
 const options = name => ({ out: join(dir, name + '.mp4'), gpu: false, encoder: { preset: 'ultrafast' } });
