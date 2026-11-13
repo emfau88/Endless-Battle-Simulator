@@ -98,7 +98,7 @@
       g.restore();
     }
     _effect(g, e, under = false) {
-      if(e.type==='break'&&e.material) { EBS.ScrapMaterialArt.breakEffect(g,e,under);return; }
+      if(e.type==='break'&&e.material) { EBS.ScrapMaterialArt.breakEffect(g,e,under,this.sunny);return; }
       if (e.type === 'shot') return; // The weapon already supplies its muzzle flash.
       if (e.type !== 'hit') { super._effect(g, e, under); return; }
       if (under || e.age >= e.ttl) return;
@@ -127,6 +127,7 @@
       this.arenaCanvas = document.createElement('canvas');
       this.arena = new ArenaRenderer(this.arenaCanvas, { dpr: 1, quality: 1 });
       this.arena.materialArena=!!this.layout.full;
+      this.arena.sunny=ctx.sim.cfg.arena==='sunshine';
       const size = this.layout.full ? 1 : Math.round(this.layout.size * ctx.renderScale);
       this.arena.setSize(size, size);
     }
@@ -274,15 +275,15 @@
       g.save();box(g,l.x,l.y,l.width,l.height,16);g.clip();
       g.translate(l.x+l.width/2,l.y+l.height/2);g.scale(l.scale*c.zoom,l.scale*c.zoom);g.translate(-cx,-cy);
       g.lineCap='round';g.lineJoin='round';g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
-      const floorKey=`${r.seed}:${l.arenaW}:${l.arenaH}`;
-      if(this.materialFloorKey!==floorKey) {this.materialFloor=art.floor(r.seed,l.arenaW,l.arenaH);this.materialFloorKey=floorKey;}
+      const sunny=s.cfg.arena==='sunshine',floorKey=`${r.seed}:${l.arenaW}:${l.arenaH}:${s.cfg.arena}`;
+      if(this.materialFloorKey!==floorKey) {this.materialFloor=art.floor(r.seed,l.arenaW,l.arenaH,sunny);this.materialFloorKey=floorKey;}
       g.drawImage(this.materialFloor,0,0,l.arenaW,l.arenaH);
-      for(const b of blocks)if(!b.alive)art.rubble(g,b);
-      r.pads.forEach((p,i)=>this.arena._pad(g,mapPoint(p),r.t,i));
+      for(const b of blocks)if(!b.alive)art.rubble(g,b,sunny);
+      r.pads.forEach((p,i)=>sunny?art.sunnyPad(g,mapPoint(p)):this.arena._pad(g,mapPoint(p),r.t,i));
       for(const e of effects)this.arena._effect(g,e,true);
       for(const p of r.pickups)this.arena._pickup(g,mapPoint(p),r.t);
       for(const b of blocks)if(b.alive) {
-        const t=art.block(b,this.arena._blocks);g.drawImage(t.canvas,b.x-t.pad,b.y-t.pad,t.width,t.height);
+        const t=art.block(b,this.arena._blocks,sunny);g.drawImage(t.canvas,b.x-t.pad,b.y-t.pad,t.width,t.height);
       }
       for(const robot of [...robots.filter(p=>!p.alive),...robots.filter(p=>p.alive)])this.arena._robot(g,robot,r.t);
       for(const p of r.projectiles)this.arena._projectile(g,mapPoint(p));
@@ -309,7 +310,7 @@
       const legendX=wide?240:this.world.w-326;
       ['wood','stone','concrete'].forEach((key,i)=>{
         const m=EBS.ScrapMaterials.materials[key],x=legendX+i*72;
-        box(g,x,46,9,9,1);g.fillStyle=m.color;g.fill();text(g,m.name,x+14,51,10,'#9caeb6');
+        box(g,x,46,9,9,1);g.fillStyle=s.cfg.arena==='sunshine'?EBS.ScrapMaterialArt.sunnyColors[key]:m.color;g.fill();text(g,m.name,x+14,51,10,'#9caeb6');
       });
       const start=wide?480:12,y=wide?9:70,gap=12,ww=(this.world.w-start-12-gap*3)/4;
       r.robots.forEach((robot,i)=>{
@@ -337,8 +338,8 @@
     defaults: { rulesVersion: 'v3', episodeMode: 'endless', arena: 'yard', workshop: false, repeatRounds: true, endPauseSec: 3 },
     controls: [
       { key: 'episodeMode', label: 'Format', type: 'select', options: [['endless', 'Freie Videolänge'], ['tournament', 'Turnier · 8 Runden + Finale']], restart: true },
-      { key: 'rulesVersion', label: 'Arena / Kampfregeln', type: 'select', options: [['v3', 'Große Arena · Holz, Stein, Beton'], ['v2', 'Bisherige Arena · flüssiger Kampf'], ['classic', 'Originalprototyp']], restart: true },
-      { key: 'arena', label: 'Arena', type: 'select', options: [['yard', 'Scrapyard · ausgewogen'], ['foundry', 'Foundry · Deckungsgassen'], ['crossroads', 'Crossroads · offenes Zentrum']], restart: true },
+      { key: 'rulesVersion', label: 'Arena / Kampfregeln', type: 'select', enabled: p => p.arena !== 'sunshine', options: [['v3', 'Große Arena · Holz, Stein, Beton'], ['v2', 'Bisherige Arena · flüssiger Kampf'], ['classic', 'Originalprototyp']], restart: true },
+      { key: 'arena', label: 'Arena', type: 'select', options: [['yard', 'Scrapyard · ausgewogen'], ['foundry', 'Foundry · Deckungsgassen'], ['crossroads', 'Crossroads · offenes Zentrum'], ['sunshine', 'Sunny Yard · Gute Laune (große Arena)']], restart: true },
       { key: 'workshop', label: 'Werkstatt (experimentell, ein Modul je Roboter)', type: 'check', enabled: p => p.episodeMode === 'tournament', restart: true },
       { key: 'repeatRounds', label: 'Weitere Runden spielen', type: 'check', enabled: p => p.episodeMode !== 'tournament', restart: true },
       { key: 'endPauseSec', label: 'Ergebnis zeigen', type: 'range', min: 2, max: 8, step: 1, restart: true, format: v => `${v} s` },

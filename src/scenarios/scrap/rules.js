@@ -12,6 +12,7 @@
       [345,345,60,60],[495,345,60,60],[345,495,60,60],[495,495,60,60],
       [190,255,90,50],[620,255,90,50],[190,595,90,50],[620,595,90,50],
     ] },
+    sunshine: { name: 'SUNNY YARD', blocks: null },
   };
   const modules = {
     plating: { name: 'PLATING', note: '+15% ARMOR / -8% SPEED', hp: 1.15, speed: .92, cooldown: 1 },

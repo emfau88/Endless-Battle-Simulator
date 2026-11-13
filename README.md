@@ -117,7 +117,12 @@ die Zuordnung zur Videozeit, nicht die festen 120-Hz-Physikschritte. Runde und R
 zur gesamten Simulationszeit im Bedienfeld. Gleiche Arena und Regeln gelten für Hoch-, Quer- und Quadratformat.
 
 **Neu für Videos:** vier deutlich gefärbte Chassis, kompakte Anzeigen und drei sichtbare Schadensstufen.
-Scrapyard, Foundry und Crossroads sind die drei verfügbaren Karten. Der Kamera-Schalter aktiviert einen
+Scrapyard, Foundry, Crossroads und **Sunny Yard** sind die vier verfügbaren Karten.
+Sunny Yard ist die Gute-Laune-Variante: türkisfarbener Boden mit Sonne, Smiley-Holzkisten,
+Blumen-Steinblöcke, Regenbogen-Beton und blütenförmige Nachschubfelder. Eine eigene spiegelgleiche
+Deckungsanordnung lässt Mittelwege und Außenring frei; Haltbarkeit und Waffenwerte bleiben gleich.
+Die Auswahl aktiviert automatisch die große V3-Arena. Vorlage: [scrap-sunny-yard.json](presets/scrap-sunny-yard.json).
+Der Kamera-Schalter aktiviert einen
 langsamen gemeinsamen Duellzoom (V3 bis 1,25×, frühere Regeln bis 1,4×); Roboter, Geschosse und aktuelle Suchziele bleiben im Ausschnitt.
 
 **Turnier:** `episodeMode=tournament` spielt genau acht Runden, zeigt den sortierten Zwischenstand und

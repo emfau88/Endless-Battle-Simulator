@@ -7,7 +7,7 @@
   const { clamp, num, bool, hashSeed, fnv1a } = EBS.util;
   const EVENT_LIMIT = 4096;
   const normalizeParams = (p = {}) => ({
-    rulesVersion: ['v2','v3'].includes(p.rulesVersion) ? p.rulesVersion : 'classic',
+    rulesVersion: p.arena === 'sunshine' ? 'v3' : ['v2','v3'].includes(p.rulesVersion) ? p.rulesVersion : 'classic',
     episodeMode: p.episodeMode === 'tournament' ? 'tournament' : 'endless',
     arena: Object.hasOwn(EBS.ScrapRules.arenas, p.arena) ? p.arena : 'yard',
     workshop: p.episodeMode === 'tournament' && bool(p.workshop, false),

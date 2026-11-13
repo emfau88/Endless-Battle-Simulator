@@ -98,3 +98,34 @@ neuen Klänge oder Mischregeln eingeführt. Eine persönliche Hörabnahme wird d
 Alle Dateien liegen unter `output/scrap-materials/` und sind generierte lokale Prüfartefakte.
 Einzelbilder wurden visuell angesehen. Persönliches Gefallen, Hörurteil und echte Handybetrachtung sind
 damit nicht vorweggenommen. Kein Videoexport über 20 Sekunden und keine Erweiterung des Marble-Prototyps.
+
+## Nachtrag – Sunny Yard
+
+Ausgangsstand dieses Folgeauftrags: `57886f4`, Arbeitsverzeichnis sauber. Der Nutzer bewertete den
+großen Bildaufbau als „viel besser“ und beauftragte zusätzlich eine Gute-Laune-Karte.
+
+**Sunny Yard** (`arena=sunshine`) ergänzt die vorhandenen drei Karten um einen eigenen spiegelgleichen
+Grundriss. Türkisfarbener Boden, flach aufgemalte Sonne, Wimpelrand, Smiley-Holzkisten,
+Blumen-Steinblöcke, Regenbogen-Beton und blütenförmige Nachschubfelder bilden den neuen Stil.
+Die Bemalung liegt unter den Schadensrissen; Splitter übernehmen die Materialfarben.
+Haltbarkeit bleibt 38/95/190 HP, Waffen und Nachschub unverändert. Keine zusätzlichen Physikobjekte,
+Musik oder Spielmechaniken. Mittelwege und Außenring bleiben frei.
+
+Die Auswahl aktiviert V3; der Regelwähler ist für diese ausschließlich rechteckige Karte gesperrt.
+Nach Wechsel zu einer der bisherigen Karten sind Original/V2 wieder auswählbar. Der Standard bleibt
+Scrapyard. Kurzvorlage: `presets/scrap-sunny-yard.json`.
+
+**Gezielt geprüft:** sechs Simulationstests und zwei Browser-/Exporttests bestanden. Darin enthalten:
+alle vier Karten × drei Seeds mit unabhängiger Wegprüfung, Kollisionen und Kamera; unveränderte
+Originalquelle und drei vollständige Original-Rundenzustände; Turnier-/Tempovertrag; pixelgleiche
+Kamerabilder aus Vorlauf und 30/60 fps auf vier Karten in beiden Formaten; Auswahl aus Originalregeln,
+Teilen-Link und bytegleicher 2-s-MP4-Replay mit Ton. Kein neuer vollständiger Projekt- oder Linux-CI-Lauf.
+
+Zusätzlich stimmt das Scrapyard-Bild bei Seed 42 / 12 s pixelgenau mit dem vorigen Lieferstand überein.
+Start, Kampf, spätere Zerstörung und Hochformat von Sunny Yard wurden als Bilder gerendert und visuell
+angesehen. Bilder, Konfigurationen, Snapshots und Hashes stehen in `output/scrap-sunny/manifest.json`;
+Prüfprotokolle in `simulation.tap` und `browser.tap` desselben Verzeichnisses. Die zusätzliche
+`sunny-yard-12s.mp4` ist eine kurze 1080p-Probe; ihr Messprotokoll heißt `export-report.json`.
+Sie enthält 360 Frames, 139 Audioereignisse ohne Verlust und eine geprüfte AAC-Spur mit
+−14,1 LUFS / −1,3 dBTP. Eine neue persönliche Hörabnahme ist damit nicht behauptet.
+Der isolierte Marble-Prototyp ist weiterhin unverändert.

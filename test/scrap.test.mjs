@@ -36,8 +36,8 @@ test('Scrap v3: Holz, Stein und Beton brauchen 2/5/10 Blaster oder 1/1/2 direkte
   r.robots[0].x=1100;assert.equal(r.checkInvariants().ok,false,'Rechteckgrenze tatsächlich geprüft');
 });
 
-test('Scrap v3: alle drei Karten begehbar, drei Seeds kollisionsfrei, Kamera hält aktive Roboter im Bild', () => {
-  for(const arena of ['yard','foundry','crossroads']) {
+test('Scrap v3: alle vier Karten begehbar, drei Seeds kollisionsfrei, Kamera hält aktive Roboter im Bild', () => {
+  for(const arena of ['yard','foundry','crossroads','sunshine']) {
     const initial=make({params:{rulesVersion:'v3',arena}}).roundSim;
     const free=(x,y)=>!initial.blocks.some(b=>Math.hypot(x-Math.max(b.x,Math.min(x,b.x+b.w)),y-Math.max(b.y,Math.min(y,b.y+b.h)))<25);
     const cells=new Map();for(let x=50;x<=990;x+=10)for(let y=50;y<=490;y+=10)if(free(x,y))cells.set(`${x},${y}`,{x,y});

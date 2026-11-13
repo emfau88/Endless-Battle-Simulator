@@ -104,7 +104,7 @@ test('Scrap: echte kurze MP4s beider Formate entsprechen der Simulation; Exportr
 });
 
 test('Scrap v3: Materialkarten und Duellkamera liefern im Quer-/Hochformat identische Bilder aus Vorlauf und 30/60 fps', async () => {
-  for(const arena of ['yard','foundry','crossroads'])for(const aspect of ['16:9','9:16']) {
+  for(const arena of ['yard','foundry','crossroads','sunshine'])for(const aspect of ['16:9','9:16']) {
     const {page,errors}=await openExportPage(browser,config({aspect,resolution:720,durationSec:90},{rulesVersion:'v3',arena}));
     try {
       const at=await page.evaluate(()=>{
@@ -119,6 +119,33 @@ test('Scrap v3: Materialkarten und Duellkamera liefern im Quer-/Hochformat ident
       assert.equal(seek.hash,drawn.hash);assert.equal(seek.check.ok,true);assert.deepEqual(errors.map(e=>e.message),[]);
     } finally {await page.close();}
   }
+});
+
+test('Sunny Yard: Auswahl aus Originalregeln, Teilen-Link und kurzer MP4-Replay bewahren die neue Karte', async () => {
+  const page=await browser.newPage();
+  try {
+    await page.goto(pathToFileURL(INDEX).href+'?scenario=scrap&rulesVersion=classic&paused=1');
+    await page.waitForFunction(()=>window.EBS?.app?.cfg.scenario==='scrap');
+    await page.selectOption('#p-arena','sunshine');
+    await page.waitForFunction(()=>EBS.app.cfg.params.arena==='sunshine'&&EBS.app.cfg.params.rulesVersion==='v3');
+    assert.equal(await page.isDisabled('#p-rulesVersion'),true);
+    await page.waitForFunction(()=>{
+      const q=new URL(document.querySelector('#shareLink').value).searchParams;
+      return q.get('arena')==='sunshine'&&q.get('rulesVersion')==='v3';
+    });
+    const expected=await page.evaluate(()=>EBS.app.cfg.params),link=await page.inputValue('#shareLink');
+    await page.goto(link);await page.waitForFunction(()=>window.EBS?.app?.cfg.params.arena==='sunshine');
+    assert.deepEqual(await page.evaluate(()=>EBS.app.cfg.params),expected);
+    await page.selectOption('#p-arena','yard');assert.equal(await page.isDisabled('#p-rulesVersion'),false);
+    await page.selectOption('#p-rulesVersion','v2');
+    assert.equal(await page.evaluate(()=>EBS.app.cfg.params.rulesVersion),'v2');
+  } finally {await page.close();}
+  const cfg=config({aspect:'16:9',durationSec:2,audio:true},{arena:'sunshine'});
+  const first=await exportVideo(cfg,options('sunny'));
+  assert.deepEqual(verifyResult(first),[]);assert.equal(first.cfg.params.rulesVersion,'v3');assert.equal(first.audio.lost,0);
+  const replay=await exportVideo(JSON.parse(readFileSync(first.sidecar,'utf8')),options('sunny-replay'));
+  assert.equal(first.stateHash,replay.stateHash);assert.equal(first.audio.eventHash,replay.audio.eventHash);
+  assert.ok(readFileSync(first.file).equals(readFileSync(replay.file)));
 });
 
 test('Ausschnitt: Originalepisode, voller Ton samt Nachklang/Normalisierung und gespeicherter Versatz bleiben erhalten', async () => {

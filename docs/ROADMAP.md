@@ -21,6 +21,9 @@ im Branch `codex/scrap-video-quality`. Umsetzung und aktuelle Prüfgrenzen:
 sichtbarer Arena/Deckung abgelehnt. Der gezielte Folgeauftrag ersetzt sie durch ein fast bildfüllendes
 Spielfeld und Holz, Stein, Beton mit verschiedener Haltbarkeit. Umsetzung und aktuelle Nachweise:
 [Materialarena V3](SCRAP_MATERIALARENA_2026-11-13.md). Keine Maschinenwracks als Arenadekoration.
+Die neue Bildaufteilung wurde danach vom Nutzer als „viel besser“ bewertet. Der anschließende Auftrag
+ergänzt **Sunny Yard** als vierte Karte mit freundlichen Farben und bemalten Materialdeckungen.
+Persönliche Film-/Hör-/Handyprüfung bleibt getrennt davon unter R20.
 
 **Zweck:** Dies bleibt die **einzige aktive Aufgabenliste**. Erledigtes steht im [CHANGELOG](CHANGELOG.md).
 Berichte dokumentieren ihren damaligen Stand und werden nicht nachträglich als aktuelle Prüfung umgeschrieben.
@@ -214,7 +217,14 @@ Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechan
   Beton 190 HP). Keine Wrack-Dekoration, zusätzlichen Waffen oder Maschinen. Die drei Karten behalten
   einen passierbaren Mittelweg und Außenring; Original/V2 bleiben auswählbar. Geänderte Geometrie und HP
   verändern bewusst den Verlauf, deshalb eigene Regelversion. Technische Nachweise im
-  [Materialarena-Bericht](SCRAP_MATERIALARENA_2026-11-13.md); persönliches Bildurteil bleibt offen.
+  [Materialarena-Bericht](SCRAP_MATERIALARENA_2026-11-13.md). Bildaufbau positiv bewertet;
+  persönliche Film-/Hör-/Handyprüfung bleibt R20.
+
+  **Folgeauftrag Sunny Yard:** vierte auswählbare Karte mit eigenem symmetrischem Grundriss,
+  Sonne, Smiley-Holzkisten, Blumen-Stein und Regenbogen-Beton. Die Materialwerte bleiben 38/95/190 HP.
+  Die Nutzerbewertung des großen Bildaufbaus ist positiv; der neue Stil wird mit Bild und Kurzprobe gezeigt.
+  Damit erweitert der neue Auftrag die frühere P5-Grenze von drei auf vier Karten. Technische Nachweise:
+  [Sunny-Yard-Nachtrag](SCRAP_MATERIALARENA_2026-11-13.md#nachtrag--sunny-yard).
 
   **Basis vor diesem Ausbau:** vier benannte Roboter, Teamfarben, HP-/Waffenanzeigen, Rückstoß, Mündungslicht,
   Treffer-/Explosions-/Wrackdarstellung, zwei Waffentypen und Nachschubstationen. Rundenfolge, Siegzähler,
