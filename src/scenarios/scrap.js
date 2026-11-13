@@ -369,17 +369,28 @@
       ];
     },
     panelNote: sim => sim.phase === 'pause' ? `Ergebnis · nächste Runde in ${Math.ceil((sim.pauseUntil - sim.step) / 60)} s` : sim.snapshot().summary,
-    audio: { events: {
-      blaster: { label: 'Blaster', samples: ['synth:scrap-blaster'], gain: .20, detune: .7, minGap: .055 },
-      rocket: { label: 'Raketenstart', samples: ['synth:scrap-rocket'], gain: .26, detune: .4 },
-      hit: { label: 'Robotertreffer', samples: ['impactMetal_light_000', 'impactMetal_light_001'], gain: .29, ref: 6, detune: 1, minGap: .07 },
-      cover_hit: { label: 'Deckungstreffer', samples: ['impactPlate_light_000'], gain: .09, ref: 19, detune: 1, minGap: .09 },
-      blast: { label: 'Explosion', samples: ['synth:cannon'], gain: .40, semis: 2, minGap: .10 },
-      break: { label: 'Deckung zerstört', samples: ['impactWood_heavy_000'], gain: .24, detune: .8 },
+    // Short combat transients recover sooner; Marble/Naval retain their 60 ms release.
+    audio: { limiterReleaseMs: 20, events: {
+      blaster: { label: 'Blaster', samples: ['synth:scrap-blaster'], gain: .60, detune: .7, minGap: .055 },
+      rocket: { label: 'Raketenstart', samples: ['synth:scrap-rocket'], gain: .60, detune: .4 },
+      hit: { label: 'Robotertreffer', samples: ['impactMetal_light_000', 'impactMetal_light_001'], gain: .09, ref: 6, detune: 1, minGap: .07 },
+      cover_hit: { label: 'Deckungstreffer', samples: ['impactPlate_light_000'], gain: .045, ref: 19, detune: 1, minGap: .09,
+        variant: 'material', variants: {
+          wood: { samples: ['impactWood_medium_000', 'impactWood_medium_001'] },
+          stone: { samples: ['synth:scrap-stone-hit'], gain: .23 },
+          concrete: { samples: ['synth:scrap-concrete-hit'], gain: .27 },
+        } },
+      blast: { label: 'Explosion', samples: ['synth:scrap-blast'], gain: .50, semis: 2, minGap: .10 },
+      break: { label: 'Deckung zerstört', samples: ['impactWood_heavy_000'], gain: .12, detune: .8, minGap: .055,
+        variant: 'material', variants: {
+          wood: { samples: ['impactWood_heavy_000'] },
+          stone: { samples: ['synth:scrap-stone-break'], gain: .32 },
+          concrete: { samples: ['synth:scrap-concrete-break'], gain: .38 },
+        } },
       pickup: { label: 'Waffenaufnahme', samples: ['synth:scrap-pickup'], gain: .22 },
       upgrade: { label: 'Werkstattmodul', samples: ['synth:scrap-pickup'], gain: .28, semis: -2, minGap: .12 },
       drop: { label: 'Waffenabwurf', samples: ['impactTin_medium_000'], gain: .08, detune: .8 },
-      ko: { label: 'Roboter ausgeschaltet', samples: ['impactMetal_light_003'], gain: .65, semis: -9 },
+      ko: { label: 'Roboter ausgeschaltet', samples: ['impactMetal_light_003'], gain: .18, semis: -5 },
     } },
   });
 })();

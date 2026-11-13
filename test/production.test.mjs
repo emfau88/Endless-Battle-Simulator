@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, writeFile, readFile, readdir, rm } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync, copyFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { run } from '../lib/process.mjs';
@@ -10,7 +10,7 @@ import { publishOutputs } from '../lib/output.mjs';
 import { sourceProvenance, exportRecipe } from '../lib/provenance.mjs';
 import { renderTrackAsync } from '../lib/audio-job.mjs';
 import { renderTrack, synthSample, SAMPLE_RATE } from '../lib/audio.mjs';
-import { exportVideo } from '../lib/exporter.mjs';
+import { exportVideo, ffmpegBin } from '../lib/exporter.mjs';
 import { ROOT } from '../lib/browser.mjs';
 
 async function temporary(t) {
@@ -103,7 +103,7 @@ test('Wiederholungsrezept übernimmt nur deklarative Capturewerte, keine fremden
   assert.deepEqual(recipe.options, { gpu: false, jpegQuality: 0.87 });
 });
 
-for (const phase of ['starting', 'rendering', 'encoding', 'audio-loading', 'audio-mixing', 'muxing', 'verifying', 'saving']) {
+for (const phase of ['starting', 'rendering', 'encoding', 'audio-loading', 'audio-mixing', 'muxing', 'audio-verifying', 'verifying', 'saving']) {
   test(`Abbruch in Phase ${phase}: vorhandene MP4/JSON bleiben erhalten, keine temporären Dateien`, async (t) => {
     const dir = await temporary(t), out = join(dir, 'existing.mp4'), json = join(dir, 'existing.json');
     await writeFile(out, 'previous video'); await writeFile(json, 'previous metadata');
@@ -130,6 +130,25 @@ test('Fehlgeschlagene Simulationsprüfung veröffentlicht kein Video und ersetzt
   assert.equal(await readFile(out, 'utf8'), 'previous video');
   assert.equal(await readFile(json, 'utf8'), 'previous metadata');
   assert.deepEqual((await readdir(dir)).sort(), ['broken.js', 'existing.json', 'existing.mp4']);
+});
+
+test('Zu hohe kodierte Audiospitzen verhindern die Veröffentlichung und bewahren vorhandene MP4/JSON', async (t) => {
+  const dir=await temporary(t),out=join(dir,'existing.mp4'),json=join(dir,'existing.json'),loud=join(dir,'loud.m4a');
+  await writeFile(out,'previous video');await writeFile(json,'previous metadata');
+  const encode=await run(ffmpegBin(),['-y','-v','error','-f','lavfi','-i','sine=frequency=997:sample_rate=48000',
+    '-t','1','-af','volume=16','-ac','2','-c:a','aac','-b:a','192k',loud]);
+  assert.equal(encode.code,0,encode.stderr);
+  let injected=false;
+  await assert.rejects(exportVideo(cfg,{...fast,out,onProgress:p=>{
+    if(p.phase==='audio-verifying') {
+      const temporaryDir=readdirSync(dir).find(f=>f.startsWith('.ebs-export-'));
+      copyFileSync(loud,join(dir,temporaryDir,'mux.mp4'));injected=true;
+    }
+  }}),/AAC-True-Peak.*überschreitet/);
+  assert.equal(injected,true);
+  assert.equal(await readFile(out,'utf8'),'previous video');
+  assert.equal(await readFile(json,'utf8'),'previous metadata');
+  assert.deepEqual((await readdir(dir)).sort(),['existing.json','existing.mp4','loud.m4a']);
 });
 
 test('Sidecar-Rezept wiederholt wirksame Encoder-/Capturewerte, Zustand und Audio auch über die CLI', async (t) => {

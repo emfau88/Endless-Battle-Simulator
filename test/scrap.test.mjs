@@ -28,12 +28,25 @@ test('Scrap v3: Holz, Stein und Beton brauchen 2/5/10 Blaster oder 1/1/2 direkte
     }
     assert.equal(r.stats.destroyed,1);assert.equal(s.events.filter(e=>e.type==='break').length,1);
     assert.equal(r.effects.find(e=>e.type==='break').material,material);
+    assert.ok(s.events.filter(e=>['cover_hit','break'].includes(e.type)).every(e=>e.material===material), 'Tonereignis beschreibt das getroffene Material');
   }
   const r=make({params:{rulesVersion:'v3'}}).roundSim;
   r.projectiles=[{id:100,x:950,y:270,px:950,py:270,vx:650,vy:0,kind:'blaster',owner:0,life:2,radius:4}];
   r._moveProjectiles(.05);assert.equal(r.projectiles.length,1,'östlich der alten 900er-Grenze frei');
   r._moveProjectiles(.1);assert.equal(r.projectiles.length,0,'neue Außenwand stoppt Projektil');
   r.robots[0].x=1100;assert.equal(r.checkInvariants().ok,false,'Rechteckgrenze tatsächlich geprüft');
+});
+
+test('Scrap v3: Material-Tonereignisse verändern den vollständigen Physikzustand nicht', () => {
+  for(const portrait of [false,true]) {
+    const options={seed:42,rulesVersion:'v3',arena:'sunshine',portrait,upgrades:[null,null,null,null]};
+    const raw=new EBS.ScrapMaterials.Round(options);
+    const observed=make({params:{rulesVersion:'v3',arena:'sunshine',repeatRounds:false},world:portrait?{w:1080,h:1920}:{w:1920,h:1080}});
+    advance(observed,20);
+    for(let i=0;i<observed.simTicks;i++)raw.step(1/120);
+    assert.equal(JSON.stringify(observed.roundSim),JSON.stringify(raw));
+    assert.ok(observed.events.some(e=>e.type==='break'&&e.material));
+  }
 });
 
 test('Scrap v3: alle vier Karten samt eigener Nord-/Süd-Arena begehbar; drei Seeds kollisionsfrei und im Kamerabild', () => {

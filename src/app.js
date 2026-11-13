@@ -334,7 +334,8 @@ async function bootLive() {
     if (s.state === 'running') {
       const phases = { starting: 'Starte Renderer …', planning: 'Ermittle das Turnierende …', simulating: 'Berechne den Episodenverlauf …', encoding: 'Schließe die Bildspur ab …',
         'audio-loading': 'Lade die Klänge …', 'audio-mixing': 'Mische und prüfe die Tonspur …',
-        muxing: 'Verbinde Bild und Ton …', verifying: 'Prüfe die fertige Videodatei …', saving: 'Speichere Video und Einstellungen …' };
+        muxing: 'Verbinde Bild und Ton …', 'audio-verifying': 'Prüfe die kodierte Tonspur …',
+        verifying: 'Prüfe die fertige Videodatei …', saving: 'Speichere Video und Einstellungen …' };
       msg.textContent = s.cancelRequested ? 'Abbruch angefordert – räume auf …'
         : s.phase === 'rendering' ? `Rendere Frame ${fmtInt(s.frame)} / ${fmtInt(s.totalFrames || 0)} · ${(s.renderFps || 0).toFixed(1)} fps · Bildphase noch ca. ${fmtTime(s.etaSec || 0)}`
         : phases[s.phase] || 'Starte Export …';
