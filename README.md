@@ -349,8 +349,8 @@ werden; neu Gewachsenes wird direkt gezeichnet, das jüngste Segment jeder Spitz
 eine reine Folge des Simulationszustands (Rendern verändert nichts, per Test geprüft); Ausschnitte (`--clip-start`)
 sind wie bei Seeschlacht und Kugelfabrik noch nicht freigegeben. Gemessen auf diesem Rechner (AMD Radeon iGPU):
 1440p60 hochkant und quer **58–74 ms je Bild** (vorher 180–250 ms), davon ≈ 35 ms Grundkosten von Übertragung und
-JPEG wie bei Scrap. Ein 30-s-Short braucht damit ≈ 2 Minuten, ein 10-Minuten-Video ≈ 40 Minuten; 1080p30 läuft mit
-≈ 20 Bildern/s.
+JPEG wie bei Scrap. Gemessen einschließlich Encoder: 20 s Short-Vorlage 1440p60 hochkant in 2:08 min (9,4 Bilder/s),
+quer in 1:44 min (11,5 Bilder/s) – ein 30-s-Short also ≈ 3 Minuten, 10 Minuten quer ≈ 50–55 Minuten; 1080p30 ≈ 20 Bilder/s.
 
 Bericht mit Messungen und Grenzen: [Endless Mycelium](docs/MYCELIUM_2026-11-13.md).
 
