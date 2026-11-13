@@ -36,3 +36,13 @@ bereitgestellten Scrap-Prototyp; sie sind keine extern geladenen Samples und kei
 WebAudio-Ausgabe. Waffenarten werden aus dem Schussereignis gelesen (der Prototyp unterschied sie anhand
 einer Effektgröße, die bei beiden Waffen über seiner Klangschwelle lag). Die vollständige Ereignisfolge
 bleibt erhalten; nur dicht aufeinanderfolgende Deckungstreffer werden im Mischer klanglich ausgedünnt.
+
+## Endless Mycelium
+
+Die Klangtabelle in `src/scenarios/mycelium.js` nutzt aus dem Kenney-Paket nur `impactSoft_medium_000` (Blatt landet,
+etwas höher gestimmt). Alle übrigen Klänge werden deterministisch in `lib/audio.mjs` erzeugt, weil kurze Glasklänge
+bei den seltenen Ereignissen eines ruhigen Videos bis zu 24 dB Begrenzung erzwangen:
+`synth:myco-seed` (Spore landet: schwebender Dur-Dreiklang), `synth:myco-pling` (Blatt aufgefressen: weicher
+Glockenton, je Blatt einen Ton weiter auf der Dur-Pentatonik), `synth:myco-pop` (Pilz ploppt auf),
+`synth:myco-breeze` (Sporenwolke: an- und abschwellendes Rauschen) und `synth:myco-night` (leise Nachtluft, 12 s mit
+weicher Ein-/Ausblendung, alle 10 s ausgelöst und dadurch nahtlos).
