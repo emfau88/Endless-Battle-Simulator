@@ -17,16 +17,21 @@ before(async () => { browser = await launchBrowser({ gpu: false }); });
 after(async () => { await browser?.close(); });
 
 /** Öffnet die Live-Oberfläche in einem frischen Browserprofil (eigener localStorage). */
-async function live(query = '', init) {
+async function live(t, query = '') {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-  if (init) await ctx.addInitScript(init.fn, init.arg);
-  const page = await ctx.newPage();
-  const errors = [];
-  page.on('pageerror', (e) => errors.push(e.message));
-  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(URL0 + query);
-  await page.waitForFunction(() => window.EBS && window.EBS.app && window.EBS.app.sim, null, { timeout: 30000 });
-  return { ctx, page, errors };
+  t.after(() => ctx.close());
+  try {
+    const page = await ctx.newPage();
+    const errors = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+    await page.goto(URL0 + query);
+    await ready(page);
+    return { ctx, page, errors };
+  } catch (error) {
+    await ctx.close();
+    throw error;
+  }
 }
 const ready = (page) => page.waitForFunction(() => window.EBS && window.EBS.app && window.EBS.app.sim, null, { timeout: 30000 });
 const duration = (page) => page.evaluate(() => window.EBS.app.cfg.video.durationSec);
@@ -37,16 +42,15 @@ const ui = (page) => page.evaluate(() => ({
   bad: document.querySelector('#durationText').classList.contains('bad'),
 }));
 
-test('Kurzer Standard: ohne gespeicherte Einstellungen 45 Sekunden', async () => {
-  const { ctx, page, errors } = await live();
+test('Kurzer Standard: ohne gespeicherte Einstellungen 45 Sekunden', async (t) => {
+  const { page, errors } = await live(t);
   assert.equal(await duration(page), 45);
   assert.deepEqual(await ui(page).then((u) => [u.text, u.select, u.out]), ['45s', '45', '00:45']);
   assert.deepEqual(errors, []);
-  await ctx.close();
 });
 
-test('Eigene Videolänge bleibt bei Neuladen, Szenariowechsel, Neustart und Formatwechsel erhalten', async () => {
-  const { ctx, page, errors } = await live();
+test('Eigene Videolänge bleibt bei Neuladen, Szenariowechsel, Neustart und Formatwechsel erhalten', async (t) => {
+  const { page, errors } = await live(t);
   await typeDuration(page, '37');
   assert.equal(await duration(page), 37);
   assert.deepEqual(await ui(page).then((u) => [u.text, u.select, u.out, u.bad]), ['37s', '', '00:37', false], 'Anzeige eigener Dauer');
@@ -63,11 +67,10 @@ test('Eigene Videolänge bleibt bei Neuladen, Szenariowechsel, Neustart und Form
   // gespeicherte Konfiguration enthält den Wert
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('ebs.cfg')).video.durationSec), 37);
   assert.deepEqual(errors, []);
-  await ctx.close();
 });
 
-test('Videolänge: Einheiten, Schnellwahl, Grenzen und ungültige Eingaben', async () => {
-  const { ctx, page, errors } = await live();
+test('Videolänge: Einheiten, Schnellwahl, Grenzen und ungültige Eingaben', async (t) => {
+  const { page, errors } = await live(t);
   for (const [text, sec, shown] of [['5m', 300, '5m'], ['1h', 3600, '1h'], ['90 s', 90, '90s'], ['2,5 min', 150, '150s'], ['1', 1, '1s']]) {
     await typeDuration(page, text);
     assert.equal(await duration(page), sec, `Eingabe "${text}"`);
@@ -95,28 +98,33 @@ test('Videolänge: Einheiten, Schnellwahl, Grenzen und ungültige Eingaben', asy
   await typeDuration(page, '45s');
   assert.equal((await ui(page)).bad, false, 'Fehlermarkierung verschwindet nach gültiger Eingabe');
   assert.deepEqual(errors, []);
-  await ctx.close();
 });
 
-test('Veraltete gespeicherte Konfiguration: sichtbare Meldung, Standard-Szenario startet, übrige Werte bleiben', async () => {
-  const init = { fn: (cfg) => { if (!sessionStorage.getItem('seeded')) { localStorage.setItem('ebs.cfg', cfg); sessionStorage.setItem('seeded', '1'); } },
-    arg: JSON.stringify({ version: 1, scenario: 'gibtsnicht', seed: 5, video: { aspect: '16:9', durationSec: 37 } }) };
-  const { ctx, page, errors } = await live('', init);
+test('Veraltete gespeicherte Konfiguration: sichtbare Meldung, Standard-Szenario startet, übrige Werte bleiben', async (t) => {
+  const { page, errors } = await live(t);
+  const stale = { version: 1, scenario: 'gibtsnicht', seed: 5, video: { aspect: '16:9', durationSec: 37 } };
+  // Einmal im tatsächlichen Datei-Ursprung vorbereiten; kein Init-Skript darf beim Neuladen erneut schreiben.
+  await page.evaluate((cfg) => localStorage.setItem('ebs.cfg', JSON.stringify(cfg)), stale);
+  assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('ebs.cfg'))), stale);
+  await page.reload(); await ready(page);
   const s = await page.evaluate(() => ({ sc: window.EBS.app.cfg.scenario, seed: window.EBS.app.cfg.seed, d: window.EBS.app.cfg.video.durationSec, a: window.EBS.app.cfg.video.aspect,
     hidden: document.querySelector('#notice').hidden, note: document.querySelector('#notice').textContent }));
   assert.deepEqual([s.sc, s.seed, s.d, s.a], ['naval', 5, 37, '16:9']);
   assert.equal(s.hidden, false, 'Meldung ist nicht sichtbar');
   assert.match(s.note, /gespeicherte Konfiguration.*„gibtsnicht“.*Endless Naval Battle.*naval, marble/);
+  const repaired = await page.evaluate(() => window.EBS.app.cfg);
+  assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('ebs.cfg'))), repaired, 'bereinigte Konfiguration wird tatsächlich gespeichert');
   // Eintrag wurde ersetzt: nach dem Neuladen keine Meldung mehr
   await page.reload(); await ready(page);
   assert.equal(await page.evaluate(() => document.querySelector('#notice').hidden), true, 'Meldung erscheint erneut');
   assert.equal(await duration(page), 37);
+  assert.deepEqual(await page.evaluate(() => window.EBS.app.cfg), repaired, 'vollständige Konfiguration nach Neuladen');
+  assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('ebs.cfg'))), repaired, 'gespeicherte Konfiguration bleibt bereinigt');
   assert.deepEqual(errors, []);
-  await ctx.close();
 });
 
-test('Link mit unbekanntem Szenario: sichtbare Meldung statt stillem Wechsel', async () => {
-  const { ctx, page, errors } = await live('?scenario=robotwars&seed=9');
+test('Link mit unbekanntem Szenario: sichtbare Meldung statt stillem Wechsel', async (t) => {
+  const { page, errors } = await live(t, '?scenario=robotwars&seed=9');
   const s = await page.evaluate(() => ({ sc: window.EBS.app.cfg.scenario, seed: window.EBS.app.cfg.seed, hidden: document.querySelector('#notice').hidden, note: document.querySelector('#notice').textContent }));
   assert.deepEqual([s.sc, s.seed, s.hidden], ['naval', 9, false]);
   assert.match(s.note, /Der Link.*„robotwars“/);
@@ -124,7 +132,6 @@ test('Link mit unbekanntem Szenario: sichtbare Meldung statt stillem Wechsel', a
   await page.goto(URL0 + '?scenario=marble'); await ready(page);
   assert.deepEqual(await page.evaluate(() => [window.EBS.app.cfg.scenario, document.querySelector('#notice').hidden]), ['marble', true]);
   assert.deepEqual(errors, []);
-  await ctx.close();
 });
 
 test('Export mit unbekanntem Szenario bricht mit klarer Meldung ab und erzeugt keine Datei', async () => {

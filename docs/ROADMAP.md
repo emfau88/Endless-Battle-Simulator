@@ -1,8 +1,9 @@
 # Roadmap
 
-**Aktueller Prüfstand · 13.11.2026:** Der Main-Nachlauf nach der Audio-Korrektur bestand mit 130/133 Tests;
-drei Browser-Tests scheiterten beim Laden. R02 ist deshalb erneut offen. Die gezielte Korrektur beseitigt
-gleichzeitig rendernde Vorschauen im Teilen-Link-Test und sichert die Kontextfreigabe bei Fehlern ab.
+**Aktueller Prüfstand · 13.11.2026:** Die erste Browser-Korrektur bestand im PR mit 134/134 Tests.
+Der Main-Nachlauf bestand mit 133/134; die früheren Ladefehler traten nicht mehr auf, ein anderer
+Konfigurationstest schlug fehl. Dessen Vorbereitung und Speicherprüfungen werden gezielt abgesichert;
+R02 bleibt bis zum vollständig grünen Main-Nachlauf offen.
 Prüfung und Abschluss: [Browser-Teststabilität](BROWSER_TESTSTABILITAET_2026-11-13.md).
 
 **Vorheriger Nachweis:** Produktionsabsicherung und Scrap-Ton an `bc0bf61` abgeschlossen.
@@ -139,8 +140,9 @@ Nachweis und Grenzen stehen im [Produktionsbericht](PRODUKTIONSSICHERUNG_2026-11
 Die Szenarien und Referenz-Hashes wurden dafür nicht verändert. Weitere Mechaniken sind kein Teil dieser Umsetzung.
 
 - [ ] **R02 · Main-Nachlauf der Browser-Prüfungen absichern (früher B10).**
-  **Aktuell:** drei Lade-Timeouts in `test/share.test.mjs` nach dem Merge. Kontext-Aufräumen bei jedem
-  Testausgang und nacheinander geöffnete Vorschauen sind umgesetzt; Linux-Prüfung und Main-Nachlauf folgen.
+  **Aktuell:** `test/share.test.mjs` besteht im PR und auf main. Der Main-Nachlauf scheiterte zusätzlich
+  an einem Fall in `test/config.test.mjs`; einmalige Testvorbereitung, stärkere Speicherprüfungen und
+  verlässliches Kontext-Aufräumen sind ergänzt. Der vollständige grüne Main-Nachweis folgt.
   Grenzen, Assertions und Referenzen bleiben erhalten. [Nachweis](BROWSER_TESTSTABILITAET_2026-11-13.md).
   **Vorheriger Abschluss 13.11.2026 an `bc0bf61`:** vollständiger Linux-Lauf mit **133/133 Tests** in vier Gruppen,
   einschließlich Golden-Referenzen, früher fehlerhaftem Marble-AAC-Fall, Scrap-UI und echtem HTTP-Abbruch.
