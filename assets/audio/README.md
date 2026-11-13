@@ -50,5 +50,6 @@ Fehlende oder unbekannte Materialien verwenden den bisherigen Fallback.
 
 Die Pegel sind zugunsten lesbarer Waffenklänge neu abgestimmt; Metalltreffer und KOs überragen die Mischung
 weniger. Nur Scrap verwendet 20 ms Begrenzer-Rücklauf statt 60 ms, damit kurze Kampfeffekte schneller ausklingen,
-ohne eine lange Pegelabsenkung auf folgende Klänge zu übertragen. Das Ziel −14 LUFS und die gemeinsame
-AAC-Spitzengrenze −1 dBTP bleiben erhalten. Messnachweise: `docs/SCRAP_AUDIO_PRODUKTION_2026-11-13.md`.
+ohne eine lange Pegelabsenkung auf folgende Klänge zu übertragen. Die PCM-Grenze liegt für Scrap bei −3 dBFS:
+Ein 15-Minuten-Audiolauf zeigte seltene AAC-Spitzen, die in den kurzen Clips nicht vorkamen. Das Ziel −14 LUFS
+und die gemeinsame AAC-Spitzengrenze −1 dBTP bleiben erhalten. Messnachweise: `docs/SCRAP_AUDIO_PRODUKTION_2026-11-13.md`.

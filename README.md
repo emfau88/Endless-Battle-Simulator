@@ -425,7 +425,8 @@ bleibt stumm.
 
 **Lautheit nach YouTube-Standard:** Jede Tonspur wird beim Export eingemessen, sodass die Standardmischung (alle
 Regler 100 %) **−14 LUFS** integriert erreicht (Messung nach ITU-R BS.1770 / EBU R128, für jedes Video einzeln). Ein
-Spitzenbegrenzer mit 5 ms Vorausschau hält PCM-Spitzen bei höchstens −2 dBFS. Anschließend wird die **fertige
+Spitzenbegrenzer mit 5 ms Vorausschau hält PCM-Spitzen bei höchstens −2 dBFS, für Scrap bei −3 dBFS wegen
+der größeren AAC-Spitzen einzelner Kampfeffekte. Anschließend wird die **fertige
 AAC-Spur** mit FFmpeg nachgemessen: Über −1 dBTP oder bei fehlgeschlagener Messung wird der Export nicht
 veröffentlicht. Vorhandene MP4/JSON bleiben erhalten. Die Messwerte stehen unter `audio.encoded` im Sidecar;
 bei Ausschnitten betreffen sie den Clip, während die übrigen Mischwerte weiterhin die gesamte Episode beschreiben.

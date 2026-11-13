@@ -11,7 +11,7 @@ brach nach 25 Minuten ab. Zuvor scheiterten der Marble-Audiofall bei Tempo 0,8 u
 Audiomischphase im Live-Abbruchtest. Der ältere [Minimalnachweis](CI_ERSTLAUF_2026-11-13.md) zeigte bereits
 −0,7 dBTP im AAC statt höchstens −1 dBTP, auch auf dem damaligen Hauptbranch.
 
-- PCM-Reserve von −1,5 auf **−2 dBFS** erhöht. Nach jedem AAC-Mux misst FFmpeg `ebur128=peak=true` die
+- PCM-Reserve von −1,5 auf **−2 dBFS** erhöht, für Scrap auf **−3 dBFS**. Nach jedem AAC-Mux misst FFmpeg `ebur128=peak=true` die
   tatsächliche Ausgabespur. Fehlende/ungültige Messung oder True Peak über −1 dBTP verhindern die Veröffentlichung.
   `audio.encoded` enthält die kodierten Werte; ein Clip wird separat gemessen, seine Mischung bleibt aus der
   gesamten Originalepisode abgeleitet. Stille ist als solche gekennzeichnet. Die neue Phase ist abbrechbar.
@@ -40,7 +40,15 @@ Aufräumen innerhalb der unveränderten 2,5-s-Grenze. Dateierhaltung wird zusät
 Exportphasen und einen absichtlich zu lauten kodierten Ton geprüft. Neue Tests decken Materialauswahl,
 Fallback, vorhandene Lautstärkeregler und die Begrenzung gleichzeitig zerstörter Blöcke ab.
 
-Die abschließenden Mischwerte, kurzen Filmproben und vollständigen lokalen/Linux-Prüfungen werden nach
+Ein zusätzlicher Lauf über 900 Sekunden reine Simulation plus vollständige Tonmischung ergab 23 Runden,
+7.983 lückenlos erfasste Ereignisse und 5.975 Klangstimmen. Die erste Fassung mit −2 dBFS hatte seltene
+AAC-Spitzen bis −0,4 dBTP, obwohl die kurzen Clips bestanden. Mit der Scrap-Reserve von −3 dBFS erreicht
+derselbe Verlauf **−14,02 LUFS im PCM sowie −14,1 LUFS / −1,2 dBTP im AAC**; alle Invarianten bestanden.
+Zwei AAC-framegerecht ausgeschnittene Ereignisfenster sichern den Befund als 16-s-Audiotest ab. Mit der
+zu geringen Reserve reproduzierte dieser Ausschnitt lokal −0,5 dBTP, mit der Korrektur −1,9 dBTP.
+Die Mischung des Ausschnitts verwendet den aufgezeichneten Episodenpegel; sie wird nicht separat normalisiert.
+
+Die abschließenden kurzen Mischwerte, Filmproben und vollständigen lokalen/Linux-Prüfungen werden nach
 Abschluss unten ergänzt. **Dieser Zwischenstand ist noch keine grüne Gesamtabnahme.**
 
 Kein einzelner Test-Videoexport dauert mehr als 20 Sekunden. Persönliche Hör-/Handyabnahme und die

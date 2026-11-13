@@ -370,7 +370,7 @@
     },
     panelNote: sim => sim.phase === 'pause' ? `Ergebnis · nächste Runde in ${Math.ceil((sim.pauseUntil - sim.step) / 60)} s` : sim.snapshot().summary,
     // Short combat transients recover sooner; Marble/Naval retain their 60 ms release.
-    audio: { limiterReleaseMs: 20, events: {
+    audio: { ceilingDb: -3, limiterReleaseMs: 20, events: {
       blaster: { label: 'Blaster', samples: ['synth:scrap-blaster'], gain: .60, detune: .7, minGap: .055 },
       rocket: { label: 'Raketenstart', samples: ['synth:scrap-rocket'], gain: .60, detune: .4 },
       hit: { label: 'Robotertreffer', samples: ['impactMetal_light_000', 'impactMetal_light_001'], gain: .09, ref: 6, detune: 1, minGap: .07 },
