@@ -36,3 +36,15 @@ bereitgestellten Scrap-Prototyp; sie sind keine extern geladenen Samples und kei
 WebAudio-Ausgabe. Waffenarten werden aus dem Schussereignis gelesen (der Prototyp unterschied sie anhand
 einer Effektgröße, die bei beiden Waffen über seiner Klangschwelle lag). Die vollständige Ereignisfolge
 bleibt erhalten; nur dicht aufeinanderfolgende Deckungstreffer werden im Mischer klanglich ausgedünnt.
+
+## Endless Pyramid
+
+Die Klangtabelle in `src/scenarios/pyramid.js` verwendet dieselben unveränderten CC0-Dateien:
+`impactSoft_medium_000` (Becher schöpft, höher gestimmt), `impactMetal_light_000` (Becher kippt aus) und
+`impactGlass_light_000/001/002` (Leuchtkugel trifft eine Wendekappe). Der Platscher ist der vorhandene
+erzeugte Klang `synth:splash`.
+
+Neu in `lib/audio.mjs` und deterministisch im Code erzeugt: `synth:chime` (Glockenton des Lichtimpulses, vier
+Teiltöne mit Abklingen; je Farbe um 0/4/7/12 Halbtöne versetzt), `synth:boing` (federnder Ton der Tierchen an
+den Wendekappen), `synth:wheee` (auf- und absteigender Pfiff beim Fallen) und `synth:squeak` (kurzes Quieken,
+wenn ein Becher ein Tierchen aufnimmt). Die drei Tierchen-Klänge erklingen nur in der Darstellung „Tierchen“.

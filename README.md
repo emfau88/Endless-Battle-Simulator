@@ -18,6 +18,10 @@ Folgerunden mit Punktestand. Die Arena aus dem bereitgestellten Scrap-Prototyp n
 Konfigurations-, Vorschau- und MP4-Weg. Alle drei Szenarien exportieren mit Ton,
 eingemessen auf YouTube-Lautheit (siehe [Ton](#ton)).
 
+Viertes Szenario: **Endless Pyramid** – Figuren laufen endlos über eine begrünte Glaspyramide: Becherwerk im
+Glasschacht, Murmelbahn mit Wendekappen außen, Lagune unten. Wahlweise als Leuchtkugeln oder als runde Tierchen mit
+Ärmchen und Beinchen (siehe [Endless Pyramid](#endless-pyramid)).
+
 Die Architektur ist für weitere Szenarien und Videoformate vorbereitet (siehe [Erweiterbarkeit](#erweiterbarkeit));
 der aktuelle Gesamtzustand steht im [Audit vom 12.11.2026](docs/AUDIT_2026-11-12.md). Offene Punkte:
 [Roadmap](docs/ROADMAP.md) · Erledigtes: [Changelog](docs/CHANGELOG.md).
@@ -58,6 +62,8 @@ npm run golden              # Referenz-Hashes der Simulation prüfen (≈ 1 min)
 npm run marble:test         # Kugelfabrik: 8-s-Testvideo 720p30 -> output/marble_test_8s_720p.mp4
 npm run export -- --config presets/scrap-portrait.json         # Scrap: 20-s-Kurzprobe mit Ton
 npm run export -- --config presets/scrap-landscape.json        # gleiche Arena im Querformat
+npm run export -- --config presets/pyramid-portrait.json       # Endless Pyramid: 20 s hochkant, Leuchtkugeln, mit Ton
+npm run export -- --config presets/pyramid-tierchen-portrait.json   # dieselbe Anlage mit Tierchen (auch -landscape)
 node scripts/screenshot.mjs --scenario marble --aspect 16:9 --at 9 --out output/marble_16x9.png   # Einzelbild (PNG)
 ```
 
@@ -342,6 +348,44 @@ Simzeit in 2–3,5 s · JS-Heap nach 30 Minuten Simzeit unverändert ≈ 11 MB.
   10 Minuten kurz ein (kleiner Schubs, wenn der Hals länger als 0,5 s leer bleibt).
 - Die grüne Farbe hat bei 35 Kugeln nur 5 statt 6 Kugeln und wird entsprechend seltener sortiert.
 - 1:1 ist nicht eigens gestaltet (verkleinertes Querformat-Layout).
+
+## Endless Pyramid
+
+Auswahl in der Oberfläche über **Szenario**, per Kommandozeile mit `--scenario pyramid`; Vorlagen
+`presets/pyramid-*.json`. Hochkant, quer und quadratisch (Quadrat zeigt die Querformat-Anlage verkleinert).
+
+**Kreislauf.** `Lagune (Strömung) → Tunnel im Pyramidenfuß → Becherwerk im Glasschacht → Lichtimpuls zur Spitze →
+Schienen mit Wendekappen → freier Fall in die Lagune`. Figuren werden nie erzeugt oder gelöscht.
+
+**Physik wie bei einer echten Murmelbahn.** Gerade Schienen mit gleichem Gefälle; an jedem Ende eine halbrunde
+Wendekappe, deren Außenwand die Figur auf die nächste Schiene darunter lenkt. Rollbeschleunigung einer Vollkugel
+(5/7 g · Gefälle), Rollreibung und Luftwiderstand; am Ende freier Fall mit voller Erdbeschleunigung. Das Becherwerk
+ist ein Band über zwei drehenden Rollen: Becher schöpfen die Figur unten aus dem Wasser und kippen sie oben über die
+Rolle auf die erste Schiene; leere Becher fahren umgedreht zurück. Ist die erste Schiene noch belegt, wartet das Band.
+Der Schacht steht innen hinter dem Glas, die Schienen liegen außen davor – nichts kreuzt sich. Wird das Gefälle für
+große Figuren zu flach, baut das Layout drei statt fünf Schienen.
+
+**Leuchtkugeln oder Tierchen.** Der Regler „Figuren“ schaltet live um, ohne Neustart und ohne die Simulation zu
+verändern. Die Tierchen (Küken, Pinguin, Schweinchen, Frosch) sind runde Körper mit Ärmchen und Beinchen. Auf der
+Schiene überschlagen sie sich physikalisch korrekt (Drehung = Weg ÷ Radius, Richtung nach der Auflage) und bekommen
+bei hohem Tempo Spiralaugen. Im Becher winken sie, beim Fallen reißen sie die Arme hoch und richten sich auf, in der
+Lagune paddeln sie mit geschlossenen Glücksaugen. Wackelaugen und Blinzeln sind deterministisch.
+
+**Regler** (alle in Oberfläche, Teilen-Link, JSON und CLI-Konfiguration):
+
+| Regler | Wirkung | Bereich |
+|---|---|---|
+| Figuren | Leuchtkugeln oder Tierchen (reine Darstellung) | – |
+| Anzahl der Figuren · Größe der Figuren | Neustart; Größe ändert Becher, Kappen, Tunnel und Abstände mit | 12–26 · 24–48 px |
+| Tempo des Becherwerks · Rolltempo (Schwerkraft) · Strömung in der Lagune | Physik, wirkt sofort | 0,5–2× · 0,6–1,6× · 0,4–2× |
+| Leuchten · Lichtimpuls · Sonnenstrahlen · Spiegelung | Intensität (reine Darstellung) | 0–150 % bzw. 0–100 % |
+| Wolkentempo · Wellengang · Glitzern · Gezappel der Tierchen | Tempo bzw. Stärke (reine Darstellung) | 0–3× bzw. 0–2× |
+| Vögel · Strömungsspur im Wasser | an/aus | – |
+
+**Ton** mit eigenem Lautstärkeregler je Klang: Becher schöpft, Lichtimpuls (Glockenton, je Farbe eine andere Stufe
+des Dur-Akkords), Becher kippt aus, Wendekappe, Platscher; in der Darstellung „Tierchen“ statt Glasklang ein „Boing“
+an den Kappen, dazu „Juhu“ beim Fallen und „Quiek“, wenn der Becher zugreift. Herkunft:
+[Klangzuordnung](assets/audio/README.md). Nachweise: [Endless Pyramid](docs/ENDLESS_PYRAMID_2026-11-13.md).
 
 ## Seeschlacht: Himmel, seltene Ereignisse und goldene Kugel
 
