@@ -224,18 +224,41 @@ async function bootLive() {
   for (const [v, t] of Object.entries(EBS.RESOLUTIONS)) resSel.add(new Option(t, v));
   const showSize = () => { const vs = videoSize(cfg().video); $('resolutionOut').textContent = `${vs.width}×${vs.height}`; };
   resSel.addEventListener('change', () => { session.cfg.video.resolution = +resSel.value; save(); showSize(); });
-  const markFps = seg('segFps', EBS.FPS_OPTIONS.map((f) => [f, f + ' fps']), cfg().video.fps, (v) => { session.cfg.video.fps = v; save(); });
+  const markFps = seg('segFps', EBS.FPS_OPTIONS.map((f) => [f, f + ' fps']), cfg().video.fps, (v) => { session.cfg.video.fps = v; save(); showDuration(); });
   // Videolänge: freie Eingabe (1 s bis 4 h) plus Schnellwahl; beide zeigen stets den Wert der Konfiguration
   const dur = $('duration'), durText = $('durationText'), durHint = $('durationHint'), DUR_HINT = durHint.textContent;
   dur.add(new Option('Eigene Dauer', ''));
   for (const [v, t] of UI_DURATIONS) dur.add(new Option(t, v));
+  let durationPlanKey = '', durationGeneration = 0, durationPending = false;
   const showDuration = (note, isError) => {
+    const natural = !!session.scenario.hasNaturalDuration?.(cfg());
+    const key = natural ? JSON.stringify([cfg().scenario, cfg().seed, cfg().params, cfg().video.tempo, cfg().video.fps]) : '';
+    dur.disabled = durText.disabled = natural;
+    if (key !== durationPlanKey) {
+      durationPlanKey = key;
+      const generation = ++durationGeneration;
+      durationPending = natural;
+      if (natural) {
+        const plan = session.scenario.createExportPlan(cfg(), session.world);
+        const tick = () => {
+          if (generation !== durationGeneration) return;
+          try {
+            const result = plan.advance();
+            if (!result.done) { setTimeout(tick, 0); return; }
+            session.cfg.video.durationSec = result.durationSec; durationPending = false; save(); showDuration();
+          } catch (e) { durationPending = false; durHint.textContent = e.message; durHint.classList.add('err'); }
+        };
+        setTimeout(tick, 0);
+      }
+    }
     const d = cfg().video.durationSec;
     if (!isError) durText.value = fmtDuration(d);
     durText.classList.toggle('bad', !!isError);
     $('durationOut').textContent = fmtTime(d);
     dur.value = UI_DURATIONS.some(([v]) => v === d) ? String(d) : '';
-    durHint.textContent = note || DUR_HINT; durHint.classList.toggle('err', !!isError);
+    durHint.textContent = natural ? (durationPending ? 'Turnierdauer wird berechnet …' : 'Automatisch: acht vollständige Runden und 5 Sekunden Gesamtergebnis.') : note || DUR_HINT;
+    $('durationOut').textContent = durationPending ? '…' : fmtTime(d);
+    durHint.classList.toggle('err', !!isError);
   };
   const setDuration = (sec, note) => { session.cfg.video.durationSec = sec; save(); showDuration(note); };
   dur.addEventListener('change', () => { if (dur.value) setDuration(+dur.value); else showDuration(); });
@@ -306,7 +329,7 @@ async function bootLive() {
     $('btnCancel').disabled = !!s.cancelRequested;
     msg.classList.toggle('err', s.state === 'error');
     if (s.state === 'running') {
-      const phases = { starting: 'Starte Renderer …', simulating: 'Berechne den Episodenverlauf …', encoding: 'Schließe die Bildspur ab …',
+      const phases = { starting: 'Starte Renderer …', planning: 'Ermittle das Turnierende …', simulating: 'Berechne den Episodenverlauf …', encoding: 'Schließe die Bildspur ab …',
         'audio-loading': 'Lade die Klänge …', 'audio-mixing': 'Mische und prüfe die Tonspur …',
         muxing: 'Verbinde Bild und Ton …', verifying: 'Prüfe die fertige Videodatei …', saving: 'Speichere Video und Einstellungen …' };
       msg.textContent = s.cancelRequested ? 'Abbruch angefordert – räume auf …'

@@ -120,7 +120,24 @@ test('Scrap: Parameter normalisieren und kollidieren nicht mit Video-/Tonwerten'
   assert.equal(cfg.params.repeatRounds, false); assert.equal(cfg.params.endPauseSec, 7);
   assert.equal(cfg.video.volume.rocket, 130);
   assert.deepEqual(plain(EBS.normalizeConfig(plain(cfg))), plain(cfg));
-  assert.deepEqual(plain(EBS.Scrap.normalizeParams({ endPauseSec: 99, repeatRounds: 'false' })), { rulesVersion: 'classic', repeatRounds: false, endPauseSec: 8 });
+  assert.deepEqual(plain(EBS.Scrap.normalizeParams({ endPauseSec: 99, repeatRounds: 'false' })), { rulesVersion: 'classic', episodeMode: 'endless', repeatRounds: false, endPauseSec: 8 });
+});
+
+test('Scrap-Turnier: genau acht Runden, echte fünf Sekunden Finale und gleiche UI-/Exportdauer', () => {
+  for (const [tempo, fps] of [[1,30],[.8,60],[.64,30]]) {
+    const cfg = EBS.normalizeConfig({ scenario: 'scrap', seed: 42, params: { rulesVersion: 'v2', episodeMode: 'tournament', repeatRounds: false }, video: { tempo, fps } });
+    const s = make({ params: cfg.params, timeScale: tempo });
+    while (s.phase !== 'outro') s.stepOnce();
+    assert.equal(s.completedRounds, 8); assert.equal(s.roundResults.length, 8);
+    assert.equal(s.events.filter(e => e.type === 'tournament_end').length, 1);
+    assert.ok(s.champions().length >= 1);
+    const end = s.step; advance(s, 299 / 60); assert.equal(s.phase, 'outro'); s.stepOnce(); assert.equal(s.phase, 'ended');
+    const plan = EBS.Scrap.createExportPlan(cfg, s.world); let result;
+    do { result = plan.advance(); } while (!result.done);
+    assert.equal(result.durationSec, Math.ceil((end + 300) / 60 * fps) / fps);
+    advance(s, 20); assert.equal(s.roundNumber, 8); assert.equal(s.checkInvariants().ok, true);
+    s.wins = [2,2,2,2]; assert.deepEqual(plain(s.champions()), [0,1,2,3]);
+  }
 });
 
 test('Scrap v2: drei Prüfseeds ohne lange Feuerpausen, reproduzierbar bei Zeitlupe', () => {

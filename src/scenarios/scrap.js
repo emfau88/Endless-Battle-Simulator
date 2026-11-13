@@ -89,18 +89,39 @@
       const bw = right - left;
       box(g, left, y + 53, bw, 8, 4); g.fillStyle = '#07131b'; g.fill();
       if (alive) { box(g, left, y + 53, bw * robot.hp / robot.maxHp, 8, 4); g.fillStyle = color; g.fill(); }
-      const weapon = robot.weapon, label = !alive ? 'KNOCKED OUT' : weapon ? `${weapon.kind.toUpperCase()}  ${weapon.ammo}/${weapon.maxAmmo}` : 'SEARCHING';
+      const weapon = robot.weapon, label = !alive ? 'KNOCKED OUT' : this.sim.phase !== 'running' ? 'SURVIVED' : weapon ? `${weapon.kind.toUpperCase()}  ${weapon.ammo}/${weapon.maxAmmo}` : 'SEARCHING';
       text(g, label, x + 20, y + h - 43, compact ? 15 : 21, alive ? '#dce8e9' : '#7a8f9a', 'left', 650);
       text(g, `${this.sim.wins[robot.id]} WINS`, right, y + h - 20, compact ? 14 : 18, color, 'right');
     }
     scores(g, x, y, w, horizontal) {
-      text(g, 'MATCH WINS', x, y, 20, '#8096a2');
-      this.sim.roundSim.robots.forEach((r, i) => {
+      text(g, this.sim.cfg.episodeMode === 'tournament' ? 'TOURNAMENT WINS · FIRST = LEADER' : 'MATCH WINS', x, y, 17, '#8096a2');
+      const robots = [...this.sim.roundSim.robots].sort((a,b) => this.sim.wins[b.id] - this.sim.wins[a.id] || a.id - b.id);
+      robots.forEach((r, i) => {
         const xx = horizontal ? x + i * w / 4 : x;
         const yy = horizontal ? y + 46 : y + 58 + i * 58;
-        text(g, horizontal ? `${r.name} ${this.sim.wins[i]}` : r.name, xx, yy, horizontal ? 24 : 26, r.color);
-        if (!horizontal) text(g, this.sim.wins[i], x + w, yy, 30, r.color, 'right');
+        text(g, horizontal ? `${r.name} ${this.sim.wins[r.id]}` : r.name, xx, yy, horizontal ? 24 : 26, colorOf(r));
+        if (!horizontal) text(g, this.sim.wins[r.id], x + w, yy, 30, colorOf(r), 'right');
       });
+    }
+    finale(g) {
+      const s = this.sim, l = this.layout, champions = s.champions();
+      const rows = [...s.roundSim.robots].sort((a,b) => s.wins[b.id] - s.wins[a.id] || a.id - b.id);
+      g.save(); g.translate(l.x, l.y); g.scale(l.size / 1000, l.size / 1000);
+      g.fillStyle = '#07131bb8'; g.fillRect(0, 0, 1000, 1000);
+      box(g, 100, 150, 800, 700, 26); g.fillStyle = '#132532f5'; g.fill();
+      g.strokeStyle = '#ebc37c'; g.lineWidth = 2; g.stroke();
+      text(g, 'TOURNAMENT COMPLETE', 500, 214, 26, '#c1d4df', 'center');
+      text(g, champions.length === 1 ? `${rows[0].name} WINS` : 'TIED FOR FIRST', 500, 282, 52, '#ffce63', 'center', 800);
+      text(g, '8 ROUNDS  ·  FINAL STANDINGS', 500, 337, 23, '#9eb4bf', 'center');
+      rows.forEach((r, i) => {
+        const y = 425 + i * 84, leading = champions.includes(r.id);
+        box(g, 158, y - 30, 684, 65, 10); g.fillStyle = leading ? '#2d3e42' : '#1b303c'; g.fill();
+        text(g, leading ? '★' : '·', 185, y, 24, '#ffce63');
+        text(g, r.name, 232, y, 32, colorOf(r));
+        text(g, `${s.wins[r.id]} WINS`, 808, y, 28, colorOf(r), 'right');
+      });
+      text(g, `${s.draws} DRAW${s.draws === 1 ? '' : 'S'}  ·  SEE YOU IN THE NEXT ARENA`, 500, 793, 21, '#9eb4bf', 'center');
+      g.restore();
     }
     paint(g) {
       const s = this.sim, r = s.roundSim, l = this.layout, { w, h } = this.world;
@@ -109,17 +130,20 @@
       g.fillStyle = bg; g.fillRect(0, 0, w, h);
       // Let the final sparks fade during the end pause without changing the
       // preserved round state, RNGs or event history.
-      const elapsed = s.phase === 'pause' ? s.cfg.endPauseSec - (s.pauseUntil - s.step) / 60 : 0;
-      const renderState = elapsed > 0 ? { ...r, effects: r.effects.map(e => ({ ...e, age: e.age + elapsed })) } : r;
+      const final = s.cfg.episodeMode === 'tournament' && s.completedRounds === 8;
+      const elapsed = s.phase === 'pause' ? s.cfg.endPauseSec - (s.pauseUntil - s.step) / 60 : final ? 5 - (s.outroUntil - s.step) / 60 : 0;
+      const renderState = elapsed > 0 || final ? { ...r, phase: final ? 'running' : r.phase, effects: r.effects.map(e => ({ ...e, age: e.age + elapsed })) } : r;
       this.arena.draw(renderState, { hud: false, cinematic: !!this.view.camera });
       g.drawImage(this.arenaCanvas, l.x, l.y, l.size, l.size);
+      if (final) this.finale(g);
       if (!this.view.hud) return;
-      const clock = EBS.util.fmtTime(Math.ceil(Math.max(0, r.duration - r.t)));
+      const clock = final ? 'END' : EBS.util.fmtTime(Math.ceil(Math.max(0, r.duration - r.t)));
+      const roundLabel = s.cfg.episodeMode === 'tournament' ? `ROUND ${s.roundNumber}/8${s.roundNumber === 8 ? ' · FINAL' : ''}` : `ROUND ${String(s.roundNumber).padStart(2, '0')}`;
       const status = s.phase === 'running' ? `${r.robots.filter(x => x.alive).length} BOTS ALIVE  /  ${r.stats.destroyed} COVER LOST`
         : s.phase === 'pause' ? `NEXT ROUND IN ${Math.ceil((s.pauseUntil - s.step) / 60)}s` : 'MATCH COMPLETE';
       if (l.kind === 'portrait') {
         text(g, 'SCRAP WARS', 54, 106, 56);
-        text(g, `ROUND ${String(s.roundNumber).padStart(2, '0')}`, 56, 177, 30, '#f0bf7b');
+        text(g, roundLabel, 56, 177, 30, '#f0bf7b');
         text(g, clock, 1024, 173, 52, '#dde9e9', 'right');
         this.card(g, r.robots[0], 54, 244, 468, 156);
         this.card(g, r.robots[1], 558, 244, 468, 156);
@@ -130,7 +154,7 @@
       } else if (l.kind === 'landscape') {
         text(g, 'SCRAP WARS', 46, 92, 49);
         text(g, 'FOUR BOTS. ONE ARENA.', 48, 139, 20, '#8da7b6');
-        text(g, `ROUND ${String(s.roundNumber).padStart(2, '0')}`, 50, 252, 30, '#f0bf7b');
+        text(g, roundLabel, 50, 252, 26, '#f0bf7b');
         text(g, clock, 46, 323, 68);
         this.scores(g, 52, 480, 340, false);
         text(g, s.phase === 'running' ? `${r.robots.filter(x => x.alive).length} BOTS ALIVE` : 'ROUND COMPLETE', 52, 914, 25, '#d4e4e6');
@@ -139,7 +163,7 @@
         r.robots.forEach((robot, i) => this.card(g, robot, 1496, 144 + i * 216, 376, 182));
       } else {
         text(g, 'SCRAP WARS', 40, 60, 48);
-        text(g, `ROUND ${s.roundNumber}  /  ${clock}`, 1040, 60, 29, '#f0bf7b', 'right');
+        text(g, `${roundLabel}  /  ${clock}`, 1040, 60, 26, '#f0bf7b', 'right');
         r.robots.forEach((robot, i) => this.card(g, robot, 24 + i * 264, 900, 240, 132, true));
         text(g, status, 540, 133, 24, '#b4c5ca', 'center');
       }
@@ -149,13 +173,16 @@
   EBS.registerScenario({
     id: 'scrap', title: 'Scrap Wars',
     supportsClips: true,
-    defaults: { rulesVersion: 'classic', repeatRounds: true, endPauseSec: 3 },
+    defaults: { rulesVersion: 'classic', episodeMode: 'endless', repeatRounds: true, endPauseSec: 3 },
     controls: [
+      { key: 'episodeMode', label: 'Format', type: 'select', options: [['endless', 'Freie Videolänge'], ['tournament', 'Turnier · 8 Runden + Finale']], restart: true },
       { key: 'rulesVersion', label: 'Kampfregeln', type: 'select', options: [['classic', 'Original'], ['v2', 'Flüssiger Kampf (empfohlen)']], restart: true },
       { key: 'repeatRounds', label: 'Weitere Runden spielen', type: 'check', restart: true },
       { key: 'endPauseSec', label: 'Ergebnis zeigen', type: 'range', min: 2, max: 8, step: 1, restart: true, format: v => `${v} s` },
     ],
     normalizeParams,
+    hasNaturalDuration: cfg => cfg.params.episodeMode === 'tournament',
+    createExportPlan: EBS.Scrap.createExportPlan,
     create: ctx => new Episode(ctx),
     createRenderer: ctx => new ScrapRenderer(ctx),
     panelStats(sim) {
