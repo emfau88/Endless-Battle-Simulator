@@ -227,7 +227,7 @@ async function bootLive() {
       session.setParam(c.key, v); invalidate(); save(); syncUi(); return;
     }
     markCustomProfile(c.key);
-    if (c.restart) restart({ params: { [c.key]: v } });
+    if (c.restart) restart({ params: { ...(c.sets && c.sets[v]), [c.key]: v } });   // sets: Regler, die diese Auswahl mitsetzt
     else {
       session.setParam(c.key, v); invalidate(); save();
       for (const control of session.scenario.controls) if (control.enabled) {

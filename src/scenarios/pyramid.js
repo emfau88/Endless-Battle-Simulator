@@ -316,7 +316,7 @@ class PyramidSim {
     const T = TUNE, L = this.L, P = L.paths, E = L.lift, cfg = this.cfg, critters = cfg.figure === 1, GAP = L.GAP;
     const dt = this.dt * cfg.speed, dtR = dt * cfg.rollSpeed;
     this.step++; this.t += dt;
-    if (this.step > 0 && !this.quiet) this._finaleEvents();
+    if (this.step > 0 && !this.quiet) { this._finaleEvents(); this._funEvents(this.t - dt, this.t); }
     // --- Schienenbahn (Führende zuerst)
     let ahead = null;
     for (const b of this._list(RAMP)) {
@@ -377,6 +377,33 @@ class PyramidSim {
         if (critters) this._emit('squeak', L.pick[0], L.pick[1], head.color);
       }
     }
+  }
+  /** Kleinigkeiten am Rand – hier nur ihre leisen Klänge; das Bild zeichnet der Renderer aus demselben Zeitplan. */
+  _funEvents(t0, t1) {
+    const cfg = this.cfg, L = this.L, px = (x) => clamp(x, 0, L.W);
+    if (cfg.skyFun) {
+      const i = Math.floor(t1 / SKY_SLOT), ev = this._sky && this._sky.i === i ? this._sky : (this._sky = skySlot(L, this.seed, i)), o = i * SKY_SLOT + ev.start;
+      let kind;
+      for (const sd of ev.snd) if (t0 < o + sd.at && t1 >= o + sd.at) {
+        if (kind === undefined) kind = skyKind(ev, dayState(dayPhase(cfg, this.video, this.step), cfg.nightDark).night > 0.5);
+        if (sd.kind === kind) this._emit(sd.type, px(sd.x), sd.y, sd.c);
+      }
+    }
+    if (cfg.little) {
+      let i = Math.floor(t1 / EMOTE_SLOT);
+      const e = this._em && this._em.i === i ? this._em : (this._em = emoteSlot(this.seed, i, this.orbs.length)), oe = i * EMOTE_SLOT + e.start;
+      if (cfg.figure && t0 < oe && t1 >= oe) { const b = this.orbs[e.id], q = this._where(b); this._emit('emote', px(q[0]), q[1], b.color); }
+      i = Math.floor(t1 / FISH_SLOT);
+      const f = this._fi && this._fi.i === i ? this._fi : (this._fi = fishSlot(L, this.seed, i)), of = i * FISH_SLOT + f.start;
+      if (t0 < of && t1 >= of) this._emit('fish', px(f.x), f.y, 1);
+    }
+  }
+  /** Ort einer Figur in Entwurfskoordinaten. */
+  _where(b) {
+    const L = this.L;
+    if (b.state === LIFT) { beltAt(L.lift, b.s, BQ); return [BQ.bx, BQ.by]; }
+    const q = pathAt(b.state === POOL ? L.paths.pool : L.paths.ramp, b.s, Q);
+    return [q.x, q.y];
   }
   /** Abschuss und Knall der Raketen im Finale (nur Ton-Ereignisse; die Physik bleibt unberührt). */
   _finaleEvents() {
@@ -625,7 +652,10 @@ function limb(g, a, b, col, end, foot, k) {
  */
 const CAPS = [['#3f6fe0', '#ffffff'], ['#e8484f', '#ffffff'], ['#58b7f0', '#ffffff'], ['#9a5fd6', '#ffe36a']];
 function drawCritter(g, sprite, kind, id, x, y, ang, mode, t, speed, look, wig, R, mood = null) {
-  const sp = SPECIES[kind], ph = t * 9 + id * 1.7, w = wig, lk = R / 16;
+  // Jedes Tierchen zappelt in eigenem Tempo und mit eigenem Armversatz; sein Gezappel schwillt für sich an und ab
+  const h1 = Math.abs(Math.sin(id * 12.9898) * 43758.5453) % 1, h2 = Math.abs(Math.sin(id * 78.233 + 1.3) * 24634.6345) % 1;
+  const sp = SPECIES[kind], ph = t * 9 * (0.7 + 0.65 * h1) + id * 1.7, ao = 0.9 + 2.2 * h2, lk = R / 16;
+  const w = wig * (0.62 + 0.62 * (0.5 + 0.5 * Math.sin(t * (0.5 + 0.9 * h2) + id * 2.9)));
   const cheer = mood && mood.cheer && (mode === 'lift' || mode === 'pool');
   const yawn = mood && !cheer ? mood.yawn : 0, sleep = mood && !cheer && mood.sleep && mode === 'pool';
   g.save(); g.translate(x, y); g.rotate(ang);
@@ -634,7 +664,7 @@ function drawCritter(g, sprite, kind, id, x, y, ang, mode, t, speed, look, wig, 
   const sh = [R * 0.8, R * 0.05], hip = [R * 0.42, R * 0.78];
   let aL, aR, lL, lR;
   if (mode === 'fall') {
-    aL = [-R * 1.02, -R * 0.78 + Math.sin(ph * 1.7) * 2.5 * w]; aR = [R * 1.02, -R * 0.78 + Math.sin(ph * 1.7 + 1.3) * 2.5 * w];
+    aL = [-R * 1.02, -R * 0.78 + Math.sin(ph * 1.7) * 2.5 * w]; aR = [R * 1.02, -R * 0.78 + Math.sin(ph * 1.7 + ao) * 2.5 * w];
     lL = [-R * 0.66, R * 1.16 + Math.sin(ph * 2) * 1.5 * w]; lR = [R * 0.66, R * 1.16 - Math.sin(ph * 2) * 1.5 * w];
   } else if (cheer) {                                                  // Finale: Arme hoch und winken
     aL = [-R * 1.0 + Math.sin(ph * 1.4) * 2, -R * 1.0 + Math.cos(ph * 1.4) * 3]; aR = [R * 1.0 - Math.sin(ph * 1.4 + 1) * 2, -R * 1.0 + Math.cos(ph * 1.4 + 1) * 3];
@@ -643,14 +673,15 @@ function drawCritter(g, sprite, kind, id, x, y, ang, mode, t, speed, look, wig, 
     aL = [-R * 1.0, -R * (0.55 + 0.45 * yawn)]; aR = [R * 1.0, -R * (0.55 + 0.45 * yawn)];
     if (mode === 'lift') { lL = [-R * 0.46, R * 1.14]; lR = [R * 0.46, R * 1.14]; }
   } else if (mode === 'lift') {
-    aL = [-R * 1.12, -R * 0.42]; aR = [R * 1.08 + Math.sin(ph * 0.8) * R * 0.1 * w, -R * 0.72 + Math.sin(ph * 0.8) * R * 0.28 * w];
-    lL = [-R * 0.46, R * 1.14]; lR = [R * 0.46, R * 1.14];
+    const wv = Math.sin(ph * 0.8), still = [R * 1.12, -R * 0.42], wave = [R * 1.08 + wv * R * 0.1 * w, -R * 0.72 + wv * R * 0.28 * w];
+    if (h1 < 0.5) { aL = [-still[0], still[1]]; aR = wave; } else { aL = [-wave[0], wave[1]]; aR = still; }   // mal winkt der rechte, mal der linke Arm
+    lL = [-R * 0.46 + Math.sin(ph * 0.6) * R * 0.08 * w, R * 1.14]; lR = [R * 0.46 + Math.sin(ph * 0.6 + ao) * R * 0.08 * w, R * 1.14];   // Beine baumeln
   } else if (mode === 'pool') {
     aL = [-R * 1.18 + Math.cos(ph * 0.6) * 2 * w, R * 0.18 + Math.sin(ph * 0.6) * 2.5 * w];
-    aR = [R * 1.18 - Math.cos(ph * 0.6 + 2) * 2 * w, R * 0.18 + Math.sin(ph * 0.6 + 2) * 2.5 * w];
+    aR = [R * 1.18 - Math.cos(ph * 0.6 + ao) * 2 * w, R * 0.18 + Math.sin(ph * 0.6 + ao) * 2.5 * w];
   } else {
     const f = 0.4 + Math.min(1, speed / 320) * 0.6;
-    aL = [-R * 1.16, -R * 0.08 + Math.sin(ph * 1.3) * R * 0.38 * w * f]; aR = [R * 1.16, -R * 0.08 + Math.sin(ph * 1.3 + 2.1) * R * 0.38 * w * f];
+    aL = [-R * 1.16, -R * 0.08 + Math.sin(ph * 1.3) * R * 0.38 * w * f]; aR = [R * 1.16, -R * 0.08 + Math.sin(ph * 1.3 + ao) * R * 0.38 * w * f];
     lL = [-R * 0.55 + Math.sin(ph) * R * 0.18 * w * f, R * 1.16]; lR = [R * 0.55 - Math.sin(ph) * R * 0.18 * w * f, R * 1.16];
   }
   if (lL) { limb(g, [-hip[0], hip[1]], lL, sp.arm, sp.foot, true, lk); limb(g, hip, lR, sp.arm, sp.foot, true, lk); }
@@ -676,7 +707,7 @@ function drawCritter(g, sprite, kind, id, x, y, ang, mode, t, speed, look, wig, 
       for (let i = 0; i <= 14; i++) { const a = i * 0.9 + t * 14 * s, q = rr * 0.85 * i / 14; i ? g.lineTo(cx + Math.cos(a) * q, cy + Math.sin(a) * q) : g.moveTo(cx, cy); }
       g.stroke(); g.strokeStyle = OUTLINE; g.lineWidth = 1.6 * lk; continue;
     }
-    const pr = rr * (mode === 'fall' ? 0.38 : 0.5), wob = Math.sin(t * 17 + id + s) * 0.12 * w;   // Wackelaugen
+    const pr = rr * (mode === 'fall' ? 0.38 : 0.5), wob = Math.sin(t * 17 + id + s) * 0.12 * Math.min(w, 2);   // Wackelaugen
     g.fillStyle = '#1d1424'; dot(g, cx + (lx + wob) * (rr - pr), cy + (ly - wob) * (rr - pr), pr);
     g.fillStyle = '#ffffff'; dot(g, cx + (lx + wob) * (rr - pr) - pr * 0.35, cy + (ly - wob) * (rr - pr) - pr * 0.35, pr * 0.35);
   }
@@ -913,7 +944,7 @@ function stoneFaces(L) {
     return { b0, b1, at: (t, v) => [b0[0] + (b1[0] - b0[0]) * t + (A[0] - m[0]) * v, b0[1] + (b1[1] - b0[1]) * t + (A[1] - m[1]) * v] };
   });
 }
-/** Alle Blöcke in Baureihenfolge: Lage für Lage, je Lage von links über den Grat nach rechts (versetzter Verband). */
+/** Alle Blöcke in Baureihenfolge: Lage für Lage, je Lage von der rechten unteren Ecke über den Grat nach links (rechts sieht man den Baubeginn am besten; versetzter Verband). */
 function stoneBlocks(L) {
   const faces = stoneFaces(L), rows = [];
   for (let i = 0; i < COURSES; i++) {
@@ -926,7 +957,7 @@ function stoneBlocks(L) {
         row.push({ face: fi, q: [f.at(a0, v0), f.at(b0, v0), f.at(b1, v1), f.at(a1, v1)] });
       }
     });
-    rows.push(row);
+    rows.push(row.reverse());
   }
   return rows;
 }
@@ -1065,7 +1096,23 @@ function skySlot(L, seed, i) {
     legs.push({ a: pts[j - 1][0], b: pts[j][0], t0: tt, fly, hold: pts[j][1], smooth: !ring }); tt += fly + pts[j][1];
   }
   ev.ufo = { mode, legs, dur: tt };
+  // leise Klänge der Gäste (Zeit ab Beginn des Besuchs)
+  ev.snd = [{ at: 0, kind: 'ufo', type: 'ufo', x: legs[0].b[0], y: legs[0].b[1], c: 1 },
+    ...ev.stars.map((st) => ({ at: st.at, kind: 'stars', type: 'twinkle', x: st.x, y: st.y, c: 0 })),
+    ...[1.5, 4.5, 8].map((at) => ({ at, kind: 'flock', type: 'chirp', x: W / 2, y: ev.flock.y, c: 3 }))];
   return ev;
+}
+// Kleinigkeiten am Rand, ebenfalls nur aus Seed und Zeitfenster: alle 7 s eine Sprechblase über einem Tierchen,
+// alle 11 s springt irgendwo in der Lagune ein Fisch.
+const EMOTE_SLOT = 7, FISH_SLOT = 11, EMOTES = ['♥', '♪', '!', '?', '★', '☺'];
+function emoteSlot(seed, i, n) {
+  const rng = new RNG(hashSeed('pyramid-emote', seed, i));
+  return { i, start: rng.range(0.4, 4), id: rng.int(0, n - 1), sym: rng.int(0, EMOTES.length - 1) };
+}
+function fishSlot(L, seed, i) {
+  const rng = new RNG(hashSeed('pyramid-fish', seed, i));
+  return { i, start: rng.range(0.5, 8), x: rng.range(L.W * 0.08, L.W * 0.92), y: rng.range(L.shore + 70, L.H - 50), dir: rng.next() < 0.5 ? -1 : 1,
+    h: rng.range(46, 84), w: rng.range(60, 110), big: rng.range(0.8, 1.25), c: rng.int(0, 2) };
 }
 /** Welcher Gast im Zeitfenster kommt: tagsüber UFO, Ballon oder Vogelschwarm, nachts UFO oder Sternschnuppen. */
 const skyKind = (ev, night) => (night ? (ev.r < 0.4 ? 'ufo' : ev.r < 0.85 ? 'stars' : null) : (ev.r < 0.3 ? 'ufo' : ev.r < 0.55 ? 'balloon' : ev.r < 0.85 ? 'flock' : null));
@@ -1293,7 +1340,45 @@ class PyramidRenderer extends EBS.CanvasScene {
     const tau = t - i * SKY_SLOT - ev.start, kind = skyKind(ev, day.night > 0.5);
     if (tau < 0 || !kind) return;
     if (!lit) { if (kind === 'balloon') this.drawBalloon(g, ev, tau); else if (kind === 'flock') this.drawFlock(g, ev, tau, t); }
-    else if (kind === 'ufo') this.drawUfo(g, ev, tau, t); else if (kind === 'stars') this.drawShooting(g, ev, tau);
+    else if (kind === 'ufo') this.drawUfoBehind(g, ev, tau, t); else if (kind === 'stars') this.drawShooting(g, ev, tau);
+  }
+  /** Sprechblase über einem Tierchen; nach dem Einfärben gezeichnet, damit sie auch nachts hell bleibt. */
+  drawEmote(g, t) {
+    const cfg = this.sim.cfg; if (!cfg.little || !cfg.figure || t < 0) return;
+    const i = Math.floor(t / EMOTE_SLOT), e = emoteSlot(this.sim.seed, i, this.sim.orbs.length), a = t - i * EMOTE_SLOT - e.start;
+    if (a < 0 || a > 2.2) return;
+    const q = this.pose(this.sim.orbs[e.id], t), R = this.L.R, k = Math.min(1, a / 0.12) * (a < 0.25 ? 1 + 0.25 * Math.sin(Math.PI * a / 0.25) : 1) * R / 15;
+    g.save(); g.globalAlpha = Math.min(1, (2.2 - a) / 0.3); g.translate(q.x + R * 1.45, q.y - R * 2.4 - Math.sin(a * 3) * 2); g.scale(k, k);
+    g.fillStyle = '#ffffff'; g.strokeStyle = 'rgba(42,31,51,.85)'; g.lineJoin = 'round'; g.lineWidth = 4.4;
+    g.beginPath(); g.roundRect(-17, -19, 34, 30, 10); g.moveTo(-10, 9); g.lineTo(-16, 22); g.lineTo(0, 9); g.closePath();
+    g.stroke(); g.fill();
+    g.fillStyle = ['#ff4f7d', '#3f8fe0', '#ff9a1e', '#7a5cf0', '#ffb400', '#43b05a'][e.sym];
+    g.font = '700 21px "Segoe UI Symbol", "Segoe UI Emoji", Bahnschrift, Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(EMOTES[e.sym], 0, -3);
+    g.restore();
+  }
+  /** Ein Fisch springt aus dem Wasser: Bogen mit Ringen an Absprung und Eintauchen. */
+  drawFish(g, t) {
+    if (!this.sim.cfg.little || t < 0) return;
+    const L = this.L, i = Math.floor(t / FISH_SLOT), f = fishSlot(L, this.sim.seed, i), a = t - i * FISH_SLOT - f.start, D = 0.85;
+    if (a < 0 || a > D + 0.65) return;
+    g.save();
+    g.strokeStyle = 'rgba(255,255,255,.65)'; g.lineWidth = 1.6;
+    for (const [ux, t0] of [[-0.5, 0], [0.5, D]]) {
+      const r = a - t0; if (r < 0 || r > 0.65) continue;
+      g.globalAlpha = 1 - r / 0.65; g.beginPath(); g.ellipse(f.x + f.dir * f.w * ux, f.y + 3, 8 + r * 46, 2.5 + r * 12, 0, 0, TAU); g.stroke();
+    }
+    const u = a / D;
+    if (u <= 1) {
+      const sc = f.big * (L.land ? 1 : 1.15), col = [['#ff9a3c', '#ffd9a0'], ['#ff6f8f', '#ffd0dc'], ['#8fd0e6', '#eafaff']][f.c];
+      g.globalAlpha = 1; g.translate(f.x + f.dir * f.w * (u - 0.5), f.y - f.h * 4 * u * (1 - u)); g.scale(f.dir * sc, sc); g.rotate(Math.atan2(-f.h * 4 * (1 - 2 * u), f.w));
+      g.fillStyle = col[0]; g.strokeStyle = 'rgba(60,30,10,.6)'; g.lineWidth = 1.2; g.lineJoin = 'round';
+      g.beginPath(); g.moveTo(-9, 0); g.lineTo(-19, -7); g.lineTo(-19, 7); g.closePath(); g.fill(); g.stroke();
+      g.beginPath(); g.ellipse(0, 0, 13, 6.5, 0, 0, TAU); g.fill(); g.stroke();
+      g.fillStyle = col[1]; g.beginPath(); g.ellipse(1, 2.2, 9, 3, 0, 0, TAU); g.fill();
+      g.fillStyle = '#1d1424'; dot(g, 7, -1.5, 1.5);
+    }
+    g.restore();
   }
   drawBalloon(g, ev, tau) {
     const L = this.L, B = ev.balloon; if (tau > B.dur) return;
@@ -1325,25 +1410,52 @@ class PyramidRenderer extends EBS.CanvasScene {
       }
     }
   }
-  drawUfo(g, ev, tau, t) {
-    const U = ev.ufo; if (tau > U.dur) return;
+  /** Ort des UFOs zur Zeit tau seines Besuchs. */
+  ufoPose(U, tau) {
     let leg = U.legs[U.legs.length - 1]; for (const l of U.legs) if (tau < l.t0 + l.fly + l.hold) { leg = l; break; }
     const q = tau - leg.t0, fly = q < leg.fly, f = fly ? q / leg.fly : 1, u = leg.smooth ? f * f * (3 - 2 * f) : f;
     let x = leg.a[0] + (leg.b[0] - leg.a[0]) * u, y = leg.a[1] + (leg.b[1] - leg.a[1]) * u;
     if (!fly) { x += Math.sin(q * 5) * 4; y += Math.cos(q * 3.3) * 5; }
+    return { leg, q, fly, f, x, y };
+  }
+  /**
+   * Das UFO fliegt hinter der Pyramide: erst auf eine eigene Fläche zeichnen, dort alles ausstanzen, was davor liegt
+   * (Steine bzw. Glaspyramide, Gerüst, Schacht, Tunnel, Schienen, Vordergrund, Figuren auf der Bahn), dann ins Bild setzen.
+   */
+  drawUfoBehind(g, ev, tau, t) {
+    const U = ev.ufo; if (tau > U.dur) return;
+    const L = this.L, ls = this.ls, P = this.ufoPose(U, tau), C = this.ufoCanvas || (this.ufoCanvas = this.layer(() => {})), cg = C.getContext('2d');
+    const box = [P.x - 170, P.y - 130, 340, 660];
+    cg.setTransform(1, 0, 0, 1, 0, 0); cg.globalCompositeOperation = 'source-over'; cg.globalAlpha = 1;
+    cg.clearRect(0, 0, C.width, C.height);
+    cg.setTransform(ls, 0, 0, ls, 0, 0);
+    cg.save(); cg.beginPath(); cg.rect(...box); cg.clip();
+    this.drawUfo(cg, ev, tau, t, P);
+    cg.globalCompositeOperation = 'destination-out'; cg.fillStyle = '#000';
+    if (this.theme) { drawScaffold(cg, L); this.drawBuilt(cg, Math.floor(this.finale.lit / PANELS * this.stoneFlat.length), 1, 'destination-out'); }
+    else { poly(cg, [L.left, L.apex, L.right]); cg.fill(); }
+    cg.fillStyle = '#000'; cg.fillRect(this.shaft.x, this.shaft.y, this.shaft.w, this.shaft.h); tunnelArch(cg, L, true); cg.fill();
+    cg.drawImage(this.front, 0, 0, L.W, L.H); cg.drawImage(this.fore, 0, 0, L.W, L.H);
+    for (const b of this.sim.orbs) if (b.state === RAMP) { const q = this.pose(b, t); dot(cg, q.x, q.y, L.R * 1.05); }
+    cg.restore();
+    g.save(); g.beginPath(); g.rect(...box); g.clip(); g.drawImage(C, 0, 0, L.W, L.H); g.restore();
+  }
+  drawUfo(g, ev, tau, t, P = this.ufoPose(ev.ufo, tau)) {
+    const U = ev.ufo; if (tau > U.dur) return;
+    const { leg, q, fly, f, x, y } = P;
     const tilt = fly ? clamp((leg.b[0] - leg.a[0]) / 900, -0.35, 0.35) * Math.sin(Math.PI * f) : Math.sin(t * 3) * 0.06;
     g.save(); g.translate(x, y); { const k = this.L.land ? 1.3 : 1.45; g.scale(k, k); }
     if (U.mode === 3 && !fly) {                                   // Lichtkegel nach unten
       const h = q - leg.fly, k = clamp(Math.min(h / 0.4, (leg.hold - h) / 0.4), 0, 1), cone = g.createLinearGradient(0, 10, 0, 340);
-      cone.addColorStop(0, `rgba(190,255,225,${0.6 * k})`); cone.addColorStop(1, 'rgba(190,255,225,0)');
+      cone.addColorStop(0, `rgba(190,255,225,${0.3 * k})`); cone.addColorStop(1, 'rgba(190,255,225,0)');
       g.globalCompositeOperation = 'lighter'; g.fillStyle = cone;
       g.beginPath(); g.moveTo(-15, 12); g.lineTo(15, 12); g.lineTo(95, 340); g.lineTo(-95, 340); g.closePath(); g.fill();
       g.globalCompositeOperation = 'source-over';
     }
     g.rotate(tilt);
     g.globalCompositeOperation = 'lighter';
-    const gl = g.createRadialGradient(0, 8, 2, 0, 8, 70); gl.addColorStop(0, 'rgba(150,255,225,.4)'); gl.addColorStop(1, 'rgba(150,255,225,0)');
-    g.fillStyle = gl; g.fillRect(-70, -40, 140, 110);
+    const gl = g.createRadialGradient(0, 8, 2, 0, 8, 70); gl.addColorStop(0, 'rgba(150,255,225,.2)'); gl.addColorStop(1, 'rgba(150,255,225,0)');
+    g.fillStyle = gl; g.beginPath(); g.arc(0, 8, 70, 0, TAU); g.fill();              // runder Lichthof (halb so stark wie zuvor)
     g.globalCompositeOperation = 'source-over';
     // Kuppel mit kleinem Piloten
     const dome = g.createLinearGradient(0, -30, 0, 0); dome.addColorStop(0, 'rgba(215,250,255,.95)'); dome.addColorStop(1, 'rgba(120,205,235,.9)');
@@ -1358,7 +1470,7 @@ class PyramidRenderer extends EBS.CanvasScene {
     g.strokeStyle = 'rgba(40,52,64,.55)'; g.lineWidth = 1.4; g.stroke();
     for (let k = 0; k < 6; k++) {                                 // Lauflichter
       const lx = -35 + k * 14, ly = 3 + (1 - Math.pow((k - 2.5) / 2.5, 2)) * 5, c = COLORS[(k + Math.floor(t * 6)) % 4].rgb;
-      g.globalCompositeOperation = 'lighter'; g.fillStyle = rgba(c, 0.45); dot(g, lx, ly, 6.5);
+      g.globalCompositeOperation = 'lighter'; g.fillStyle = rgba(c, 0.22); dot(g, lx, ly, 6.5);
       g.globalCompositeOperation = 'source-over'; g.fillStyle = rgba(mix(c, [255, 255, 255], 0.35), 1); dot(g, lx, ly, 3);
     }
     g.restore();
@@ -1484,6 +1596,7 @@ class PyramidRenderer extends EBS.CanvasScene {
     g.drawImage(this.fore, 0, 0, L.W, L.H);
     this.drawPool(g, t);
     this.drawSplashes(g, t);
+    this.drawFish(g, t);
     if (cfg.birds && day.night < 0.95) { g.globalAlpha = 1 - day.night; this.drawBirds(g, t); g.globalAlpha = 1; }
     this.drawSkyGuests(g, t, day, false);
     // Tageszeit: ganze Szene einfärben, danach alles, was selbst leuchtet
@@ -1491,6 +1604,7 @@ class PyramidRenderer extends EBS.CanvasScene {
     this.drawSelfLit(g, t, day);
     this.drawNight(g, t, day);
     this.drawSkyGuests(g, t, day, true);
+    this.drawEmote(g, t);
     if (this.theme) this.drawBuildLights(g, t, fs, day); else this.drawFillLights(g, t, fs, day);
     this.drawGlassFlash(g);
     this.drawPulseDot(g);
@@ -1869,24 +1983,29 @@ class PyramidRenderer extends EBS.CanvasScene {
     g.restore();
   }
   destroy() {
-    for (const c of [this.sky, this.back, this.front, this.fore, this.refl, this.colCanvas, this.scratch, this.shaftCanvas, this.moonImg.c, ...(this.theme ? [this.stone, this.stoneGlow] : []), ...this.clouds.map((x) => x.c)]) c.width = c.height = 1;
+    for (const c of [this.sky, this.back, this.front, this.fore, this.refl, this.colCanvas, this.scratch, this.shaftCanvas, this.moonImg.c, ...(this.ufoCanvas ? [this.ufoCanvas] : []), ...(this.theme ? [this.stone, this.stoneGlow] : []), ...this.clouds.map((x) => x.c)]) c.width = c.height = 1;
     super.destroy();
   }
 }
 
 const pct = (v) => Math.round(v * 100) + ' %', times = (v) => v.toFixed(2).replace('.', ',') + '×';
+// Standardwerte je Kulisse: ein Wechsel der Kulisse im Bedienfeld setzt diese Regler mit (alles andere bleibt, wie es ist)
+const THEME_SETS = {
+  0: { orbs: 22, size: 16, beltSpeed: 1, rollSpeed: 1, current: 1, glow: 1, pulse: 1, rays: 1, clouds: 1, reflection: 1, waves: 1, wiggle: 1 },
+  1: { orbs: 22, size: 23, beltSpeed: 0.85, rollSpeed: 0.85, current: 1.9, glow: 0.8, pulse: 0.15, rays: 1.3, clouds: 1.4, reflection: 0.9, waves: 1.6, wiggle: 1.85 },
+};
 const DAY_OPTIONS = [[0, 'automatisch (Videolänge, mind. 5 min)'], [1, '1 Minute'], [5, '5 Minuten'], [10, '10 Minuten'], [20, '20 Minuten'], [30, '30 Minuten'], [60, '60 Minuten']];
 EBS.registerScenario({
   id: 'pyramid',
   title: 'Endless Pyramid',
   defaults: {
     orbs: 22, size: 16, warmup: 30, figure: 0, theme: 0, speed: 1, beltSpeed: 1, rollSpeed: 1, current: 1,
-    glow: 1, pulse: 1, rays: 1, clouds: 1, reflection: 1, waves: 1, sparkle: 1, wiggle: 1, birds: true, lane: true, skyFun: true,
+    glow: 1, pulse: 1, rays: 1, clouds: 1, reflection: 1, waves: 1, sparkle: 1, wiggle: 1, birds: true, lane: true, skyFun: true, little: true,
     dayCycle: true, dayMinutes: 0, dayStart: 0, nightDark: 0.85, stars: true, sleepy: true,
     fill: true, finale: true, fillGlow: 1, fireworks: 1,
   },
   controls: [
-    { key: 'theme', label: 'Kulisse', type: 'select', restart: true, options: [[0, 'Glaspyramide in der Lagune'], [1, 'Wüsten-Baustelle (die Figuren bauen die Pyramide)']] },
+    { key: 'theme', label: 'Kulisse', type: 'select', restart: true, sets: THEME_SETS, options: [[0, 'Glaspyramide in der Lagune'], [1, 'Wüsten-Baustelle (die Figuren bauen die Pyramide)']] },
     { key: 'figure', label: 'Figuren', type: 'select', options: [[0, 'Leuchtkugeln'], [1, 'Tierchen (Küken, Pinguin, Schweinchen, Frosch)']] },
     { key: 'orbs', label: 'Anzahl der Figuren', type: 'range', restart: true, min: 12, max: 26, step: 1, format: (v) => String(v) },
     { key: 'size', label: 'Größe der Figuren', type: 'range', restart: true, min: 12, max: 24, step: 1, format: (v) => `${v * 2} px` },
@@ -1914,6 +2033,7 @@ EBS.registerScenario({
     { key: 'sleepy', label: 'Tierchen werden abends müde', type: 'check' },
     { key: 'birds', label: 'Vögel', type: 'check' },
     { key: 'skyFun', label: 'Himmelsgäste (Ballon, Vogelschwarm, UFO, Sternschnuppen)', type: 'check' },
+    { key: 'little', label: 'Kleinigkeiten (Sprechblasen der Tierchen, springende Fische)', type: 'check' },
     { key: 'lane', label: 'Strömungsspur im Wasser', type: 'check' },
   ],
   normalizeParams(p) {
@@ -1925,14 +2045,16 @@ EBS.registerScenario({
       beltSpeed: r('beltSpeed', 1, 0.25, 2), rollSpeed: r('rollSpeed', 1, 0.25, 1.6), current: r('current', 1, 0.25, 2),
       glow: r('glow', 1, 0, 1.5), pulse: r('pulse', 1, 0, 1.5), rays: r('rays', 1, 0, 1.5), clouds: r('clouds', 1, 0, 3),
       reflection: r('reflection', 1, 0, 1), waves: r('waves', 1, 0, 2), sparkle: r('sparkle', 1, 0, 2), wiggle: r('wiggle', 1, 0, 2),
-      birds: bool(p.birds, true), lane: bool(p.lane, true), skyFun: bool(p.skyFun, true),
+      birds: bool(p.birds, true), lane: bool(p.lane, true), skyFun: bool(p.skyFun, true), little: bool(p.little, true),
       dayCycle: bool(p.dayCycle, true), dayMinutes: DAY_OPTIONS.some(([v]) => v === +p.dayMinutes) ? +p.dayMinutes : 0,
       dayStart: r('dayStart', 0, 0, 0.95), nightDark: r('nightDark', 0.85, 0, 1), stars: bool(p.stars, true), sleepy: bool(p.sleepy, true),
       fill: bool(p.fill, true), finale: bool(p.finale, true), fillGlow: r('fillGlow', 1, 0, 1.5), fireworks: r('fireworks', 1, 0.5, 2),
     };
   },
   create: (ctx) => new PyramidSim(ctx),
+  themeSets: THEME_SETS,
   skyPlan: (world, seed, i) => skySlot(computeLayout(world), seed, i),   // Zeitplan der Himmelsgäste (zum Nachsehen)
+  funPlan: (world, seed, n, i, j) => ({ emote: emoteSlot(seed, i, n), fish: fishSlot(computeLayout(world), seed, j) }),
   createRenderer: (ctx) => new PyramidRenderer(ctx),
   panelStats(sim) {
     const s = sim.snapshot();
@@ -1963,6 +2085,12 @@ EBS.registerScenario({
       full: { label: 'Pyramide voll: Fanfare', samples: ['synth:fanfare'], gain: 0.24 },
       launch: { label: 'Feuerwerk: Abschuss', samples: ['synth:launch'], gain: 0.06, detune: 2 },
       firework: { label: 'Feuerwerk: Knall', samples: ['synth:firework'], gain: 0.3, ref: 1.2, detune: 1.5 },
+      // Kleinigkeiten und Himmelsgäste: bewusst sehr leise
+      emote: { label: 'Tierchen: Sprechblase', samples: ['synth:myco-pop'], gain: 0.07, semis: 12, detune: 2 },
+      fish: { label: 'Springender Fisch', samples: ['synth:splash'], gain: 0.045, semis: 9, detune: 2 },
+      ufo: { label: 'Himmelsgast: UFO', samples: ['synth:ufo'], gain: 0.07, detune: 1.5 },
+      twinkle: { label: 'Himmelsgast: Sternschnuppe', samples: ['synth:myco-pling'], gain: 0.05, semis: 12, detune: 1 },
+      chirp: { label: 'Himmelsgast: Vogelschwarm', samples: ['synth:squeak'], gain: 0.03, semis: 5, detune: 3 },
     },
   },
 });
