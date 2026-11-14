@@ -1,6 +1,8 @@
 /* Progressive Marble Factory: the existing event mixer owns playback, variation,
  * loudness normalization and export. No audio clock or random source touches physics.
- * Short, density-limited gestures follow actual work; there is no perpetual motor loop. */
+ * Short, density-limited gestures follow actual work; there is no perpetual motor loop.
+ * Polishing/coating remain logical production events but intentionally have no
+ * sound mapping: their former broad noise layers were removed. */
 (function () {
   'use strict';
   const production = EBS.MarbleProduction = EBS.MarbleProduction || {};
@@ -27,17 +29,9 @@
       label: 'Produktion · Vereinzelung', samples: ['impactMetal_light_000', 'impactMetal_light_001'],
       gain: .13, semis: -4, detune: .5, minGap: .2,
     },
-    factoryPolish: {
-      label: 'Produktion · Polierbürsten', samples: ['synth:myco-breeze'],
-      gain: .085, semis: -5, detune: .6, minGap: .9,
-    },
     factoryPress: {
       label: 'Produktion · Presse', samples: ['impactWood_medium_000', 'impactWood_medium_001'],
       gain: .21, semis: -9, detune: .6, minGap: .35,
-    },
-    factoryCoat: {
-      label: 'Produktion · Beschichtung', samples: ['synth:myco-breeze'],
-      gain: .065, ref: 1, semis: 5, detune: .5, minGap: .8,
     },
     factoryScan: {
       label: 'Produktion · Prüfung', samples: ['impactGlass_light_001', 'impactGlass_light_002'],

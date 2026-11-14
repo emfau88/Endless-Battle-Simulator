@@ -38,7 +38,7 @@ test('Production audio: every machine cue resolves, mixes deterministically and 
   assert.equal(voices.length, events.length);
   assert.ok(voices.every(v => v.data.length > 0 && v.gl > 0 && v.gr > 0 && v.gl === v.gr));
   assert.deepEqual(buildVoices(events, audio, samples, { worldW: physicalWidth }), voices);
-  for (const type of ['factoryRoll', 'factoryImpact', 'factoryPolish', 'factoryCoat', 'factorySort']) {
+  for (const type of ['factoryRoll', 'factoryImpact', 'factoryPress', 'factorySort']) {
     const dense = Array.from({ length: 15 }, (_, seq) => ({ seq, step: 60 + seq, type, x: physicalWidth / 2, p: 1, c: 0, material: 'glass' }));
     assert.ok(buildVoices(dense, audio, samples).length < dense.length / 2, `${type} needs audible breathing room`);
   }
@@ -47,6 +47,30 @@ test('Production audio: every machine cue resolves, mixes deterministically and 
   assert.ok(Math.abs(mixed.lufs - TARGET_LUFS) <= .2, JSON.stringify(mixed));
   assert.ok(mixed.peakOutDb <= -1.99, JSON.stringify(mixed));
   assert.equal(renderTrack(events, audio, samples, options).digest, mixed.digest);
+});
+
+test('Production audio: removed polish/coating noise cannot return through legacy high volume settings', () => {
+  const retained = ['factoryRoll', 'factoryImpact', 'factoryFeed', 'factoryPress', 'factoryScan', 'factorySort', 'factoryUpgrade', 'factoryComplete'];
+  assert.deepEqual(Object.keys(audio.events), retained, 'all eight remaining sound layers stay available');
+  assert.equal(samples.has('synth:myco-breeze'), false, 'removed noise is not loaded for production');
+  const contacts = retained.map((type, i) => ({ seq: i * 3, step: 60 + i * 90, type, x: physicalWidth / 2, p: 1, c: i % 6, material: 'glass' }));
+  const noise = contacts.flatMap(e => [
+    { ...e, seq: e.seq + 1, step: e.step + 15, type: 'factoryPolish' },
+    { ...e, seq: e.seq + 2, step: e.step + 30, type: 'factoryCoat' },
+  ]);
+  // Even an old sample cache and maximum saved sliders must not resurrect the
+  // deleted mappings or change the timing/level/sample of the retained voices.
+  const cachedSamples = new Map(samples);
+  const oldNoise = new Float32Array([.5, -.5, .25, -.25]);
+  cachedSamples.set('synth:myco-breeze', oldNoise);
+  for (const volume of [null, { factoryPolish: 200, factoryCoat: 200, factoryImpact: 70, factoryComplete: 40 }]) {
+    const options = { worldW: physicalWidth, volume };
+    const expected = buildVoices(contacts, audio, cachedSamples, options);
+    const actual = buildVoices([...contacts, ...noise], audio, cachedSamples, options);
+    assert.equal(expected.length, retained.length);
+    assert.deepEqual(actual, expected);
+    assert.ok(actual.every(voice => voice.data !== oldNoise));
+  }
 });
 
 test('Production audio: configuration keeps Classic voices intact and accepts material/machine volume settings', () => {
@@ -67,13 +91,21 @@ test('Production audio: configuration keeps Classic voices intact and accepts ma
   assert.equal(scenario.createRenderer, originalRenderer);
   for (const [key, definition] of Object.entries(classic)) assert.deepEqual(JSON.parse(JSON.stringify(scenario.audio.events[key])), definition);
   const cfg = registered.EBS.normalizeConfig({ scenario: 'marbleworks', params: { material: 'mixed' },
-    video: { volume: { factoryImpact: 70, factoryComplete: 40, imaginary: 140 } } });
+    video: { volume: { factoryImpact: 70, factoryComplete: 40, factoryPolish: 200, factoryCoat: 180, imaginary: 140 } } });
   assert.equal(cfg.scenario, 'marbleworks');
   assert.equal(cfg.params.material, 'mixed');
   assert.equal(cfg.video.volume.factoryImpact, 70);
   assert.equal(cfg.video.volume.factoryComplete, 40);
-  assert.equal(cfg.video.volume.factoryPolish, 100);
+  assert.equal(cfg.video.volume.factoryPress, 100);
+  assert.equal(Object.hasOwn(cfg.video.volume, 'factoryPolish'), false);
+  assert.equal(Object.hasOwn(cfg.video.volume, 'factoryCoat'), false);
   assert.equal(cfg.video.volume.imaginary, undefined);
+  const legacy = registered.EBS.normalizeConfig({ scenario: 'marble', params: { factoryMode: 'progressive' },
+    video: { volume: { factoryPolish: 200, factoryCoat: 200, factoryImpact: 70 } } });
+  assert.equal(legacy.scenario, 'marbleworks');
+  assert.equal(Object.hasOwn(legacy.video.volume, 'factoryPolish'), false);
+  assert.equal(Object.hasOwn(legacy.video.volume, 'factoryCoat'), false);
+  assert.equal(legacy.video.volume.factoryImpact, 70);
   assert.deepEqual(JSON.parse(JSON.stringify(registered.EBS.normalizeConfig({ scenario: 'marble' }).params)), { balls: 35, buffer: 2, warmup: 30 });
 });
 
@@ -113,6 +145,7 @@ test('Production audio: a complete mixed order preserves every event and produce
   const landscape = record({ w: 1920, h: 1080 }), portrait = record({ w: 1080, h: 1920 });
   assert.deepEqual(portrait, landscape, 'format must not change the production event score');
   const { events, seconds } = landscape;
+  for (const type of ['factoryPolish', 'factoryCoat']) assert.ok(events.some(e => e.type === type), 'logical production events are retained independently of sound mappings');
   for (const type of Object.keys(audio.events)) assert.ok(events.some(e => e.type === type), `${type} never sounds during actual production`);
   assert.equal(events.filter(e => e.type === 'factoryUpgrade').length, 2);
   assert.equal(events.filter(e => e.type === 'factoryComplete').length, 1);
@@ -123,7 +156,11 @@ test('Production audio: a complete mixed order preserves every event and produce
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const wav = join(dir, 'order.wav'), aac = join(dir, 'order.m4a');
   const mixed = renderTrack(events, audio, samples, { worldW: physicalWidth, totalSamples: seconds * SAMPLE_RATE, file: wav });
-  assert.ok(Math.abs(mixed.lufs - TARGET_LUFS) <= .2, JSON.stringify(mixed));
+  // With the sustained noise removed, this sparse score may reach the mixer's
+  // bounded normalization gain before its exact target. Keep the same 1 LU
+  // acceptance window as the encoded track and retain the strict peak ceiling.
+  assert.ok(Math.abs(mixed.lufs - TARGET_LUFS) <= 1, JSON.stringify(mixed));
+  assert.ok(mixed.peakOutDb <= -1.99, JSON.stringify(mixed));
   const encoded = await run(ffmpegBin(), ['-y', '-v', 'error', '-i', wav, '-c:a', 'aac', '-b:a', '192k', aac]);
   assert.equal(encoded.code, 0, encoded.stderr);
   const measured = await measureEncodedAudio(aac, { ffmpeg: ffmpegBin() });
