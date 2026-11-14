@@ -64,11 +64,22 @@ zwölf Dateien. Der zusätzliche Check prüft die Quellen, Zwischenstufe, fertig
 
 ## Review und Prüfung
 
-Zum dokumentierten Zwischenstand sind 31 gezielte Fälle, 14 bestehende Audiofälle, zwölf Core-/Konfigurationsfälle,
-acht zusätzliche Audiofälle für Scrap, Mycelium und Pyramid und ein Marble-Works-Exporttest bestanden (66 Fälle).
-Letzterer umfasst drei reale 3-Sekunden-Clips mit vollständiger
-84-Sekunden-Episodentonspur. Die restlichen Renderer-/Browserprüfungen und Reviewvideos werden separat
-abgeschlossen; frühere 3D-Testzahlen und die Messwerte der alten Tonfassung sind kein Nachweis dieses neuen Mischprofils.
+Es sind **74 verschiedene Testfälle bestanden**: 31 gezielte Modell-/Mischplan-/Audioprüfungen,
+14 bestehende Audiofälle, zwölf Core-/Konfigurationsfälle, acht zusätzliche Audiofälle für Scrap,
+Mycelium und Pyramid, acht bestehende Marble-Works-Browser-/Effektfälle und ein Exporttest.
+Letzterer umfasst drei reale 3-Sekunden-Clips mit vollständiger 84-Sekunden-Episodentonspur.
+Nach Korrektur des Lautstärkehinweises wurden die beiden betroffenen UI-Fälle nochmals erfolgreich geprüft;
+diese Wiederholungen sind in der Gesamtzahl nicht doppelt gezählt.
+
+Vier echte Vorher-/Nachher-PNG-Paare sind bytegleich zu `main@f3cb8de`: 16:9 bei 0/40 Sekunden und
+9:16 bei 18/100 Sekunden, einschließlich zweitem Ausbau und Finale. Ein früher Bildvergleich mit
+mehreren gleichzeitigen Grafik-Kontexten blieb hängen. Sequentielle Einzelaufnahmen bestanden auf
+derselben AMD-Grafik; Produktionscode oder Zeitlimits wurden dafür nicht verändert.
+
+Belege im Worktree: `output/mw-focused-tests.log`, `mw-legacy-audio.log`, `mw-core-config-tests.log`,
+`mw-other-scenario-audio.log`, `mw-browser-tests.log`, `mw-export-tests.log`, `mw-audio-ui-final.log`
+sowie `mw-renderer-comparison.json`. Frühere 3D-Testzahlen und Messwerte der alten Tonfassung sind
+kein Nachweis dieses Mischprofils.
 
 Ein vollständiger gemischter Auftrag mit 24 Produkten enthält 291 Rohereignisse und eine 79 Sekunden lange
 Tonspur. Gemessen wurden −36,9 LUFS für die Mischung und −12,1 dBTP für die fertige AAC-Spur, ohne

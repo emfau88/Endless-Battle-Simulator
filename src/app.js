@@ -170,10 +170,12 @@ async function bootLive() {
     }
   }
   // ---- Lautstärke: Gesamtregler + je Klang der Klangtabelle (Prozent, nur für den Export; wirkt ohne Neustart)
-  // 100 % = Standardmischung auf YouTube-Lautheit (−14 LUFS); 0–200 %, also leiser und lauter möglich
+  // Other scenarios retain their −14 LUFS reference; Marble Works has a fixed, quiet mix.
+  const usesCameraAudio = () => session.scenario.audio?.mixProfile === 'marbleworks-soft-v1';
   const dB = (v) => { const d = 20 * Math.log10(v / 100); return (d > 0 ? '+' : '−') + Math.abs(d).toFixed(1).replace('.', ','); };
   const fmtVol = (key, v) => {
     if (v === 0) return '0 % · aus';
+    if (key === 'master' && usesCameraAudio()) return v === 100 ? '100 % · Standard' : `${v} % · ${dB(v)} dB`;
     // Gesamt unter 100 % wirkt hinter dem Begrenzer (exakt), darüber treibt er in den Begrenzer (lauter, Spitzen begrenzt)
     if (key === 'master') return v === 100 ? '100 % · −14 LUFS' : v < 100 ? `${v} % · ≈ −${Math.round(14 - 20 * Math.log10(v / 100))} LUFS` : `${v} % · ${dB(v)} dB, begrenzt`;
     return v === 100 ? '100 %' : `${v} % · ${dB(v)} dB`;
@@ -211,7 +213,8 @@ async function bootLive() {
     }
     $('btnVolumeReset').disabled = !on;
     $('audioHint').textContent = !hasAudio ? 'Dieses Szenario hat noch keinen Ton.'
-      : on ? 'Standard 100 % = YouTube-Lautheit (−14 LUFS). Nach links leiser, nach rechts lauter (bis 200 % = +6 dB). '
+      : on ? (usesCameraAudio() ? 'Der Ton folgt dem Kamerablick. 100 % = ruhige Standardmischung. Nach links leiser, nach rechts lauter. '
+        : 'Standard 100 % = YouTube-Lautheit (−14 LUFS). Nach links leiser, nach rechts lauter (bis 200 % = +6 dB). ')
         + 'Gilt für den Ton im exportierten Video, im Hoch- wie im Querformat; die Vorschau ist stumm.'
         : 'Ton ist ausgeschaltet – das Video wird ohne Tonspur exportiert.';
   }

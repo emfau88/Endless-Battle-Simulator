@@ -10,8 +10,8 @@ await mkdir(output, { recursive: true });
 const reviews = [
   { aspect: '16:9', stem: 'marbleworks-audio-16x9', startSec: 0,
     title: '16:9 · Überblick und Zuführung', text: 'Vom ruhigen Überblick zur nahen Zuführung. Der Ton rückt mit dem Kamerablick nach vorn.' },
-  { aspect: '9:16', stem: 'marbleworks-audio-9x16', startSec: 22,
-    title: '9:16 · Veredelung und Ausbau', text: 'Eine Kamerafahrt durch die Freischaltungen. Entfernte Stationen treten akustisch zurück.' },
+  { aspect: '9:16', stem: 'marbleworks-audio-9x16', startSec: 8,
+    title: '9:16 · Nahansicht und Stationswechsel', text: 'Von der Zuführung zur ersten Veredelung. Beim Wechsel treten entfernte Kontakte akustisch zurück.' },
 ];
 const results = [];
 for (const review of reviews) {

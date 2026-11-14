@@ -97,9 +97,16 @@ test('Progressive UI: switch from Classic, preserve live state on reframe and sa
   await page.goto(pathToFileURL(INDEX).href + '?scenario=marble&paused=1');
   await page.waitForFunction(() => EBS.app?.sim);
   assert.equal(await page.inputValue('#scenario'), 'marble');
+  assert.match(await page.textContent('#audioHint'), /−14 LUFS/);
   assert.equal(await page.locator('#p-factoryMode').count(), 0);
   assert.ok(await page.locator('#p-balls').isVisible());
   await page.selectOption('#scenario', 'marbleworks');
+  assert.equal(await page.textContent('#vo-master'), '100 % · Standard');
+  assert.match(await page.textContent('#audioHint'), /Kamerablick/);
+  assert.doesNotMatch(await page.textContent('#audioHint'), /−14 LUFS/);
+  await page.fill('#vol-master', '50'); await page.dispatchEvent('#vol-master', 'input');
+  assert.equal(await page.textContent('#vo-master'), '50 % · −6,0 dB');
+  await page.click('#btnVolumeReset');
   assert.equal(await page.locator('#p-balls').count(), 0);
   assert.ok(await page.locator('#p-orderSize').isVisible());
   assert.ok(await page.locator('#stat-completed').count());
@@ -125,6 +132,7 @@ test('Progressive UI: switch from Classic, preserve live state on reframe and sa
   assert.equal(await page.inputValue('#scenario'), 'marbleworks');
   assert.equal(await page.inputValue('#p-orderSize'), '24');
   await page.selectOption('#scenario', 'marble');
+  assert.match(await page.textContent('#audioHint'), /−14 LUFS/);
   assert.ok(await page.locator('#stat-cycles').count());
   assert.equal(await page.locator('#p-orderSize').count(), 0);
   assert.equal(await page.locator('#p-factoryMode').count(), 0);
