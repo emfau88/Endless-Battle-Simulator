@@ -1,5 +1,10 @@
 # Roadmap
 
+**Scrap-Optik · 14.11.2026:** P1–P3 des [Optikplans](SCRAP_OPTIK_PLAN_2026-11-14.md)
+sind lokal auf `codex/scrap-optik` umgesetzt. Vorher-/Nachher-Bilder und Prüfungen:
+[Abnahmebericht](SCRAP_OPTIK_2026-11-14.md). Die visuelle Abnahme nach P3 steht aus;
+P4/P5 sowie P6/M2/M3 bleiben offen. Noch kein Push oder PR.
+
 **Aktueller Stand · 13.11.2026:** R26 vereint die fünf vorhandenen Szenarien in einem
 gemeinsamen Produktionsgenerator. Auf Wunsch des Nutzers entfällt die Teilen-Link-Oberfläche;
 Seed, Feinjustierungen sowie Speichern/Laden von Einstellungen bleiben erhalten.

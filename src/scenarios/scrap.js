@@ -71,7 +71,9 @@
           if (this._scorchTextures.size >= 48) this._scorchTextures.clear();
           this._scorchTextures.set(key, texture);
         }
-        const age = Math.max(0, this.episode.roundSim.t - e.roundTime);
+        // The killing hit can end the round at age zero. Global video ticks
+        // keep its fade-in moving even while the round's physics is frozen.
+        const age = Math.max(0, (this.episode.step - e.step) / 60) * this.episode.timeScale;
         const p = mapPoint({ x: e.arenaX, y: e.arenaY });
         g.save(); g.globalAlpha = Math.min(1, age / .15) * (.38 - .10 * Math.min(1, age / 15)) * (this.sunny ? .65 : 1);
         g.drawImage(texture, p.x - 40, p.y - 40, 80, 80); g.restore();
@@ -93,17 +95,33 @@
       if (this.sunny) EBS.ScrapDaylightArt.pickup(g, p, t, this);
       else super._pickup(g, p, t);
     }
-    _bodyTexture(color, dead = false) {
-      const id = palette.indexOf(color), key = `painted:${color}:${dead}`;
+    _bodyTexture(color, dead = false, stage = 0) {
+      const id = Math.max(0, palette.indexOf(color));
+      stage = dead ? 2 : Math.max(0, Math.min(2, stage));
+      const key = `painted-p3:${color}:${dead ? 'wreck' : stage}`;
       if (this._bodies.has(key)) return this._bodies.get(key);
-      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 208;
-      const g = canvas.getContext('2d'); g.scale(2, 2); g.translate(52, 52);
-      const accent = dead ? '#68757a' : color;
-      // Four cosmetic silhouettes share the original physical footprint.
-      for (const y of [-27, 17]) {
-        box(g, -25, y, 45, 11, 3); g.fillStyle = '#101923'; g.fill();
-        g.strokeStyle = '#8397a3'; g.lineWidth = 1; g.stroke();
-        for (let x = -22; x < 19; x += 6) { g.fillStyle = '#40515e'; g.fillRect(x, y + 2, 3, 7); }
+      const blend = (a, b, amount) => {
+        const aa = parseInt(a.slice(1), 16), bb = parseInt(b.slice(1), 16);
+        return '#' + [16, 8, 0].map(shift => Math.round(((aa >> shift) & 255) * (1 - amount)
+          + ((bb >> shift) & 255) * amount).toString(16).padStart(2, '0')).join('');
+      };
+      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 416;
+      const g = canvas.getContext('2d'); g.scale(4, 4); g.translate(52, 52);
+      const accent = dead ? blend(color, '#1c2226', .75) : color;
+      // Each silhouette keeps its original nose and rear shape. The narrower
+      // hull exposes eight units of track without changing the physical body.
+      for (const y of [-29, 19]) {
+        g.save();
+        if (dead && y > 0) g.translate(3, 3);
+        box(g, -27, y, 50, 10, 4); g.fillStyle = '#141c22'; g.fill();
+        g.strokeStyle = '#0a1015'; g.lineWidth = 1.5; g.stroke();
+        for (let x = -24; x < 22; x += 5) stroke(g, x, y + 1.3, x, y + 8.7, '#34434d', 2);
+        for (const x of [-23, 19]) {
+          circle(g, x, y + 5, 4); g.fillStyle = '#26333c'; g.fill();
+          circle(g, x, y + 5, 1.5); g.fillStyle = '#45535d'; g.fill();
+        }
+        stroke(g, -22, y + 1, 18, y + 1, rgba('#6c7e88', dead ? .3 : .6), .8);
+        g.restore();
       }
       const shapes = [
         [[-25,-16],[-15,-23],[13,-21],[27,-8],[27,8],[13,21],[-15,23],[-25,16]],
@@ -111,67 +129,238 @@
         [[-23,-23],[17,-23],[25,-15],[25,15],[17,23],[-23,23]],
         [[-24,-12],[-12,-24],[12,-24],[24,-12],[24,12],[12,24],[-12,24],[-24,12]],
       ];
-      path(g, shapes[Math.max(0, id)]); g.fillStyle = '#111c24'; g.lineWidth = 5; g.strokeStyle = '#091118'; g.stroke();
-      const paint = g.createLinearGradient(-24, -25, 24, 28);
-      paint.addColorStop(0, dead ? '#849193' : '#e6edf0'); paint.addColorStop(.16, accent);
-      paint.addColorStop(.68, accent); paint.addColorStop(1, '#263c46'); g.fillStyle = paint; g.fill();
-      g.strokeStyle = dead ? '#7c898d' : '#eff5e8'; g.lineWidth = 1.1; g.stroke();
-      if (id === 0) { path(g, [[-18,-16],[-6,-16],[14,0],[-6,16],[-18,16],[-1,0]]); g.fillStyle = '#722d30'; g.fill(); }
-      if (id === 1) { for (const y of [-18, 12]) { box(g, -15, y, 27, 6, 2); g.fillStyle = '#d2f7fa'; g.fill(); } }
-      if (id === 2) { for (const y of [-22, 13]) { g.fillStyle = '#58401e'; g.fillRect(-19, y, 37, 9); g.fillStyle = accent; g.fillRect(-11, y, 7, 9); g.fillRect(8, y, 7, 9); } }
-      if (id === 3) { circle(g, -4, 0, 19); g.strokeStyle = '#3b642f'; g.lineWidth = 4; g.stroke(); }
-      box(g, -24, -10, 6, 20, 2); g.fillStyle = '#132431'; g.fill();
-      circle(g, -5, 0, 12); g.fillStyle = '#152936'; g.fill(); g.strokeStyle = '#e5eeed'; g.lineWidth = 1.2; g.stroke();
+      const hull = shapes[id].map(([x, y]) => [x, y * 21 / 24]);
+      g.save(); g.translate(1.5, 2.5); path(g, hull); g.fillStyle = '#132029'; g.fill(); g.restore();
+      path(g, hull);
+      const paint = g.createLinearGradient(-24, -22, 24, 24);
+      paint.addColorStop(0, blend(accent, '#ffffff', dead ? .06 : .18));
+      paint.addColorStop(.35, accent); paint.addColorStop(.7, accent);
+      paint.addColorStop(1, blend(accent, '#0d1a22', .35));
+      g.fillStyle = paint; g.fill(); g.strokeStyle = '#0a1218'; g.lineWidth = 2.5; g.stroke();
+      // Narrow bevels replace the old white wash over the entire body.
+      for (let i = 0; i < hull.length; i++) {
+        const a = hull[i], b = hull[(i + 1) % hull.length], dx = b[0] - a[0], dy = b[1] - a[1];
+        const light = dx - dy > 0;
+        stroke(g, a[0] * .97, a[1] * .97, b[0] * .97, b[1] * .97,
+          light ? blend(accent, '#ffffff', dead ? .12 : .45) : blend(accent, '#0d1a22', .55), 1);
+      }
+      // Existing identifying motifs: Ember intake, Azure windows, Amber warning
+      // plates and Moss ring. Their placement follows the reduced hull height.
+      if (id === 0) {
+        path(g, [[-18,-14],[-6,-14],[14,0],[-6,14],[-18,14],[-1,0]]);
+        g.fillStyle = dead ? '#3e3031' : '#722d30'; g.fill();
+      }
+      if (id === 1) for (const y of [-16, 11]) {
+        box(g, -15, y, 27, 5, 2); g.fillStyle = dead ? '#506067' : '#b2dde1'; g.fill();
+        stroke(g, -13, y + 1, 9, y + 1, dead ? '#647174' : '#d2f7fa', .7);
+      }
+      if (id === 2) for (const y of [-19, 12]) {
+        g.fillStyle = dead ? '#383529' : '#58401e'; g.fillRect(-19, y, 37, 7);
+        g.fillStyle = accent; g.fillRect(-11, y, 7, 7); g.fillRect(8, y, 7, 7);
+      }
+      if (id === 3) {
+        circle(g, -4, 0, 17); g.strokeStyle = dead ? '#364431' : '#3b642f'; g.lineWidth = 4; g.stroke();
+      }
+      for (const sign of [-1, 1]) {
+        g.beginPath(); g.moveTo(-19, sign * 10); g.lineTo(-10, sign * 12); g.lineTo(12, sign * 10);
+        g.strokeStyle = rgba('#000000', .3); g.lineWidth = 1; g.stroke();
+      }
+      for (const y of [-6, 0, 6]) stroke(g, -23, y, -16, y + 1, '#132431', 2);
+      circle(g, -5, 0, 12); g.fillStyle = '#152936'; g.fill();
+      g.strokeStyle = dead ? '#596565' : '#b9cac9'; g.lineWidth = 1.2; g.stroke();
       circle(g, -5, 0, 7.5); g.fillStyle = accent; g.fill();
-      circle(g, -7, -3, 2.7); g.fillStyle = dead ? '#86918a' : '#fffbe2'; g.fill();
-      for (const [x,y] of [[-17,-17],[-17,17],[13,-15],[13,15]]) { circle(g, x, y, 1.6); g.fillStyle = '#d8e5e7'; g.fill(); }
-      box(g, 19, -9, 7, 18, 2); g.fillStyle = '#263a45'; g.fill(); g.fillStyle = dead ? '#697378' : '#f4f9e7'; g.fillRect(24,-5,2,10);
-      if (dead) { g.strokeStyle = '#11191c'; g.lineWidth = 3; g.beginPath(); g.moveTo(-18,-14); g.lineTo(11,12); g.lineTo(7,-8); g.stroke(); }
-      this._bodies.set(key, canvas); return canvas;
-    }
-    _robot(g, robot, t) {
-      const color = colorOf(robot);
-      super._robot(g, { ...robot, color, name:this.materialArena?' ':robot.name }, t);
-      if (!robot.alive) return;
-      g.save(); g.translate(robot.x, robot.y);
-      const stage = damageStage(robot);
-      if (stage) {
-        g.save(); g.rotate(Math.hypot(robot.vx, robot.vy) > 8 ? Math.atan2(robot.vy, robot.vx) : robot.angle);
-        // Fixed scars preserve team paint and weapon readability. Damage is a
-        // view of HP, never an extra physics state or a source of random calls.
-        g.strokeStyle = '#17212ce0'; g.lineWidth = 3;
-        for (let i = 0; i < stage + 1; i++) {
-          g.beginPath(); g.moveTo(-18 + i * 12, -19); g.lineTo(-13 + i * 12, -13); g.lineTo(-17 + i * 12, -5); g.stroke();
+      if (!dead) { circle(g, -7, -3, 2.7); g.fillStyle = '#fffbe2'; g.fill(); }
+      for (const [x, y] of [[-17,-15],[-17,15],[13,-13],[13,13]]) {
+        circle(g, x, y, 1.6); g.fillStyle = dead ? '#717b7c' : '#d8e5e7'; g.fill();
+        stroke(g, x - .7, y, x + .7, y, '#43525a', .6);
+      }
+      box(g, 19, -8, 7, 16, 2); g.fillStyle = '#263a45'; g.fill();
+      g.fillStyle = dead ? '#53605f' : '#d9e5d7'; g.fillRect(24, -4, 2, 8);
+      if (stage >= 1) {
+        for (let i = 0; i < 2; i++) {
+          const x = -14 + noise(id + 61, i) * 23, y = -12 + noise(id + 67, i) * 24;
+          g.beginPath(); g.ellipse(x, y, 3, 2, -.2, 0, Math.PI * 2);
+          g.fillStyle = blend(accent, '#0d1a22', .4); g.fill();
+          stroke(g, x - 2, y + 1.6, x + 2, y + 1.6, blend(accent, '#ffffff', .3), .7);
         }
-        if (stage === 2) {
-          box(g, -23, 9, 18, 10, 2); g.fillStyle = '#281c19'; g.fill();
-          g.strokeStyle = '#eaa56a'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(-21, 11); g.lineTo(-12, 16); g.lineTo(-7, 11); g.stroke();
+        for (let i = 0; i < (stage === 2 ? 7 : 4); i++) {
+          const x = -20 + noise(id + 79, i) * 31, y = -14 + noise(id + 83, i) * 27;
+          const length = 5 + noise(id + 89, i) * 4;
+          stroke(g, x, y, x + Math.cos(.35) * length, y + Math.sin(.35) * length, rgba('#d9e2e4', dead ? .35 : .8), 1);
         }
-        g.restore();
       }
       if (stage === 2) {
-        // Three analytic puffs at most per robot; no accumulating particle pool.
-        for (let i = 0; i < 3; i++) {
-          const age = (t * .7 + i / 3 + robot.id * .13) % 1;
-          circle(g, -14 + Math.sin(age * 4 + i) * 5, -9 - age * 35, 4 + age * 9);
-          g.fillStyle = `rgba(126,137,143,${(1 - age) * .28})`; g.fill();
-        }
+        glow(g, dead ? -2 : -15, dead ? 0 : 4, dead ? 25 : 10, '#12161a', dead ? .72 : .55);
+        box(g, -23, 8, 16, 9, 2); g.fillStyle = '#281c19'; g.fill();
+        path(g, [[-23,8],[-20,4],[-7,7],[-7,10]]); g.fillStyle = blend(accent, '#0d1a22', .3); g.fill();
+        g.strokeStyle = '#152027'; g.lineWidth = .8; g.stroke();
+        stroke(g, -21, 11, -13, 15, dead ? '#87644a' : '#eaa56a', 1.4);
+        stroke(g, -13, 15, -9, 10, dead ? '#87644a' : '#eaa56a', 1.4);
+      }
+      // Cache a soft silhouette as well. Rotation happens at draw time while
+      // the lighting offset stays in arena coordinates, never in robot space.
+      const mask = document.createElement('canvas'); mask.width = mask.height = 416;
+      const mg = mask.getContext('2d'); mg.drawImage(canvas, 0, 0);
+      mg.globalCompositeOperation = 'source-in'; mg.fillStyle = rgba('#03090e', .6); mg.fillRect(0, 0, 416, 416);
+      const shadow = document.createElement('canvas'); shadow.width = shadow.height = 416;
+      const sg = shadow.getContext('2d'); sg.filter = 'blur(16px)'; sg.drawImage(mask, 0, 0);
+      canvas.scrapShadow = shadow;
+      this._bodies.set(key, canvas); return canvas;
+    }
+    _weapon(g, kind, loaded, color = '#84c9df', miniature = false) {
+      if (kind !== 'rocket') { super._weapon(g, kind, loaded, color, miniature); return; }
+      g.save(); if (miniature) g.scale(.65, .65);
+      box(g, 8, -9, 11, 18, 3); g.fillStyle = '#263841'; g.fill();
+      g.strokeStyle = '#0a1218'; g.lineWidth = 1; g.stroke();
+      g.fillStyle = color; g.fillRect(10, -7, 2, 14);
+      for (const y of [-9, 2]) {
+        box(g, 17, y, 22, 7, 2);
+        const metal = g.createLinearGradient(0, y, 0, y + 7);
+        metal.addColorStop(0, '#5c6a70'); metal.addColorStop(1, '#2c383e');
+        g.fillStyle = metal; g.fill(); g.strokeStyle = '#0a1218'; g.lineWidth = 1; g.stroke();
+        stroke(g, 19, y + 1, 35, y + 1, '#91a1a5', .7);
+        box(g, 36, y - .5, 4, 8, 1.2); g.fillStyle = '#1a272f'; g.fill();
+        box(g, 37, y + 1, 2, 5, .7); g.fillStyle = '#0b0f12'; g.fill();
+        if (loaded) { g.strokeStyle = '#d88459'; g.lineWidth = .8; g.stroke(); }
+        stroke(g, 21, y + .5, 21, y + 6.5, '#24323a', 1.2);
+      }
+      box(g, 23, -2, 8, 4, 1); g.fillStyle = '#34464e'; g.fill();
+      g.restore();
+    }
+    _robot(g, robot, t) {
+      const finite = (v, fallback = 0) => Number.isFinite(v) ? v : fallback;
+      const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+      const color = colorOf(robot), dead = robot.alive === false || finite(robot.hp, 1) <= 0;
+      const speed = Math.hypot(finite(robot.vx), finite(robot.vy));
+      const chassisAngle = speed > 8 ? Math.atan2(robot.vy, robot.vx) : finite(robot.angle);
+      const aim = finite(robot.angle), radius = Math.max(12, finite(robot.r, 24)), bodyScale = radius / 24;
+      const stage = dead ? 2 : damageStage(robot), body = this._bodyTexture(color, dead, stage);
+      g.save(); g.translate(finite(robot.x), finite(robot.y));
+      if (!dead) glow(g, 0, 5, 40 * bodyScale, color, .10);
+      g.save(); g.translate(5 * bodyScale, 8 * bodyScale); g.rotate(chassisAngle); g.scale(bodyScale, bodyScale);
+      g.drawImage(body.scrapShadow, -52, -52, 104, 104); g.restore();
+      g.save(); g.rotate(chassisAngle); g.scale(bodyScale, bodyScale);
+      g.drawImage(body, -52, -52, 104, 104);
+      if (!dead && speed > 8) {
+        const travel = (((finite(robot.x) + finite(robot.y)) * .28) % 5 + 5) % 5;
+        for (const y of [-28, 20]) for (let x = -22; x < 17; x += 5)
+          stroke(g, x + travel, y, x + travel, y + 6, rgba('#a8bcc4', .28), .7);
       }
       if (robot.module) {
-        // One visible attachment per robot, below the name and outside the gun.
-        g.save(); g.rotate(Math.atan2(robot.vy, robot.vx));
+        // Attachments use exactly the chassis rotation (including at rest),
+        // rather than atan2(0, 0), and sit beside the newly exposed tracks.
+        if (dead) g.globalAlpha = .5;
         if (robot.module === 'plating') {
-          path(g,[[-24,-13],[-17,-17],[-17,17],[-24,13]]); g.fillStyle = '#d6e0df'; g.fill();
+          path(g, [[-27,-13],[-20,-17],[-20,17],[-27,13]]); g.fillStyle = '#d6e0df'; g.fill();
         } else if (robot.module === 'drive') {
-          for(const y of [-22,22]) { box(g,-27,y-4,13,8,2); g.fillStyle='#8fe0e5';g.fill(); }
+          for (const y of [-24, 24]) { box(g, -27, y - 4, 13, 8, 2); g.fillStyle = '#8fe0e5'; g.fill(); }
         } else {
-          box(g,-29,-8,10,16,3);g.fillStyle='#ffce63';g.fill();g.fillStyle='#394452';g.fillRect(-27,-4,6,8);
+          box(g, -29, -8, 10, 16, 3); g.fillStyle = '#ffce63'; g.fill();
+          g.fillStyle = '#394452'; g.fillRect(-27, -4, 6, 8);
+        }
+        g.globalAlpha = 1;
+      }
+      g.restore();
+      if (!dead && robot.weapon) {
+        g.save(); g.rotate(aim); g.scale(bodyScale, bodyScale);
+        circle(g, 7, 0, 10.5);
+        const mount = g.createLinearGradient(-4, -12, 16, 12);
+        mount.addColorStop(0, '#93a6af'); mount.addColorStop(.32, '#536c7b'); mount.addColorStop(1, '#1a303f');
+        g.fillStyle = mount; g.fill(); g.strokeStyle = '#122431'; g.lineWidth = 1.3; g.stroke();
+        const recoil = clamp((finite(robot.flashUntil) - t) * 32, 0, 4); g.translate(-recoil, 0);
+        this._weapon(g, robot.weapon.kind, robot.weapon.ammo > 0, color);
+        circle(g, 6, 0, 5.5); g.fillStyle = '#293f4c'; g.fill();
+        circle(g, 6, 0, 2.1); g.fillStyle = '#7e9098'; g.fill(); stroke(g, 4.9, 0, 7.1, 0, '#1c2c36', .8);
+        if (robot.flashUntil > t) {
+          const rocket = robot.weapon.kind === 'rocket', muzzle = rocket ? 40 : 47;
+          const length = 9 + clamp((robot.flashUntil - t) * 100, 0, 14);
+          g.globalCompositeOperation = 'screen';
+          path(g, [[muzzle,-3],[muzzle+8,-6],[muzzle+5+length,0],[muzzle+8,6],[muzzle,3]]);
+          g.fillStyle = rocket ? '#ffd0a0' : '#d8f6ff'; g.fill();
+          glow(g, muzzle + 2, 0, 23, rocket ? '#ffb15c' : '#81d9ee', .34);
         }
         g.restore();
+      } else {
+        g.save(); g.rotate(aim); g.scale(bodyScale, bodyScale);
+        circle(g, 7, 0, 9); g.fillStyle = '#22323c'; g.fill();
+        g.strokeStyle = '#5d727d'; g.lineWidth = 1.2; g.stroke();
+        for (let i = 0; i < 4; i++) {
+          const a = Math.PI / 4 + i * Math.PI / 2;
+          circle(g, 7 + Math.cos(a) * 6.2, Math.sin(a) * 6.2, 1.2); g.fillStyle = '#0b151c'; g.fill();
+        }
+        if (!dead) { circle(g, 7, 0, 2.5); g.fillStyle = '#3b4d58'; g.fill(); }
+        g.restore();
       }
-      const y = this.materialArena && robot.y < 62 ? robot.r + 31 : -robot.r - 25;
-      box(g, -34, y - 8, 68, 15, 4); g.fillStyle = '#10202be8'; g.fill();
-      text(g, robot.name, 0, y, 10, color, 'center', 800);
+      const rearX = -14 * Math.cos(chassisAngle) * bodyScale, rearY = -14 * Math.sin(chassisAngle) * bodyScale;
+      if (dead) {
+        glow(g, -3, 0, 18, '#d38944', .08);
+        // Global event ticks keep the six-second plume advancing in end pauses
+        // and tournament finales, while roundSim.t is intentionally frozen.
+        const episode = this.episode, events = episode?.events || [];
+        let ko = null;
+        for (let i = events.length - 1; i >= 0; i--) {
+          const e = events[i];
+          if (e.round < episode.roundNumber) break;
+          if (e.type === 'ko' && e.round === episode.roundNumber && e.team === robot.id) { ko = e; break; }
+        }
+        const age = ko ? Math.max(0, (episode.step - ko.step) / 60) : Infinity;
+        if (age < 6) for (let i = 0; i < 2; i++) {
+          const phase = (age * .38 + i * .47) % 1, height = (16 + phase * 22) * bodyScale;
+          const drift = Math.sin(age * 1.6 + i * 2.4) * 5 * bodyScale;
+          const x = rearX + (i * 5 - 2.5) * bodyScale;
+          g.beginPath(); g.moveTo(x, rearY - 1);
+          g.bezierCurveTo(x - drift, rearY - height * .32, x + drift * 1.6, rearY - height * .7, x + drift, rearY - height);
+          g.strokeStyle = rgba('#7e898f', .18 * Math.min(1, age / .15) * (1 - age / 6));
+          g.lineWidth = (2 + phase * 1.2) * bodyScale; g.stroke();
+        }
+        g.restore(); return;
+      }
+      if (stage === 2) {
+        for (let i = 0; i < 3; i++) {
+          const age = (t * .7 + i / 3 + robot.id * .13) % 1;
+          circle(g, rearX + Math.sin(age * 4 + i) * 5, rearY - 5 - age * 35, 4 + age * 9);
+          g.fillStyle = rgba('#7e898f', (1 - age) * .28); g.fill();
+        }
+        const period = 1.1 + noise(robot.id + 97, 0) * .5, shifted = t + noise(robot.id + 101, 0) * period;
+        const sparkAge = shifted % period;
+        if (sparkAge < .12) {
+          const u = sparkAge / .12, cycle = Math.floor(shifted / period);
+          g.save(); g.globalCompositeOperation = 'screen';
+          for (let i = 0; i < 3; i++) {
+            const angle = -Math.PI + noise(robot.id + cycle, i + 109) * Math.PI;
+            const x = rearX + Math.cos(angle) * (2 + 8 * u), y = rearY + Math.sin(angle) * (2 + 8 * u);
+            stroke(g, x, y, x + Math.cos(angle) * 4, y + Math.sin(angle) * 4, rgba('#ffd38a', 1 - u), 1);
+          }
+          g.restore();
+        }
+      }
+      if (robot.hurtUntil > t) {
+        circle(g, 0, 0, radius + 7); g.strokeStyle = rgba('#ffe6cf', clamp((robot.hurtUntil - t) * 5, 0, .8));
+        g.lineWidth = 2; g.stroke();
+      }
+      // P3 deliberately preserves the current telemetry placement and sizes.
+      // The separate, collision-aware sign pass belongs to P4.
+      const hp = clamp(finite(robot.hp) / Math.max(1, finite(robot.maxHp, 100)), 0, 1), barY = -radius - 17;
+      box(g, -28, barY, 56, 7, 3.5); g.fillStyle = rgba('#030a10', .9); g.fill();
+      if (hp > 0) {
+        box(g, -26, barY + 2, 52 * hp, 3, Math.min(1.5, 26 * hp)); g.fillStyle = hp < .24 ? '#f48562' : color; g.fill();
+        if (hp > .05) stroke(g, -25, barY + 2, -26 + 51 * hp, barY + 2, rgba('#ffffff', .45), .7);
+      }
+      if (!this.materialArena) text(g, robot.name, 0, barY - 7.5, 7.4, color, 'center', 800);
+      const yAmmo = radius + 12;
+      if (robot.weapon) {
+        const max = Math.max(1, finite(robot.weapon.maxAmmo, robot.weapon.kind === 'rocket' ? 2 : 12));
+        const count = Math.min(12, max), n = clamp(finite(robot.weapon.ammo) / max, 0, 1) * count;
+        const gap = robot.weapon.kind === 'rocket' ? 4 : 1.8, wide = robot.weapon.kind === 'rocket' ? 9 : 3;
+        const total = count * wide + (count - 1) * gap;
+        for (let i = 0; i < count; i++) {
+          box(g, -total / 2 + i * (wide + gap), yAmmo, wide, 4, 1);
+          g.fillStyle = i < n ? (robot.weapon.kind === 'rocket' ? '#f1b773' : '#bbdee7') : '#273b47'; g.fill();
+        }
+      } else text(g, 'UNARMED', 0, yAmmo + 1, 5.8, '#c7a36e', 'center', 800);
+      const nameY = this.materialArena && robot.y < 62 ? radius + 31 : -radius - 25;
+      box(g, -34, nameY - 8, 68, 15, 4); g.fillStyle = '#10202be8'; g.fill();
+      text(g, robot.name, 0, nameY, 10, color, 'center', 800);
       g.restore();
     }
     _projectile(g, p) {

@@ -2,6 +2,12 @@
 
 Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen in der [ROADMAP](ROADMAP.md).
 
+## 14.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| Scrap-Optik P1–P3: Ereigniseffekte und Brandflecken, konstante Kartenböden mit eigener Identität, 4×-Robotertexturen, Doppelrohr, Schadensstufen und Wracks. Simulation und Kamera unverändert. Lokal umgesetzt; visuelle Abnahme nach P3 ausstehend, kein Push. | Branch `codex/scrap-optik` | [Vorher/Nachher und Prüfungen](SCRAP_OPTIK_2026-11-14.md) |
+
 ## 13.11.2026
 
 | Was | Commit | Bericht |

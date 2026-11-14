@@ -86,10 +86,23 @@ test('Scrap-Optik: dunkle Karten behalten ihren Boden über Seeds und Folgerunde
   try {
     const result = await page.evaluate(() => {
       const art = EBS.ScrapMaterialArt, maps = ['yard', 'foundry', 'crossroads'];
-      const images = maps.map(arena => art.floor(42, 1040, 540, false, arena).toDataURL());
-      const seedsStable = maps.every((arena, i) => art.floor(314, 1040, 540, false, arena).toDataURL() === images[i]);
-      const sunny = art.floor(42, 1040, 540, true, 'sunshine').toDataURL()
-        === EBS.ScrapDaylightArt.floor(42, 1040, 540).toDataURL();
+      // Keep this seed/identity comparison on one Canvas2D raster backend.
+      // Chromium's accelerated path can change antialiasing after warm-up:
+      // Foundry's thin diagonal strokes differ even for two seed-42 renders.
+      // Explicit CPU contexts avoid that backend change; equality stays exact.
+      const getContext = HTMLCanvasElement.prototype.getContext;
+      let images, seedsStable, sunny;
+      try {
+        HTMLCanvasElement.prototype.getContext = function (type, options) {
+          return getContext.call(this, type, type === '2d' ? { ...options, willReadFrequently: true } : options);
+        };
+        images = maps.map(arena => art.floor(42, 1040, 540, false, arena).toDataURL());
+        seedsStable = maps.every((arena, i) => art.floor(314, 1040, 540, false, arena).toDataURL() === images[i]);
+        sunny = art.floor(42, 1040, 540, true, 'sunshine').toDataURL()
+          === EBS.ScrapDaylightArt.floor(42, 1040, 540).toDataURL();
+      } finally {
+        HTMLCanvasElement.prototype.getContext = getContext;
+      }
       const cfg = EBS.normalizeConfig({ scenario: 'scrap', seed: 42, params: { rulesVersion: 'v3', arena: 'yard' },
         video: { aspect: '16:9' }, view: { hud: true, camera: false } });
       const sc = EBS.getScenario('scrap'), world = { w: 1920, h: 1080 };
@@ -103,6 +116,34 @@ test('Scrap-Optik: dunkle Karten behalten ihren Boden über Seeds und Folgerunde
       renderer.destroy(); sim.destroy(); return result;
     });
     assert.deepEqual(result, { seedsStable: true, distinct: 3, sunny: true, cachedAcrossRounds: true, round: 2, ok: true });
+    assert.deepEqual(errors.map(e => e.message), []);
+  } finally { await page.close(); }
+});
+
+test('Scrap-Optik: der letzte KO-Brandfleck blendet auch bei eingefrorenem Rundenergebnis ein', async () => {
+  const { page, errors } = await openExportPage(browser, { scenario: 'scrap', video: { resolution: 720 } });
+  try {
+    const result = await page.evaluate(() => {
+      const cfg = EBS.normalizeConfig({ scenario: 'scrap', seed: 42, params: { rulesVersion: 'v3', repeatRounds: false },
+        video: { aspect: '16:9' }, view: { camera: false } });
+      const sc = EBS.getScenario('scrap'), world = { w: 1920, h: 1080 };
+      const sim = sc.create({ seed: 42, params: cfg.params, world, view: cfg.view, timeScale: 1 });
+      while (sim.phase === 'running' && sim.step < 100 * 60) sim.stepOnce();
+      const renderer = sc.createRenderer({ sim, world, view: cfg.view, renderScale: 2 / 3 });
+      const last = renderer.arena._scorchEvents().at(-1), time = sim.roundSim.t;
+      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 100;
+      const g = canvas.getContext('2d');
+      const ink = () => {
+        g.clearRect(0, 0, 100, 100); renderer.arena._drawScorches(g, () => ({ x: 50, y: 50 }), [last]);
+        return g.getImageData(0, 0, 100, 100).data.filter((_, i) => i % 4 === 3).reduce((a, b) => a + b, 0);
+      };
+      const initial = ink(); for (let i = 0; i < 30; i++) sim.stepOnce();
+      const out = { type: last.type, phase: sim.phase, frozenRound: time === sim.roundSim.t, initial, visible: ink(), ok: sim.checkInvariants().ok };
+      renderer.destroy(); sim.destroy(); return out;
+    });
+    assert.equal(result.type, 'ko'); assert.equal(result.phase, 'ended');
+    assert.ok(result.frozenRound && result.ok);
+    assert.ok(result.visible > 0 && result.visible > result.initial, JSON.stringify(result));
     assert.deepEqual(errors.map(e => e.message), []);
   } finally { await page.close(); }
 });
