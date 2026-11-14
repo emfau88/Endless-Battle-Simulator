@@ -39,27 +39,52 @@ test('Progressive production: camera, aspect, render cadence and resolution cann
     const { page, errors } = await openExportPage(browser, config({ cameraMode }, { aspect, resolution, fps }));
     pages.push(page); t.after(() => page.close());
     await page.evaluate(() => exportAPI.simulate(100));
-    await page.evaluate(n => exportAPI.renderFrames(n, .5), fps);
+    // Six 60-fps or three 30-fps frames exercise different render cadences over
+    // the same six physics ticks without repeating a second of expensive 3D draws.
+    await page.evaluate(n => exportAPI.renderFrames(n, .5), fps / 10);
     assert.deepEqual(errors, []);
   }
   const outputs = await Promise.all(pages.map(page => page.evaluate(() => ({ hash: exportAPI.hash(), events: exportAPI.events(0) }))));
   assert.deepEqual(outputs[0], outputs[1]); assert.deepEqual(outputs[1], outputs[2]);
 });
 
-test('Progressive renderer: direct seeking matches continuous rendering, including an upgrade and finale', async t => {
+test('Progressive renderer: direct seeking matches intermediate rendering across upgrades and finale', async t => {
   const { page, errors } = await openExportPage(browser, config({ orderSize: 24, productionSpeed: 2, intensity: 2 }));
   t.after(() => page.close());
-  for (const at of [0, 18, 40, 100]) {
+  const checkpoints = [0, 18, 40, 100], expected = new Map();
+  for (const at of checkpoints) {
     await page.evaluate(() => exportAPI.restart({}));
     await page.evaluate(s => exportAPI.simulate(s), at);
-    const expected = await page.evaluate(() => exportAPI.renderFrames(1, 1, 'image/png'));
-    const hash = await page.evaluate(() => exportAPI.hash());
-    await page.evaluate(() => exportAPI.restart({}));
-    for (let i = 0; i < at; i++) await page.evaluate(() => { exportAPI.simulate(1 - 1 / 30); exportAPI.renderFrames(1, .1); });
-    const actual = await page.evaluate(() => exportAPI.renderFrames(1, 1, 'image/png'));
-    assert.equal(await page.evaluate(() => exportAPI.hash()), hash);
-    assert.deepEqual(actual, expected, `render after seek differs at ${at}s`);
+    expected.set(at, await page.evaluate(() => ({ image: exportAPI.renderFrames(1, 1, 'image/png'), hash: exportAPI.hash() })));
   }
+  const milestones = await page.evaluate(() => exportAPI.snapshot().milestones);
+  assert.deepEqual(milestones.map(m => m.type), ['coating', 'parallel', 'complete']);
+  // One continuous physics history, with draws between checkpoints and on both
+  // sides of every earned upgrade/completion. Rendering every second mostly
+  // repeated the same shader work and restarted that history four times.
+  const renderTimes = new Set(checkpoints);
+  for (let i = 1; i < checkpoints.length; i++) renderTimes.add((checkpoints[i - 1] + checkpoints[i]) / 2);
+  for (const milestone of milestones) for (const offset of [-1, 0, 1]) {
+    const at = Math.floor(milestone.time) + offset;
+    if (at >= 0 && at <= checkpoints.at(-1)) renderTimes.add(at);
+  }
+  await page.evaluate(() => exportAPI.restart({}));
+  let elapsedTicks = 0;
+  for (const at of [...renderTimes].sort((a, b) => a - b)) {
+    const tick = at * 60, capture = expected.has(at);
+    const actual = await page.evaluate(({ remainingTicks, capture }) => {
+      exportAPI.simulate(remainingTicks / 60);
+      const image = exportAPI.renderFrames(1, capture ? 1 : .1, capture ? 'image/png' : 'image/jpeg');
+      return capture ? { image, hash: exportAPI.hash() } : null;
+    }, { remainingTicks: tick - elapsedTicks, capture });
+    // renderFrames itself advances two 60-Hz physics ticks at the configured 30 fps.
+    elapsedTicks = tick + 2;
+    if (capture) {
+      assert.equal(actual.hash, expected.get(at).hash);
+      assert.deepEqual(actual.image, expected.get(at).image, `render after seek differs at ${at}s`);
+    }
+  }
+  t.diagnostic(`${renderTimes.size} history frames plus ${checkpoints.length} direct PNG checkpoints`);
   assert.deepEqual(errors, []);
 });
 

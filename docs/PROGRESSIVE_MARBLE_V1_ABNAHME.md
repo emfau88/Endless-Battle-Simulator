@@ -50,6 +50,12 @@ Der neue Effekttest lässt einen Auftrag mit 24 Produkten und doppelter Produkti
 
 Gezielte aktive Effektbilder vergleichen echte PNGs nach direktem Seeking und nach mehreren Zwischenbildern. Wiederholtes Rendern ohne Physikschritt liefert ebenfalls identische PNGs. Die Prüfung umfasst 16:9 und 9:16 und weist durch isoliertes Ein-/Ausblenden zusätzlich nach, dass jede Effektart tatsächlich sichtbare Pixel verändert. Beide Effekttests bestanden mit lokaler Hardwaregrafik in 7,50 s; Standard des Tests bleibt Software-Rendering.
 
+### CI-Prüfung für den Merge
+
+Der erste vollständige [PR-Prüflauf](https://github.com/emfau88/Endless-Battle-Simulator/actions/runs/43628367934) bestand 13 von 14 Jobs. Im Core bestanden 83 Fälle; die neue Browser-Testdatei wurde nach dem dort gültigen Limit von 600 Sekunden abgebrochen. Allein ihr Format-/Bildratenvergleich hatte mit Software-Rendering 502,8 Sekunden benötigt. Es gab in diesem Core-Lauf keine fehlgeschlagene Assertion, aber die abgebrochene Datei war kein vollständiger Prüfnachweis.
+
+Die aufwendigen Marble-Works-Prüfungen wurden deshalb in einen eigenen parallelen CI-Job mit 1.200 Sekunden pro Datei ausgelagert. Der Formatvergleich rendert 12 statt 120 Bilder bei weiterhin echten 60/30 fps, denselben drei Formaten/Auflösungen und gleicher Simulationsdauer zwischen den Varianten. Seeking behält seine vier PNG-/Hash-Kontrollpunkte und prüft zusätzlich gerenderte Zwischenzustände um die tatsächlichen Ausbauten. Die eigenständigen Videoexporttests werden nicht verkürzt. Maßgeblich für den Merge ist das erfolgreiche Gesamtergebnis des aktualisierten [PR #11](https://github.com/emfau88/Endless-Battle-Simulator/pull/11).
+
 ### Vorherige 3D-Basisprüfung: 186 Fälle
 
 Die folgende Tabelle dokumentiert die bereits abgeschlossene Prüfung der vorherigen 3D-Fassung. Diese 186 Fälle wurden für die aktuelle Gestaltungs- und Klangkorrektur **nicht vollständig erneut ausgeführt**; sie sind keine zusätzlichen aktuellen Testläufe.
