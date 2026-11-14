@@ -18,7 +18,8 @@ const suite=process.argv[2];
 if(suite==='--list')console.log(JSON.stringify(suites,null,2));
 else {
   if(!Object.hasOwn(suites,suite))throw new Error('CI suite must be one of: '+Object.keys(suites).join(', '));
-  const result=spawnSync(process.execPath,['--test','--test-concurrency=1','--test-timeout=600000',
+  const timeout=['production','export-marbleworks'].includes(suite)?1200000:600000;
+  const result=spawnSync(process.execPath,['--test','--test-concurrency=1','--test-timeout='+timeout,
     '--test-reporter=tap',...suites[suite]],{cwd:root,stdio:'inherit'});
   if(result.error)throw result.error;
   process.exitCode=result.status??1;

@@ -52,10 +52,28 @@
       this.gl.setPixelRatio(1); this.gl.setSize(this.canvas.width,this.canvas.height,false);
       this.gl.outputColorSpace=T.SRGBColorSpace; this.gl.toneMapping=T.ACESFilmicToneMapping; this.gl.toneMappingExposure=.86;
       this.gl.shadowMap.enabled=true; this.gl.shadowMap.type=T.PCFSoftShadowMap;
-      this._lighting(); this._stage(); this._tracks(); this.machines=P.buildMachines3D(this.kit,this.scene,this.sim);
+      this._lighting(); this._stage(); this._tracks(); this._batchStatic(this.scene);this._batchStatic(this.secondTracks);
+      this.machines=P.buildMachines3D(this.kit,this.scene,this.sim);
       this._collectors(); this._balls();
     }
     _own(value) { this.owned.push(value); return value; }
+    _batchStatic(parent) {
+      // Repeated rollers and feet share one draw call. Moving machine parts are
+      // constructed afterwards, so their individual transforms stay independent.
+      const batches=new Map();
+      for(const mesh of [...parent.children]) {
+        if(!mesh.isMesh||mesh.isInstancedMesh||mesh.material.transparent)continue;
+        const key=mesh.geometry.id+':'+mesh.material.id+':'+mesh.castShadow+':'+mesh.receiveShadow;
+        if(!batches.has(key))batches.set(key,[]);batches.get(key).push(mesh);
+      }
+      for(const meshes of batches.values()) {
+        if(meshes.length<3)continue;
+        const first=meshes[0],batch=new T.InstancedMesh(first.geometry,first.material,meshes.length);
+        batch.castShadow=first.castShadow;batch.receiveShadow=first.receiveShadow;
+        meshes.forEach((mesh,i)=>{mesh.updateMatrix();batch.setMatrixAt(i,mesh.matrix);parent.remove(mesh);});
+        batch.instanceMatrix.needsUpdate=true;batch.computeBoundingSphere();parent.add(batch);
+      }
+    }
     _lighting() {
       this.scene.add(new T.HemisphereLight(0xfff5e6,0x83919c,.65));
       const sun=new T.DirectionalLight(0xffe9cd,2.8); sun.position.set(-24,45,32); sun.castShadow=true;
@@ -168,7 +186,7 @@
       const filamentMaterial=this._own(new T.MeshPhysicalMaterial({color:0xfff3d6,roughness:.24,clearcoat:.65,side:T.DoubleSide}));
       for(const b of this.sim.balls) {
         const group=new T.Group();this.scene.add(group);
-        const material=this._own(new T.MeshPhysicalMaterial({color:0x8a9e9d,roughness:.5,transmission:b.material==='glass'?.001:0,clearcoat:b.material==='glass'?.001:0,iridescence:b.pattern==='pearl'?.001:0,thickness:.10,ior:1.45,envMapIntensity:.72,attenuationColor:0xffffff,attenuationDistance:1.8}));
+        const material=this._own(new T.MeshPhysicalMaterial({color:0x8a9e9d,roughness:.5,transmission:0,clearcoat:0,iridescence:0,thickness:.10,ior:1.45,envMapIntensity:.72,attenuationColor:0xffffff,attenuationDistance:1.8}));
         const shell=new T.Mesh(shellGeo,material);shell.castShadow=true;shell.receiveShadow=true;group.add(shell);
         const tint=new T.Color((this.sim.colors||P.COLORS)[b.color].hex);
         const coreColor=b.pattern==='pearl'?new T.Color(0xfff5e2).lerp(tint,.25):tint.clone().multiplyScalar(.65);
@@ -198,8 +216,13 @@
         v.material.color.setHex(0x91a09c).lerp(new T.Color(0xf4fbf9),polished).lerp(v.target,finish*(b.material==='glass'?glassTint:b.material==='steel'?.45:.9));
         v.material.attenuationColor.setHex(0xffffff).lerp(v.target,finish*.45);
         v.material.roughness=b.material==='rubber'?.85:mix(.6,b.material==='steel'?.19:.028,polished);
-        v.material.metalness=b.material==='steel'?.96:0;v.material.transmission=b.material==='glass'?Math.max(.001,polished*.96):0;
-        v.material.clearcoat=b.material==='glass'?Math.max(.001,polished):0;v.material.iridescence=b.pattern==='pearl'?Math.max(.001,finish*.65):0;
+        v.material.metalness=b.material==='steel'?.96:0;
+        // Activate shader features at real processing transitions. Opaque raw
+        // stock needs no refraction pass; direct seeking compiles the same flags.
+        for(const [feature,value] of [['transmission',b.material==='glass'?polished*.96:0],['clearcoat',b.material==='glass'?polished:0],['iridescence',b.pattern==='pearl'?finish*.65:0]]) {
+          if((v.material[feature]>0)!==(value>0))v.material.needsUpdate=true;
+          v.material[feature]=value;
+        }
         v.core.visible=b.material==='glass'&&b.pattern!=='clear'&&finish>.02;
         v.other.visible=v.core.visible&&b.pattern==='swirl';
         v.core.scale.setScalar(finish);v.other.scale.set(finish*.28,finish,finish*.28);

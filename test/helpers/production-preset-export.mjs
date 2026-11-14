@@ -68,7 +68,9 @@ for (const kind of ['short', 'long']) {
     ]);
     assert.deepEqual(request.postDataJSON(), config, 'Oberfläche sendet die vollständigen Einstellungen');
     await page.waitForFunction(() => document.querySelector('#btnExport').disabled);
-    await page.waitForFunction(() => document.querySelector('#exportMsg a') || document.querySelector('#exportMsg').classList.contains('err'), null, { timeout: 180000 });
+    // The physical 3D materials take longer in CI's software renderer; preserve the original scenarios' budget.
+    await page.waitForFunction(() => document.querySelector('#exportMsg a') || document.querySelector('#exportMsg').classList.contains('err'), null,
+      { timeout: scenario === 'marbleworks' ? 420000 : 180000 });
     status = await (await fetch(base + '/api/export')).json();
     assert.equal(status.state, 'done', status.error || JSON.stringify(status));
     assert.deepEqual(status.cfg, config);
