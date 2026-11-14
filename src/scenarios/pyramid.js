@@ -10,6 +10,8 @@
  * Rollreibung und Luftwiderstand; im freien Fall volle Erdbeschleunigung. Stau-Logik, Figuren werden nie erzeugt
  * oder gelöscht. Darstellung wahlweise als Leuchtkugeln oder als runde Tierchen mit Ärmchen und Beinchen –
  * die Darstellung ändert die Simulation nicht. Sämtliche Grafik entsteht per Canvas 2D im Code.
+ * Kulisse wahlweise „Glaspyramide in der Lagune“ (füllt sich mit Licht) oder „Wüsten-Baustelle“ (die Figuren bauen
+ * eine Sandsteinpyramide Block für Block; gleiche Bahn, gleiche Physik).
  */
 (function () {
 'use strict';
@@ -19,7 +21,7 @@ const { clamp, num, bool, fnv1a, hashSeed, fmtInt, fmtIntEn } = EBS.util;
 const TAU = Math.PI * 2;
 const RP = 18;                                  // Rollenradius des Becherwerks
 const PHI_D = -Math.PI / 2 - 0.5;               // Kippwinkel oben (kurz hinter dem Scheitel)
-const TUNE = { Geff: 1000 * 5 / 7, G: 1000, mu: 12, cd: 0.0008, vMin: 8, vMax: 700, belt: 100, float: 80, spacing: 76 };
+const TUNE = { Geff: 1000 * 5 / 7, G: 1000, mu: 12, cd: 0.0008, vMin: 8, vLoop: 170, vMax: 700, belt: 100, float: 80, spacing: 76 };
 const MIN_SLOPE = 0.045;                        // flachstes Gefälle: 5/7·g·sin bleibt deutlich über der Rollreibung
 const PULSE_TRAVEL = 0.35;                      // Sekunden, die der Lichtimpuls von der Rolle zur Spitze braucht
 const COLORS = [
@@ -29,7 +31,7 @@ const COLORS = [
   { name: 'Lime', rgb: [150, 255, 74] },
 ];
 const POOL = 0, LIFT = 1, RAMP = 2;
-const KIND_RAIL = 0, KIND_CURVE = 1, KIND_FALL = 2;
+const KIND_RAIL = 0, KIND_CURVE = 1, KIND_FALL = 2, KIND_LOOP = 3;
 const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
 const mix = (c, d, k) => [Math.round(c[0] + (d[0] - c[0]) * k), Math.round(c[1] + (d[1] - c[1]) * k), Math.round(c[2] + (d[2] - c[2]) * k)];
 
@@ -106,7 +108,7 @@ const BQ = { x: 0, y: 0, nx: 0, ny: 0, tx: 0, ty: 0, bx: 0, by: 0 };
 //  (Quadrat) zeigen dieselbe Entwurfsfläche verkleinert und mittig – die Physik bleibt dadurch unverändert.
 //  Die Schienen liegen außen auf dem Glas, das Becherwerk steht innen senkrecht unter der Spitze.
 // =====================================================================
-function computeLayout(world, size = 16) {
+function computeLayout(world, size = 16, theme = 0) {
   // Figurradius R bestimmt Mindestabstand, Becher, Wendekappen und Tunnel
   const R = size, GAP = 2 * R + 6, BO = R + 5, TURN = Math.max(34, R + 16);
   const land = world.w >= world.h, DW = land ? 1920 : 1080, DH = land ? 1080 : 1920;
@@ -129,6 +131,9 @@ function computeLayout(world, size = 16) {
   const r = TURN, m = r + R + 14;
   const endL = (y) => Math.max(xL(y) + m, d.clampX), endR = (y) => Math.min(xR(y) - m, DW - d.clampX);
   Object.assign(L, { baseY, Lv, Fv, Rv, face, xL, xR });
+  // Steinpyramide der Wüsten-Baustelle: Blick genau über Eck – vordere Ecke unter der Spitze und tiefer als die
+  // Seitenecken, die auf den unveränderten Außenkanten etwas höher liegen (beide Flächen gleich groß)
+  L.stone = { left: lerp2(d.left, A, 0.07), right: lerp2(d.right, A, 0.07), front: [A[0], d.shore - 8] };
 
   // --- Becherwerk: obere Rolle so hoch wie möglich, solange die erste Schiene lang genug bleibt
   const rho = RP + BO, dD = [Math.sin(PHI_D), -Math.cos(PHI_D)];
@@ -146,7 +151,7 @@ function computeLayout(world, size = 16) {
 
   // --- Schienen: Gefälle s so gewählt, dass die letzte Schiene knapp über dem Fuß endet
   function build(s, nRails) {
-    const raw = [], rails = [], turns = [], lip = [];
+    const raw = [], rails = [], turns = [], lip = [], loops = [];
     // Drehwinkel einer rollenden Figur: dθ = (Weg × Richtung zur Auflage) / R (ohne Schlupf)
     let rot = 0, prev = null;
     const add = (p, kind, C) => {
@@ -170,7 +175,23 @@ function computeLayout(world, size = 16) {
       E = [x, P0[1] + s * Math.abs(x - P0[0])];
       rails.push({ a: P0, b: E, dir });
       const n = Math.max(2, Math.ceil(Math.abs(E[0] - P0[0]) / 8));
-      for (let i = 1; i <= n; i++) add(lerp2(P0, E, i / n), KIND_RAIL);
+      // Wüsten-Baustelle: Loopings auf den langen Abfahrten (nur wo Platz zur Schiene darüber, zum Schacht und zu den Enden ist)
+      const rl = Math.max(34, R + 18), len = dist(P0, E), spots = [];
+      if (theme && k > 0) for (const u of k === 1 ? [0.7] : [0.56, 0.8]) {
+        const Pu = lerp2(P0, E, u), up = rails[k - 1], x0 = Math.min(up.a[0], up.b[0]) - r, x1 = Math.max(up.a[0], up.b[0]) + r;
+        const yUp = up.a[1] + (Pu[0] - up.a[0]) * (up.b[1] - up.a[1]) / (up.b[0] - up.a[0]);
+        const clear = Pu[0] < x0 || Pu[0] > x1 || Pu[1] - yUp > 2 * rl + 2 * R + 34;
+        const apart = spots.every((i) => Math.abs(i / n - u) * len > 2 * rl + 2 * R + 20);
+        if (clear && apart && u * len > rl + 50 && (1 - u) * len > rl + r + 36 && Math.abs(Pu[0] - cx) > RP + BO + R + rl + 24) spots.push(Math.round(u * n));
+      }
+      for (let i = 1; i <= n; i++) {
+        const Pi = lerp2(P0, E, i / n); add(Pi, KIND_RAIL);
+        if (!spots.includes(i)) continue;
+        const [tx, ty] = norm(E[0] - P0[0], E[1] - P0[1]), nd = tx >= 0 ? [-ty, tx] : [ty, -tx];
+        const C = [Pi[0] - nd[0] * rl, Pi[1] - nd[1] * rl], a0 = Math.atan2(nd[1], nd[0]);
+        for (let j = 1; j <= 44; j++) { const a = a0 - dir * TAU * j / 44; add([C[0] + rl * Math.cos(a), C[1] + rl * Math.sin(a)], KIND_LOOP, C); }
+        loops.push({ C, r: rl });
+      }
       const C = [E[0], E[1] + r];
       if (k < nRails - 1) {
         turns.push({ C, dir });
@@ -183,7 +204,7 @@ function computeLayout(world, size = 16) {
         for (let i = 1; i <= 12; i++) add(lerp2(F0, F1, i / 12), KIND_FALL);
       }
     }
-    return { raw, rails, turns, lip, drop, endY: E[1], slope: s };
+    return { raw, rails, turns, lip, loops, drop, endY: E[1], slope: s };
   }
   // Gefälle so, dass die letzte Schiene knapp über dem Fuß endet; wird es zu flach (große Figuren), gibt es
   // zwei Schienen weniger – sonst gewänne die Rollreibung und die Figuren blieben stehen
@@ -192,9 +213,10 @@ function computeLayout(world, size = 16) {
     for (let it = 0; it < 50; it++) { const mid = (lo + hi) / 2; if (build(mid, nr).endY > baseY - 44) hi = mid; else lo = mid; }
     return build(lo, nr);
   };
-  let B = solve(d.rails);
-  if (B.slope < MIN_SLOPE && d.rails > 3) B = solve(d.rails - 2);
-  Object.assign(L, { rails: B.rails, turns: B.turns, lip: B.lip, drop: B.drop, slope: B.slope, splash: B.drop.to, turnR: r });
+  // Wüsten-Baustelle: immer drei steile Abfahrten (Platz und Tempo für die Loopings)
+  let B = solve(theme ? 3 : d.rails);
+  if (!theme && B.slope < MIN_SLOPE && d.rails > 3) B = solve(d.rails - 2);
+  Object.assign(L, { rails: B.rails, turns: B.turns, lip: B.lip, loops: B.loops, drop: B.drop, slope: B.slope, splash: B.drop.to, turnR: r });
   L.paths = {
     ramp: resample(B.raw),
     pool: resample(catmull([B.drop.to, ...d.poolVia, L.pick]).map((p) => [p[0], p[1], 0, 0])),
@@ -214,6 +236,8 @@ function computeLayout(world, size = 16) {
 // =====================================================================
 const PANEL_ROWS = 30, PANEL_COLS = [10, 20], ROW_CELLS = 30, PANELS = PANEL_ROWS * ROW_CELLS;
 const finaleSec = (D) => clamp(D * 0.06, 5, 10);
+// Wüsten-Baustelle: Steinlagen je Fläche und Blöcke je Grundkante (quadratischer Grundriss: beide Kanten gleich viele)
+const COURSES = 30, BLOCKS = 22;
 /** Füllstand beim Physikschritt step: Zyklus (Tag) und Zahl leuchtender Glasfelder; voll kurz vor dem Finale. */
 function fillAt(D, step) {
   if (step < 0) return { cycle: -1, lit: 0 };
@@ -221,7 +245,7 @@ function fillAt(D, step) {
   return { cycle, lit: Math.floor(PANELS * clamp(ct / Math.max(1, D - finaleSec(D) - 2), 0, 1)) };
 }
 /** Feuerwerk im Finale eines Zyklus (Videosekunden): Raketen mit Ort, Farbe, Größe – aus Seed und Zyklus. */
-function fireworkPlan(L, seed, cycle, D, amount) {
+function fireworkPlan(L, seed, cycle, D, amount, theme = 0) {
   const rng = new RNG(hashSeed('pyramid-fw', seed, cycle)), F = finaleSec(D), n = Math.max(3, Math.round(F / 0.6 * amount));
   const start = cycle * D + D - F + 0.4, span = F - 1.6, out = [];
   const box = L.land ? [140, L.W - 140, 90, 430] : [110, L.W - 110, 300, 900];
@@ -229,6 +253,12 @@ function fireworkPlan(L, seed, cycle, D, amount) {
     const last = i === n - 1, at = start + span * (last ? 1 : (i + rng.range(0.1, 0.9)) / n);
     const x = last ? L.apex[0] : rng.range(box[0], box[1]), y = last ? box[2] + (box[3] - box[2]) * 0.35 : rng.range(box[2], box[3]);
     out.push({ at, x, y, c: last ? 0 : rng.int(0, 3), big: last ? 1.8 : rng.range(0.8, 1.25), x0: x + rng.range(-60, 60), seed: rng.int(1, 1e6) });
+  }
+  // Baustelle: kleines Etappenfest bei 25, 50 und 75 % (drei Raketen über der Spitze)
+  if (theme === 1) for (const q of [0.25, 0.5, 0.75]) {
+    const at0 = cycle * D + q * Math.max(1, D - F - 2) + 1.2;
+    for (let i = 0; i < 3; i++) out.push({ at: at0 + i * 0.45, x: L.apex[0] + (i - 1) * (L.land ? 260 : 190) + rng.range(-30, 30),
+      y: box[2] + (box[3] - box[2]) * rng.range(0.25, 0.6), c: rng.int(0, 3), big: rng.range(0.75, 0.95), x0: L.apex[0] + (i - 1) * 200, seed: rng.int(1, 1e6) });
   }
   return out.sort((a, b) => a.at - b.at);
 }
@@ -239,7 +269,7 @@ function fireworkPlan(L, seed, cycle, D, amount) {
 const VISUAL_FX = new Set(['pulse', 'splash']);
 class PyramidSim {
   constructor({ seed, params, world, timeScale = 1, video = null }) {
-    this.cfg = { ...params }; this.world = world; this.video = video; this.seed = seed; this.L = computeLayout(world, params.size);
+    this.cfg = { ...params }; this.world = world; this.video = video; this.seed = seed; this.L = computeLayout(world, params.size, params.theme);
     this.dt = DT * (timeScale || 1);
     this.rng = new RNG(hashSeed('pyramid', seed));
     this.events = new Array(512); this.eventSeq = 0; this.fxSeq = 0; this.recent = [];
@@ -292,7 +322,7 @@ class PyramidSim {
     for (const b of this._list(RAMP)) {
       pathAt(P.ramp, b.s, Q);
       const a = Q.k === KIND_FALL ? T.G * Q.ty : T.Geff * Q.ty - T.mu - T.cd * b.v * b.v;
-      b.v = clamp(b.v + a * dtR, T.vMin, T.vMax);
+      b.v = clamp(b.v + a * dtR, Q.k === KIND_LOOP ? T.vLoop : T.vMin, T.vMax);
       const s0 = b.s; b.s += b.v * dtR;
       if (b.v > this.stats.maxSpeed) this.stats.maxSpeed = b.v;
       if (ahead && b.s > ahead.s - GAP) { b.s = ahead.s - GAP; b.v = Math.min(b.v, ahead.v); }
@@ -354,7 +384,7 @@ class PyramidSim {
     if (!cfg.finale) return;
     const D = cycleSec(cfg, this.video), v = this.step / 60, v0 = (this.step - 1) / 60, cycle = Math.floor(v / D);
     const f = this._fw;
-    if (!f || f.cycle !== cycle || f.D !== D || f.amount !== cfg.fireworks) this._fw = { cycle, D, amount: cfg.fireworks, list: fireworkPlan(this.L, this.seed, cycle, D, cfg.fireworks) };
+    if (!f || f.cycle !== cycle || f.D !== D || f.amount !== cfg.fireworks) this._fw = { cycle, D, amount: cfg.fireworks, list: fireworkPlan(this.L, this.seed, cycle, D, cfg.fireworks, cfg.theme) };
     for (const b of this._fw.list) {
       if (v0 < b.at - 0.6 && v >= b.at - 0.6) this._emit('launch', b.x0, this.L.shore, b.c, b.big);
       if (v0 < b.at && v >= b.at) this._emit('firework', b.x, b.y, b.c, b.big);
@@ -506,6 +536,26 @@ function orbSprite(col, sc, glow, R) {
     g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.ellipse(-R * 0.38, -R * 0.45, R * 0.28, R * 0.18, -0.6, 0, TAU); g.fill();
   }
   return { c, r };
+}
+
+/** Mond: Scheibe mit Maren, beleuchtete Sichel links oben, Nachtseite schwach sichtbar (Erdschein), weiche Schattengrenze. */
+function moonSprite(sc, r) {
+  const pad = 4, c = document.createElement('canvas'); c.width = c.height = Math.ceil((r + pad) * 2 * sc * 2);
+  const g = c.getContext('2d'); g.scale(sc * 2, sc * 2); g.translate(r + pad, r + pad);
+  g.save(); g.beginPath(); g.arc(0, 0, r, 0, TAU); g.clip();
+  const gr = g.createRadialGradient(-r * 0.35, -r * 0.35, r * 0.1, 0, 0, r * 1.05);
+  gr.addColorStop(0, '#fffef4'); gr.addColorStop(0.6, '#f6eed2'); gr.addColorStop(1, '#dcd3b2');
+  g.fillStyle = gr; g.fillRect(-r, -r, r * 2, r * 2);
+  g.fillStyle = 'rgba(150,146,150,.26)';
+  for (const [x, y, a, b, rot] of [[-0.42, -0.3, 0.26, 0.2, 0.4], [-0.1, -0.6, 0.2, 0.13, -0.3], [-0.55, 0.2, 0.2, 0.26, 0.2], [-0.2, 0.62, 0.22, 0.14, 0.9], [0.1, 0.05, 0.3, 0.22, 0]]) {
+    g.beginPath(); g.ellipse(x * r, y * r, a * r, b * r, rot, 0, TAU); g.fill();
+  }
+  const sh = g.createRadialGradient(r * 0.6, r * 0.28, r * 0.5, r * 0.6, r * 0.28, r * 1.22);
+  sh.addColorStop(0, 'rgba(0,0,0,.9)'); sh.addColorStop(0.78, 'rgba(0,0,0,.84)'); sh.addColorStop(1, 'rgba(0,0,0,0)');
+  g.globalCompositeOperation = 'destination-out';              // Nachtseite fast durchsichtig: der Himmel scheint durch, ein Rest Erdschein bleibt
+  g.fillStyle = sh; g.fillRect(-r, -r, r * 2, r * 2);
+  g.restore();
+  return { c, r: r + pad };
 }
 
 // =====================================================================
@@ -786,18 +836,19 @@ function tunnelArch(g, L, close) {
   const { cx: tx, tw, top: tt } = L.tunnel, yb = L.shore + 8;
   g.beginPath(); g.moveTo(tx - tw, yb); g.lineTo(tx - tw, tt + tw); g.arc(tx, tt + tw, tw, Math.PI, 0); g.lineTo(tx + tw, yb); if (close) g.closePath();
 }
-function drawTunnel(g, L) {
+function drawTunnel(g, L, edge = '#eaf3f7') {
   const { cx: tx, tw, top: tt } = L.tunnel, yb = L.shore + 8;
   tunnelArch(g, L, true); let gr = g.createLinearGradient(0, tt, 0, yb); gr.addColorStop(0, '#05151f'); gr.addColorStop(1, '#0e3242'); g.fillStyle = gr; g.fill();
   tunnelArch(g, L, true); gr = g.createRadialGradient(tx, yb, 0, tx, yb, tw * 1.5); gr.addColorStop(0, 'rgba(70,210,235,.35)'); gr.addColorStop(1, 'rgba(70,210,235,0)'); g.fillStyle = gr; g.fill();
   for (const sg of [-1, 1]) { g.fillStyle = 'rgba(120,235,255,.85)'; dot(g, tx + sg * (tw - 13), tt + tw + 4, 3); }
-  g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = '#eaf3f7'; g.lineWidth = 6; tunnelArch(g, L, false); g.stroke();
+  g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = edge; g.lineWidth = 6; tunnelArch(g, L, false); g.stroke();
 }
 
-function drawFront(g, L, rng) {
+function drawFront(g, L, rng, theme = 0) {
   const R = L.R, cx = L.lift.cx, r = L.turnR, off = R + 5, colW = RP + L.lift.bo + R + 12;
   const col = (x) => Math.abs(x - cx) < colW;
-  // Pflanzkästen unter den Schienen (am Glasschacht offen, damit das Becherwerk sichtbar bleibt)
+  // Pflanzkästen unter den Schienen (am Glasschacht offen, damit das Becherwerk sichtbar bleibt); Baustelle: Holzbohlen
+  if (theme) drawRailWood(g, L, col); else {
   for (const rl of L.rails) {
     foliage(g, rng, line(rl.a, rl.b, Math.ceil(dist(rl.a, rl.b) / 10)), -(R + 9), R + 46, (nx, ny) => ny > 0,
       { dens: 4, rMin: 2.2, rMax: 7, skip: (x) => col(x), flowers: 0.05 });
@@ -805,6 +856,7 @@ function drawFront(g, L, rng) {
   const arcPts = (C, a0, a1, rad, n = 24) => Array.from({ length: n + 1 }, (_, i) => { const a = a0 + (a1 - a0) * i / n; return [C[0] + rad * Math.cos(a), C[1] + rad * Math.sin(a)]; });
   const out = (C) => (nx, ny, x, y) => nx * (x - C[0]) + ny * (y - C[1]) > 0;
   for (const tn of L.turns) foliage(g, rng, arcPts(tn.C, -Math.PI / 2, -Math.PI / 2 + tn.dir * Math.PI, r), -(R + 10), R + 26, out(tn.C), { dens: 3, rMin: 2, rMax: 6, flowers: 0.05 });
+  }
   // Schienen, Wendekappen, Auffanglippe oben, Umlenkung unten
   const sp = new Path2D(), down = (a, b) => { const [dx, dy] = norm(b[0] - a[0], b[1] - a[1]); return dx >= 0 ? [-dy, dx] : [dy, -dx]; };
   for (const rl of L.rails) { const [nx, ny] = down(rl.a, rl.b); sp.moveTo(rl.a[0] + nx * off, rl.a[1] + ny * off); sp.lineTo(rl.b[0] + nx * off, rl.b[1] + ny * off); }
@@ -815,11 +867,14 @@ function drawFront(g, L, rng) {
   const wall = (C, a0, a1, ccw) => { const rad = r + off; sp.moveTo(C[0] + rad * Math.cos(a0), C[1] + rad * Math.sin(a0)); sp.arc(C[0], C[1], rad, a0, a1, ccw); };
   for (const tn of L.turns) tn.dir > 0 ? wall(tn.C, -Math.PI / 2 - 0.3, Math.PI / 2, false) : wall(tn.C, -Math.PI / 2 + 0.3, -1.5 * Math.PI, true);
   const dp = L.drop; dp.dir > 0 ? wall(dp.C, -Math.PI / 2 - 0.3, 0.15, false) : wall(dp.C, -Math.PI / 2 + 0.3, -Math.PI - 0.15, true);
+  for (const lp of L.loops) { sp.moveTo(lp.C[0] + lp.r + off, lp.C[1]); sp.arc(lp.C[0], lp.C[1], lp.r + off, 0, TAU); }
   g.lineCap = 'round'; g.lineJoin = 'round';
   g.save(); g.translate(2, 6); g.strokeStyle = 'rgba(5,30,25,.32)'; g.lineWidth = 14; g.stroke(sp); g.restore();
-  g.strokeStyle = '#6f8992'; g.lineWidth = 12; g.stroke(sp);
-  g.strokeStyle = '#e6eff2'; g.lineWidth = 8.5; g.stroke(sp);
-  g.strokeStyle = '#ffffff'; g.lineWidth = 2.5; g.save(); g.translate(0, -2.5); g.stroke(sp); g.restore();
+  const rc = theme ? ['#14505a', '#2fb5c4', '#d2fbfc'] : ['#6f8992', '#e6eff2', '#ffffff'];   // Baustelle: Türkis hebt sich vom Sandstein ab
+  g.strokeStyle = rc[0]; g.lineWidth = 12; g.stroke(sp);
+  g.strokeStyle = rc[1]; g.lineWidth = 8.5; g.stroke(sp);
+  g.strokeStyle = rc[2]; g.lineWidth = 2.5; g.save(); g.translate(0, -2.5); g.stroke(sp); g.restore();
+  if (theme) for (const tn of L.turns) drawTorch(g, tn.C[0] + tn.dir * (r + off + 14), tn.C[1] + 6);
 }
 
 /** Ufer vor der Pyramide: Büsche, Sand, Palmen – verdecken Schienen und Figuren (Tunnel und Fallstelle bleiben frei). */
@@ -836,6 +891,186 @@ function drawFore(g, L, rng) {
 }
 
 // =====================================================================
+//  Untervariante „Wüsten-Baustelle“ (theme 1): Die Figuren bauen eine Sandsteinpyramide.
+//  Gleiche Bahn und gleiche Physik; nur Kulisse und Bedeutung der Füllung sind anders (Blöcke statt Licht).
+//  Perspektive: quadratischer Grundriss – beide Grundkanten tragen gleich viele Blöcke, die abgewandte Fläche wirkt
+//  dadurch verkürzt; die Lagen laufen parallel zur jeweiligen Grundkante, die Stoßfugen parallel zur Falllinie
+//  (nicht zur Spitze hin zusammenlaufend), die vordere Ecke liegt tiefer als die Seitenecken.
+// =====================================================================
+function drawSkyDesert(g, L) {
+  const { W, H } = L, gr = g.createLinearGradient(0, 0, 0, L.horizon);
+  gr.addColorStop(0, '#1257b0'); gr.addColorStop(0.45, '#3f8fe0'); gr.addColorStop(0.82, '#a9d3ee'); gr.addColorStop(1, '#f7e7bd');
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  const [ax, ay] = L.apex, rr = Math.max(W, H) * 0.55, hz = g.createRadialGradient(ax, ay, 0, ax, ay, rr);
+  hz.addColorStop(0, 'rgba(255,255,250,.55)'); hz.addColorStop(0.18, 'rgba(255,244,220,.25)'); hz.addColorStop(1, 'rgba(255,240,210,0)');
+  g.fillStyle = hz; g.fillRect(0, 0, W, H);
+}
+/** Flächen der Steinpyramide: Punkt bei t (0..1 entlang der Grundkante) und Höhe v (0..1); gültig für v/2 ≤ t ≤ 1 − v/2. */
+function stoneFaces(L) {
+  const A = L.apex, S = L.stone, F = S.front;
+  return [[S.left, F], [F, S.right]].map(([b0, b1]) => {
+    const m = [(b0[0] + b1[0]) / 2, (b0[1] + b1[1]) / 2];
+    return { b0, b1, at: (t, v) => [b0[0] + (b1[0] - b0[0]) * t + (A[0] - m[0]) * v, b0[1] + (b1[1] - b0[1]) * t + (A[1] - m[1]) * v] };
+  });
+}
+/** Alle Blöcke in Baureihenfolge: Lage für Lage, je Lage von links über den Grat nach rechts (versetzter Verband). */
+function stoneBlocks(L) {
+  const faces = stoneFaces(L), rows = [];
+  for (let i = 0; i < COURSES; i++) {
+    const v0 = i / COURSES, v1 = (i + 1) / COURSES, off = (i % 2) * 0.5 / BLOCKS, row = [];
+    faces.forEach((f, fi) => {
+      for (let j = Math.floor((v0 / 2 - off) * BLOCKS); j / BLOCKS + off < 1 - v0 / 2; j++) {
+        const ta = j / BLOCKS + off, tb = ta + 1 / BLOCKS;
+        const a0 = Math.max(ta, v0 / 2), b0 = Math.min(tb, 1 - v0 / 2), a1 = Math.max(ta, v1 / 2), b1 = Math.max(a1, Math.min(tb, 1 - v1 / 2));
+        if (b0 - a0 < 1e-6) continue;
+        row.push({ face: fi, q: [f.at(a0, v0), f.at(b0, v0), f.at(b1, v1), f.at(a1, v1)] });
+      }
+    });
+    rows.push(row);
+  }
+  return rows;
+}
+function drawStone(g, L, rows) {
+  const A = L.apex, S = L.stone, F = S.front, rng = new RNG(GLASS_SEED + 1);
+  const tone = [['#f9e4aa', '#e8c680'], ['#cf9f56', '#ad7b3a']];           // linke Fläche in der Sonne, rechte im Schatten
+  stoneFaces(L).forEach((f, fi) => {
+    g.save(); poly(g, [f.b0, f.b1, A]); g.clip();
+    const gr = g.createLinearGradient(0, A[1], 0, F[1]); gr.addColorStop(0, tone[fi][0]); gr.addColorStop(1, tone[fi][1]);
+    g.fillStyle = gr; poly(g, [f.b0, f.b1, A]); g.fill();
+    for (const row of rows) for (const b of row) {
+      if (b.face !== fi) continue;
+      const r = rng.next(), q = b.q;
+      g.fillStyle = r < 0.5 ? `rgba(255,246,218,${(0.03 + r * 0.24).toFixed(3)})` : `rgba(98,60,20,${(0.02 + (r - 0.5) * 0.22).toFixed(3)})`;
+      poly(g, q); g.fill();
+      // dunkle Stoß- und Lagerfuge (links, unten), helle Kante oben
+      g.lineWidth = 1.5; g.strokeStyle = 'rgba(84,50,14,.45)'; g.beginPath(); g.moveTo(q[3][0], q[3][1]); g.lineTo(q[0][0], q[0][1]); g.lineTo(q[1][0], q[1][1]); g.stroke();
+      g.lineWidth = 1; g.strokeStyle = 'rgba(255,248,224,.34)'; g.beginPath(); g.moveTo(q[3][0], q[3][1] + 1.3); g.lineTo(q[2][0], q[2][1] + 1.3); g.stroke();
+    }
+    g.restore();
+  });
+  g.lineCap = 'round';
+  g.strokeStyle = 'rgba(255,242,206,.8)'; g.lineWidth = 3; g.beginPath(); g.moveTo(F[0], F[1]); g.lineTo(A[0], A[1]); g.stroke();
+  g.strokeStyle = 'rgba(108,68,24,.55)'; g.lineWidth = 2;
+  for (const c of [S.left, S.right]) { g.beginPath(); g.moveTo(c[0], c[1]); g.lineTo(A[0], A[1]); g.stroke(); }
+}
+/** Baugerüst in Form der späteren Pyramide: trägt Bahn und Becherwerk, bis die Steine es verdecken. */
+function drawScaffold(g, L) {
+  const A = L.apex, C = [L.stone.left, L.stone.front, L.stone.right], n = 10;
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  const beam = (a, b, w, col) => { g.strokeStyle = col; g.lineWidth = w; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); };
+  for (let i = 0; i < n; i++) {
+    const a = C.map((c) => lerp2(c, A, i / n)), b = C.map((c) => lerp2(c, A, (i + 1) / n));
+    for (const k of [0, 1]) {
+      const m = 5;
+      for (let j = 0; j < m; j++) {
+        const p0 = lerp2(a[k], a[k + 1], j / m), p1 = lerp2(a[k], a[k + 1], (j + 1) / m), q0 = lerp2(b[k], b[k + 1], j / m), q1 = lerp2(b[k], b[k + 1], (j + 1) / m);
+        beam(p0, q1, 1.6, 'rgba(120,78,36,.4)'); beam(p1, q0, 1.6, 'rgba(120,78,36,.4)'); beam(p0, q0, 2.4, 'rgba(108,68,30,.7)');
+      }
+      beam(a[k], a[k + 1], 3.2, 'rgba(120,78,36,.9)');
+    }
+  }
+  for (const c of C) { beam(c, A, 7, '#5c3a16'); beam(c, A, 4, '#a8733a'); }
+}
+function drawBackDesert(g, L, rng) {
+  const { W } = L, H0 = L.horizon;
+  const dune = (y0, amp, fr, col) => {
+    const ph = rng.range(0, 6), top = [];
+    for (let x = -10; x <= W + 10; x += 8) top.push([x, y0 + Math.sin(x * fr + ph) * amp + Math.sin(x * fr * 2.7 + ph * 2) * amp * 0.35]);
+    g.fillStyle = col; poly(g, [...top, [W + 10, L.shore + 6], [-10, L.shore + 6]]); g.fill();
+  };
+  dune(H0 - 26, 16, 0.006, '#eedcae');
+  for (const [cx, w, h] of L.land ? [[300, 170, 78], [1650, 130, 60], [1530, 90, 42]] : [[150, 150, 70], [960, 120, 56]]) {   // ferne Pyramiden
+    const by = H0 - 6;
+    g.fillStyle = '#e6c88c'; poly(g, [[cx - w / 2, by], [cx - w * 0.1, by], [cx, by - h]]); g.fill();
+    g.fillStyle = '#cba562'; poly(g, [[cx - w * 0.1, by], [cx + w / 2, by], [cx, by - h]]); g.fill();
+  }
+  dune(H0 - 2, 18, 0.009, '#e6c98c'); dune(H0 + 26, 13, 0.013, '#dfba76');
+  // Sandboden bis zum Ufer
+  const gr = g.createLinearGradient(0, L.islandTop, 0, L.shore + 4), ph = rng.range(0, 6), top = [];
+  gr.addColorStop(0, '#e4c07c'); gr.addColorStop(1, '#d2a45a');
+  for (let x = -10; x <= W + 10; x += 8) top.push([x, L.islandTop + Math.sin(x * 0.017 + ph) * 7 + Math.sin(x * 0.051) * 3]);
+  g.fillStyle = gr; poly(g, [...top, [W + 10, L.shore + 6], [-10, L.shore + 6]]); g.fill();
+  g.strokeStyle = 'rgba(255,240,205,.35)'; g.lineWidth = 1.2;
+  for (let i = 0; i < 46; i++) { const x = rng.range(0, W), y = rng.range(L.islandTop + 14, L.shore - 10), w = rng.range(30, 110); g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + w / 2, y - 3, x + w, y); g.stroke(); }
+  for (const x of L.land ? [60, 150, 1760, 1860] : [24, 1040]) palm(g, rng, x, L.islandTop + 30, rng.range(46, 70), rng.range(-0.2, 0.2));
+  drawScaffold(g, L);
+  drawTunnel(g, L, '#f0dcae');
+}
+/** Holzbohlen mit Stützen unter den Schienen (statt der Pflanzkästen). */
+function drawRailWood(g, L, col) {
+  const off = L.R + 14;
+  g.lineCap = 'round';
+  for (const rl of L.rails) {
+    const len = dist(rl.a, rl.b), [tx, ty] = norm(rl.b[0] - rl.a[0], rl.b[1] - rl.a[1]), [nx, ny] = tx >= 0 ? [-ty, tx] : [ty, -tx];
+    const P = (d, o) => [rl.a[0] + tx * d + nx * o, rl.a[1] + ty * d + ny * o];
+    g.strokeStyle = '#6b4520'; g.lineWidth = 3.5;
+    for (let d = 30; d < len - 20; d += 64) { const p = P(d, off); if (col(p[0])) continue; g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(p[0], p[1] + 20); g.stroke(); }
+    const a = P(6, off), b = P(len - 6, off);
+    for (const [w, c] of [[9, '#5c3a16'], [5.5, '#b07a3c']]) { g.strokeStyle = c; g.lineWidth = w; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }
+  }
+}
+function drawTorch(g, x, y) {
+  g.lineCap = 'round';
+  g.strokeStyle = '#5c3a16'; g.lineWidth = 5; g.beginPath(); g.moveTo(x, y + 22); g.lineTo(x, y); g.stroke();
+  g.fillStyle = '#7a5230'; g.beginPath(); g.moveTo(x - 8, y - 2); g.lineTo(x + 8, y - 2); g.lineTo(x + 5, y + 5); g.lineTo(x - 5, y + 5); g.closePath(); g.fill();
+  for (const [k, c] of [[1, '#ff8a1e'], [0.55, '#ffe07a']]) {
+    g.fillStyle = c; g.beginPath(); g.moveTo(x, y - 2 - 20 * k); g.quadraticCurveTo(x + 9 * k, y - 8 * k, x, y - 2); g.quadraticCurveTo(x - 9 * k, y - 8 * k, x, y - 2 - 20 * k); g.fill();
+  }
+}
+/** Ufer der Oase: Sandbank, Schilf und Palmen (Tunnel und Fallstelle bleiben frei). */
+function drawForeDesert(g, L, rng) {
+  const { W } = L, T = L.tunnel, sand = g.createLinearGradient(0, L.shore - 18, 0, L.shore + 2);
+  sand.addColorStop(0, '#f2dba2'); sand.addColorStop(1, '#c79a52'); g.fillStyle = sand;
+  for (const [x0, x1] of [[-10, T.cx - T.tw - 6], [T.cx + T.tw + 6, W + 10]]) {
+    const pts = [];
+    for (let x = x0; x <= x1; x += 10) pts.push([x, L.shore - 13 + Math.sin(x * 0.045) * 3 + Math.sin(x * 0.013) * 2.5]);
+    poly(g, [[x0, L.shore + 2], ...pts, [x1, L.shore - 12], [x1, L.shore + 2]]); g.fill();
+  }
+  g.lineCap = 'round'; g.lineWidth = 2;
+  for (let i = 0; i < (L.land ? 26 : 16); i++) {
+    const x = rng.range(0, W);
+    if (Math.abs(x - T.cx) < T.tw + 30 || Math.abs(x - L.drop.from[0]) < 50) continue;
+    for (let k = 0; k < 5; k++) { g.strokeStyle = pick(rng, LEAF_MID); g.beginPath(); g.moveTo(x + k * 3, L.shore); g.quadraticCurveTo(x + k * 3 + rng.range(-4, 4), L.shore - 12, x + k * 3 + rng.range(-9, 9), L.shore - rng.range(16, 30)); g.stroke(); }
+  }
+  const palms = L.land ? [[40, 230], [150, 170], [430, 120], [600, 100], [1180, 110], [1350, 140], [1880, 210]] : [[150, 120], [700, 120], [830, 150], [990, 190]];
+  for (const [x, h] of palms) if (Math.abs(x - T.cx) > 90 && Math.abs(x - L.drop.from[0]) > 45) palm(g, rng, x, L.shore - 2, h, rng.range(-0.18, 0.18));
+}
+
+// =====================================================================
+//  Himmelsgäste: je 45 s Simulationszeit höchstens einer – Heißluftballon, Vogelschwarm, UFO oder Sternschnuppen.
+//  Rein darstellend und zustandslos: Art, Zeitpunkt und Flugweg folgen allein aus Seed und Zeitfenster,
+//  jeder Besuch verläuft anders (das UFO hält an, fliegt Zickzack, kreist um die Spitze oder leuchtet herunter).
+// =====================================================================
+const SKY_SLOT = 45;
+function skySlot(L, seed, i) {
+  const rng = new RNG(hashSeed('pyramid-sky', seed, i)), W = L.W, top = L.land ? 170 : 420, bot = L.land ? 560 : 1150;
+  const ev = { i, r: rng.next(), start: rng.range(2, 9), side: rng.next() < 0.5 ? -1 : 1 };
+  const P = () => [rng.range(W * 0.14, W * 0.86), rng.range(top, bot)];
+  ev.balloon = { y: rng.range(top, (top + bot) / 2), c: rng.int(0, 3), dur: 36 };
+  ev.flock = { y: rng.range(top, bot - 120), n: rng.int(5, 9), dur: 13 };
+  ev.stars = Array.from({ length: rng.int(1, 3) }, () => ({ at: rng.range(0, 5), x: rng.range(W * 0.1, W * 0.9), y: rng.range(top - 110, (top + bot) / 2), ang: rng.range(0.45, 1.0), len: rng.range(170, 300), dir: rng.next() < 0.5 ? -1 : 1 }));
+  // UFO: Wegpunkte mit Haltezeiten
+  const mode = rng.int(0, 3), pts = [[[ev.side < 0 ? -150 : W + 150, rng.range(top, bot)], 0]];
+  if (mode === 0) pts.push([P(), rng.range(2, 3.5)]);
+  else if (mode === 1) for (let j = 0, n = rng.int(3, 5); j < n; j++) pts.push([P(), j === n - 1 ? 1.4 : rng.range(0.35, 0.8)]);
+  else if (mode === 2) {
+    const c = [L.apex[0], L.apex[1] + (L.land ? 70 : 50)], rad = rng.range(140, 200), a0 = rng.range(0, TAU), dc = rng.next() < 0.5 ? -1 : 1, turns = rng.range(1.2, 2.2);
+    for (let j = 0; j <= Math.round(turns * 14); j++) { const a = a0 + dc * j / 14 * TAU; pts.push([[c[0] + Math.cos(a) * rad, c[1] + Math.sin(a) * rad * 0.42], 0]); }
+  } else pts.push([[rng.range(W * 0.2, W * 0.8), rng.range(top, (top + bot) / 2)], 3.6]);
+  pts.push([[rng.next() < 0.5 ? -170 : W + 170, rng.range(top - 220, bot)], 0]);
+  let tt = 0; const legs = [];
+  for (let j = 1; j < pts.length; j++) {
+    const d = dist(pts[j - 1][0], pts[j][0]), ring = mode === 2 && j > 1 && j < pts.length - 1;
+    const fly = ring ? d / 430 : clamp(d / (mode === 1 ? 1500 : 620), 0.3, 2.6);
+    legs.push({ a: pts[j - 1][0], b: pts[j][0], t0: tt, fly, hold: pts[j][1], smooth: !ring }); tt += fly + pts[j][1];
+  }
+  ev.ufo = { mode, legs, dur: tt };
+  return ev;
+}
+/** Welcher Gast im Zeitfenster kommt: tagsüber UFO, Ballon oder Vogelschwarm, nachts UFO oder Sternschnuppen. */
+const skyKind = (ev, night) => (night ? (ev.r < 0.4 ? 'ufo' : ev.r < 0.85 ? 'stars' : null) : (ev.r < 0.3 ? 'ufo' : ev.r < 0.55 ? 'balloon' : ev.r < 0.85 ? 'flock' : null));
+
+// =====================================================================
 //  Renderer (liest Darstellungsregler live aus sim.cfg; verändert die Simulation nicht)
 // =====================================================================
 class PyramidRenderer extends EBS.CanvasScene {
@@ -849,13 +1084,15 @@ class PyramidRenderer extends EBS.CanvasScene {
       ? [[-60, 560, 380], [300, 650, 300], [1260, 640, 320], [1500, 520, 420], [180, 300, 240], [1380, 290, 260], [620, 260, 200], [1700, 700, 260]]
       : [[-80, 760, 340], [600, 820, 320], [-40, 1150, 280], [760, 1120, 300], [60, 470, 260], [740, 440, 240], [330, 700, 200], [880, 640, 200]];   // hochkant: keine Wolke hinter der Anzeige
     for (const [x, y, w] of spots) this.clouds.push({ ...cloudSprite(rng, w, this.ls), x0: x, y, speed: rng.range(3, 7) });
-    this.sky = this.layer((g) => drawSky(g, L));
-    this.back = this.layer((g) => drawBack(g, L, rng));
-    this.front = this.layer((g) => drawFront(g, L, rng));
-    this.fore = this.layer((g) => drawFore(g, L, rng));
-    this.refl = this.layer((g) => {
-      for (const c of [this.sky, this.back, this.front, this.fore]) { if (c === this.back) this.drawClouds(g, 0, 1); g.drawImage(c, 0, 0, L.W, L.H); }
-    });
+    const crng = new RNG(hashSeed('pyramid-cirrus', 3));           // hohe Schleierwolken: flach, blass, schneller
+    for (const [x, y, w] of L.land ? [[420, 240, 420], [1250, 345, 520], [80, 470, 380]] : [[300, 650, 380], [-60, 930, 420], [640, 1010, 340]])
+      this.clouds.push({ ...cloudSprite(crng, w, this.ls), x0: x, y, speed: crng.range(8, 13), thin: true });
+    const theme = (this.theme = this.sim.cfg.theme);                 // Kulisse (Strukturwert: ein Wechsel baut den Renderer neu)
+    this.sky = this.layer((g) => (theme ? drawSkyDesert : drawSky)(g, L));
+    this.back = this.layer((g) => (theme ? drawBackDesert : drawBack)(g, L, rng));
+    this.front = this.layer((g) => drawFront(g, L, rng, theme));
+    this.fore = this.layer((g) => (theme ? drawForeDesert : drawFore)(g, L, rng));
+    this.refl = this.layer((g) => this.paintRefl(g, 0));
     // Glas vor dem Schacht: Ausschnitt mit weichen Rändern
     const fx = E.rp + E.bo + R + 14, y0 = L.apex[1] + 56;
     this.col = { x: E.cx - fx, y: y0, w: fx * 2, h: L.tunnel.top - y0 };
@@ -879,7 +1116,8 @@ class PyramidRenderer extends EBS.CanvasScene {
     // Sterne: feste Positionen im Himmel (aus festem Seed), funkeln nachts
     const srng = new RNG(hashSeed('pyramid-stars', 3));
     this.stars = Array.from({ length: L.land ? 190 : 170 }, () => [srng.range(0, L.W), Math.pow(srng.next(), 1.4) * (L.horizon - 30), srng.range(1.1, 2.8), srng.range(0, TAU)]);
-    this.moon = L.land ? [300, 210, 34] : [190, 430, 30];
+    this.moon = L.land ? [300, 215, 46] : [190, 440, 42];
+    this.moonImg = moonSprite(this.ls, this.moon[2]);
     // Licht-Füllung: Bild aller leuchtenden Glasfelder, Reihenfolge innerhalb jeder Reihe aus festem Seed
     this.litCanvas = this.layer((g) => drawLitPanels(g, L));
     this.shaft = { x: E.cx - (E.rp + E.bo + R + 6), y: E.yTop - E.rp - E.bo - R - 8, w: 2 * (E.rp + E.bo + R + 6) };
@@ -895,6 +1133,15 @@ class PyramidRenderer extends EBS.CanvasScene {
     this.shaftBox = { x: this.shaft.x - R, y: this.shaft.y - R, w: this.shaft.w + 2 * R, h: L.shore - this.shaft.y + R };
     this.shaftCanvas = document.createElement('canvas');
     this.shaftCanvas.width = Math.ceil(this.shaftBox.w * this.ls); this.shaftCanvas.height = Math.ceil(this.shaftBox.h * this.ls);
+    if (theme) {                                                    // Wüsten-Baustelle: fertige Steinpyramide, wird nach Baufortschritt aufgedeckt
+      this.stoneRows = stoneBlocks(L); this.stoneFlat = this.stoneRows.flat(); this.reflRow = 0;
+      this.stone = this.layer((g) => drawStone(g, L, this.stoneRows));
+      this.stoneGlow = this.layer((g) => {                          // fürs Aufleuchten: ohne Schienen, Ufer, Schacht, Tunnel
+        g.drawImage(this.stone, 0, 0, L.W, L.H); g.globalCompositeOperation = 'destination-out';
+        g.drawImage(this.front, 0, 0, L.W, L.H); g.drawImage(this.fore, 0, 0, L.W, L.H);
+        g.fillRect(this.shaft.x, this.shaft.y, this.shaft.w, this.shaft.h); tunnelArch(g, L, true); g.fill();
+      });
+    }
     this.fillPerm = Array.from({ length: PANEL_ROWS }, (_, i) => {
       const r = new RNG(hashSeed('pyramid-fill', i)), a = Array.from({ length: ROW_CELLS }, (_, k) => k);
       for (let k = a.length - 1; k > 0; k--) { const j = r.int(0, k); [a[k], a[j]] = [a[j], a[k]]; }
@@ -911,7 +1158,8 @@ class PyramidRenderer extends EBS.CanvasScene {
     const W = this.L.W;
     for (const c of this.clouds) {
       const span = W + c.w + 200, x = ((c.x0 + t * c.speed * k + 100 + c.w) % span + span) % span - c.w - 100;
-      g.drawImage(c.c, x, c.y - c.h / 2, c.w, c.h);
+      if (c.thin) { const a = g.globalAlpha; g.globalAlpha = a * 0.5; g.drawImage(c.c, x, c.y - c.h * 0.16, c.w, c.h * 0.32); g.globalAlpha = a; }
+      else g.drawImage(c.c, x, c.y - c.h / 2, c.w, c.h);
     }
   }
   /** Position, Drehung und Haltung einer Figur. */
@@ -930,7 +1178,7 @@ class PyramidRenderer extends EBS.CanvasScene {
       const f = clamp((b.s - L.fallS) / (P.ramp.len - L.fallS), 0, 1);
       return { x: p.x, y: p.y, ang: L.fallRot * (1 - Math.min(1, f * 1.6)), mode: 'fall', speed: b.v, look: [0, 1] };
     }
-    return { x: p.x, y: p.y, ang: p.rot, mode: 'roll', speed: b.v, look: [p.tx, p.ty] };
+    return { x: p.x, y: p.y, ang: p.rot, mode: 'roll', speed: b.v, look: [p.tx, p.ty], loop: p.k === KIND_LOOP };
   }
   drawFigure(g, b, q, glowK) {
     const cfg = this.sim.cfg, a0 = g.globalAlpha, glow = cfg.glow * glowK * (cfg.figure ? 0.35 : 1);
@@ -950,6 +1198,182 @@ class PyramidRenderer extends EBS.CanvasScene {
     const p = d.p, t = this.sim.t, per = 6 + (b.id % 4) * 1.3, ph = (t + b.id * 1.37) % per;
     const dusk = p > 0.66 && p < 0.9, yawn = dusk && ph < 1.4 ? Math.sin(Math.PI * ph / 1.4) : 0;
     return { yawn, cap: p > 0.8 || p < 0.03, sleep: p > 0.84 || p < 0.02 };
+  }
+  /** Spiegelbild der festen Kulisse; in der Baustelle samt der bereits gebauten Steine. */
+  paintRefl(g, placed) {
+    const L = this.L;
+    g.drawImage(this.sky, 0, 0, L.W, L.H); this.drawClouds(g, 0, 1); g.drawImage(this.back, 0, 0, L.W, L.H);
+    if (this.theme && placed > 0) this.drawBuilt(g, placed);
+    g.drawImage(this.front, 0, 0, L.W, L.H); g.drawImage(this.fore, 0, 0, L.W, L.H);
+  }
+  /** Spiegelbild nur neu zeichnen, wenn eine Steinlage fertig geworden ist. */
+  syncRefl(placed) {
+    const row = this.rowAt(placed).k;
+    if (row === this.reflRow) return;
+    this.reflRow = row;
+    const g = this.refl.getContext('2d'), ls = this.ls;
+    g.setTransform(ls, 0, 0, ls, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    this.paintRefl(g, placed);
+  }
+  /** Lage k und Zahl n der dort schon gesetzten Blöcke für placed gesetzte Blöcke insgesamt. */
+  rowAt(placed) {
+    const rows = this.stoneRows; let k = 0, n = placed;
+    while (k < rows.length && n >= rows[k].length) { n -= rows[k].length; k++; }
+    return { k, n };
+  }
+  /** Gebaute Steine: fertige Lagen als Fläche, die angefangene Lage Block für Block. */
+  drawBuilt(g, placed, alpha = 1, op = 'source-over', src = this.stone) {
+    if (placed <= 0 || alpha <= 0.01) return;
+    const L = this.L, A = L.apex, S = L.stone, F = S.front, { k, n } = this.rowAt(placed), v = k / COURSES, up = (p) => lerp2(p, A, v);
+    g.save(); g.globalAlpha = Math.min(1, alpha); g.globalCompositeOperation = op;
+    poly(g, [S.left, F, S.right, A]); g.clip();
+    g.beginPath();
+    if (k > 0) { [S.left, F, S.right, up(S.right), up(F), up(S.left)].forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); }
+    if (k < this.stoneRows.length) for (let i = 0; i < n; i++) { this.stoneRows[k][i].q.forEach(([x, y], j) => (j ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); }
+    g.clip(); g.drawImage(src, 0, 0, L.W, L.H);
+    g.restore();
+  }
+  /** Goldene Spitze: wird mit dem letzten Block aufgesetzt. */
+  drawCap(g) {
+    const L = this.L, A = L.apex, S = L.stone, v = 0.9, a = lerp2(S.left, A, v), b = lerp2(S.front, A, v), c = lerp2(S.right, A, v);
+    g.fillStyle = '#ffe98a'; poly(g, [a, b, A]); g.fill();
+    g.fillStyle = '#f0b02c'; poly(g, [b, c, A]); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 2; g.beginPath(); g.moveTo(b[0], b[1]); g.lineTo(A[0], A[1]); g.stroke();
+    g.strokeStyle = 'rgba(120,70,10,.6)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.lineTo(c[0], c[1]); g.stroke();
+  }
+  /** Wimpel an den Kanten: je erreichter Etappe (25, 50, 75 %) ein Paar. */
+  drawFlags(g, t, f) {
+    const L = this.L, A = L.apex, cols = ['#e8484f', '#3f8fe0', '#43b05a'];
+    g.lineCap = 'round';
+    [0.25, 0.5, 0.75].forEach((q, i) => {
+      if (f < q) return;
+      for (const [c, sg] of [[L.left, -1], [L.right, 1]]) {
+        const p = lerp2(c, A, q), top = [p[0] + sg * 12, p[1] - 50], w = Math.sin(t * 4 + i + sg) * 4;
+        g.strokeStyle = '#5c3a16'; g.lineWidth = 3.5; g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(top[0], top[1]); g.stroke();
+        g.fillStyle = cols[i]; poly(g, [top, [top[0] + sg * 34, top[1] + 9 + w], [top[0] + sg * 2, top[1] + 20]]); g.fill();
+      }
+    });
+  }
+  /** Karawane zieht fern am Horizont vorbei (hinter der Pyramide). */
+  drawCaravan(g, t) {
+    const L = this.L, y = L.horizon + 8, span = L.W + 400, x0 = ((t * 5) % span + span) % span - 200;
+    g.save();
+    g.beginPath(); g.rect(0, 0, L.W, L.H); g.moveTo(L.left[0], L.left[1]); g.lineTo(L.apex[0], L.apex[1]); g.lineTo(L.right[0], L.right[1]); g.closePath(); g.clip('evenodd');
+    g.fillStyle = g.strokeStyle = 'rgba(98,62,30,.82)'; g.lineCap = 'round';
+    for (let i = 0; i < 4; i++) {
+      const x = x0 - i * 48, ph = t * 3 + i * 1.3;
+      g.beginPath(); g.ellipse(x, y - 14, 13, 6.5, 0, 0, TAU); g.fill();
+      g.beginPath(); g.ellipse(x - 2, y - 20, 5.5, 5, 0, 0, TAU); g.fill();
+      g.lineWidth = 3.2; g.beginPath(); g.moveTo(x + 10, y - 15); g.quadraticCurveTo(x + 17, y - 18, x + 17, y - 27); g.stroke();
+      g.beginPath(); g.ellipse(x + 20, y - 28, 4.5, 2.6, 0.2, 0, TAU); g.fill();
+      g.lineWidth = 2.2;
+      for (const [dx, k] of [[-8, 0], [-4, 1], [5, 1], [9, 0]]) { const sw = Math.sin(ph + k * Math.PI) * 3; g.beginPath(); g.moveTo(x + dx, y - 10); g.lineTo(x + dx + sw, y); g.stroke(); }
+    }
+    g.restore();
+  }
+  /** Baustelle: Steine schimmern nachts, frisch gesetzte Blöcke blitzen auf, im Finale pulsiert die fertige Pyramide. */
+  drawBuildLights(g, t, fs, day) {
+    const k = this.sim.cfg.fillGlow, T = this.stoneFlat.length, placed = Math.floor(fs.lit / PANELS * T), prev = Math.floor(fs.prev / PANELS * T);
+    this.drawBuilt(g, placed, (0.05 + 0.26 * day.night) * k, 'lighter', this.stoneGlow);
+    const age = this.pulseAge();
+    if (age >= 0 && age < 1.2 && placed > prev) {
+      const L = this.L;
+      g.save(); g.globalCompositeOperation = 'lighter'; g.globalAlpha = Math.min(1, Math.exp(-age * 3) * 0.7 * Math.max(0.4, k));
+      g.beginPath();
+      for (let i = prev; i < placed && i < prev + 120; i++) { this.stoneFlat[i].q.forEach(([x, y], j) => (j ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); }
+      g.clip(); g.drawImage(this.stoneGlow, 0, 0, L.W, L.H);
+      g.restore();
+    }
+    if (fs.on && fs.lit === PANELS) this.drawBuilt(g, T, (0.12 + 0.08 * Math.sin(t * 6)) * k, 'lighter', this.stoneGlow);
+  }
+  /** Himmelsgäste: Ballon und Vogelschwarm vor dem Einfärben (tragen das Tageslicht), UFO und Sternschnuppen danach (leuchten selbst). */
+  drawSkyGuests(g, t, day, lit) {
+    if (!this.sim.cfg.skyFun || t < 0) return;
+    const i = Math.floor(t / SKY_SLOT), ev = this.skyEv && this.skyEv.i === i ? this.skyEv : (this.skyEv = skySlot(this.L, this.sim.seed, i));
+    const tau = t - i * SKY_SLOT - ev.start, kind = skyKind(ev, day.night > 0.5);
+    if (tau < 0 || !kind) return;
+    if (!lit) { if (kind === 'balloon') this.drawBalloon(g, ev, tau); else if (kind === 'flock') this.drawFlock(g, ev, tau, t); }
+    else if (kind === 'ufo') this.drawUfo(g, ev, tau, t); else if (kind === 'stars') this.drawShooting(g, ev, tau);
+  }
+  drawBalloon(g, ev, tau) {
+    const L = this.L, B = ev.balloon; if (tau > B.dur) return;
+    const u = tau / B.dur, x = ev.side < 0 ? -90 + (L.W + 180) * u : L.W + 90 - (L.W + 180) * u, y = B.y + Math.sin(tau * 0.8) * 6, col = COLORS[B.c].rgb;
+    g.save(); g.translate(x, y); if (!L.land) g.scale(1.15, 1.15);
+    g.strokeStyle = '#6b4a2a'; g.lineWidth = 1.5; for (const dx of [-9, 9]) { g.beginPath(); g.moveTo(dx * 1.4, 38); g.lineTo(dx, 58); g.stroke(); }
+    g.fillStyle = '#8a5a2b'; g.beginPath(); g.roundRect(-11, 57, 22, 15, 3); g.fill();
+    g.fillStyle = '#6b4520'; g.fillRect(-11, 57, 22, 3);
+    const hull = () => { g.beginPath(); g.moveTo(0, 46); g.bezierCurveTo(-54, 12, -46, -54, 0, -54); g.bezierCurveTo(46, -54, 54, 12, 0, 46); g.closePath(); };
+    g.save(); hull(); g.clip();
+    for (let k = -4; k < 4; k++) { g.fillStyle = rgba(k % 2 ? col : [255, 252, 240], 1); g.fillRect(k * 14, -58, 14, 108); }
+    const sh = g.createRadialGradient(-16, -24, 4, 0, -6, 62);
+    sh.addColorStop(0, 'rgba(255,255,255,.4)'); sh.addColorStop(0.5, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(40,20,60,.3)');
+    g.fillStyle = sh; g.fillRect(-60, -60, 120, 112);
+    g.restore();
+    g.strokeStyle = 'rgba(60,40,40,.45)'; g.lineWidth = 1.5; hull(); g.stroke();
+    g.restore();
+  }
+  drawFlock(g, ev, tau, t) {
+    const L = this.L, F = ev.flock; if (tau > F.dur) return;
+    const u = tau / F.dur, dir = -ev.side, x0 = dir > 0 ? -160 + (L.W + 320) * u : L.W + 160 - (L.W + 320) * u;
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    for (let k = 0; k < F.n; k++) {
+      const row = Math.ceil(k / 2), sg = k % 2 ? 1 : -1, x = x0 - dir * row * 26, y = F.y + sg * row * 13 + Math.sin(t * 0.9 + k) * 4;
+      const f = Math.sin(t * 8.5 + k * 1.7), w = 10, wy = -f * 5.5;
+      for (const [col, lw] of [['rgba(20,50,100,.35)', 3.4], ['rgba(255,255,255,.95)', 2]]) {
+        g.strokeStyle = col; g.lineWidth = lw;
+        g.beginPath(); g.moveTo(x - w, y + wy); g.quadraticCurveTo(x - w * 0.4, y - 3, x, y + 1); g.quadraticCurveTo(x + w * 0.4, y - 3, x + w, y + wy); g.stroke();
+      }
+    }
+  }
+  drawUfo(g, ev, tau, t) {
+    const U = ev.ufo; if (tau > U.dur) return;
+    let leg = U.legs[U.legs.length - 1]; for (const l of U.legs) if (tau < l.t0 + l.fly + l.hold) { leg = l; break; }
+    const q = tau - leg.t0, fly = q < leg.fly, f = fly ? q / leg.fly : 1, u = leg.smooth ? f * f * (3 - 2 * f) : f;
+    let x = leg.a[0] + (leg.b[0] - leg.a[0]) * u, y = leg.a[1] + (leg.b[1] - leg.a[1]) * u;
+    if (!fly) { x += Math.sin(q * 5) * 4; y += Math.cos(q * 3.3) * 5; }
+    const tilt = fly ? clamp((leg.b[0] - leg.a[0]) / 900, -0.35, 0.35) * Math.sin(Math.PI * f) : Math.sin(t * 3) * 0.06;
+    g.save(); g.translate(x, y); { const k = this.L.land ? 1.3 : 1.45; g.scale(k, k); }
+    if (U.mode === 3 && !fly) {                                   // Lichtkegel nach unten
+      const h = q - leg.fly, k = clamp(Math.min(h / 0.4, (leg.hold - h) / 0.4), 0, 1), cone = g.createLinearGradient(0, 10, 0, 340);
+      cone.addColorStop(0, `rgba(190,255,225,${0.6 * k})`); cone.addColorStop(1, 'rgba(190,255,225,0)');
+      g.globalCompositeOperation = 'lighter'; g.fillStyle = cone;
+      g.beginPath(); g.moveTo(-15, 12); g.lineTo(15, 12); g.lineTo(95, 340); g.lineTo(-95, 340); g.closePath(); g.fill();
+      g.globalCompositeOperation = 'source-over';
+    }
+    g.rotate(tilt);
+    g.globalCompositeOperation = 'lighter';
+    const gl = g.createRadialGradient(0, 8, 2, 0, 8, 70); gl.addColorStop(0, 'rgba(150,255,225,.4)'); gl.addColorStop(1, 'rgba(150,255,225,0)');
+    g.fillStyle = gl; g.fillRect(-70, -40, 140, 110);
+    g.globalCompositeOperation = 'source-over';
+    // Kuppel mit kleinem Piloten
+    const dome = g.createLinearGradient(0, -30, 0, 0); dome.addColorStop(0, 'rgba(215,250,255,.95)'); dome.addColorStop(1, 'rgba(120,205,235,.9)');
+    g.fillStyle = dome; g.beginPath(); g.arc(0, -4, 22, Math.PI, 0); g.closePath(); g.fill();
+    g.fillStyle = '#6fe06a'; g.beginPath(); g.ellipse(0, -10, 8, 9, 0, 0, TAU); g.fill();
+    g.fillStyle = '#16301a'; for (const dx of [-3.4, 3.4]) { g.beginPath(); g.ellipse(dx, -11, 2.3, 3.2, dx * 0.08, 0, TAU); g.fill(); }
+    g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 1.6; g.beginPath(); g.arc(0, -4, 19, Math.PI * 1.12, Math.PI * 1.45); g.stroke();
+    // Scheibe
+    const body = g.createLinearGradient(0, -12, 0, 14); body.addColorStop(0, '#f4f7fa'); body.addColorStop(0.55, '#aab6c1'); body.addColorStop(1, '#68767f');
+    g.fillStyle = '#56636d'; g.beginPath(); g.ellipse(0, 7, 34, 9, 0, 0, TAU); g.fill();
+    g.fillStyle = body; g.beginPath(); g.ellipse(0, 0, 48, 13, 0, 0, TAU); g.fill();
+    g.strokeStyle = 'rgba(40,52,64,.55)'; g.lineWidth = 1.4; g.stroke();
+    for (let k = 0; k < 6; k++) {                                 // Lauflichter
+      const lx = -35 + k * 14, ly = 3 + (1 - Math.pow((k - 2.5) / 2.5, 2)) * 5, c = COLORS[(k + Math.floor(t * 6)) % 4].rgb;
+      g.globalCompositeOperation = 'lighter'; g.fillStyle = rgba(c, 0.45); dot(g, lx, ly, 6.5);
+      g.globalCompositeOperation = 'source-over'; g.fillStyle = rgba(mix(c, [255, 255, 255], 0.35), 1); dot(g, lx, ly, 3);
+    }
+    g.restore();
+  }
+  drawShooting(g, ev, tau) {
+    g.save(); g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
+    for (const st of ev.stars) {
+      const a = tau - st.at; if (a < 0 || a > 0.8) continue;
+      const f = a / 0.8, dx = Math.cos(st.ang) * st.dir, dy = Math.sin(st.ang), hx = st.x + dx * st.len * f, hy = st.y + dy * st.len * f, k = Math.sin(Math.PI * f);
+      const gr = g.createLinearGradient(hx, hy, hx - dx * 130, hy - dy * 130);
+      gr.addColorStop(0, `rgba(255,255,240,${0.95 * k})`); gr.addColorStop(1, 'rgba(200,220,255,0)');
+      g.strokeStyle = gr; g.lineWidth = 2.6; g.beginPath(); g.moveTo(hx, hy); g.lineTo(hx - dx * 130, hy - dy * 130); g.stroke();
+      g.globalAlpha = k; this.sprite(g, this.white, hx, hy, 0.16); g.globalAlpha = 1;
+    }
+    g.restore();
   }
   pulseAge() { return this.sim.t - this.sim.lastPulse.t - PULSE_TRAVEL; }
   /** Stand von Füllung und Finale für das aktuelle Bild (rein aus Simulationszustand und Videolänge). */
@@ -991,9 +1415,9 @@ class PyramidRenderer extends EBS.CanvasScene {
   /** Raketen steigen vom Ufer auf und explodieren; die letzte groß und golden über der Spitze. */
   drawFireworks(g, fs) {
     const s = this.sim, cfg = s.cfg;
-    if (!cfg.finale || fs.ct < fs.D - fs.F - 1) return;
+    if (!cfg.finale || (!cfg.theme && fs.ct < fs.D - fs.F - 1)) return;
     const key = `${fs.cycle}|${fs.D}|${cfg.fireworks}`;
-    if (!this.fwPlan || this.fwPlan.key !== key) this.fwPlan = { key, list: fireworkPlan(this.L, s.seed, fs.cycle, fs.D, cfg.fireworks) };
+    if (!this.fwPlan || this.fwPlan.key !== key) this.fwPlan = { key, list: fireworkPlan(this.L, s.seed, fs.cycle, fs.D, cfg.fireworks, cfg.theme) };
     g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
     for (const b of this.fwPlan.list) {
       const age = fs.v - b.at;
@@ -1034,31 +1458,40 @@ class PyramidRenderer extends EBS.CanvasScene {
     const day = (this.day = dayState(dayPhase(cfg, this.video, s.step), cfg.nightDark));
     const fs = (this.finale = this.fillState());
     g.drawImage(this.sky, 0, 0, L.W, L.H);
+    this.drawSkyTint(g, day);
     this.drawSun(g, day);
     this.drawRays(g, t, cfg.rays * day.rays);
     this.drawClouds(g, t, cfg.clouds);
     g.drawImage(this.back, 0, 0, L.W, L.H);
+    const placed = this.theme ? Math.floor(fs.lit / PANELS * this.stoneFlat.length) : 0;
+    if (this.theme) { this.drawCaravan(g, t); this.syncRefl(placed); }
     this.drawWater(g, t);
-    this.drawLit(g, fs.lit, Math.min(1, 0.85 * cfg.fillGlow), 'source-over');
-    // Tunnel und Becherwerk nach den Glasfeldern: beide bleiben sichtbar, wenn die Pyramide leuchtet
-    if (fs.lit > 0) { g.save(); g.beginPath(); g.rect(0, 0, L.W, L.shore); g.clip(); drawTunnel(g, L); g.restore(); }
+    if (this.theme) {                                            // Wüsten-Baustelle: Steine statt leuchtender Glasfelder
+      this.drawBuilt(g, placed);
+      if (placed === this.stoneFlat.length) this.drawCap(g);
+      this.drawFlags(g, t, fs.lit / PANELS);
+    } else this.drawLit(g, fs.lit, Math.min(1, 0.85 * cfg.fillGlow), 'source-over');
+    // Tunnel und Becherwerk nach den Glasfeldern bzw. Steinen: beide bleiben sichtbar
+    if (fs.lit > 0) { g.save(); g.beginPath(); g.rect(0, 0, L.W, L.shore); g.clip(); drawTunnel(g, L, this.theme ? '#f0dcae' : undefined); g.restore(); }
     this.drawLift(g, t);
-    const c = this.col; g.drawImage(this.colCanvas, c.x, c.y, c.w, c.h);
+    if (!this.theme) { const c = this.col; g.drawImage(this.colCanvas, c.x, c.y, c.w, c.h); }
     g.drawImage(this.front, 0, 0, L.W, L.H);
     for (const b of s.orbs) if (b.state === RAMP) {
       const q = this.pose(b, t);
-      if (q.mode !== 'fall') { g.fillStyle = 'rgba(0,30,40,.28)'; g.beginPath(); g.ellipse(q.x + 1, q.y + R + 3, R * 0.75, 3, 0, 0, TAU); g.fill(); }
+      if (q.mode !== 'fall' && !q.loop) { g.fillStyle = 'rgba(0,30,40,.28)'; g.beginPath(); g.ellipse(q.x + 1, q.y + R + 3, R * 0.75, 3, 0, 0, TAU); g.fill(); }
       this.drawFigure(g, b, q, 1);
     }
     g.drawImage(this.fore, 0, 0, L.W, L.H);
     this.drawPool(g, t);
     this.drawSplashes(g, t);
     if (cfg.birds && day.night < 0.95) { g.globalAlpha = 1 - day.night; this.drawBirds(g, t); g.globalAlpha = 1; }
+    this.drawSkyGuests(g, t, day, false);
     // Tageszeit: ganze Szene einfärben, danach alles, was selbst leuchtet
     this.grade(g, day);
     this.drawSelfLit(g, t, day);
     this.drawNight(g, t, day);
-    this.drawFillLights(g, t, fs, day);
+    this.drawSkyGuests(g, t, day, true);
+    if (this.theme) this.drawBuildLights(g, t, fs, day); else this.drawFillLights(g, t, fs, day);
     this.drawGlassFlash(g);
     this.drawPulseDot(g);
     this.drawApex(g, t);
@@ -1066,6 +1499,19 @@ class PyramidRenderer extends EBS.CanvasScene {
     g.restore();
     if (this.view.hud) this.drawHud(g);
     g.restore();
+  }
+  /** Himmelsverlauf je Tageszeit: morgens Pfirsich am Horizont, abends violetter Zenit über goldenem Horizont, nachts dunkler Zenit mit hellem Horizontschein. */
+  drawSkyTint(g, day) {
+    const L = this.L, H = L.horizon + 2, n = day.night, k = day.warmK * (1 - n);
+    const band = (stops) => {
+      const gr = g.createLinearGradient(0, 0, 0, H);
+      for (const [q, c, a] of stops) gr.addColorStop(q, rgba(c, Math.min(1, a)));
+      g.fillStyle = gr; g.fillRect(0, 0, L.W, H);
+    };
+    if (k > 0.02) band(day.p < 0.3
+      ? [[0, [120, 150, 230], 0], [0.6, [255, 210, 190], 0.22 * k], [1, [255, 214, 170], 0.7 * k]]
+      : [[0, [58, 26, 120], 0.6 * k], [0.45, [150, 60, 130], 0.3 * k], [0.8, [255, 150, 70], 0.36 * k], [1, [255, 214, 110], 0.6 * k]]);
+    if (n > 0.02) band([[0, [1, 4, 26], 0.72 * n], [0.6, [8, 24, 80], 0.3 * n], [1, [74, 120, 200], 0.42 * n]]);
   }
   /** Morgens geht die Sonne rechts auf, abends links unter (hinter Pyramide und Insel). */
   drawSun(g, day) {
@@ -1140,7 +1586,7 @@ class PyramidRenderer extends EBS.CanvasScene {
   }
   /** Nachts: Sterne und Mond, Mondglitzern, Innenlicht der Pyramide, Schein um die Figuren. */
   drawNight(g, t, day) {
-    const L = this.L, n = day.night, cfg = this.sim.cfg, E = L.lift;
+    const L = this.L, n = day.night, cfg = this.sim.cfg, E = L.lift, R0 = L.R;
     if (n < 0.02) return;
     g.globalCompositeOperation = 'lighter';
     if (cfg.stars) {
@@ -1148,11 +1594,12 @@ class PyramidRenderer extends EBS.CanvasScene {
       for (const [x, y, r, ph] of this.stars) {
         g.globalAlpha = n * (0.55 + 0.45 * Math.sin(t * 1.7 + ph)); g.fillStyle = '#fffbe8'; g.fillRect(x - r / 2, y - r / 2, r, r);
       }
-      const [mx, my, mr] = this.moon;
-      g.globalAlpha = n * 0.5; this.sprite(g, this.white, mx, my, mr / 16 * 0.9);
-      g.globalAlpha = n; g.globalCompositeOperation = 'source-over';
-      g.beginPath(); g.arc(mx, my, mr, 0, TAU); g.moveTo(mx + mr * 1.3, my - mr * 0.2); g.arc(mx + mr * 0.45, my - mr * 0.2, mr * 0.85, 0, TAU, true);
-      g.fillStyle = '#fff6d8'; g.fill('evenodd');
+      const [mx, my0, mr] = this.moon, my = my0 + (1 - n) * mr * 1.5;      // steigt beim Dunkelwerden ein Stück auf
+      const halo = g.createRadialGradient(mx, my, mr * 0.6, mx, my, mr * 5);
+      halo.addColorStop(0, `rgba(190,212,255,${0.4 * n})`); halo.addColorStop(0.35, `rgba(150,180,255,${0.13 * n})`); halo.addColorStop(1, 'rgba(150,180,255,0)');
+      g.globalAlpha = 1; g.fillStyle = halo; g.fillRect(mx - mr * 5, my - mr * 5, mr * 10, mr * 10);
+      g.globalAlpha = Math.min(1, n * 1.15); g.globalCompositeOperation = 'source-over';
+      this.sprite(g, this.moonImg, mx, my);
       g.restore(); g.globalCompositeOperation = 'lighter';
       // Mondglitzern auf dem Wasser
       for (let i = 0; i < 26; i++) {
@@ -1169,6 +1616,9 @@ class PyramidRenderer extends EBS.CanvasScene {
     g.globalCompositeOperation = 'lighter'; g.globalAlpha = n * 0.5;
     g.strokeStyle = 'rgba(255,236,190,.9)'; g.lineWidth = 3; g.beginPath(); g.moveTo(E.cx, E.yTop - E.rp - 3); g.lineTo(L.apex[0], L.apex[1]); g.stroke();
     for (const sg of [-1, 1]) { g.globalAlpha = n; this.sprite(g, this.white, E.cx + sg * (L.tunnel.tw - 13), L.tunnel.top + L.tunnel.tw + 4, 0.35); }
+    if (this.theme) for (const [i, tn] of L.turns.entries()) {     // Fackeln an den Wendekappen
+      g.globalAlpha = n * (0.75 + 0.2 * Math.sin(t * 9 + i * 2.1)); this.sprite(g, this.glow[0], tn.C[0] + tn.dir * (L.turnR + R0 + 19), tn.C[1] - 6, 0.55 * 16 / R0);
+    }
     // Schein um die Figuren (Leuchtkugeln stärker als Tierchen)
     const k = n * 0.7 * cfg.glow * (cfg.figure ? 0.55 : 1);
     if (k > 0.02) for (const b of this.sim.orbs) {
@@ -1407,19 +1857,19 @@ class PyramidRenderer extends EBS.CanvasScene {
       g.letterSpacing = '2px'; g.font = font(600, L.land ? 17 : 23); g.fillStyle = '#fff0c4'; g.textAlign = L.land ? 'right' : 'center';
       g.shadowColor = 'rgba(0,18,56,.8)'; g.shadowBlur = 9;
       const banner = fs.on && fs.lit === PANELS;
-      if (!banner || L.land) g.fillText(`PYRAMID LIT ${Math.floor(f * 100)} %`, L.land ? L.W - 60 : L.W / 2, by + (L.land ? 30 : 36));
+      if (!banner || L.land) g.fillText(`${cfg.theme ? 'PYRAMID BUILT' : 'PYRAMID LIT'} ${Math.floor(f * 100)} %`, L.land ? L.W - 60 : L.W / 2, by + (L.land ? 30 : 36));
       if (banner) {
         const a = Math.min(1, (fs.ct - (fs.D - fs.F)) / 0.6), sc = 1 + 0.04 * Math.sin(fs.v * 5);
         g.save(); g.globalAlpha = a; g.translate(L.W / 2, L.land ? 62 : 344); g.scale(sc, sc);
         g.shadowColor = 'rgba(255,170,40,.9)'; g.shadowBlur = 24; g.letterSpacing = '4px'; g.textAlign = 'center';
-        g.font = font(800, L.land ? 46 : 54); g.fillStyle = '#fff3c4'; g.fillText('PYRAMID FULLY LIT!', 0, 0);
+        g.font = font(800, L.land ? 46 : 54); g.fillStyle = '#fff3c4'; g.fillText(cfg.theme ? 'PYRAMID COMPLETE!' : 'PYRAMID FULLY LIT!', 0, 0);
         g.restore();
       }
     }
     g.restore();
   }
   destroy() {
-    for (const c of [this.sky, this.back, this.front, this.fore, this.refl, this.colCanvas, this.scratch, this.shaftCanvas, ...this.clouds.map((x) => x.c)]) c.width = c.height = 1;
+    for (const c of [this.sky, this.back, this.front, this.fore, this.refl, this.colCanvas, this.scratch, this.shaftCanvas, this.moonImg.c, ...(this.theme ? [this.stone, this.stoneGlow] : []), ...this.clouds.map((x) => x.c)]) c.width = c.height = 1;
     super.destroy();
   }
 }
@@ -1430,12 +1880,13 @@ EBS.registerScenario({
   id: 'pyramid',
   title: 'Endless Pyramid',
   defaults: {
-    orbs: 22, size: 16, warmup: 30, figure: 0, speed: 1, beltSpeed: 1, rollSpeed: 1, current: 1,
-    glow: 1, pulse: 1, rays: 1, clouds: 1, reflection: 1, waves: 1, sparkle: 1, wiggle: 1, birds: true, lane: true,
+    orbs: 22, size: 16, warmup: 30, figure: 0, theme: 0, speed: 1, beltSpeed: 1, rollSpeed: 1, current: 1,
+    glow: 1, pulse: 1, rays: 1, clouds: 1, reflection: 1, waves: 1, sparkle: 1, wiggle: 1, birds: true, lane: true, skyFun: true,
     dayCycle: true, dayMinutes: 0, dayStart: 0, nightDark: 0.85, stars: true, sleepy: true,
     fill: true, finale: true, fillGlow: 1, fireworks: 1,
   },
   controls: [
+    { key: 'theme', label: 'Kulisse', type: 'select', restart: true, options: [[0, 'Glaspyramide in der Lagune'], [1, 'Wüsten-Baustelle (die Figuren bauen die Pyramide)']] },
     { key: 'figure', label: 'Figuren', type: 'select', options: [[0, 'Leuchtkugeln'], [1, 'Tierchen (Küken, Pinguin, Schweinchen, Frosch)']] },
     { key: 'orbs', label: 'Anzahl der Figuren', type: 'range', restart: true, min: 12, max: 26, step: 1, format: (v) => String(v) },
     { key: 'size', label: 'Größe der Figuren', type: 'range', restart: true, min: 12, max: 24, step: 1, format: (v) => `${v * 2} px` },
@@ -1462,24 +1913,26 @@ EBS.registerScenario({
     { key: 'stars', label: 'Sterne und Mond', type: 'check' },
     { key: 'sleepy', label: 'Tierchen werden abends müde', type: 'check' },
     { key: 'birds', label: 'Vögel', type: 'check' },
+    { key: 'skyFun', label: 'Himmelsgäste (Ballon, Vogelschwarm, UFO, Sternschnuppen)', type: 'check' },
     { key: 'lane', label: 'Strömungsspur im Wasser', type: 'check' },
   ],
   normalizeParams(p) {
     const r = (k, d, a, b) => clamp(num(p[k], d), a, b);
     return {
       orbs: clamp(Math.round(num(p.orbs, 22)), 12, 26), size: clamp(Math.round(num(p.size, 16)), 12, 24), warmup: r('warmup', 30, 0, 120),
-      figure: clamp(Math.round(num(p.figure, 0)), 0, 1),
+      figure: clamp(Math.round(num(p.figure, 0)), 0, 1), theme: clamp(Math.round(num(p.theme, 0)), 0, 1),
       speed: r('speed', 1, 0.25, 1.5),
       beltSpeed: r('beltSpeed', 1, 0.25, 2), rollSpeed: r('rollSpeed', 1, 0.25, 1.6), current: r('current', 1, 0.25, 2),
       glow: r('glow', 1, 0, 1.5), pulse: r('pulse', 1, 0, 1.5), rays: r('rays', 1, 0, 1.5), clouds: r('clouds', 1, 0, 3),
       reflection: r('reflection', 1, 0, 1), waves: r('waves', 1, 0, 2), sparkle: r('sparkle', 1, 0, 2), wiggle: r('wiggle', 1, 0, 2),
-      birds: bool(p.birds, true), lane: bool(p.lane, true),
+      birds: bool(p.birds, true), lane: bool(p.lane, true), skyFun: bool(p.skyFun, true),
       dayCycle: bool(p.dayCycle, true), dayMinutes: DAY_OPTIONS.some(([v]) => v === +p.dayMinutes) ? +p.dayMinutes : 0,
       dayStart: r('dayStart', 0, 0, 0.95), nightDark: r('nightDark', 0.85, 0, 1), stars: bool(p.stars, true), sleepy: bool(p.sleepy, true),
       fill: bool(p.fill, true), finale: bool(p.finale, true), fillGlow: r('fillGlow', 1, 0, 1.5), fireworks: r('fireworks', 1, 0.5, 2),
     };
   },
   create: (ctx) => new PyramidSim(ctx),
+  skyPlan: (world, seed, i) => skySlot(computeLayout(world), seed, i),   // Zeitplan der Himmelsgäste (zum Nachsehen)
   createRenderer: (ctx) => new PyramidRenderer(ctx),
   panelStats(sim) {
     const s = sim.snapshot();
