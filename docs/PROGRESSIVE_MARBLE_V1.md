@@ -14,7 +14,7 @@ node export.mjs --config presets/marble-progressive-materials.json --out output/
 
 In der Oberfläche: **Szenario → Marble Works · Progressive Factory**. Short und Langvideo laden dann Produktionsvorlagen. Einstellungen lassen sich wie bisher als JSON speichern/laden. Der Online-Vorschaulink zeigt die Simulation; MP4-Export mit Ton erfolgt weiterhin auf dem lokalen Node-/FFmpeg-Server. Die Live-Vorschau bleibt wie im Bestand stumm.
 
-**Kameraton, Variante C:** Marble Works verwendet jetzt weich vorbereitete, überwiegend auf Kenney-Aufnahmen beruhende Kontaktklänge. Die Tonmischung folgt dem tatsächlichen Bildausschnitt und begrenzt die Geräuschdichte. Die subjektive Klangabnahme der fertigen Videos bleibt offen; [Verhalten, Quellen und Prüfung](MARBLEWORKS_CAMERA_AUDIO.md).
+**Kameraton, Variante C:** Marble Works verwendet jetzt weich vorbereitete, überwiegend auf Kenney-Aufnahmen beruhende Kontaktklänge. Die Tonmischung folgt dem tatsächlichen Bildausschnitt und begrenzt die Geräuschdichte. Der Nutzer hat die fertigen Reviewvideos am 14. November 2026 freigegeben; [Verhalten, Quellen und Prüfung](MARBLEWORKS_CAMERA_AUDIO.md).
 
 Gespeicherte Rezepte und Links der ersten Progressive-Fassung mit der exakten Kombination `scenario=marble` und `factoryMode=progressive` werden auf `marbleworks` umgestellt. Alle echten Classic-Konfigurationen bleiben unverändert.
 

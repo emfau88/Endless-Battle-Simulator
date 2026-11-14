@@ -3,7 +3,8 @@
 Stand: 14. November 2026. Branch `codex/marbleworks-camera-audio`, Basis `f3cb8de`.
 Die Änderung betrifft ausschließlich **Marble Works · Progressive Factory**. Classic Marble und die
 anderen Szenarien behalten ihre Klangtabellen und ihren bisherigen Mischpfad. Die Live-Vorschau der
-Fabrik bleibt stumm; Ton entsteht weiterhin im Videoexport. Die endgültige subjektive Klangabnahme ist offen.
+Fabrik bleibt stumm; Ton entsteht weiterhin im Videoexport. Der Nutzer hat die neue Klangfassung am
+14. November 2026 anhand der Reviewvideos freigegeben (siehe PR #12).
 
 ## Klang und Kameraverhalten
 
@@ -67,7 +68,10 @@ zwölf Dateien. Der zusätzliche Check prüft die Quellen, Zwischenstufe, fertig
 Es sind **74 verschiedene Testfälle bestanden**: 31 gezielte Modell-/Mischplan-/Audioprüfungen,
 14 bestehende Audiofälle, zwölf Core-/Konfigurationsfälle, acht zusätzliche Audiofälle für Scrap,
 Mycelium und Pyramid, acht bestehende Marble-Works-Browser-/Effektfälle und ein Exporttest.
-Letzterer umfasst drei reale 3-Sekunden-Clips mit vollständiger 84-Sekunden-Episodentonspur.
+Letzterer umfasst drei reale Clips mit vollständiger 84-Sekunden-Episodentonspur. Nach einem CI-Timeout
+im seriellen Production-Job läuft er separat als `export-marbleworks-audio` und rendert jeweils eine
+Sekunde aktive Produktion; sämtliche Audio-, Format- und Replay-Prüfungen bleiben erhalten.
+Die bestehenden Vorlagenprüfungen behalten ihre 3-Sekunden-Exporte. Die Zeitlimits wurden nicht erhöht.
 Nach Korrektur des Lautstärkehinweises wurden die beiden betroffenen UI-Fälle nochmals erfolgreich geprüft;
 diese Wiederholungen sind in der Gesamtzahl nicht doppelt gezählt.
 
@@ -83,11 +87,11 @@ kein Nachweis dieses Mischprofils.
 
 Ein vollständiger gemischter Auftrag mit 24 Produkten enthält 291 Rohereignisse und eine 79 Sekunden lange
 Tonspur. Gemessen wurden −36,9 LUFS für die Mischung und −12,1 dBTP für die fertige AAC-Spur, ohne
-Begrenzereingriff. Dieser ruhige Pegel folgt der freigegebenen Klangrichtung; die endgültige Hörabnahme bleibt offen.
+Begrenzereingriff. Der Nutzer hat die daraus erzeugten Reviewvideos und ihre Klangfassung freigegeben.
 
 Die aktuellen Tests prüfen unter anderem Projektion, ruhige Randübergänge, Dichteauswahl, Kamera-/Tempo-
 und Bildratenbezug, unveränderte Produktionsereignisse, den optionalen Mischpfad und feste Pegel. Die
-Hörqualität wird anschließend mit Bild beurteilt; technische Tests ersetzen diese Abnahme nicht.
+Hörqualität wurde zusätzlich mit Bild beurteilt; technische Tests ersetzen diese Abnahme nicht.
 
 `scripts/marbleworks-audio-proof.mjs` erzeugt zwei separate Reviewvideos mit jeweils 24 Sekunden,
 720p-Auflösung, 30 Bildern/s, H.264-Bild und AAC-Ton sowie zugehörige JSON-Rezepte:

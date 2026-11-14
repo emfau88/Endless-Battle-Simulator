@@ -1,6 +1,6 @@
 # Marble Works · 3D-Prüfbericht
 
-Stand: 14. November 2026. Die 3D-Fassung wurde mit [PR #11](https://github.com/emfau88/Endless-Battle-Simulator/pull/11) nach `main` gemergt. Die aktuelle Kamera-/Klangüberarbeitung liegt auf `codex/marbleworks-camera-audio`, Basis `f3cb8de`; ihre subjektive Klangabnahme bleibt ausdrücklich offen.
+Stand: 14. November 2026. Die 3D-Fassung wurde mit [PR #11](https://github.com/emfau88/Endless-Battle-Simulator/pull/11) nach `main` gemergt. Die aktuelle Kamera-/Klangüberarbeitung liegt auf `codex/marbleworks-camera-audio`, Basis `f3cb8de`; der Nutzer hat ihre Reviewvideos und den Merge nach erfolgreicher CI in [PR #12](https://github.com/emfau88/Endless-Battle-Simulator/pull/12) freigegeben.
 
 ## Aktueller Stand
 
@@ -10,9 +10,9 @@ Die Fabrik besitzt einen warmen, fein texturierten Werkstattboden, salbeifarbene
 
 Die Klangzuordnungen `factoryPolish` und `factoryCoat` bleiben entfernt, ihre Produktionsereignisse bestehen weiter. Die acht übrigen Klangrollen verwenden jetzt die weichere, Kenney-lastige Variante C. Ein separater Kamera-Mischplan wählt hörbare Vorgänge aus, senkt entfernte Quellen ab und begrenzt die Geräuschdichte. Die Live-Vorschau bleibt stumm; die Änderung betrifft den Videoexport ausschließlich von Marble Works. [Technik, Quellen und aktuelle Prüfnachweise](MARBLEWORKS_CAMERA_AUDIO.md).
 
-## Offene Klangabnahme
+## Freigegebene Klangfassung
 
-Die vorherige Tonfassung wurde wegen harter Glas- und Kontaktgeräusche abgelehnt. Der Nutzer hat für die Überarbeitung die separate Hörprobe C mit stärkerem Kenney-Anteil gewählt. Diese Richtung ist umgesetzt; die endgültige ASMR-/YouTube-Klangabnahme erfolgt anhand der neuen Videos mit Kamerafahrt. Bestandene Audio- und Exporttests prüfen Reproduzierbarkeit, Format und Pegelgrenzen, nicht die ästhetische Hörqualität.
+Die vorherige Tonfassung wurde wegen harter Glas- und Kontaktgeräusche abgelehnt. Der Nutzer hat für die Überarbeitung die separate Hörprobe C mit stärkerem Kenney-Anteil gewählt und die daraus erzeugten Videos mit Kamerafahrt am 14. November 2026 mit „Ok, klingt gut so“ freigegeben. Bestandene Audio- und Exporttests prüfen zusätzlich Reproduzierbarkeit, Format und Pegelgrenzen; die ästhetische Hörabnahme ist damit ebenfalls erfolgt.
 
 Die frühere Episodenmischung meldete bis zu 40,5 dB Begrenzung. Dieser historische Messwert gehört zur alten, auf Lautheit normalisierten Fassung. Das neue Marble-Works-Profil verwendet vorbereitete kurze Klänge, einen festen Grundpegel und kamerabhängige Abschwächung; es normalisiert leise Bereiche nicht auf −14 LUFS zurück. Die neuen Exportmessungen und Reviewclips werden im [Kameraton-Nachweis](MARBLEWORKS_CAMERA_AUDIO.md#review-und-prüfung) getrennt geführt.
 
