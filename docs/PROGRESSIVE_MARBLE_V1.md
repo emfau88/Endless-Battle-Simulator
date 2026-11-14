@@ -97,6 +97,8 @@ Für Marble Works wartet der Export-UI-Test bis zu **420 s** auf das Ergebnis. D
 
 Die Browserprüfung vergleicht dieselbe kurze Simulationsdauer bei echten 60/30 fps mit 6/3/3 gerenderten Bildern in den drei Format-/Auflösungskombinationen. Seeking vergleicht weiterhin echte PNGs und Zustands-Hashes an denselben vier Kontrollpunkten; zusätzliche Zwischenbilder liegen gezielt auch um die tatsächlichen Ausbauten. Alle Vergleichsbedingungen bleiben erhalten. Die eigenständigen Exporttests behalten ihre Auflösung, Bildrate und codierte Bildzahl.
 
+Der UI-Test für gespeicherte Marble-Works-Einstellungen erlaubt bis zu **90 Sekunden für eine Navigation**, da das Neuladen der 3D-Szene auf Softwaregrafik die Shader erneut kompiliert. Diese Grenze gilt nur für diesen Test und führt weder Wiederholungen noch feste Wartezeiten ein.
+
 ## Bewusster V1-Umfang
 
 Es gibt eine ausgearbeitete Fabriktopologie mit variabler Produktion, keine frei baubare Wirtschaftssimulation. Geprüfte Kugeln werden nach Farbe gesammelt; Ausschuss und Nacharbeit sind noch kein eigener Produktionszweig. Das Modell prüft den ordnungsgemäßen Durchlauf aller Stationen. Die Gesamtübersicht zeigt in 9:16 die volle breite Anlage entsprechend klein; anschließend führen automatische Nahansichten durch die Stationen. Die 3D-Darstellung braucht mehr Grafikleistung als Classic; Software-Rendering bleibt möglich, ist aber deutlich langsamer. Wiederholte Förderrollen und Stützen werden gemeinsam gezeichnet, und die Glasbrechung wird erst während der tatsächlichen Politur aktiviert.

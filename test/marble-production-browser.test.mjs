@@ -90,6 +90,9 @@ test('Progressive renderer: direct seeking matches intermediate rendering across
 
 test('Progressive UI: switch from Classic, preserve live state on reframe and save camera/material settings', async t => {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } }); t.after(() => page.close());
+  // Reloading a saved 3D scene includes software shader compilation. This
+  // navigation budget is scoped to this UI test; the assertions stay unchanged.
+  page.setDefaultNavigationTimeout(90000);
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto(pathToFileURL(INDEX).href + '?scenario=marble&paused=1');
   await page.waitForFunction(() => EBS.app?.sim);
