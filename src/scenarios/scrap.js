@@ -92,8 +92,88 @@
       return c;
     }
     _pickup(g, p, t) {
-      if (this.sunny) EBS.ScrapDaylightArt.pickup(g, p, t, this);
-      else super._pickup(g, p, t);
+      if (this.sunny) { EBS.ScrapDaylightArt.pickup(g, p, t, this); return; }
+      if (!this.materialArena) { super._pickup(g, p, t); return; }
+      const empty = !!p.empty || p.ammo <= 0, color = p.kind === 'rocket' ? '#eeb779' : '#7cdbef';
+      const { sprite, shadow } = this._pickupTexture(p.kind, empty), angle = (noise(p.id, 13) - .5) * 1.5;
+      g.save(); g.translate(p.x, p.y);
+      if (empty) g.globalAlpha = .5 - .2 * Math.max(0, Math.min(1, (p.age || 0) / (p.ttl || 3)));
+      else for (let i = 0; i < 4; i++) {
+        const a = i * Math.PI / 2 + .16;
+        g.beginPath(); g.arc(0, 0, 24, a, a + .4); g.strokeStyle = rgba(color, .55); g.lineWidth = 1.3; g.stroke();
+      }
+      // Offset in arena coordinates first: every silhouette casts the same
+      // down-right shadow, independent of the weapon's orientation.
+      g.save(); g.translate(3, 5); g.rotate(angle); g.drawImage(shadow, -32, -32, 64, 64); g.restore();
+      g.save(); g.rotate(angle); g.drawImage(sprite, -32, -32, 64, 64); g.restore();
+      if (!empty) {
+        box(g, -10, 18, 20, 10, 2); g.fillStyle = '#0b1721'; g.fill();
+        text(g, Math.max(0, Math.ceil(p.ammo)), 0, 23, 7, color, 'center');
+      }
+      g.restore();
+    }
+    _pickupTexture(kind, empty) {
+      this._pickupTextures ||= new Map();
+      const key = `${kind}:${empty}`;
+      if (this._pickupTextures.has(key)) return this._pickupTextures.get(key);
+      const source = document.createElement('canvas'); source.width = source.height = 128;
+      const ctx = source.getContext('2d'); ctx.scale(2, 2); ctx.translate(18, 31);
+      this._weapon(ctx, kind, !empty, kind === 'rocket' ? '#eeb779' : '#7cdbef', true);
+      const sprite = document.createElement('canvas'); sprite.width = sprite.height = 128;
+      const sg = sprite.getContext('2d'); if (empty) sg.filter = 'grayscale(1)'; sg.drawImage(source, 0, 0);
+      const mask = document.createElement('canvas'); mask.width = mask.height = 128;
+      const mg = mask.getContext('2d'); mg.drawImage(sprite, 0, 0); mg.globalCompositeOperation = 'source-in';
+      mg.fillStyle = rgba('#03090e', .45); mg.fillRect(0, 0, 128, 128);
+      const shadow = document.createElement('canvas'); shadow.width = shadow.height = 128;
+      const bg = shadow.getContext('2d'); bg.filter = 'blur(3px)'; bg.drawImage(mask, 0, 0);
+      const result = { sprite, shadow }; this._pickupTextures.set(key, result); return result;
+    }
+    _labelLayout(robots, width, height) {
+      const labels = [], h = 16.5, margin = 18;
+      const overlaps = (a, b) => a.x < b.x + 60 && a.x + 60 > b.x && a.y < b.y + h + 2 && a.y + h + 2 > b.y;
+      // Sorting a copy keeps this pass independent of draw history and physics.
+      for (const robot of robots.filter(r => r.alive !== false && r.hp > 0).slice().sort((a, b) => a.y - b.y || a.id - b.id)) {
+        const radius = Math.max(12, robot.r || 24), x = Math.max(margin, Math.min(width - margin - 58, robot.x - 29));
+        const top = robot.y - radius - 6 - h, bottom = robot.y + radius + 10;
+        const candidates = [top, bottom, top - 20, bottom + 20, top - 40, bottom + 40];
+        let y = candidates.find(yy => yy >= margin && yy + h <= height - margin && !labels.some(b => overlaps({ x, y: yy }, b)));
+        if (y === undefined) y = Math.max(margin, Math.min(height - margin - h, top));
+        labels.push({ robot, x, y, width: 58, height: h, below: y > robot.y,
+          ammoY: y > robot.y ? y + h + 4 : robot.y + radius + 12 });
+      }
+      return labels;
+    }
+    _labels(g, robots, width, height) {
+      const labels = this._labelLayout(robots, width, height);
+      g.save();
+      // Magazine pips stay below the machine; a lower nameplate moves them
+      // beneath that plate so the two indicators never occupy the same row.
+      for (const { robot, ammoY } of labels) if (robot.weapon) {
+        const rocket = robot.weapon.kind === 'rocket', max = Math.max(1, robot.weapon.maxAmmo || (rocket ? 2 : 12));
+        const count = Math.min(12, max), n = Math.max(0, Math.min(1, robot.weapon.ammo / max)) * count;
+        const gap = (rocket ? 4 : 1.8) * .8, wide = (rocket ? 9 : 3) * .8, total = count * wide + (count - 1) * gap;
+        for (let i = 0; i < count; i++) {
+          box(g, robot.x - total / 2 + i * (wide + gap), ammoY, wide, 3.2, .8);
+          g.fillStyle = i < n ? (rocket ? '#f1b773' : '#bbdee7') : '#273b47'; g.fill();
+        }
+      }
+      for (const { robot, x, y } of labels) {
+        const color = colorOf(robot), hp = Math.max(0, Math.min(1, robot.hp / Math.max(1, robot.maxHp)));
+        box(g, x, y, 58, 13, 3); g.fillStyle = rgba('#0c1820', .88); g.fill();
+        text(g, robot.name, x + 29, y + 6.5, 9, color, 'center', 800);
+        box(g, x + 5, y + 13, 48, 3.5, 1.2); g.fillStyle = '#050c11'; g.fill();
+        if (hp > 0) {
+          box(g, x + 5, y + 13, 48 * hp, 3.5, Math.min(1.2, 24 * hp));
+          g.fillStyle = hp < .25 ? '#f48562' : color; g.fill();
+        }
+      }
+      g.restore();
+    }
+    draw(round, options) {
+      // The archived path calls _result after all effects, providing the same
+      // final label pass for Classic/V2 without editing the archived renderer.
+      this._sourceLabelPass = true;
+      try { super.draw(round, options); } finally { this._sourceLabelPass = false; }
     }
     _bodyTexture(color, dead = false, stage = 0) {
       const id = Math.max(0, palette.indexOf(color));
@@ -338,29 +418,6 @@
         circle(g, 0, 0, radius + 7); g.strokeStyle = rgba('#ffe6cf', clamp((robot.hurtUntil - t) * 5, 0, .8));
         g.lineWidth = 2; g.stroke();
       }
-      // P3 deliberately preserves the current telemetry placement and sizes.
-      // The separate, collision-aware sign pass belongs to P4.
-      const hp = clamp(finite(robot.hp) / Math.max(1, finite(robot.maxHp, 100)), 0, 1), barY = -radius - 17;
-      box(g, -28, barY, 56, 7, 3.5); g.fillStyle = rgba('#030a10', .9); g.fill();
-      if (hp > 0) {
-        box(g, -26, barY + 2, 52 * hp, 3, Math.min(1.5, 26 * hp)); g.fillStyle = hp < .24 ? '#f48562' : color; g.fill();
-        if (hp > .05) stroke(g, -25, barY + 2, -26 + 51 * hp, barY + 2, rgba('#ffffff', .45), .7);
-      }
-      if (!this.materialArena) text(g, robot.name, 0, barY - 7.5, 7.4, color, 'center', 800);
-      const yAmmo = radius + 12;
-      if (robot.weapon) {
-        const max = Math.max(1, finite(robot.weapon.maxAmmo, robot.weapon.kind === 'rocket' ? 2 : 12));
-        const count = Math.min(12, max), n = clamp(finite(robot.weapon.ammo) / max, 0, 1) * count;
-        const gap = robot.weapon.kind === 'rocket' ? 4 : 1.8, wide = robot.weapon.kind === 'rocket' ? 9 : 3;
-        const total = count * wide + (count - 1) * gap;
-        for (let i = 0; i < count; i++) {
-          box(g, -total / 2 + i * (wide + gap), yAmmo, wide, 4, 1);
-          g.fillStyle = i < n ? (robot.weapon.kind === 'rocket' ? '#f1b773' : '#bbdee7') : '#273b47'; g.fill();
-        }
-      } else text(g, 'UNARMED', 0, yAmmo + 1, 5.8, '#c7a36e', 'center', 800);
-      const nameY = this.materialArena && robot.y < 62 ? radius + 31 : -radius - 25;
-      box(g, -34, nameY - 8, 68, 15, 4); g.fillStyle = '#10202be8'; g.fill();
-      text(g, robot.name, 0, nameY, 10, color, 'center', 800);
       g.restore();
     }
     _projectile(g, p) {
@@ -446,9 +503,11 @@
     }
     destroy() {
       this._scorchTextures?.clear(); this._scorchedFloor = null; this.episode = null;
+      this._pickupTextures?.clear();
       super.destroy();
     }
     _result(g, round) {
+      if (this._sourceLabelPass) this._labels(g, round.robots || [], 900, 900);
       if (this.skipResult) return;
       // Preserve the source result banner; enlarge and move it into the arena
       // centre, where it remains legible in a phone-sized portrait export.
@@ -620,7 +679,10 @@
         const t=art.block(b,this.arena._blocks,true);g.drawImage(t.shadow,b.x-t.pad,b.y-t.pad,t.width,t.height);
       }
       for(const b of blocks)if(!b.alive)art.rubble(g,b,sunny);
-      r.pads.forEach((p,i)=>sunny?art.sunnyPad(g,mapPoint(p)):this.arena._pad(g,mapPoint(p),r.t,i));
+      for(const pad of r.pads) {
+        const occupied=r.pickups.some(p=>!p.empty&&p.ammo>0&&Math.hypot(p.x-pad.x,p.y-pad.y)<40);
+        if(sunny)art.sunnyPad(g,mapPoint(pad));else art.pad(g,mapPoint(pad),occupied);
+      }
       for(const e of effects)this.arena._effect(g,e,true);
       for(const p of r.pickups)this.arena._pickup(g,mapPoint(p),r.t);
       for(const b of blocks)if(b.alive) {
@@ -629,6 +691,7 @@
       for(const robot of [...robots.filter(p=>!p.alive),...robots.filter(p=>p.alive)])this.arena._robot(g,robot,r.t);
       for(const p of r.projectiles)this.arena._projectile(g,mapPoint(p));
       for(const e of effects)this.arena._effect(g,e);
+      this.arena._labels(g,robots,l.arenaW,l.arenaH);
       g.restore();
       if(final)this.finale(g);
       else if(r.phase==='ended') {

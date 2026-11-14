@@ -273,22 +273,85 @@
     const result={canvas:c,pad,width:w+pad*2,height:h+pad*2};
     if(cache.size>=160)cache.clear();cache.set(key,result);return result;
   }
-  function rubble(g,b,sunny=false) {
-    if(sunny)return EBS.ScrapDaylightArt.rubble(g,b);
-    const wood=b.material==='wood',stone=b.material==='stone',seed=b.id+36;
-    g.save();g.translate(b.x+b.w/2,b.y+b.h/2);
-    const dust=g.createRadialGradient(3,4,0,3,4,Math.max(b.w,b.h)*.58);
-    dust.addColorStop(0,wood?'#956d3828':'#cad2cc20');dust.addColorStop(1,'#59616400');
-    g.beginPath();g.ellipse(3,4,b.w*.57,b.h*.48,0,0,Math.PI*2);g.fillStyle=dust;g.fill();
-    // Low loose fragments leave the opened route visually distinct from a wall.
-    for(let i=0;i<11;i++) {
-      g.save();g.translate((noise(seed,i*2)-.5)*b.w,(noise(seed,i*2+1)-.5)*b.h);g.rotate(noise(seed,i+50)*Math.PI);
-      const size=3+noise(seed,i+77)*6;
-      g.fillStyle=wood?(i%2?'#a9753e':'#d39c59'):stone?(i%2?'#6a8291':'#8d9fab'):(i%2?'#a5afa8':'#d1d3c5');
-      polygon(g,wood?[[-size,-2],[size,-1],[size-3,2],[-size+1,2]]:[[-size,-size*.4],[0,-size*.7],[size,0],[size*.5,size*.5],[-size*.6,size*.4]]);g.fill();
-      line(g,-size,-size*.4,0,-size*.7,wood?'#e6b36b66':'#e5e8d866',.7);g.restore();
+  let padTexture;
+  function stationTexture() {
+    if(padTexture)return padTexture;
+    const c=canvas(240,240),g=c.getContext('2d');g.scale(2,2);g.translate(60,60);
+    // Keep the dark station's enclosure, bevels and flush screws. Only the
+    // central readout changes; the geometry remains a shallow supply plate.
+    g.shadowColor='#03090e8c';g.shadowBlur=16;g.shadowOffsetX=10;g.shadowOffsetY=16;
+    rect(g,-42,-38,84,76,6,'#101a23');g.shadowBlur=0;g.shadowOffsetX=g.shadowOffsetY=0;
+    const metal=g.createLinearGradient(-35,-39,35,35);
+    metal.addColorStop(0,'#344650');metal.addColorStop(.35,'#24343f');metal.addColorStop(1,'#172630');
+    rect(g,-41,-39,82,73,5,metal);g.strokeStyle='#0a1218';g.lineWidth=1.5;g.stroke();
+    line(g,-37,-38,36,-38,'#73858e',1);line(g,-40,-34,-40,29,'#536974',.8);
+    rect(g,-33,-31,66,59,4,'#101e28');g.strokeStyle='#354c59';g.lineWidth=1;g.stroke();
+    disc(g,0,-2,26,'#152630');g.strokeStyle='#050f17';g.lineWidth=3;g.stroke();
+    for(const x of [-35,35])for(const y of [-31,27]) {
+      disc(g,x,y,2,'#81929a');line(g,x-.9,y,x+.9,y,'#273b47',.7);
+      disc(g,x-.5,y-.6,.5,'#c5ceca66');
+    }
+    for(const [x,y] of [[-30,-38],[11,30]]) {
+      g.save();g.beginPath();g.rect(x,y,19,4);g.clip();g.globalAlpha=.38;
+      g.fillStyle='#0d171f';g.fillRect(x,y,19,4);
+      for(let offset=-5;offset<22;offset+=8) {
+        polygon(g,[[x+offset,y],[x+offset+4,y],[x+offset+8,y+4],[x+offset+4,y+4]]);
+        g.fillStyle='#bfa66b';g.fill();
+      }
+      g.restore();
+    }
+    padTexture=c;return c;
+  }
+  function pad(g,pad,occupied=false) {
+    const ready=Math.max(0,pad.readyIn),fraction=1-Math.min(1,ready/Math.max(1,pad.period));
+    const color=pad.kind==='rocket'?'#dca367':'#68bacf';
+    g.save();g.translate(pad.x,pad.y);g.drawImage(stationTexture(),-60,-60,120,120);
+    g.beginPath();g.arc(0,-2,28,-Math.PI/2,-Math.PI/2+Math.PI*2*Math.max(.005,fraction));
+    g.strokeStyle=color;g.lineWidth=2.3;g.stroke();
+    if(!occupied) {
+      g.textAlign='center';g.textBaseline='middle';g.fillStyle='#e5e9df';
+      g.font='700 17px "Segoe UI",Arial,sans-serif';
+      g.fillText(ready>0?String(Math.ceil(ready)).padStart(2,'0'):'READY',0,-5);
+      g.font='600 6px "Segoe UI",Arial,sans-serif';g.fillStyle=color;
+      g.fillText(pad.kind==='rocket'?'ROCKET':'BLASTER',0,13);
     }
     g.restore();
+  }
+  const rubbleColors={wood:['#6e4c2c','#8a6238'],stone:['#4f5f69','#66757e'],concrete:['#8c928d','#a5a99f']};
+  const rubbleSides={wood:'#382a20',stone:'#28343c',concrete:'#515957'};
+  const rubbleTextures=new Map();
+  function fragment(g,x,y,angle,material,size,large,index) {
+    const wood=material==='wood',half=size/2,height=wood?(large?3:Math.max(1.1,size*.35)):size*.65;
+    const points=wood?[[-half,-height/2],[half,-height/2],[half-.6,height/2],[-half+.4,height/2]]
+      :[[-half,-height*.35],[-size*.1,-height*.55],[half,-height*.12],[size*.3,height*.5],[-size*.33,height*.4]];
+    // Translate the underside in arena coordinates BEFORE rotating the top.
+    // Every loose piece has the same small down-right contact edge.
+    g.save();g.translate(x+1,y+1.5);g.rotate(angle);polygon(g,points);g.fillStyle=rubbleSides[material];g.fill();g.restore();
+    g.save();g.translate(x,y);g.rotate(angle);polygon(g,points);g.fillStyle=rubbleColors[material][index%2];g.fill();
+    if(wood&&large)line(g,-half+1,-.2,half-1,.15,'#47332377',.55);
+    g.restore();
+  }
+  function rubble(g,b,sunny=false) {
+    if(sunny)return EBS.ScrapDaylightArt.rubble(g,b);
+    const key=`rubble-p4:${b.material}:${b.w}:${b.h}:${b.id}`;
+    let texture=rubbleTextures.get(key);
+    if(!texture) {
+      texture=canvas((b.w+32)*2,(b.h+32)*2);
+      const g=texture.getContext('2d');g.scale(2,2);g.translate(16+b.w/2,16+b.h/2);
+      const wood=b.material==='wood',seed=b.id+36;
+      const dust=g.createRadialGradient(3,4,0,3,4,Math.max(b.w,b.h)*.58);
+      dust.addColorStop(0,wood?'#956d3828':'#cad2cc20');dust.addColorStop(1,'#59616400');
+      g.beginPath();g.ellipse(3,4,b.w*.57,b.h*.48,0,0,Math.PI*2);g.fillStyle=dust;g.fill();
+      // Fourteen small chips plus two readable pieces. Their positions are a
+      // pure function of block identity, so seeking never adds/removes debris.
+      for(let i=0;i<16;i++) {
+        const large=i>=14,size=large?(wood?14:8):2+noise(seed,i+77)*4;
+        fragment(g,(noise(seed,i*2)-.5)*b.w,(noise(seed,i*2+1)-.5)*b.h,
+          noise(seed,i+50)*Math.PI,b.material,size,large,i);
+      }
+      if(rubbleTextures.size>=160)rubbleTextures.clear();rubbleTextures.set(key,texture);
+    }
+    g.drawImage(texture,b.x-16,b.y-16,b.w+32,b.h+32);
   }
   function breakEffect(g,e,under,sunny=false) {
     const u=e.age/e.ttl;if(u>=1)return;
@@ -297,10 +360,16 @@
       disc(g,0,0,e.size*(.25+u*.5),e.material==='wood'?`rgba(186,143,82,${(1-u)**2*.16})`:`rgba(172,186,184,${(1-u)**2*.19})`);
     } else for(let i=0;i<9;i++) {
       const a=noise(e.seed,i)*Math.PI*2,d=u*(20+noise(e.seed,i+12)*38),size=2+noise(e.seed,i+23)*4;
-      g.save();g.translate(Math.cos(a)*d,Math.sin(a)*d-u*(1-u)*18);g.rotate(a+u*2);g.globalAlpha=1-u;
-      g.fillStyle=sunny?sunnyColors[e.material]:e.color;g.fillRect(-size,-2,size*2,e.material==='wood'?3:5);g.restore();
+      g.save();g.globalAlpha=1-u;
+      if(sunny) {
+        // Preserve Sunny Yard's existing palette, size and particle silhouette.
+        g.translate(Math.cos(a)*d,Math.sin(a)*d-u*(1-u)*18);g.rotate(a+u*2);
+        g.fillStyle=sunnyColors[e.material];g.fillRect(-size,-2,size*2,e.material==='wood'?3:5);
+      } else fragment(g,Math.cos(a)*d,Math.sin(a)*d-u*(1-u)*18,a+u*2,
+        Object.hasOwn(rubbleColors,e.material)?e.material:'stone',size,false,i);
+      g.restore();
     }
     g.restore();
   }
-  EBS.ScrapMaterialArt={floor,block,rubble,breakEffect,sunnyPad:(g,pad)=>EBS.ScrapDaylightArt.pad(g,pad),sunnyColors};
+  EBS.ScrapMaterialArt={floor,block,pad,rubble,breakEffect,sunnyPad:(g,pad)=>EBS.ScrapDaylightArt.pad(g,pad),sunnyColors};
 })();
