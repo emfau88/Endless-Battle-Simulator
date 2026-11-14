@@ -80,3 +80,29 @@ test('Scrap-Optik: Brandflecken sind auf 24 Ereignisse der aktuellen Runde begre
     assert.deepEqual(errors.map(e => e.message), []);
   } finally { await page.close(); }
 });
+
+test('Scrap-Optik: dunkle Karten behalten ihren Boden über Seeds und Folgerunden; Sunny bleibt erhalten', async () => {
+  const { page, errors } = await openExportPage(browser, { scenario: 'scrap', video: { resolution: 720 } });
+  try {
+    const result = await page.evaluate(() => {
+      const art = EBS.ScrapMaterialArt, maps = ['yard', 'foundry', 'crossroads'];
+      const images = maps.map(arena => art.floor(42, 1040, 540, false, arena).toDataURL());
+      const seedsStable = maps.every((arena, i) => art.floor(314, 1040, 540, false, arena).toDataURL() === images[i]);
+      const sunny = art.floor(42, 1040, 540, true, 'sunshine').toDataURL()
+        === EBS.ScrapDaylightArt.floor(42, 1040, 540).toDataURL();
+      const cfg = EBS.normalizeConfig({ scenario: 'scrap', seed: 42, params: { rulesVersion: 'v3', arena: 'yard' },
+        video: { aspect: '16:9' }, view: { hud: true, camera: false } });
+      const sc = EBS.getScenario('scrap'), world = { w: 1920, h: 1080 };
+      const sim = sc.create({ seed: 42, params: cfg.params, world, view: cfg.view, timeScale: 1 });
+      const renderer = sc.createRenderer({ sim, world, view: cfg.view, renderScale: 2 / 3 });
+      renderer.draw(); const firstFloor = renderer.materialFloor;
+      while (sim.roundNumber === 1 && sim.step < 100 * 60) sim.stepOnce();
+      renderer.draw();
+      const result = { seedsStable, distinct: new Set(images).size, sunny,
+        cachedAcrossRounds: firstFloor === renderer.materialFloor, round: sim.roundNumber, ok: sim.checkInvariants().ok };
+      renderer.destroy(); sim.destroy(); return result;
+    });
+    assert.deepEqual(result, { seedsStable: true, distinct: 3, sunny: true, cachedAcrossRounds: true, round: 2, ok: true });
+    assert.deepEqual(errors.map(e => e.message), []);
+  } finally { await page.close(); }
+});

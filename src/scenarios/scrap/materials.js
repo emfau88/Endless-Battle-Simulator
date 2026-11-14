@@ -47,6 +47,22 @@
     }
     return blocks;
   }
+  // Shared authored placements, in the fixed engine coordinate system. The art
+  // reads fresh arrays from here; it never has to inspect moving pickups or
+  // duplicate their start positions. No random numbers or simulation state.
+  function placements(arena='yard',portrait=false) {
+    const sunny=arena==='sunshine',northSouth=sunny&&portrait,startX=sunny?190:106;
+    const fromPortrait=([x,y])=>[y,HEIGHT-x];
+    const starts=northSouth?[[176,106],[364,106],[364,934],[176,934]].map(fromPortrait)
+      :[[startX,84],[WIDTH-startX,84],[WIDTH-startX,HEIGHT-84],[startX,HEIGHT-84]];
+    const padY=sunny?118:96;
+    const pads=northSouth?[[180,520],[360,520]].map(fromPortrait)
+      :[[WIDTH/2,padY],[WIDTH/2,HEIGHT-padY]];
+    const weapons=northSouth?[[270,260],[270,780],[130,354],[410,686]].map(fromPortrait)
+      :sunny?[[360,270],[680,270],[520,178],[520,362]]
+      :[[140,HEIGHT/2],[WIDTH-140,HEIGHT/2],[420,HEIGHT/2],[WIDTH-420,HEIGHT/2]];
+    return {starts,pads,weapons};
+  }
   const distanceToBox = (x,y,b) => Math.hypot(x-clamp(x,b.x,b.x+b.w),y-clamp(y,b.y,b.y+b.h));
   // Swept intersections match the source equations; wider bounds cannot turn
   // high-speed bullets into point samples or permit tunnelling through cover.
@@ -73,22 +89,14 @@
       this.blocks=cover(this.arena,portrait);
       // Sunny Yard brings entry points and floor weapons into the fighting
       // area. The other three maps retain their existing starts and supplies.
-      const sunny=this.arena==='sunshine',startX=sunny?190:106;
-      const fromPortrait=([x,y])=>[y,HEIGHT-x];
-      const starts=portrait?[[176,106],[364,106],[364,934],[176,934]].map(fromPortrait)
-        :[[startX,84],[WIDTH-startX,84],[WIDTH-startX,HEIGHT-84],[startX,HEIGHT-84]];
+      const {starts,pads,weapons}=placements(this.arena,portrait);
       for(const r of this.robots) {
         [r.x,r.y]=starts[r.id];r.lastX=r.x;r.lastY=r.y;
         r.goalX=WIDTH/2;r.goalY=HEIGHT/2;
         r.angle=Math.atan2(r.goalY-r.y,r.goalX-r.x);
         r.vx=Math.cos(r.angle)*r.speed;r.vy=Math.sin(r.angle)*r.speed;
       }
-      this.pads[0].x=this.pads[1].x=WIDTH/2;
-      this.pads[0].y=sunny?118:96;this.pads[1].y=HEIGHT-this.pads[0].y;
-      if(portrait) [[180,520],[360,520]].map(fromPortrait).forEach(([x,y],i)=>{this.pads[i].x=x;this.pads[i].y=y;});
-      const weapons=portrait?[[270,260],[270,780],[130,354],[410,686]].map(fromPortrait)
-        :sunny?[[360,270],[680,270],[520,178],[520,362]]
-        :[[140,HEIGHT/2],[WIDTH-140,HEIGHT/2],[420,HEIGHT/2],[WIDTH-420,HEIGHT/2]];
+      pads.forEach(([x,y],i)=>{this.pads[i].x=x;this.pads[i].y=y;});
       weapons.forEach(([x,y],i)=>{
         this.pickups[i].x=x;this.pickups[i].y=y;
       });
@@ -189,5 +197,5 @@
       result.ok=!result.errors.length;return result;
     }
   }
-  EBS.ScrapMaterials={Round:MaterialRound,materials,width:WIDTH,height:HEIGHT,edge:EDGE};
+  EBS.ScrapMaterials={Round:MaterialRound,materials,placements,width:WIDTH,height:HEIGHT,edge:EDGE};
 })();

@@ -423,8 +423,8 @@
       g.save();box(g,l.x,l.y,l.width,l.height,16);g.clip();
       g.translate(l.x+l.width/2,l.y+l.height/2);g.scale(l.scale*c.zoom,l.scale*c.zoom);g.translate(-cx,-cy);
       g.lineCap='round';g.lineJoin='round';g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
-      const sunny=s.cfg.arena==='sunshine',floorKey=`${r.seed}:${l.arenaW}:${l.arenaH}:${s.cfg.arena}`;
-      if(this.materialFloorKey!==floorKey) {this.materialFloor=art.floor(r.seed,l.arenaW,l.arenaH,sunny);this.materialFloorKey=floorKey;}
+      const sunny=s.cfg.arena==='sunshine',floorKey=`${sunny?r.seed:'map'}:${l.arenaW}:${l.arenaH}:${s.cfg.arena}`;
+      if(this.materialFloorKey!==floorKey) {this.materialFloor=art.floor(r.seed,l.arenaW,l.arenaH,sunny,s.cfg.arena);this.materialFloorKey=floorKey;}
       g.drawImage(this.materialFloor,0,0,l.arenaW,l.arenaH);
       this.arena._drawScorches(g,mapPoint);
       if(sunny)for(const b of blocks)if(b.alive) {
