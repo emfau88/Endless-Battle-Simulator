@@ -173,14 +173,22 @@ const DEFAULT_DURATION = 45, MAX_DURATION = 4 * 3600;
  * Fehlende Werte = 100 %, unbekannte Klänge fallen weg. Gilt für jedes Format (Hoch-, Querformat, Quadrat).
  */
 const VOLUME_MAX = 200;
-function normalizeVolume(vol, sc) {
-  const keys = ['master', ...Object.keys((sc.audio && sc.audio.events) || {})], out = {};
+function normalizeVolume(vol, sc, params) {
+  const audio = sc.audioForParams ? sc.audioForParams(params || {}) : sc.audio;
+  const keys = ['master', ...Object.keys((audio && audio.events) || {})], out = {};
   for (const k of keys) out[k] = clamp(Math.round(num(vol && vol[k], 100)), 0, VOLUME_MAX);
   return out;
 }
 
 function normalizeConfig(input) {
   const o = liftConfig(input);
+  // The first Progressive prototype used a Marble sub-mode. Its exact saved
+  // recipe/link now selects the independent scenario; genuine Classic inputs
+  // retain their original schema, defaults and registry definition.
+  if (o.scenario === 'marble' && o.params.factoryMode === 'progressive' && scenarios.has('marbleworks')) {
+    o.scenario = 'marbleworks';
+    delete o.params.factoryMode;
+  }
   // Fehlende Angabe -> Standard-Szenario. Ausdrücklich genannte, aber unbekannte ID -> Fehler (kein stiller Rückfall).
   const wanted = o.scenario === undefined || o.scenario === null || o.scenario === '' ? null : String(o.scenario);
   if (wanted !== null && !scenarios.has(wanted)) {
@@ -189,7 +197,7 @@ function normalizeConfig(input) {
   }
   const sc = getScenario(wanted);
   if (!sc) throw new Error('Kein Szenario registriert.');
-  const v = o.video, q = v.quality;
+  const v = o.video, q = v.quality, params = sc.normalizeParams({ ...sc.defaults, ...o.params });
   // Optionale Videostandards eines Szenarios (z. B. YouTube-Qualität); ohne Angabe gelten die allgemeinen Standards
   const vd = sc.videoDefaults || {}, qd = vd.quality || {};
   return {
@@ -197,7 +205,7 @@ function normalizeConfig(input) {
     ...(o.name ? { name: String(o.name) } : {}),
     scenario: sc.id,
     seed: Math.abs(Math.floor(num(o.seed, 42))) >>> 0,
-    params: sc.normalizeParams({ ...sc.defaults, ...o.params }),
+    params,
     video: {
       aspect: ASPECTS[v.aspect] ? v.aspect : '9:16',
       resolution: RESOLUTIONS[+v.resolution] ? +v.resolution : RESOLUTIONS[vd.resolution] ? vd.resolution : 1080,
@@ -206,7 +214,7 @@ function normalizeConfig(input) {
       tempo: sc.tempoRange ? clamp(num(v.tempo, sc.tempoRange.default), sc.tempoRange.min, sc.tempoRange.max)
         : TEMPO_OPTIONS.includes(+v.tempo) ? +v.tempo : 1,
       audio: bool(v.audio, true),      // Tonspur, sofern das Szenario eine Klangtabelle mitbringt
-      volume: normalizeVolume(v.volume, sc),
+      volume: normalizeVolume(v.volume, sc, params),
       quality: {
         crf: clamp(Math.round(num(q.crf, num(qd.crf, 20))), 0, 51),
         preset: X264_PRESETS.includes(q.preset) ? q.preset : X264_PRESETS.includes(qd.preset) ? qd.preset : 'medium',
@@ -394,7 +402,9 @@ class Session {
   // Legacy scenarios keep their existing restart-on-format-change behavior.
   setAspect(aspect) {
     if (!ASPECTS[aspect] || aspect === this.cfg.video.aspect) return;
-    if (!this.scenario.reframe) return this.start(mergeConfig(this.cfg, { video: { aspect } }));
+    if (!this.scenario.reframe || (this.scenario.canReframe && !this.scenario.canReframe(this.cfg))) {
+      return this.start(mergeConfig(this.cfg, { video: { aspect } }));
+    }
     this.cfg.video.aspect = aspect;
     const a = ASPECTS[aspect]; this.world = { w: a.w, h: a.h };
     this.app.renderer.resize(this.world.w, this.world.h, this.renderScale);
@@ -420,9 +430,11 @@ function installExportAPI(session, extra = {}) {
         cfg: session.cfg, scenario: session.cfg.scenario, scenarioTitle: session.scenario.title,
         // Opt-in after comparing captured frames with a continuous run. Some
         // legacy renderers retain frame-dependent HUD state during simulation-only seek.
-        supportsClips: session.scenario.supportsClips === true,
+        supportsClips: typeof session.scenario.supportsClips === 'function'
+          ? session.scenario.supportsClips(session.cfg) : session.scenario.supportsClips === true,
         naturalDuration: !!session.scenario.hasNaturalDuration?.(session.cfg),
-        audio: session.scenario.audio || null, world: session.world,
+        audio: (session.scenario.audioForParams ? session.scenario.audioForParams(session.cfg.params) : session.scenario.audio) || null, world: session.world,
+        audioWorldWidth: session.sim.audioWorldWidth || session.world.w,
         width: session.app.canvas.width, height: session.app.canvas.height, expected: vs,
         fps: session.cfg.video.fps, physHz: PHYS_HZ, pixi: PIXI.VERSION, matter: global.Matter ? Matter.version : null,
         renderer: session.app.renderer.name, glRenderer: glRendererName(session.app),

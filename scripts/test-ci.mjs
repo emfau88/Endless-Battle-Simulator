@@ -5,20 +5,22 @@ import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
 const root=fileURLToPath(new URL('..',import.meta.url));
-const suites={core:[],audio:[],production:[],scrap:[],mycelium:[],pyramid:[],territory:[],
-  ...Object.fromEntries(['naval','marble','scrap','mycelium','pyramid','territory'].map(id=>['export-'+id,[]]))};
+const suites={core:[],audio:[],production:[],marbleworks:[],scrap:[],mycelium:[],pyramid:[],territory:[],
+  ...Object.fromEntries(['naval','marble','scrap','mycelium','pyramid','territory','marbleworks'].map(id=>['export-'+id,[]]))};
 for(const file of readdirSync(join(root,'test')).filter(f=>f.endsWith('.test.mjs')).sort()) {
-  const exportScenario=/^presets-export-(naval|marble|scrap|mycelium|pyramid|territory)\.test\.mjs$/.exec(file)?.[1];
+  const exportScenario=/^presets-export-(naval|marble|scrap|mycelium|pyramid|territory|marbleworks)\.test\.mjs$/.exec(file)?.[1];
   const suite=exportScenario?'export-'+exportScenario:file.startsWith('scrap')?'scrap':file.startsWith('audio')?'audio'
     :file.startsWith('mycelium')?'mycelium':file.startsWith('pyramid')?'pyramid':file.startsWith('territory')?'territory'
-    :['export.test.mjs','live.test.mjs','production.test.mjs'].includes(file)?'production':'core';
+    :['export.test.mjs','live.test.mjs','production.test.mjs','marbleworks-export.test.mjs'].includes(file)?'production'
+    :/^(marble-production-|marbleworks-|production-marble-)/.test(file)?'marbleworks':'core';
   suites[suite].push(join('test',file));
 }
 const suite=process.argv[2];
 if(suite==='--list')console.log(JSON.stringify(suites,null,2));
 else {
   if(!Object.hasOwn(suites,suite))throw new Error('CI suite must be one of: '+Object.keys(suites).join(', '));
-  const result=spawnSync(process.execPath,['--test','--test-concurrency=1','--test-timeout=600000',
+  const timeout=['production','marbleworks','export-marbleworks'].includes(suite)?1200000:600000;
+  const result=spawnSync(process.execPath,['--test','--test-concurrency=1','--test-timeout='+timeout,
     '--test-reporter=tap',...suites[suite]],{cwd:root,stdio:'inherit'});
   if(result.error)throw result.error;
   process.exitCode=result.status??1;

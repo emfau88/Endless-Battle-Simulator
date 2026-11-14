@@ -2,9 +2,10 @@
 // presets/production carry the same values for CLI use; tests check both paths.
 (function () {
   'use strict';
-  const labels = { naval: 'Seeschlacht', marble: 'Kugelfabrik', scrap: 'Scrap Wars', mycelium: 'Myzel', pyramid: 'Pyramide', territory: 'Territory Wars / Hex Dominion' };
+  const labels = { naval: 'Seeschlacht', marble: 'Kugelfabrik', scrap: 'Scrap Wars', mycelium: 'Myzel', pyramid: 'Pyramide', territory: 'Territory Wars / Hex Dominion', marbleworks: 'Marble Works' };
   EBS.productionPreset = (scenario, kind, seed = 42) => {
     if (!Object.hasOwn(labels, scenario) || !['short', 'long'].includes(kind)) throw new Error('Unbekannte Produktionsvorlage.');
+    if (scenario === 'marbleworks') return EBS.MarbleProduction.preset(kind, seed);
     const short = kind === 'short';
     return {
       version: 1,

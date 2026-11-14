@@ -6,13 +6,16 @@ Direkt zur Kugelfabrik: [hochkant](https://emfau88.github.io/Endless-Battle-Simu
 [Querformat](https://emfau88.github.io/Endless-Battle-Simulator/?scenario=marble&aspect=16:9) –
 Vorschau und Regler laufen im Browser, auch am Handy. Videos entstehen am eigenen PC (`start.bat`).
 
+**Progressive Marble Factory V1:** Im eigenen Szenario „Marble Works · Progressive Factory“ entsteht in einer 6000 × 1500 großen Anlage ein vollständiger Auftrag: Polieren, Veredeln, Temperieren, Prüfen und Sammeln, mit zwei echten Ausbauten und cinematischer Kamera. Classic bleibt erhalten. [Bedienung, Produktionsvorlagen und Prüfungen](docs/PROGRESSIVE_MARBLE_V1.md).
+
 Deterministische 2D-Physiksimulation im Stil von Algodoo-/„Satisfying Physics“-Videos mit automatischem MP4-Export.
-Dieser Arbeitsstand vereint sechs Szenarien im selben Generator:
+Dieser Arbeitsstand vereint sieben Szenarien im selben Generator:
 
 | Szenario | Inhalt |
 |---|---|
 | Endless Naval Battle | Seeschlacht mit sichtbarem Kreislauf der Kanonenkugeln |
-| Endless Marble Factory | Kugelfabrik mit geschlossenem Kreislauf |
+| Endless Marble Factory | Unveränderte Kugelfabrik mit geschlossenem Kreislauf |
+| Marble Works · Progressive Factory | Eigenständige progressive Produktionsanlage mit Bearbeitung, Veredelung und Auftragsfinale |
 | Scrap Wars | Roboterkämpfe mit Deckung, Waffen und Folgerunden |
 | Endless Mycelium | Pilzgeflecht, Laub, Pilze und neue Sporengenerationen |
 | Endless Pyramid | Glaspyramide mit Becherwerk, Leuchtkugeln oder Tierchen, Tageslauf und Finale |

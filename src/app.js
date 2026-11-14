@@ -116,7 +116,8 @@ async function bootLive() {
   });
   for (const [id, kind] of [['btnShortPreset', 'short'], ['btnLongPreset', 'long']]) {
     $(id).addEventListener('click', () => {
-      session.start(normalizeConfig(EBS.productionPreset(session.cfg.scenario, kind, session.cfg.seed)));
+      const preset = EBS.productionPreset(session.cfg.scenario, kind, session.cfg.seed);
+      session.start(normalizeConfig(preset));
       speed = 1; acc = 0; fit(); save(); buildScenarioUi(); syncUi();
     });
   }
@@ -178,7 +179,9 @@ async function bootLive() {
     return v === 100 ? '100 %' : `${v} % · ${dB(v)} dB`;
   };
   function buildVolumeUi() {
-    const sc = session.scenario, box = $('volumeControls'), events = (sc.audio && sc.audio.events) || {};
+    const sc = session.scenario, box = $('volumeControls');
+    const audio = sc.audioForParams ? sc.audioForParams(session.cfg.params) : sc.audio;
+    const events = (audio && audio.events) || {};
     box.innerHTML = '';
     const row = (key, label) => {
       const d = document.createElement('div'); d.className = 'ctl';
@@ -227,12 +230,16 @@ async function bootLive() {
       session.setParam(c.key, v); invalidate(); save(); syncUi(); return;
     }
     markCustomProfile(c.key);
-    if (c.restart) restart({ params: { ...(c.sets && c.sets[v]), [c.key]: v } });   // sets: Regler, die diese Auswahl mitsetzt
+    if (c.restart) {
+      restart({ params: { ...(c.sets && c.sets[v]), [c.key]: v } }); // Apply the selected scene's related defaults.
+      if (c.rebuildUi) { buildScenarioUi(); syncUi(); }
+    }
     else {
       session.setParam(c.key, v); invalidate(); save();
       for (const control of session.scenario.controls) if (control.enabled) {
         $('p-' + control.key).disabled = !control.enabled(session.cfg.params);
       }
+      if (c.affectsDuration) showDuration();
     }
   }
   function markCustomProfile(key) {
@@ -325,7 +332,9 @@ async function bootLive() {
     durText.classList.toggle('bad', !!isError);
     $('durationOut').textContent = fmtTime(d);
     dur.value = UI_DURATIONS.some(([v]) => v === d) ? String(d) : '';
-    durHint.textContent = natural ? (durationPending ? 'Turnierdauer wird berechnet …' : 'Automatisch: acht vollständige Runden und 5 Sekunden Gesamtergebnis.') : note || DUR_HINT;
+    durHint.textContent = natural ? (durationPending
+      ? session.scenario.durationLabel?.pending || 'Turnierdauer wird berechnet …'
+      : session.scenario.durationLabel?.complete || 'Automatisch: acht vollständige Runden und 5 Sekunden Gesamtergebnis.') : note || DUR_HINT;
     $('durationOut').textContent = durationPending ? '…' : fmtTime(d);
     durHint.classList.toggle('err', !!isError);
   };
@@ -353,9 +362,13 @@ async function bootLive() {
   function syncUi() {
     const c = session.cfg;
     scSel.value = c.scenario; $('seed').value = c.seed;
+    const production = c.scenario === 'marbleworks';
+    $('btnShortPreset').textContent = production ? 'Short · Mini-Auftrag' : 'Short · 1 Minute';
+    $('btnLongPreset').textContent = production ? 'Langvideo · Vollständiger Auftrag' : 'Langvideo · 10 Minuten';
     for (const ctl of session.scenario.controls) {
       const el = $('p-' + ctl.key), v = c.params[ctl.key];
       if (!el) continue;
+      if (ctl.visible) el.closest('.ctl, label').hidden = !ctl.visible(c.params);
       el.disabled = ctl.enabled ? !ctl.enabled(c.params) : false;
       if (ctl.type === 'check') el.checked = !!v;
       else if (!ctl.applyLabel || el.dataset.applied !== String(v)) el.value = String(v);
