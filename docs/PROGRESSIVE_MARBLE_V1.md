@@ -14,6 +14,8 @@ node export.mjs --config presets/marble-progressive-materials.json --out output/
 
 In der Oberfläche: **Szenario → Marble Works · Progressive Factory**. Short und Langvideo laden dann Produktionsvorlagen. Einstellungen lassen sich wie bisher als JSON speichern/laden. Der Online-Vorschaulink zeigt die Simulation; MP4-Export mit Ton erfolgt weiterhin auf dem lokalen Node-/FFmpeg-Server. Die Live-Vorschau bleibt wie im Bestand stumm.
 
+**Klanggestaltung noch offen:** Die exportierte Tonspur ist technisch funktionsfähig, aber wegen harter Glas- und Kontaktgeräusche noch nicht für die gewünschte ASMR-/YouTube-Ästhetik abgenommen. Die weitere Soundauswahl und Mischung werden separat abgestimmt; siehe [offene Klangabnahme im Prüfbericht](PROGRESSIVE_MARBLE_V1_ABNAHME.md#offene-klangabnahme).
+
 Gespeicherte Rezepte und Links der ersten Progressive-Fassung mit der exakten Kombination `scenario=marble` und `factoryMode=progressive` werden auf `marbleworks` umgestellt. Alle echten Classic-Konfigurationen bleiben unverändert.
 
 `exportLength=order` berechnet die Videolänge aus dem realen Produktionsabschluss plus zwölf Sekunden Finale. Zeitlupe verlängert beides. `exportLength=duration` verwendet die eingestellte Videolänge, etwa für kurze technische Proben. Die Zeit steuert niemals Freischaltungen. Seed 42 mit dem Standardauftrag (144 Glasprodukte) schließt die Herstellung nach etwa **465,88 s** ab; einschließlich Finale ergibt sich ein **478-s-Video**.

@@ -1,6 +1,6 @@
 # Marble Works · 3D-Prüfbericht
 
-Stand: 14. November 2026. Branch: `codex/progressive-marble-v1`, Basis `3586239`. Kein Merge nach `main`.
+Stand: 14. November 2026. Branch: `codex/progressive-marble-v1`, Basis `3586239`. Der Merge nach `main` ist nach erfolgreicher technischer Prüfung freigegeben; die Klanggestaltung bleibt ausdrücklich offen.
 
 ## Aktueller Stand
 
@@ -9,6 +9,12 @@ Die zuvor abgelehnte flache Darstellung wurde durch eine eigenständige 3D-Anlag
 Die aktuelle Überarbeitung ergänzt einen warmen, fein texturierten Werkstattboden, salbeifarbene Wände und große Fenster. Sattere Pigmentfüllungen, klarere Patronenhüllen und deutlichere innere Farbbänder stärken die Lesbarkeit der Glasprodukte. Kurzer Sprühnebel an der aktiven Farbinfusion, Glanzpunkte nach dem Polieren und lokale Wärmeschleier an belegten Temperierstationen folgen tatsächlichen Produktionsvorgängen. Die Kameraführung ist unverändert.
 
 Auf ausdrücklichen Wunsch wurden die störenden Rauschlagen entfernt: Nur die Klangzuordnungen `factoryPolish` und `factoryCoat` entfallen, ihre Produktionsereignisse bleiben bestehen. Die übrigen acht Klangdefinitionen sind unverändert. Die Live-Vorschau bleibt stumm; der Videoexport enthält weiterhin Rollen, Materialkontakte, Vereinzelung, Presse, Prüfung, Sortierung, Ausbau und Abschluss. Eine weitergehende Klanggestaltung ist nicht Bestandteil dieser Überarbeitung.
+
+## Offene Klangabnahme
+
+Die verbleibenden Glas- und Kontaktgeräusche wurden vom Nutzer weiterhin als zu hart und störend bewertet. Die aktuelle Tonspur ist ein technischer Zwischenstand und nicht als fertige ASMR-/YouTube-Vertonung abgenommen. Bestandene Audio- und Exporttests prüfen Reproduzierbarkeit, Format und Pegelgrenzen, nicht die ästhetische Hörqualität.
+
+Offen bleiben weichere Roll- und Kontaktaufnahmen, zurückhaltende Glasakzente, geringere Geräuschdichte sowie die Abstimmung von Anschlägen, Resonanzen und Lautheitsregelung. Der aktuelle Episodenexport meldet bis zu 40,5 dB Begrenzung; diese starke Bearbeitung muss bei der neuen Klangabstimmung überprüft werden. Zuerst sollen kurze, bei vergleichbarer Lautstärke abgehörte Varianten abgestimmt werden, danach eine vollständige Episode. Die Klangarbeit erfolgt separat und ist laut Nutzerfreigabe kein Hindernis für den technisch geprüften Merge.
 
 ## Trennung vom Original
 
