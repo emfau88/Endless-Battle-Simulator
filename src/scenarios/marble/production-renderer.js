@@ -1,588 +1,233 @@
-/* Progressive Marble Works: presentation is a pure projection of production state.
- * The fixed factory never changes with the camera, the frame rate or the video format.
- * CanvasScene retains the existing Pixi capture/export pipeline. */
+/* Solid, illuminated diorama; a pure projection of deterministic production. */
 (function () {
   'use strict';
-  const P = EBS.MarbleProduction;
+  const P = EBS.MarbleProduction, T = THREE;
   const { clamp } = EBS.util;
-  const TAU = Math.PI * 2;
-  const W = 6000, H = 1500;
-  const smooth = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
-  const mix = (a, b, f) => a + (b - a) * f;
-  const hex = (n) => '#' + n.toString(16).padStart(6, '0');
-  const rgba = (n, a) => `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`;
-  const palette = (sim) => (P.PALETTES?.[sim.cfg.palette] || P.COLORS || [0x38d8e8, 0x598cff, 0xec74ce, 0xf3aa58, 0xf0d56b, 0x79dca6]).map(c => typeof c === 'number' ? c : c.hex);
-  function linear(g, x0, y0, x1, y1, stops) {
-    const d = g.createLinearGradient(x0, y0, x1, y1);
-    stops.forEach(([p, c]) => d.addColorStop(p, c)); return d;
+  const R = .238, mix = (a,b,f) => a+(b-a)*f;
+  const smooth = x => { x=clamp(x,0,1); return x*x*(3-2*x); };
+  const X = x => (x-3000)*.0108;
+  function position(x,y) {
+    if(x<=1180) return new T.Vector3(X(x),3.8+Math.max(0,(650-y)/180)*1.1,-3.6);
+    return new T.Vector3(X(x),3.8+smooth((x-4400)/340)*2.5,(y-850)*.018);
   }
-  function radial(g, x, y, r, stops) {
-    const d = g.createRadialGradient(x - r * .28, y - r * .34, r * .02, x, y, r);
-    stops.forEach(([p, c]) => d.addColorStop(p, c)); return d;
+  function rawPosition(b) {
+    const i=b.id%60;
+    return new T.Vector3(-28.1+(i%5-2)*.47,5.6+Math.floor(i/20)*.47,-3.6+(Math.floor(i/5)%4-1.5)*.47);
   }
-  function rect(g, x, y, w, h, r = 0) { g.beginPath(); g.roundRect(x, y, w, h, r); }
-  function circle(g, x, y, r) { g.beginPath(); g.arc(x, y, r, 0, TAU); }
-  function line(g, points, color, width = 1) {
-    g.beginPath(); points.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
-    g.strokeStyle = color; g.lineWidth = width; g.stroke();
+  function collectedPosition(b) {
+    const i=b.binSlot;
+    return new T.Vector3(X(P.BIN_X[b.bin])+(i%3-1)*.51,1.24+Math.floor(i/9)*.5,6.2+(Math.floor(i/3)%3-1)*.51);
   }
-  function text(g, txt, x, y, size = 18, color = '#b9ccd6', align = 'left', weight = 500) {
-    // Warm daylight calls for printed ink, rather than illuminated labels.
-    const heading = ['#d9e7ea', '#dcebef', '#c1d8dc', '#e1eeed', '#b7cbd3', '#edf3ef'];
-    const ochre = ['#d3ac6f', '#cdb385', '#dfc899', '#a79170', '#a99573'];
-    const green = ['#93dfb8', '#90b8af', '#b6cdc9'];
-    const ink = heading.includes(color) ? '#34464c' : ochre.includes(color) ? '#90662d' : green.includes(color) ? '#397757' : '#596b70';
-    g.font = `${weight} ${size}px "Segoe UI",Arial,sans-serif`; g.textAlign = align;
-    g.textBaseline = 'middle'; g.fillStyle = ink; g.fillText(txt, x, y);
-  }
-  function plate(g, x, y, w, h, r = 8, brass = false) {
-    g.save(); g.shadowColor = '#5a55482b'; g.shadowBlur = 9; g.shadowOffsetY = 6;
-    rect(g, x, y, w, h, r);
-    g.fillStyle = linear(g, x, y, x + w * .35, y + h, brass ? [[0, '#f5dda6'], [.2, '#dfbd79'], [.65, '#c39b59'], [1, '#a47d43']] : [[0, '#fafaf4'], [.10, '#e3e7e2'], [.56, '#cbd3d1'], [1, '#aab9bc']]);
-    g.fill(); g.shadowBlur = 0; g.shadowOffsetY = 0; g.strokeStyle = '#4e6168'; g.lineWidth = 2.3; g.stroke();
-    rect(g, x + 2, y + 2, w - 4, h - 4, Math.max(0, r - 1)); g.strokeStyle = '#ffffffbb'; g.lineWidth = 1.3; g.stroke();
-    g.restore();
-  }
-  function bolt(g, x, y, r = 4, gold = false) {
-    circle(g, x, y + 1, r + 1); g.fillStyle = '#65706d'; g.fill();
-    circle(g, x, y, r); g.fillStyle = radial(g, x, y, r, gold ? [[0, '#fff3c8'], [.5, '#d6b477'], [1, '#93703c']] : [[0, '#ffffff'], [.5, '#b9c5c6'], [1, '#71848c']]); g.fill();
-    line(g, [[x - r * .6, y + r * .22], [x + r * .6, y - r * .22]], '#536269', 1);
-  }
-  function feet(g, x, y, w, bottom = 1370) {
-    for (const xx of [x + 22, x + w - 22]) {
-      plate(g, xx - 10, y, 20, Math.max(12, bottom - y), 3);
-      plate(g, xx - 27, bottom - 7, 54, 14, 3);
-      bolt(g, xx - 15, bottom); bolt(g, xx + 15, bottom);
+  function cameraAt(sim,view,aspect) {
+    const cfg=sim.cfg,t=sim.t,portrait=aspect<1;
+    const overview={x:0,y:2.5,z:.5,span:Math.max(40,75/aspect)};
+    if(cfg.cameraMode==='overview'||view.camera===false) return overview;
+    const expansion=sim.milestones.find(e=>e.type==='parallel');
+    const laneFocus=expansion?smooth((t-expansion.time)/6):0;
+    const focusZ=mix(-3.4,-.2,laneFocus);
+    if(cfg.cameraMode==='manual') return {x:mix(-27,27,cfg.cameraPosition/100),y:3.8,z:cfg.cameraPosition>85?2.5:focusZ,span:(portrait?17:18)/cfg.cameraZoom};
+    const marks=[-27,-16.2,-2.16,7.02,15.12,26,7.02,-2.16,-16.2],phase=Math.max(0,t-11)/24;
+    const i=Math.floor(phase)%marks.length,f=smooth((phase%1-.22)/.78);
+    const shot={x:mix(marks[i],marks[(i+1)%marks.length],f),y:3.8,z:focusZ,span:portrait?17.5:18.5};
+    shot.z=mix(shot.z,2.5,smooth((shot.x-18)/6));
+    for(const event of sim.milestones) {
+      const age=t-event.time;
+      if(age>=0&&age<33) {
+        const weight=smooth(age/7)*(1-smooth((age-24)/9));
+        shot.x=mix(shot.x,event.type==='parallel'?-8.5:-2.16,weight);
+        shot.span=mix(shot.span,event.type==='parallel'?22:19,weight);
+      }
     }
+    let weight=1-smooth((t-4)/7);
+    if(sim.completedAt!=null) weight=Math.max(weight,smooth((t-sim.completedAt)/8));
+    for(const key of ['x','y','z','span']) shot[key]=mix(shot[key],overview[key],weight);
+    return shot;
   }
-  function gear(g, x, y, r, teeth, angle, gold = false) {
-    g.save(); g.translate(x, y); g.rotate(angle);
-    g.beginPath();
-    for (let i = 0; i <= teeth * 4; i++) {
-      const a = i / (teeth * 4) * TAU, rr = r * (i % 4 === 1 || i % 4 === 2 ? 1 : .85);
-      i ? g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : g.moveTo(Math.cos(a) * rr, Math.sin(a) * rr);
-    }
-    g.closePath(); g.fillStyle = radial(g, 0, 0, r, gold ? [[0, '#f2dca7'], [.6, '#d4af6c'], [.92, '#b58d50'], [1, '#fff1c8']] : [[0, '#edf0eb'], [.6, '#b9c9cc'], [.92, '#81999f'], [1, '#f3f6f2']]);
-    g.fill(); g.strokeStyle = '#4b6066'; g.lineWidth = 2; g.stroke();
-    circle(g, 0, 0, r * .65); g.strokeStyle = '#6b797555'; g.lineWidth = 3; g.stroke();
-    for (let i = 0; i < 5; i++) { const a = TAU * i / 5; circle(g, Math.cos(a) * r * .43, Math.sin(a) * r * .43, r * .115); g.fillStyle = '#63777d'; g.fill(); }
-    circle(g, 0, 0, r * .22); g.fillStyle = '#e4eae5'; g.fill(); bolt(g, 0, 0, r * .11, gold);
-    g.restore();
-  }
-  function lamp(g, x, y, color, active = true, r = 5) {
-    circle(g, x, y, r + 3); g.fillStyle = '#70827e'; g.fill();
-    g.save();
-    circle(g, x, y, r); g.fillStyle = active ? color : '#bac7c4'; g.fill(); g.restore();
-    circle(g, x - r * .25, y - r * .3, r * .24); g.fillStyle = '#fff8'; g.fill();
-  }
-  function tube(g, points, front = false, radius = 27) {
-    g.save(); g.lineJoin = 'round'; g.lineCap = 'round';
-    if (!front) {
-      line(g, points.map(([x, y]) => [x + 3, y + 7]), '#62665d22', radius * 2 + 7);
-      line(g, points, '#657d8794', radius * 2 + 2);
-      line(g, points, '#e2eeea', radius * 2 - 3);
-      line(g, points, '#a2c8cd2a', radius * 2 - 6);
-    } else {
-      const offset = (distance) => points.map(([x, y], i) => {
-        const a = points[Math.max(0, i - 1)], b = points[Math.min(points.length - 1, i + 1)];
-        const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy) || 1;
-        return [x + dy / len * distance, y - dx / len * distance];
-      });
-      line(g, offset(radius - 4), '#ffffffd9', 2.4);
-      line(g, offset(radius - 9), '#ffffff77', 5);
-      line(g, offset(-radius + 5), '#739fac60', 3);
-    }
-    g.restore();
-  }
-  function collar(g, x, y, vertical = false) {
-    g.save(); g.translate(x, y); if (vertical) g.rotate(Math.PI / 2);
-    plate(g, -9, -36, 18, 72, 3); bolt(g, 0, -29, 3); bolt(g, 0, 29, 3); g.restore();
-  }
-  function belt(g, x0, x1, y, t, enabled = true) {
-    const cy = y + 46;
-    plate(g, x0 - 20, cy - 28, x1 - x0 + 40, 68, 18);
-    rect(g, x0 - 26, cy - 28, x1 - x0 + 52, 56, 28); g.fillStyle = '#748c94'; g.fill(); g.strokeStyle = '#435c65'; g.lineWidth = 3; g.stroke();
-    line(g, [[x0, y + 24], [x1, y + 24]], '#d5dedb', 6);
-    const off = enabled ? (t * 90) % 24 : 0;
-    for (let x = x0 + off; x < x1; x += 24) line(g, [[x, cy - 21], [x - 5, cy - 12]], '#cedad8', 3);
-    for (let x = x0 + 62; x < x1 - 35; x += 76) { circle(g, x, cy, 13); g.fillStyle = '#c3d0d0'; g.fill(); bolt(g, x, cy, 4); }
-    gear(g, x0, cy, 25, 14, enabled ? t * 2.6 : 0); gear(g, x1, cy, 25, 14, enabled ? t * 2.6 : 0);
-  }
-  function machineLabel(g, index, title, x, y, subtitle) {
-    text(g, index, x, y, 13, '#d3ac6f', 'left', 700);
-    text(g, title, x + 32, y, 19, '#d9e7ea', 'left', 600);
-    if (subtitle) text(g, subtitle, x + 32, y + 25, 13, '#8297a6');
-  }
-
-  /** Stateless camera: seeking directly to a frame yields the same shot as playback. */
-  function cameraAt(sim, world, view = {}) {
-    const portrait = world.h > world.w;
-    const availableH = world.h - (portrait ? 370 : 210);
-    const overview = { x: 3000, y: 755, zoom: Math.min((world.w - 70) / W, availableH / H) };
-    const mode = sim.cfg.cameraMode || 'auto';
-    if (mode === 'overview' || view.camera === false) return overview;
-    const zoom = Math.min(portrait ? 1.15 : 1.07, availableH / (portrait ? 1190 : 830));
-    const minX = Math.min(W / 2, world.w / zoom / 2 - 80), maxX = W - minX;
-    if (mode === 'manual') {
-      const manualZoom = zoom * (sim.cfg.cameraZoom || 1), half = Math.min(W / 2, world.w / manualZoom / 2 - 35);
-      return { x: mix(half, W - half, clamp((sim.cfg.cameraPosition ?? 50) / 100, 0, 1)), y: 810, zoom: manualZoom };
-    }
-    const t = sim.t || 0;
-    // Thirty-second traversals with an eight-second settling period on each machine.
-    const marks = [650, 1500, 2800, 3650, 4400, 5400, 3650, 2800, 1500];
-    const elapsed = Math.max(0, t - 10), segment = elapsed / 17, ix = Math.floor(segment) % marks.length;
-    const u = segment % 1, f = smooth((u - .24) / .76);
-    let x = mix(marks[ix], marks[(ix + 1) % marks.length], f), y = 825;
-    let z = zoom * (1 + .045 * Math.sin(elapsed * .035));
-    // Real production events interrupt the established tour, then blend back into it.
-    const events = sim.milestones || [];
-    const milestone = [...events].reverse().find(e => e.type !== 'complete' && t >= e.time && t - e.time < 19);
-    if (milestone) {
-      const age = t - milestone.time;
-      const weight = smooth(age / 4) * (1 - smooth((age - 12) / 7));
-      x = mix(x, milestone.x || (milestone.type === 'parallel' ? 2250 : 2800), weight);
-      y = mix(y, milestone.type === 'parallel' ? 900 : 700, weight);
-      z = mix(z, zoom * (milestone.type === 'parallel' ? .88 : 1.04), weight);
-    }
-    x = clamp(x, minX, maxX);
-    y = mix(y, 1030, smooth((x - 4400) / 700));
-    const intro = smooth((t - 7) / 8);
-    let out = { x: mix(overview.x, x, intro), y: mix(overview.y, y, intro), zoom: mix(overview.zoom, z, intro) };
-    if (sim.completedAt != null) {
-      const finish = smooth((t - sim.completedAt) / 8);
-      out = { x: mix(out.x, overview.x, finish), y: mix(out.y, overview.y, finish), zoom: mix(out.zoom, overview.zoom, finish) };
-    }
-    return out;
-  }
-
   class ProductionRenderer extends EBS.CanvasScene {
     constructor(ctx) {
-      super(ctx); this.sim = ctx.sim; this.view = ctx.view; this.video = ctx.video;
-      this.colors = palette(this.sim);
-      this.background = document.createElement('canvas'); this.background.width = W; this.background.height = H;
-      this._hall(this.background.getContext('2d'));
+      super(ctx); this.sim=ctx.sim; this.view=ctx.view||{}; this.kit=P.createDioramaKit(); this.owned=[];
+      this.scene=new T.Scene(); this.scene.background=new T.Color(0xe8e5dd); this.scene.fog=new T.Fog(0xe8e5dd,130,280);
+      this.camera3=new T.OrthographicCamera(-1,1,1,-1,.1,300);
+      this.gl=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true,powerPreference:'high-performance'});
+      this.gl.setPixelRatio(1); this.gl.setSize(this.canvas.width,this.canvas.height,false);
+      this.gl.outputColorSpace=T.SRGBColorSpace; this.gl.toneMapping=T.ACESFilmicToneMapping; this.gl.toneMappingExposure=.86;
+      this.gl.shadowMap.enabled=true; this.gl.shadowMap.type=T.PCFSoftShadowMap;
+      this._lighting(); this._stage(); this._tracks(); this.machines=P.buildMachines3D(this.kit,this.scene,this.sim);
+      this._collectors(); this._balls();
     }
-    resize(world, renderScale = this.scale) {
-      this.world = world; this.scale = renderScale;
-      this.canvas.width = Math.round(world.w * renderScale); this.canvas.height = Math.round(world.h * renderScale);
-      this.root.children[0].width = world.w; this.root.children[0].height = world.h;
-      this.texture.source.resize?.(this.canvas.width, this.canvas.height);
-      this.texture.source.update();
+    _own(value) { this.owned.push(value); return value; }
+    _lighting() {
+      this.scene.add(new T.HemisphereLight(0xfff5e6,0x83919c,.65));
+      const sun=new T.DirectionalLight(0xffe9cd,2.8); sun.position.set(-24,45,32); sun.castShadow=true;
+      Object.assign(sun.shadow.camera,{left:-47,right:47,top:27,bottom:-27,near:.5,far:120});
+      sun.shadow.mapSize.set(2048,2048); sun.shadow.normalBias=.025; sun.shadow.bias=-.0001; sun.shadow.radius=3; this.scene.add(sun);
+      const fill=new T.DirectionalLight(0xc5e2ee,.55); fill.position.set(12,14,-28); this.scene.add(fill);
+      const room=new T.Scene(); room.background=new T.Color(0x4e5962);
+      const geo=new T.PlaneGeometry(1,1),mat=new T.MeshBasicMaterial({color:0xffffff,side:T.DoubleSide});
+      for(const [x,y,z,w,h] of [[0,18,0,32,20],[-20,8,4,12,15],[14,7,-12,20,9],[0,5,15,32,4]]) {
+        const panel=new T.Mesh(geo,mat); panel.position.set(x,y,z); panel.scale.set(w,h,1); panel.lookAt(0,2,0); room.add(panel);
+      }
+      const pmrem=new T.PMREMGenerator(this.gl); this.env=pmrem.fromScene(room,.04); this.scene.environment=this.env.texture;
+      pmrem.dispose(); geo.dispose(); mat.dispose();
     }
-    _hall(g) {
-      g.fillStyle = linear(g, 0, 0, 0, H, [[0, '#f1eee4'], [.45, '#e6e3dc'], [1, '#d4d6d2']]); g.fillRect(0, 0, W, H);
-      for (let x = 0; x < W; x += 225) for (let y = 0; y < 1420; y += 190) {
-        g.fillStyle = (x / 225 + y / 190) % 3 === 0 ? '#fffaf024' : '#8a9b9b07';
-        g.fillRect(x + 2, y + 2, 221, 186); g.strokeStyle = '#8e999531'; g.lineWidth = 1.2; g.strokeRect(x, y, 225, 190);
-        for (const dx of [12, 213]) for (const dy of [12, 178]) { circle(g, x + dx, y + dy, 2.2); g.fillStyle = '#8d9a9570'; g.fill(); }
+    _stage() {
+      const k=this.kit,m=k.mat,root=this.scene;
+      k.box(root,360,.1,360,0,-1,0,k.material(0xe1dfd7,.9),0);
+      k.box(root,73,.72,20.8,0,-.55,0,m.navy,.3);
+      k.box(root,72.6,.26,20.4,0,-.08,0,m.brass,.16);
+      k.box(root,72.2,.38,20,0,.17,0,m.ivory,.14);
+      const zones=[[-28.1,6.6,'01  RAW GLASS'],[-16.2,6.6,'02  POLISH'],[-2.16,8.6,'03  INFUSE'],[7.02,6.6,'04  ANNEAL'],[15.12,6.6,'05  INSPECT'],[26,14.6,'06  COLLECT']];
+      const floor=k.material(0xd7d9cf,.68);
+      for(const [x,w,name] of zones) {
+        k.box(root,w,.12,14.8,x,.42,.15,m.tealLight,.15); k.box(root,w-.2,.04,14.6,x,.5,.15,floor,.1);
+        const label=k.label(root,name,x,.38,8.9,Math.min(w-.5,4.7),.65); label.rotation.x=-Math.PI/2;
       }
-      for (let x = 135; x < W; x += 580) {
-        g.fillStyle = linear(g, x, 0, x + 34, 0, [[0, '#b8c2bd'], [.2, '#edf0e8'], [.65, '#d0d8d2'], [1, '#a9b7b4']]); g.fillRect(x, 0, 34, 1420);
-      }
-      for (const y of [220, 242]) {
-        g.fillStyle = linear(g, 0, y, 0, y + 14, [[0, '#8fa7a8'], [.4, '#dae4df'], [1, '#9bb1b0']]); g.fillRect(0, y, W, 14);
-        for (let x = 95; x < W; x += 230) plate(g, x, y - 4, 11, 22, 2);
-      }
-      for (const x of [380, 1130, 1880, 2630, 3380, 4130, 4880, 5630]) {
-        const glow = g.createRadialGradient(x, 65, 20, x, 65, 660);
-        glow.addColorStop(0, '#fff0be62'); glow.addColorStop(1, '#fff0be00'); g.fillStyle = glow; g.fillRect(x - 660, 0, 1320, 870);
-        plate(g, x - 135, 62, 270, 24, 4); g.save(); g.shadowColor = '#ffe4a2'; g.shadowBlur = 16;
-        rect(g, x - 120, 84, 240, 5, 2); g.fillStyle = '#fff8db'; g.fill(); g.restore();
-      }
-      g.fillStyle = linear(g, 0, 1418, 0, H, [[0, '#c7bca8'], [.08, '#e3d9c8'], [1, '#d5c7b1']]); g.fillRect(0, 1418, W, H - 1418);
-      line(g, [[0, 1419], [W, 1419]], '#a5967c', 2);
-      for (let x = -300; x < W + 300; x += 210) line(g, [[x, H], [x + 100, 1420]], '#b3a68f50', 1);
-      text(g, 'SIMCASCADE   /   GLASSWORKS', 310, 188, 17, '#7d97a5', 'left', 600);
-      for (const x of [920, 2190, 3150, 4145, 4700]) {
-        line(g, [[x, 1370], [x + 35, 1370]], '#b79962', 3);
-        line(g, [[x + 24, 1359], [x + 36, 1370], [x + 24, 1381]], '#b79962', 3);
-      }
-    }
-    _hopper(g, front = false) {
-      const sim = this.sim, raw = sim.balls.filter(b => b.state === 'raw').length;
-      if (!front) {
-        feet(g, 112, 525, 390);
-        plate(g, 93, 498, 435, 34, 7);
-        g.beginPath(); g.moveTo(115, 237); g.lineTo(520, 237); g.lineTo(520, 435); g.lineTo(477, 490); g.lineTo(423, 490); g.lineTo(115, 455); g.closePath();
-        g.fillStyle = linear(g, 115, 237, 520, 490, [[0, '#e6f5ed66'], [.3, '#b2d6d45c'], [1, '#effaf344']]); g.fill(); g.strokeStyle = '#73969d'; g.lineWidth = 3; g.stroke();
-        plate(g, 101, 224, 432, 24, 5);
-        machineLabel(g, '01', 'RAW STOCK', 142, 216);
-        plate(g, 190, 548, 192, 74, 7); text(g, 'INVENTORY', 207, 568, 12, '#8199a8'); text(g, String(raw).padStart(3, '0'), 206, 599, 30, '#dcebef', 'left', 600);
-        lamp(g, 357, 591, '#9dc5b0', raw > 0);
-        gear(g, 450, 462, 59, 18, sim.t * (raw ? 1.1 : 0), true);
-        circle(g, 450, 462, 44); g.strokeStyle = '#819995'; g.lineWidth = 11; g.stroke();
-        for (let i = 0; i < 4; i++) {
-          const a = sim.t * (raw ? 1.1 : 0) + i * TAU / 4;
-          circle(g, 450 + Math.cos(a) * 31, 462 + Math.sin(a) * 31, 15); g.fillStyle = '#a1b6b3'; g.fill(); g.strokeStyle = '#987f55'; g.lineWidth = 2; g.stroke();
-        }
-        tube(g, [[450, 510], [450, 600], [550, 600]]);
-      } else {
-        line(g, [[124, 256], [124, 446], [422, 479]], '#ecfaff65', 3);
-        line(g, [[139, 260], [139, 429], [238, 443]], '#d5f3ff17', 10);
-        line(g, [[510, 253], [510, 429]], '#d5f3ff65', 2);
-        for (const [x, y] of [[112, 236], [522, 236], [431, 490], [469, 490]]) bolt(g, x, y, 5, true);
-        tube(g, [[450, 510], [450, 600], [550, 600]], true); collar(g, 450, 550, true);
+      for(const z of [-8.6,9.5]) k.box(root,68,.022,.075,0,.38,z,m.brass,0);
+      for(const z of [-7.3,-7.65]) k.pipe(root,[[-31,1.4,z],[0,1.4,z],[28,1.4,z]],.065,m.brass);
+      for(let x=-31;x<30;x+=5) k.box(root,.13,.5,.65,x,1.16,-7.5,m.teal);
+      for(const x of [-21,3.5]) {
+        k.cylinder(root,.65,.65,3.3,x,2.6,-6.7,m.ivory); k.sphere(root,.65,x,4.25,-6.7,m.ivory);
+        for(const y of [1.1,3.8]) k.torus(root,.66,.05,x,y,-6.7,m.brass,'y');
+        k.pipe(root,[[x,4.9,-6.7],[x,5.2,-6.7],[x+1.4,5.2,-6.7],[x+1.4,1.4,-7.3]],.07,m.steel);
       }
     }
-    _polisher(g, lane, front = false) {
-      const sim = this.sim, y = lane ? 840 : 600, st = sim.stations?.polish?.[lane];
-      const busy = !!st?.ball, p = st?.progress || 0, r = lane ? 77 : 92;
-      if (!front) {
-        plate(g, 930, y - 110, 240, 236, 17);
-        for (const [x, yy] of [[944, y - 95], [1156, y - 95], [944, y + 109], [1156, y + 109]]) bolt(g, x, yy, 5, true);
-        circle(g, 1050, y, r + 3); g.fillStyle = '#67848a'; g.fill();
-        circle(g, 1050, y, r - 5); g.fillStyle = radial(g, 1050, y, r, [[0, '#f4f8ec'], [.65, '#cfdfd7'], [1, '#99b6ba']]); g.fill();
-        gear(g, 1195, y + 76, 40, 18, busy ? -sim.t * 2.6 : 0, true);
-        gear(g, 1247, y + 103, 22, 12, busy ? sim.t * 4.8 : 0);
-        plate(g, 1265, y + 70, 95, 64, 7); for (let i = 0; i < 5; i++) line(g, [[1280 + i * 12, y + 82], [1280 + i * 12, y + 120]], '#7c959c', 4);
-        lamp(g, 1345, y + 84, '#8edbc4', busy, 4);
-        if (!lane) { machineLabel(g, '02', sim.cfg.material === 'rubber' ? 'ELASTIC PRESS' : 'DIAMOND POLISH', 923, 407, 'Precision shaping · mirror finish'); feet(g, 930, 726, 430); }
-        for (let i = 0; i < 6; i++) {
-          const a = (i / 6) * TAU + (busy ? sim.t * .75 : 0), bx = 1050 + Math.cos(a) * (r - 19), by = y + Math.sin(a) * (r - 19);
-          g.save(); g.translate(bx, by); g.rotate(a + Math.PI / 2);
-          plate(g, -22, -12, 44, 24, 8, true);
-          for (let n = -16; n <= 16; n += 4) line(g, [[n, -8], [n, 8]], '#f0d8b180', 1);
-          g.restore();
-        }
-        line(g, [[963, y + 92], [1137, y + 92]], '#b3c5c3', 6);
-        line(g, [[963, y + 92], [963 + 174 * p, y + 92]], '#598d78', 4);
-      } else {
-        circle(g, 1050, y, r); g.strokeStyle = '#fafff0c9'; g.lineWidth = 3; g.stroke();
-        g.beginPath(); g.arc(1050, y, r - 8, -2.8, -1.0); g.strokeStyle = '#e6f6ff5c'; g.lineWidth = 4; g.stroke();
-        circle(g, 1050, y, r - 4); g.fillStyle = '#b7eeff08'; g.fill();
-        if (busy) {
-          for (let i = 0; i < 9; i++) { const a = sim.t * 4 + i * 2.4, rr = 28 + ((sim.t * 35 + i * 11) % 40); circle(g, 1050 + Math.cos(a) * rr, y + Math.sin(a) * rr, 1.2); g.fillStyle = '#fffbe8'; g.fill(); }
+    _tracks() {
+      const c=document.createElement('canvas'); c.width=128;c.height=64;const g=c.getContext('2d');
+      g.fillStyle='#37494a';g.fillRect(0,0,128,64);g.fillStyle='#526463';
+      for(let x=0;x<128;x+=16) g.fillRect(x,0,2,64);
+      this.beltTexture=this._own(new T.CanvasTexture(c));this.beltTexture.colorSpace=T.SRGBColorSpace;
+      this.beltTexture.wrapS=this.beltTexture.wrapT=T.RepeatWrapping;
+      const material=this._own(new T.MeshStandardMaterial({map:this.beltTexture,roughness:.83,side:T.DoubleSide}));
+      this.secondTracks=new T.Group();this.scene.add(this.secondTracks);
+      const p=P.PATHS;this._track(P.path([[650,650],[1180,650]]),this.scene,material);
+      for(const key of ['polish','coat','cool','inspect']) for(let lane=0;lane<2;lane++) this._track(p[key][lane],lane?this.secondTracks:this.scene,material);
+      this._track(p.scan,this.scene,material);this._track(p.sort,this.scene,material);
+    }
+    _track(path,parent,material) {
+      const points=path.points.map(p=>position(p.x??p[0],p.y??p[1]));
+      const k=this.kit,m=k.mat,verts=[],normals=[],uv=[],indices=[],left=[],right=[];
+      let length=0;
+      for(let i=0;i<points.length;i++) {
+        const p=points[i],tangent=points[Math.min(i+1,points.length-1)].clone().sub(points[Math.max(0,i-1)]).normalize();
+        const side=new T.Vector3(-tangent.z,0,tangent.x).normalize();
+        if(i) length+=p.distanceTo(points[i-1]);
+        for(const sign of [-1,1]) {const v=p.clone().addScaledVector(side,sign*.44);verts.push(v.x,v.y-R,v.z);normals.push(0,1,0);uv.push(length,(sign+1)/2);}
+        left.push(p.clone().addScaledVector(side,-.51).add(new T.Vector3(0,-.08,0)).toArray());
+        right.push(p.clone().addScaledVector(side,.51).add(new T.Vector3(0,-.08,0)).toArray());
+        if(i) {const a=(i-1)*2;indices.push(a,a+1,a+2,a+1,a+3,a+2);}
+      }
+      const geo=this._own(new T.BufferGeometry());geo.setAttribute('position',new T.Float32BufferAttribute(verts,3));geo.setAttribute('normal',new T.Float32BufferAttribute(normals,3));geo.setAttribute('uv',new T.Float32BufferAttribute(uv,2));geo.setIndex(indices);
+      const belt=new T.Mesh(geo,material);belt.receiveShadow=true;parent.add(belt);
+      k.pipe(parent,left,.047,m.steel);k.pipe(parent,right,.047,m.steel);
+      for(let i=1;i<points.length;i++) {
+        const a=points[i-1],b=points[i],distance=a.distanceTo(b),tangent=b.clone().sub(a).normalize(),side=new T.Vector3(-tangent.z,0,tangent.x).normalize();
+        for(let u=.18;u<distance;u+=.58) {const p=a.clone().lerp(b,u/distance),roller=k.cylinder(parent,.105,.105,1.02,p.x,p.y-R-.11,p.z,m.dark);roller.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),side);}
+        for(let u=.4;u<distance;u+=3.3) {
+          const p=a.clone().lerp(b,u/distance),h=p.y-R-.62;
+          for(const sign of [-1,1]) {const v=p.clone().addScaledVector(side,sign*.65);k.box(parent,.13,h,.13,v.x,.54+h/2,v.z,m.teal);k.box(parent,.45,.1,.5,v.x,.56,v.z,m.steel);}
+          const cross=k.box(parent,.15,.17,1.5,p.x,p.y-R-.27,p.z,m.ivory);cross.rotation.y=-Math.atan2(tangent.z,tangent.x);
         }
       }
     }
-    _coater(g, lane, front = false) {
-      const sim = this.sim, y = lane ? 840 : 600, st = sim.stations?.coat?.[lane], upgraded = sim.level >= 1;
-      const busy = !!st?.ball, p = st?.progress || 0;
-      const col = this.colors[st?.ball?.color ?? 0] || 0x65d9e7;
-      if (!front) {
-        plate(g, 1658, y - 102, 282, 226, 14);
-        for (const x of [1673, 1925]) for (const yy of [y - 86, y + 107]) bolt(g, x, yy, 5, true);
-        circle(g, 1800, y, 97); g.fillStyle = '#8ba9ae'; g.fill();
-        circle(g, 1800, y, 91); g.fillStyle = '#e2eeea'; g.fill();
-        circle(g, 1800, y, 87); g.fillStyle = radial(g, 1800, y, 90, [[0, rgba(col, busy ? .16 : .025)], [1, '#afceca33']]); g.fill();
-        if (!lane) {
-          machineLabel(g, '03', upgraded ? 'CHROMATIC INFUSION' : 'CLEAR ANNEALING', 1638, 273, upgraded ? 'Pigment · inner pattern · optical finish' : 'First batch · clear glass finish');
-          feet(g, 1658, 725, 384);
-          for (let i = 0; i < 6; i++) {
-            const x = 1680 + i * 47;
-            plate(g, x - 14, 341, 28, 99, 8);
-            rect(g, x - 10, 359, 20, 60, 4); g.fillStyle = rgba(this.colors[i], upgraded ? .72 : .08); g.fill();
-            line(g, [[x - 7, 365], [x - 7, 409]], '#ffffff47', 2);
-            tube(g, [[x, 440], [x, 468], [1800, 484]], false, 4);
-            lamp(g, x, 347, hex(this.colors[i]), upgraded, 3);
-          }
-          if (!upgraded) { text(g, 'INFUSION UPGRADE', 1800, 320, 12, '#a79170', 'center'); }
-          plate(g, 1748, 466, 104, 40, 5, true);
+    _collectors() {
+      const k=this.kit,m=k.mat;this.sortGates=[];this.dropCurves=[];const colors=this.sim.colors||P.COLORS;
+      const chuteGlass=this._own(new T.MeshPhysicalMaterial({color:0x9ec9c8,roughness:.12,transparent:true,opacity:.22,depthWrite:false,side:T.DoubleSide,clearcoat:1}));
+      for(let i=0;i<6;i++) {
+        const x=X(P.BIN_X[i]),color=k.material(colors[i].hex,.27,.1);
+        k.box(this.scene,1.95,.36,2.05,x,1,6.2,m.teal);
+        k.box(this.scene,1.77,4.1,1.77,x,3.18,6.2,m.glass,0);
+        for(const dx of [-.89,.89]) for(const dz of [-.89,.89]) k.cylinder(this.scene,.035,.035,4.35,x+dx,3.15,6.2+dz,m.steel);
+        for(const z of [5.3,7.1]) k.box(this.scene,1.94,.14,.12,x,5.32,z,m.ivory);
+        for(const dx of [-.91,.91]) k.box(this.scene,.12,.14,1.8,x+dx,5.32,6.2,m.ivory);
+        k.box(this.scene,1.55,.09,.2,x,1.24,7.15,color);k.label(this.scene,colors[i].name||String(i+1),x,1.03,7.24,1.5,.25);
+        const tubePoints=[[x,6.3,-3.6],[x,6.3,-2.2],[x,6.1,3],[x,5.7,5.2],[x,5.35,6.2]];
+        const curve=new T.CatmullRomCurve3(tubePoints.map(p=>new T.Vector3(...p)),false,'centripetal');this.dropCurves.push(curve);
+        k.pipe(this.scene,tubePoints,.32,chuteGlass);
+        for(const q of [.15,.58,.85]) {
+          const p=curve.getPointAt(q),ring=k.torus(this.scene,.33,.035,p.x,p.y,p.z,m.steel);
+          ring.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),curve.getTangentAt(q));
+          if(q===.58) {k.cylinder(this.scene,.04,.04,p.y-.6,x,p.y/2+.3,p.z,m.teal);k.box(this.scene,.4,.08,.4,x,.56,p.z,m.steel);}
         }
-        for (const x of [1714, 1886]) {
-          plate(g, x - 8, y - 78, 16, 156, 4);
-          for (let yy = y - 63; yy < y + 70; yy += 19) line(g, [[x - 5, yy], [x + 5, yy]], '#d9eefb40', 2);
-        }
-        const piston = busy ? Math.sin(Math.PI * p) * 24 : 0;
-        plate(g, 1786, y - 89, 28, 30 + piston, 3, true);
-        plate(g, 1770, y - 65 + piston, 60, 12, 4, true);
-        gear(g, 1980, y + 84, 38, 18, busy ? sim.t * 1.8 : 0, true);
-        lamp(g, 1916, y - 60, upgraded ? '#72decf' : '#d4b37e', busy);
-      } else {
-        circle(g, 1800, y, 94); g.strokeStyle = '#5b858c8a'; g.lineWidth = 3; g.stroke();
-        circle(g, 1800, y, 84); g.strokeStyle = busy ? rgba(col, .55) : '#94b7bc73'; g.lineWidth = 3; g.stroke();
-        g.beginPath(); g.arc(1800, y, 79, -2.6, -1.1); g.strokeStyle = '#fffff5b3'; g.lineWidth = 5; g.stroke();
-        if (busy && upgraded) {
-          g.save();
-          for (let i = 0; i < 3; i++) {
-            const a = sim.t * 1.9 + i * TAU / 3;
-            g.beginPath(); g.ellipse(1800, y, 61, 18, a, 0, TAU); g.strokeStyle = rgba(col, .22 + .22 * Math.sin(Math.PI * p)); g.lineWidth = 2.4; g.stroke();
-          }
-          g.restore();
-        }
+        k.cylinder(this.scene,.14,.14,1.25,x,6.2,-3.6,color,'z');
+        this.sortGates.push(k.box(this.scene,.08,.38,.78,x,6.3,-3.6,m.brass));
       }
     }
-    _inspector(g, front = false) {
-      const sim = this.sim, st = sim.stations?.inspect, busy = !!st?.ball, p = st?.progress || 0;
-      if (!front) {
-        feet(g, 2315, 755, 269);
-        plate(g, 2315, 464, 269, 290, 14);
-        rect(g, 2343, 499, 214, 196, 14); g.fillStyle = '#d6e7df'; g.fill(); g.strokeStyle = '#77938e'; g.lineWidth = 2; g.stroke();
-        machineLabel(g, '05', 'OPTICAL CONTROL', 2306, 407, 'Scan · verify · colour sort');
-        for (const x of [2329, 2570]) for (const y of [480, 738]) bolt(g, x, y, 5, true);
-        plate(g, 2362, 430, 176, 26, 5); text(g, 'QUALITY ASSURED', 2450, 444, 11, '#b6cdc9', 'center', 600);
-        lamp(g, 2351, 721, '#79dfba', busy); text(g, busy ? 'ANALYSING' : 'READY', 2371, 721, 14, '#90b8af');
-        if (st?.ball?.material === 'steel' || sim.cfg.material === 'steel') {
-          g.beginPath(); g.arc(2450, 547, 43, Math.PI, TAU); g.strokeStyle = '#b89c6a'; g.lineWidth = 18; g.stroke();
-          plate(g, 2398, 539, 18, 25, 3); plate(g, 2484, 539, 18, 25, 3); text(g, 'MAGNETIC', 2450, 486, 10, '#a99573', 'center');
-        }
-      } else {
-        line(g, [[2354, 516], [2354, 682]], '#d0efff38', 3);
-        if (busy) {
-          const x = 2366 + 169 * ((p * 2) % 1);
-          g.save();
-          line(g, [[x, 521], [x, 679]], '#508b7b', 2);
-          rect(g, x - 17, 521, 34, 158); g.fillStyle = '#68ae8d18'; g.fill(); g.restore();
-          for (let i = 0; i < 4; i++) line(g, [[2470, 531 + i * 9], [2490 + (i % 3) * 13, 531 + i * 9]], '#5e907a99', 2);
-        }
-        for (const [x, y, sx, sy] of [[2370, 530, 1, 1], [2530, 530, -1, 1], [2370, 670, 1, -1], [2530, 670, -1, -1]]) line(g, [[x, y + sy * 12], [x, y], [x + sx * 12, y]], '#86aeaf', 2);
+    _balls() {
+      this.ballMeshes=[];const shellGeo=this._own(new T.SphereGeometry(R,32,24));
+      // A tapered glass ribbon stays completely inside the shell. Unlike a fat
+      // cylindrical helix, its ends cannot protrude and its silhouette survives
+      // the small marble size in a production shot.
+      const vertices=[],indices=[];
+      for(let i=0;i<=48;i++) {
+        const t=i/48,angle=t*Math.PI*2.2,width=.125*Math.pow(Math.sin(Math.PI*t),.75);
+        for(let j=0;j<=4;j++) {const d=(j/2-1)*width;vertices.push(Math.cos(angle)*d,(t-.5)*.37,Math.sin(angle)*d);}
+        if(i)for(let j=0;j<4;j++){const a=(i-1)*5+j;indices.push(a,a+1,a+5,a+1,a+6,a+5);}
+      }
+      const coreGeo=this._own(new T.BufferGeometry());coreGeo.setAttribute('position',new T.Float32BufferAttribute(vertices,3));coreGeo.setIndex(indices);coreGeo.computeVertexNormals();
+      const pearlGeo=this._own(new T.SphereGeometry(.175,24,16));
+      const filamentMaterial=this._own(new T.MeshPhysicalMaterial({color:0xfff3d6,roughness:.24,clearcoat:.65,side:T.DoubleSide}));
+      for(const b of this.sim.balls) {
+        const group=new T.Group();this.scene.add(group);
+        const material=this._own(new T.MeshPhysicalMaterial({color:0x8a9e9d,roughness:.5,transmission:b.material==='glass'?.001:0,clearcoat:b.material==='glass'?.001:0,iridescence:b.pattern==='pearl'?.001:0,thickness:.10,ior:1.45,envMapIntensity:.72,attenuationColor:0xffffff,attenuationDistance:1.8}));
+        const shell=new T.Mesh(shellGeo,material);shell.castShadow=true;shell.receiveShadow=true;group.add(shell);
+        const tint=new T.Color((this.sim.colors||P.COLORS)[b.color].hex);
+        const coreColor=b.pattern==='pearl'?new T.Color(0xfff5e2).lerp(tint,.25):tint.clone().multiplyScalar(.65);
+        const coreMaterial=this._own(new T.MeshPhysicalMaterial({color:coreColor,roughness:b.pattern==='pearl'?.3:.22,clearcoat:.6,side:T.DoubleSide}));
+        const core=new T.Mesh(b.pattern==='pearl'?pearlGeo:coreGeo,coreMaterial),other=new T.Mesh(coreGeo,filamentMaterial);other.rotation.y=1.45;group.add(core,other);
+        this.ballMeshes.push({group,material,core,other,target:new T.Color((this.sim.colors||P.COLORS)[b.color].hex)});
       }
     }
-    _bins(g, front = false) {
-      const sim = this.sim;
-      if (!front) {
-        machineLabel(g, '06', 'THE COLLECTION', 4810, 457, 'Finished products · sorted with precision');
-        feet(g, 4790, 1385, 1200, 1420);
-        plate(g, 4790, 1380, 1200, 28, 6);
+    _updateBalls() {
+      const sim=this.sim;
+      for(let i=0;i<sim.balls.length;i++) {
+        const b=sim.balls[i],v=this.ballMeshes[i];v.group.visible=b.state!=='raw'||b.id<sim.rawCursor+60-(sim.pickup?1:0);
+        let p;
+        if(b.state==='raw') p=rawPosition(b);
+        else if(sim.pickup===b) {const q=smooth(b.s/b.route.len);p=rawPosition(b).lerp(position(650,470),q);p.y+=Math.sin(q*Math.PI)*.35;}
+        else if(b.bin>=0) {
+          const target=collectedPosition(b);
+          if(b.state==='finished') p=target;
+          else {const q=clamp(b.s/b.route.len,0,1),mouth=new T.Vector3(X(P.BIN_X[b.bin]),5.35,6.2);p=q<.62?this.dropCurves[b.bin].getPointAt(q/.62):mouth.lerp(target,(q-.62)/.38);}
+          if(b.material==='rubber'&&b.settleAge!=null) p.y+=Math.abs(Math.sin(b.settleAge*11))*Math.max(0,1-b.settleAge/1.1)*.25;
+        } else p=position(b.x,b.y);
+        v.group.position.copy(p);v.group.rotation.set(b.rot||0,0,(b.rot||0)*.15);
+        let squash=b.squash||1;if(b.material==='rubber'&&b.state==='polishing') squash=1-Math.sin((sim.stations.polish[b.lane]?.progress||0)*Math.PI)*.18;
+        v.group.scale.set(1/Math.sqrt(squash),squash,1/Math.sqrt(squash));
+        const finish=smooth((b.coating-.18)/.82),polished=b.polish||0;
+        const glassTint=b.pattern==='clear'?.42:.12;
+        v.material.color.setHex(0x91a09c).lerp(new T.Color(0xf4fbf9),polished).lerp(v.target,finish*(b.material==='glass'?glassTint:b.material==='steel'?.45:.9));
+        v.material.attenuationColor.setHex(0xffffff).lerp(v.target,finish*.45);
+        v.material.roughness=b.material==='rubber'?.85:mix(.6,b.material==='steel'?.19:.028,polished);
+        v.material.metalness=b.material==='steel'?.96:0;v.material.transmission=b.material==='glass'?Math.max(.001,polished*.96):0;
+        v.material.clearcoat=b.material==='glass'?Math.max(.001,polished):0;v.material.iridescence=b.pattern==='pearl'?Math.max(.001,finish*.65):0;
+        v.core.visible=b.material==='glass'&&b.pattern!=='clear'&&finish>.02;
+        v.other.visible=v.core.visible&&b.pattern==='swirl';
+        v.core.scale.setScalar(finish);v.other.scale.set(finish*.28,finish,finish*.28);
       }
-      for (let i = 0; i < 6; i++) {
-        const x = 4900 + i * 200, col = this.colors[i];
-        const current = sim.balls.find(b => b.state === 'sorting' && b.bin === i && b.x > x - 55);
-        if (!front) {
-          tube(g, [[x, 650], [x, 955]], false);
-          rect(g, x - 90, 943, 180, 435, 10); g.fillStyle = linear(g, x - 90, 943, x + 90, 1378, [[0, '#f6fcf199'], [.4, rgba(col, .055)], [1, rgba(col, .13)]]); g.fill();
-          g.strokeStyle = '#7599a296'; g.lineWidth = 2; g.stroke();
-          plate(g, x - 92, 931, 184, 22, 5);
-          plate(g, x - 92, 1371, 184, 14, 4);
-          lamp(g, x, 903, hex(col), !!current, 5);
-          gear(g, x + 27, 676, 15, 10, current ? sim.t * 2 : .4, true);
-          text(g, String(sim.stats.sorted[i]).padStart(2, '0'), x, 1444, 24, '#c1d8dc', 'center', 600);
-          line(g, [[x - 35, 1420], [x + 35, 1420]], rgba(col, .8), 3);
-          for (const y of [771, 855]) collar(g, x, y, true);
-        } else {
-          tube(g, [[x, 650], [x, 955]], true);
-          g.save(); g.translate(x, 670); g.rotate(current ? -.65 : .04); plate(g, -27, -4, 54, 8, 3, true); g.restore();
-          line(g, [[x - 82, 958], [x - 82, 1367]], '#ffffffdd', 2);
-          line(g, [[x - 73, 965], [x - 73, 1362]], '#ffffff66', 7);
-          line(g, [[x + 82, 958], [x + 82, 1367]], '#719da36b', 2);
-          rect(g, x - 87, 955, 174, 418, 6); g.fillStyle = '#d3f5ff06'; g.fill();
-          for (let y = 980; y < 1355; y += 32) line(g, [[x + 65, y], [x + 80, y]], '#6c8f987f', 1);
-        }
-      }
+      for(let i=0;i<this.sortGates.length;i++) this.sortGates[i].rotation.y=sim.balls.some(b=>b.bin===i&&b.state==='sorting')?-.7:0;
     }
-    _annealer(g, lane, front = false) {
-      const sim = this.sim, y = lane ? 1050 : 650, st = sim.stations?.anneal?.[lane], busy = !!st?.ball;
-      const heat = st?.ball?.temperature || 0;
-      if (!front) {
-        plate(g, 3548, y - 112, 216, 245, 16);
-        rect(g, 3568, y - 91, 176, 171, 50); g.fillStyle = '#e4eeea'; g.fill();
-        if (!lane) { machineLabel(g, '04', 'THERMAL STABILISATION', 3400, 395, 'Controlled annealing · cooling buffer'); feet(g, 3548, y + 134, 282); }
-        for (const x of [3562, 3750]) for (const yy of [y - 97, y + 116]) bolt(g, x, yy, 5, true);
-        for (const x of [3595, 3618, 3641, 3664, 3687, 3710]) {
-          g.beginPath(); g.ellipse(x, y, 20, 71, 0, 0, TAU); g.strokeStyle = heat > .1 ? `rgba(192,${Math.round(112 + 35 * (1 - heat))},70,${.55 + .35 * heat})` : '#85a6ad99'; g.lineWidth = 6; g.stroke();
-        }
-        plate(g, 3777, y - 54, 67, 101, 8);
-        for (let i = 0; i < 7; i++) line(g, [[3789, y - 40 + i * 12], [3832, y - 40 + i * 12]], '#7a949b', 4);
-        gear(g, 3810, y + 94, 31, 14, busy ? sim.t * 3.2 : 0);
-        lamp(g, 3741, y + 98, heat > .25 ? '#ffc382' : '#8dded6', busy);
-        text(g, busy ? 'COOLING' : 'READY', 3650, y + 107, 12, '#9cbcc6', 'center', 600);
-      } else {
-        rect(g, 3568, y - 91, 176, 171, 50); g.strokeStyle = '#6e919a9e'; g.lineWidth = 3; g.stroke();
-        line(g, [[3581, y - 49], [3581, y + 38]], '#ffffffb3', 4);
-        if (busy) {
-          g.save();
-          const glow = g.createRadialGradient(3650, y, 14, 3650, y, 72); glow.addColorStop(0, `rgba(244,177,91,${heat * .15})`); glow.addColorStop(1, '#ffd18a00');
-          g.fillStyle = glow; g.fillRect(3576, y - 74, 148, 148); g.restore();
-        }
-      }
+    resize(world,scale) {
+      this.world=world;this.scale=scale;this.canvas.width=Math.round(world.w*scale);this.canvas.height=Math.round(world.h*scale);
+      this.texture.source.resize(this.canvas.width,this.canvas.height);if(this.gl)this.gl.setSize(this.canvas.width,this.canvas.height,false);
+      const sprite=this.root.children[0];sprite.width=world.w;sprite.height=world.h;
     }
-    _servicePlant(g) {
-      // Physical support equipment around the long manufacturing line, kept behind the marbles.
-      const t = this.sim.completedAt == null ? this.sim.t : this.sim.completedAt;
-      // The overhead drive turns the long conveyor through its visible chain transmission.
-      plate(g, 1915, 468, 183, 90, 13);
-      for (let i = 0; i < 10; i++) line(g, [[1931 + i * 14, 484], [1931 + i * 14, 540]], '#80959b', 5);
-      line(g, [[2070, 514], [2070, 697]], '#6f858b', 7);
-      line(g, [[2124, 514], [2124, 697]], '#6f858b', 7);
-      for (let y = 519 + ((t * 30) % 13); y < 687; y += 13) {
-        line(g, [[2067, y], [2073, y]], '#e2ebe6', 3);
-        line(g, [[2121, 1206 - y], [2127, 1206 - y]], '#e2ebe6', 3);
-      }
-      gear(g, 2097, 514, 34, 18, t * 2.1, true); gear(g, 2097, 697, 34, 18, t * 2.1);
-      lamp(g, 1934, 477, '#94c4af', this.sim.completedAt == null, 4);
-      text(g, 'CONVEYOR DRIVE', 1950, 452, 12, '#7f9ba8');
-      // Insulated coolant vessel and its manifold feed the annealing coils.
-      plate(g, 3250, 358, 102, 173, 34);
-      plate(g, 3240, 380, 122, 15, 5); plate(g, 3240, 490, 122, 15, 5);
-      rect(g, 3292, 403, 17, 68, 4); g.fillStyle = '#aac8c6'; g.fill();
-      rect(g, 3295, 420, 11, 47, 2); g.fillStyle = '#509bb4a0'; g.fill();
-      line(g, [[3297, 409], [3297, 466]], '#d0f6ff6a', 2);
-      tube(g, [[3352, 442], [3452, 442], [3452, 530], [3600, 530]], false, 9);
-      gear(g, 3452, 442, 20, 10, .4, true);
-      for (const x of [1910, 2170]) {
-        feet(g, x - 72, 1250, 144, 1420);
-        plate(g, x - 72, 1110, 144, 140, 16);
-        circle(g, x, 1163, 36); g.fillStyle = '#fbf7e9'; g.fill(); g.strokeStyle = '#80989c'; g.lineWidth = 4; g.stroke();
-        for (let i = 0; i < 16; i++) { const a = i / 16 * TAU; line(g, [[x + Math.cos(a) * 27, 1163 + Math.sin(a) * 27], [x + Math.cos(a) * 31, 1163 + Math.sin(a) * 31]], '#596f76', 1); }
-        const a = -.7 + Math.sin(t * .28 + x) * .12;
-        line(g, [[x, 1163], [x + Math.cos(a) * 24, 1163 + Math.sin(a) * 24]], '#b57c49', 2); bolt(g, x, 1163, 3, true);
-        text(g, x < 2000 ? 'PRESSURE' : 'COOLANT', x, 1220, 12, '#94a8b4', 'center');
-      }
-      tube(g, [[1910, 1110], [1910, 1010], [1500, 1010]], false, 9);
-      tube(g, [[2170, 1110], [2170, 1280], [3430, 1280], [3430, 1030]], false, 9);
-      for (let x = 2310; x < 3300; x += 180) collar(g, x, 1280);
-      plate(g, 3070, 1130, 202, 110, 12);
-      for (let i = 0; i < 8; i++) line(g, [[3090 + i * 22, 1148], [3090 + i * 22, 1218]], '#7d959d', 5);
-      gear(g, 3109, 1190, 27, 13, -t * 1.7, true); lamp(g, 3250, 1150, '#82bba5', this.sim.level >= 2);
-      for (const x of [1690, 2440, 3980]) {
-        plate(g, x, 270, 152, 123, 10);
-        text(g, 'CONTROL', x + 16, 288, 10, '#a6bcc6');
-        rect(g, x + 15, 306, 122, 41, 3); g.fillStyle = '#e6eee2'; g.fill();
-        for (let i = 0; i < 11; i++) line(g, [[x + 22 + i * 10, 339], [x + 22 + i * 10, 332 - 15 * Math.abs(Math.sin(i * .8 + t * .25))]], '#718c78', 4);
-        for (let i = 0; i < 3; i++) lamp(g, x + 27 + i * 46, 371, i === 1 ? '#d8b778' : '#78bdad', i !== 1 || this.sim.level > 0, 4);
-        tube(g, [[x + 75, 393], [x + 75, 440], [x + 180, 440], [x + 180, 550]], false, 5);
-      }
-    }
-    _marble(g, b) {
-      const raw = b.state === 'raw' || b.polish < .02;
-      const p = b.polish || 0, coat = b.coating || 0, col = this.colors[b.color] || 0x6edee5;
-      const r = b.displayR || b.r || 22, material = b.material || 'glass';
-      g.save(); g.translate(b.x, b.y);
-      const rubber = material === 'rubber';
-      if (rubber && (b.state === 'polishing' || b.state === 'finished')) {
-        const amount = b.state === 'polishing' ? Math.sin(p * Math.PI) * .16 : (b.finishedAt != null ? Math.max(0, 1 - (this.sim.t - b.finishedAt) * 1.1) * Math.sin((this.sim.t - b.finishedAt) * 18) * .14 : 0);
-        g.scale(1 + amount, 1 - amount);
-      }
-      g.beginPath(); g.ellipse(4, r * .87, r * 1.12, r * .34, 0, 0, TAU); g.fillStyle = '#53686636'; g.fill();
-      circle(g, 0, 0, r);
-      if (material === 'steel') g.fillStyle = linear(g, -r, -r, r, r, [[0, '#f2f0d9'], [.19, '#91a3b0'], [.37, '#e2eff0'], [.46, '#485d6b'], [.58, '#172c3c'], [.77, '#b7c7ca'], [1, '#455764']]);
-      else if (rubber) g.fillStyle = radial(g, 0, 0, r, [[0, coat > .2 ? rgba(col, 1) : '#97a2a1'], [.6, coat > .2 ? rgba(col, .85) : '#677873'], [1, '#283d43']]);
-      else if (raw) g.fillStyle = radial(g, 0, 0, r, [[0, '#cad6d4'], [.4, '#93aaa9'], [.8, '#577682'], [1, '#354f5d']]);
-      else g.fillStyle = radial(g, 0, 0, r, [[0, '#f4ffef99'], [.3, coat > .05 ? rgba(col, .55) : '#a1d3cf66'], [.64, '#386b8377'], [.86, coat > .05 ? rgba(col, .85) : '#90b8c3ad'], [1, '#e9fff4cf']]);
-      g.fill(); g.strokeStyle = material === 'glass' && !raw ? '#547d8baf' : '#4a647a99'; g.lineWidth = 1.1; g.stroke();
-      g.save(); circle(g, 0, 0, r - 1); g.clip();
-      if (material === 'glass' && coat > .02) {
-        g.globalAlpha = coat;
-        g.rotate(b.rot || 0);
-        const pattern = b.finishLevel === 0 ? 'clear' : (b.pattern || this.sim.cfg.product);
-        if (pattern === 'pearl') {
-          circle(g, 0, 0, r * .46); g.fillStyle = radial(g, 0, 0, r * .47, [[0, '#fffde9'], [.4, rgba(col, .98)], [1, rgba(col, .12)]]); g.fill();
-        } else if (pattern !== 'clear') {
-          for (let i = 0; i < 3; i++) {
-            g.save(); g.rotate(i * TAU / 3);
-            g.beginPath(); g.moveTo(-r * .83, -r * .28); g.bezierCurveTo(-r * .17, -r * .63, r * .17, r * .61, r * .87, r * .23); g.bezierCurveTo(r * .11, r * .18, -r * .05, -r * .1, -r * .83, -r * .28);
-            g.fillStyle = i === 1 ? '#ffffff8a' : rgba(col, .94); g.fill(); g.restore();
-          }
-        } else { circle(g, 0, 0, r * .8); g.fillStyle = rgba(col, .18); g.fill(); }
-      }
-      if (raw) {
-        for (let i = 0; i < 9; i++) { const a = i * 2.399 + b.id, rr = r * Math.sqrt((i + 1) / 11); circle(g, Math.cos(a) * rr, Math.sin(a) * rr, 1.2); g.fillStyle = '#dcece446'; g.fill(); }
-      }
-      if (material === 'steel' && coat > .2) { g.rotate(b.rot || 0); line(g, [[-r, -r * .25], [r, -r * .25]], rgba(col, .8), r * .25); }
-      g.restore();
-      if (!rubber) {
-        g.beginPath(); g.ellipse(-r * .32, -r * .4, r * .32, r * .15, -.55, 0, TAU); g.fillStyle = raw ? '#ffffff69' : '#ffffffd9'; g.fill();
-        g.beginPath(); g.arc(0, 0, r * .78, .15, 1.3); g.strokeStyle = '#d9f7ff7d'; g.lineWidth = 1.6; g.stroke();
-        circle(g, r * .38, r * .35, r * .085); g.fillStyle = '#e8fbff9c'; g.fill();
-      } else { g.beginPath(); g.ellipse(-r * .28, -r * .34, r * .29, r * .18, -.55, 0, TAU); g.fillStyle = '#ffffff15'; g.fill(); }
-      g.restore();
-    }
-    _world(g) {
-      const sim = this.sim, active = sim.completedAt == null, t = active ? sim.t : sim.completedAt;
-      g.drawImage(this.background, 0, 0);
-      this._servicePlant(g);
-      const at = (x, y, fn) => { g.save(); g.translate(x, y); fn(); g.restore(); };
-      at(200, 50, () => this._hopper(g));
-      belt(g, 750, 1370, 650, t); belt(g, 1630, 2650, 650, t); belt(g, 2950, 3150, 650, t);
-      const cool = (y) => [[3150, y], [3200, y + 100], [3500, y + 100], [3550, y], [3568, y]];
-      tube(g, cool(650));
-      belt(g, 3780, 4244, 650, t); tube(g, [[4535, 650], [5900, 650]]);
-      for (const x of [4612, 4740, 5010, 5210, 5410, 5610, 5810]) collar(g, x, 650);
-      at(450, 50, () => this._polisher(g, 0)); at(1000, 50, () => this._coater(g, 0));
-      this._annealer(g, 0); at(1950, 50, () => this._inspector(g)); this._bins(g);
-      if (sim.level >= 2) {
-        const event = sim.milestones?.find(e => e.type === 'parallel'), reveal = event ? smooth((sim.t - event.time) / 3) : 1;
-        g.save(); g.globalAlpha = .25 + .75 * reveal; g.translate(0, (1 - reveal) * 24);
-        tube(g, [[1180, 650], [1230, 1050], [1380, 1050]]);
-        belt(g, 1630, 2650, 1050, t); belt(g, 2950, 3150, 1050, t); tube(g, cool(1050));
-        tube(g, [[3750, 1050], [3950, 1050], [4050, 650]]);
-        at(450, 210, () => this._polisher(g, 1)); at(1000, 210, () => this._coater(g, 1)); this._annealer(g, 1);
-        g.restore();
-      } else {
-        g.save(); g.setLineDash([12, 9]);
-        rect(g, 1300, 965, 2584, 160, 12); g.strokeStyle = '#72939b4a'; g.lineWidth = 2; g.stroke();
-        line(g, [[1328, 1045], [3852, 1045]], '#72939b30', 2); g.setLineDash([]);
-        text(g, 'RESERVED FOR PARALLEL PRODUCTION', 2592, 1004, 16, '#647b89', 'center', 600);
-        text(g, 'Capacity expands as the order progresses', 2592, 1085, 14, '#4f6675', 'center');
-        g.restore();
-      }
-      let rawDrawn = 0;
-      for (const b of sim.balls) {
-        if (b.state === 'raw' && rawDrawn++ >= 30) continue;
-        this._marble(g, b);
-      }
-      at(200, 50, () => this._hopper(g, true)); at(450, 50, () => this._polisher(g, 0, true)); at(1000, 50, () => this._coater(g, 0, true));
-      this._annealer(g, 0, true); at(1950, 50, () => this._inspector(g, true)); this._bins(g, true);
-      tube(g, [[4535, 650], [5900, 650]], true); tube(g, cool(650), true);
-      if (sim.level >= 2) {
-        at(450, 210, () => this._polisher(g, 1, true)); at(1000, 210, () => this._coater(g, 1, true)); this._annealer(g, 1, true);
-        tube(g, [[1180, 650], [1230, 1050], [1380, 1050]], true); tube(g, [[3750, 1050], [3950, 1050], [4050, 650]], true); tube(g, cool(1050), true);
-        collar(g, 1239, 1050); collar(g, 4050, 650);
-      }
-    }
-    _hud(g, camera) {
-      const { w, h } = this.world, sim = this.sim, portrait = h > w, pad = portrait ? 60 : 54;
-      const scrim = g.createLinearGradient(0, 0, 0, portrait ? 160 : 142);
-      scrim.addColorStop(0, '#faf5e9f5'); scrim.addColorStop(.65, '#faf5e9e8'); scrim.addColorStop(1, '#faf5e900');
-      g.fillStyle = scrim; g.fillRect(0, 0, w, portrait ? 160 : 142);
-      const complete = sim.completedAt != null, total = sim.orderSize || sim.cfg.orderSize, done = sim.stats.completed;
-      const stage = complete ? 'ORDER COMPLETE' : sim.level >= 2 ? '03  /  PARALLEL PRODUCTION' : sim.level >= 1 ? '02  /  COLOUR & CHARACTER' : '01  /  THE FIRST BATCH';
-      text(g, 'SIMCASCADE / GLASSWORKS', pad, 46, portrait ? 19 : 16, '#b7cbd3', 'left', 600);
-      text(g, stage, pad, portrait ? 87 : 81, portrait ? 17 : 14, complete ? '#93dfb8' : '#cdb385', 'left', 500);
-      text(g, `${String(done).padStart(3, '0')} / ${total}`, w - pad, portrait ? 51 : 45, portrait ? 28 : 25, '#e1eeed', 'right', 500);
-      text(g, 'FINISHED MARBLES', w - pad, portrait ? 84 : 78, portrait ? 12 : 11, '#819ba8', 'right', 600);
-      const bw = portrait ? 190 : 180, bx = w - pad - bw, by = portrait ? 106 : 99;
-      rect(g, bx, by, bw, 4, 2); g.fillStyle = '#627f8e30'; g.fill();
-      rect(g, bx, by, bw * clamp(done / total, 0, 1), 4, 2); g.fillStyle = complete ? '#4c9573' : '#bd955c'; g.fill();
-      const latest = [...(sim.milestones || [])].reverse().find(e => sim.t >= e.time && sim.t - e.time < 11);
-      if (latest && latest.type !== 'complete') {
-        const fade = Math.min(smooth((sim.t - latest.time) / 2), 1 - smooth((sim.t - latest.time - 8) / 3));
-        g.save(); g.globalAlpha = fade;
-        const yy = portrait ? 148 : 139;
-        const noticeWidth = Math.min(w - pad * 2, portrait ? 780 : 665);
-        rect(g, (w - noticeWidth) / 2, yy - 19, noticeWidth, 38, 10);
-        g.fillStyle = '#fcf7eaf2'; g.fill(); g.strokeStyle = '#bda77755'; g.lineWidth = 1; g.stroke();
-        text(g, latest.type === 'parallel' ? 'CAPACITY UPGRADE  ·  SECOND LINE ONLINE' : 'INFUSION UPGRADE  ·  COLOUR IN MOTION', w / 2, yy, portrait ? 18 : 17, '#dfc899', 'center', 500);
-        g.restore();
-      }
-      this._overviewStrip(g, camera, portrait ? h - 210 : h - 93, portrait ? 146 : 51);
-      text(g, complete ? 'Every sphere accounted for. A collection complete.' : `${(sim.cfg.material || 'glass').toUpperCase()}  /  ${(sim.cfg.product || 'swirl').toUpperCase()}  /  SEED ${sim.cfg.seed ?? '—'}`, pad, h - (portrait ? 27 : 20), portrait ? 16 : 13, '#7f9aa8');
-      text(g, sim.cfg.cameraMode === 'manual' ? 'MANUAL CAMERA' : sim.cfg.cameraMode === 'overview' ? 'FACTORY OVERVIEW' : 'AUTOMATIC CAMERA', w - pad, h - (portrait ? 27 : 20), portrait ? 12 : 11, '#607d8e', 'right');
-    }
-    _overviewStrip(g, camera, y, height) {
-      const { w, h } = this.world, portrait = h > w, x = portrait ? 58 : 54, width = w - 2 * x;
-      const mapX = x + 25, mapY = y + (portrait ? 67 : 18), mapW = width - 50, sx = mapW / W;
-      rect(g, x, y, width, height, 12); g.fillStyle = '#faf7edeb'; g.fill(); g.strokeStyle = '#81999b60'; g.lineWidth = 1; g.stroke();
-      if (portrait) text(g, 'PRODUCTION FLOW', x + 23, y + 25, 12, '#748e9a', 'left', 600);
-      line(g, [[mapX + 600 * sx, mapY], [mapX + 5900 * sx, mapY]], '#4b6d7e', 2);
-      if (this.sim.level >= 2) line(g, [[mapX + 1180 * sx, mapY], [mapX + 1300 * sx, mapY + 17], [mapX + 3950 * sx, mapY + 17], [mapX + 4050 * sx, mapY]], '#50867f', 2);
-      const stages = [[500, 'RAW'], [1500, 'POLISH'], [2800, 'INFUSE'], [3650, 'ANNEAL'], [4400, 'VERIFY'], [5400, 'COLLECT']];
-      for (const [xx, label] of stages) {
-        circle(g, mapX + xx * sx, mapY, portrait ? 5 : 4); g.fillStyle = '#ab874e'; g.fill();
-        text(g, label, mapX + xx * sx, mapY + (portrait ? 42 : 22), portrait ? 13 : 11, '#8ca5ae', 'center', 600);
-      }
-      const left = clamp(camera.x - this.world.w / camera.zoom / 2, 0, W), right = clamp(camera.x + this.world.w / camera.zoom / 2, 0, W);
-      rect(g, mapX + left * sx, mapY - 13, Math.max(8, (right - left) * sx), 31, 5); g.strokeStyle = '#668c8a80'; g.lineWidth = 1; g.stroke();
-      for (const b of this.sim.balls) if (b.state !== 'raw' && b.state !== 'finished') {
-        circle(g, mapX + b.x * sx, mapY + (b.lane ? 17 : 0), 2); g.fillStyle = hex(this.colors[b.color]); g.fill();
-      }
+    _hud(g,w,h) {
+      const sim=this.sim,pad=Math.max(22,w*.022),fs=Math.max(12,Math.min(w,h)*.019);
+      g.fillStyle='#f3f0e8dc';g.fillRect(w-pad-fs*7.6,pad-fs*.35,fs*7.8,fs*2.1);
+      g.fillStyle='#28474c';g.textAlign='right';g.font='600 '+(fs*1.3)+'px Arial';g.fillText(sim.stats.completed+' / '+sim.orderSize,w-pad,pad+fs);
+      g.textAlign='left';g.font='500 '+(fs*.86)+'px Arial';
+      const phase=sim.completedAt!=null?'COLLECTION COMPLETE':['I · THE FIRST MARBLE','II · COLOUR INFUSION','III · PARALLEL PRODUCTION'][sim.level];
+      const textWidth=g.measureText(phase).width;g.fillStyle='#f3f0e8dc';g.fillRect(pad-fs*.4,h-pad-fs*1.05,textWidth+fs*.8,fs*1.5);g.fillStyle='#28474c';g.fillText(phase,pad,h-pad);
     }
     paint(g) {
-      const { w, h } = this.world, portrait = h > w;
-      g.fillStyle = linear(g, 0, 0, 0, h, [[0, '#faf5e9'], [.5, '#e9e9e0'], [1, '#f2e8d7']]); g.fillRect(0, 0, w, h);
-      const camera = cameraAt(this.sim, this.world, this.view);
-      this.camera = camera;
-      const cy = portrait ? h * .51 : h * .525;
-      g.save();
-      g.translate(w / 2, cy); g.scale(camera.zoom, camera.zoom); g.translate(-camera.x, -camera.y);
-      this._world(g); g.restore();
-      // Very light warm falloff keeps the daylight diorama soft without dark corners.
-      const vignette = g.createRadialGradient(w / 2, h / 2, Math.min(w, h) * .2, w / 2, h / 2, Math.max(w, h) * .8);
-      vignette.addColorStop(0, '#bda77f00'); vignette.addColorStop(1, '#bda77f0b'); g.fillStyle = vignette; g.fillRect(0, 0, w, h);
-      if (this.view.hud) this._hud(g, camera);
+      const w=this.world.w,h=this.world.h,aspect=w/h,view=this.view,shot=cameraAt(this.sim,view,aspect);
+      Object.assign(this.camera3,{left:-shot.span*aspect/2,right:shot.span*aspect/2,top:shot.span/2,bottom:-shot.span/2});
+      this.camera3.position.set(shot.x-33,shot.y+43,shot.z+58);this.camera3.lookAt(shot.x,shot.y,shot.z);this.camera3.updateProjectionMatrix();
+      this.beltTexture.offset.x=-this.sim.workTime*.55;this.secondTracks.visible=this.sim.level>=2;
+      this._updateBalls();this.machines.update(this.sim);this.gl.render(this.scene,this.camera3);
+      g.drawImage(this.gl.domElement,0,0,w,h);if(view.hud!==false)this._hud(g,w,h);
     }
-    destroy() { this.background.width = this.background.height = 1; super.destroy(); }
+    destroy() {this.machines?.dispose();this.owned.forEach(x=>x.dispose());this.kit?.dispose();this.env?.dispose();this.gl?.dispose();this.gl?.forceContextLoss();super.destroy();}
   }
-  P.cameraAt = cameraAt;
-  P.Renderer = ProductionRenderer;
+  P.cameraAt=cameraAt;P.Renderer=ProductionRenderer;
 })();

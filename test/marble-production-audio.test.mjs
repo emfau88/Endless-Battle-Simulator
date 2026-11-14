@@ -54,19 +54,27 @@ test('Production audio: configuration keeps Classic voices intact and accepts ma
   for (const file of ['core.js', 'scenarios/marble.js', 'scenarios/marble/production-audio.js']) {
     vm.runInContext(readFileSync(new URL('../src/' + file, import.meta.url), 'utf8'), registered, { filename: file });
   }
-  const classic = JSON.parse(JSON.stringify(registered.EBS.getScenario('marble').audio.events));
+  const classicScenario = registered.EBS.getScenario('marble');
+  const classic = JSON.parse(JSON.stringify(classicScenario.audio.events));
+  const originalDefaults = classicScenario.defaults, originalControls = classicScenario.controls;
+  const originalCreate = classicScenario.create, originalRenderer = classicScenario.createRenderer;
   vm.runInContext(readFileSync(new URL('../src/scenarios/marble/production.js', import.meta.url), 'utf8'), registered);
   const scenario = registered.EBS.getScenario('marble');
+  assert.equal(scenario, classicScenario, 'Classic registry identity must remain unchanged');
+  assert.equal(scenario.defaults, originalDefaults);
+  assert.equal(scenario.controls, originalControls);
+  assert.equal(scenario.create, originalCreate);
+  assert.equal(scenario.createRenderer, originalRenderer);
   for (const [key, definition] of Object.entries(classic)) assert.deepEqual(JSON.parse(JSON.stringify(scenario.audio.events[key])), definition);
-  const cfg = registered.EBS.normalizeConfig({ scenario: 'marble', params: { factoryMode: 'progressive', material: 'mixed' },
+  const cfg = registered.EBS.normalizeConfig({ scenario: 'marbleworks', params: { material: 'mixed' },
     video: { volume: { factoryImpact: 70, factoryComplete: 40, imaginary: 140 } } });
-  assert.equal(cfg.params.factoryMode, 'progressive');
+  assert.equal(cfg.scenario, 'marbleworks');
   assert.equal(cfg.params.material, 'mixed');
   assert.equal(cfg.video.volume.factoryImpact, 70);
   assert.equal(cfg.video.volume.factoryComplete, 40);
   assert.equal(cfg.video.volume.factoryPolish, 100);
   assert.equal(cfg.video.volume.imaginary, undefined);
-  assert.equal(registered.EBS.normalizeConfig({ scenario: 'marble' }).params.factoryMode, 'classic');
+  assert.deepEqual(JSON.parse(JSON.stringify(registered.EBS.normalizeConfig({ scenario: 'marble' }).params)), { balls: 35, buffer: 2, warmup: 30 });
 });
 
 test('Production audio: a complete mixed order preserves every event and produces bounded AAC audio', async t => {
@@ -76,10 +84,10 @@ test('Production audio: a complete mixed order preserves every event and produce
     vm.runInContext(readFileSync(new URL('../src/' + file, import.meta.url), 'utf8'), runtime, { filename: file });
   }
   const { EBS } = runtime;
-  const cfg = EBS.normalizeConfig({ scenario: 'marble', seed: 42,
-    params: { factoryMode: 'progressive', orderSize: 24, material: 'mixed', productionSpeed: 2, intensity: 2 } });
+  const cfg = EBS.normalizeConfig({ scenario: 'marbleworks', seed: 42,
+    params: { orderSize: 24, material: 'mixed', productionSpeed: 2, intensity: 2 } });
   const record = world => {
-    const sim = EBS.getScenario('marble').create({ seed: cfg.seed, params: cfg.params, world, timeScale: 1, video: cfg.video });
+    const sim = EBS.getScenario('marbleworks').create({ seed: cfg.seed, params: cfg.params, world, timeScale: 1, video: cfg.video });
     const events = []; let next = 0, finishedSecond = null, seconds = 0;
     while (seconds < 300) {
       for (let step = 0; step < 60; step++) sim.stepOnce();
@@ -94,7 +102,7 @@ test('Production audio: a complete mixed order preserves every event and produce
     assert.equal(sim.stats.completed, cfg.params.orderSize, 'the production order must reach its audible finale');
     assert.equal(sim.eventSeq, next);
     assert.equal(sim.audioWorldWidth, physicalWidth, 'stereo positions use physical factory width');
-    const info = EBS.installExportAPI({ cfg, sim, world, scenario: EBS.getScenario('marble'),
+    const info = EBS.installExportAPI({ cfg, sim, world, scenario: EBS.getScenario('marbleworks'),
       app: { canvas: { width: world.w, height: world.h }, renderer: { name: 'test' } } }).info();
     assert.equal(info.audioWorldWidth, physicalWidth, 'the exporter receives fixed acoustic width');
     assert.equal(info.world.w, world.w, 'audio width must not override the requested viewport');

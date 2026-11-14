@@ -9,6 +9,8 @@ mkdirSync(join(root, 'vendor'), { recursive: true });
 const files = [
   ['node_modules/pixi.js/dist/pixi.min.js', 'vendor/pixi.min.js'],
   ['node_modules/matter-js/build/matter.min.js', 'vendor/matter.min.js'],
+  ['node_modules/three/build/three.min.js', 'vendor/three.min.js'],
+  ['node_modules/three/LICENSE', 'vendor/three.LICENSE.txt'],
 ];
 for (const [src, dst] of files) {
   copyFileSync(join(root, src), join(root, dst));

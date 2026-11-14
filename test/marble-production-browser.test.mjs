@@ -1,17 +1,14 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { INDEX, launchBrowser, openExportPage } from '../lib/browser.mjs';
-import { exportVideo, verifyResult } from '../lib/exporter.mjs';
 
 let browser;
-before(async () => { browser = await launchBrowser({ gpu: false }); });
+const gpu = process.env.EBS_GPU === '1'; // Opt-in local hardware checks; CI remains deterministic software rendering.
+before(async () => { browser = await launchBrowser({ gpu }); });
 after(async () => { await browser?.close(); });
-const config = (params = {}, video = {}) => ({ scenario: 'marble', seed: 42,
-  params: { factoryMode: 'progressive', exportLength: 'duration', ...params },
+const config = (params = {}, video = {}) => ({ scenario: 'marbleworks', seed: 42,
+  params: { exportLength: 'duration', ...params },
   video: { aspect: '16:9', resolution: 720, fps: 30, durationSec: 3, ...video } });
 
 test('Progressive production: a complete default episode, useful unlocks and exact collection', async t => {
@@ -71,10 +68,11 @@ test('Progressive UI: switch from Classic, preserve live state on reframe and sa
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto(pathToFileURL(INDEX).href + '?scenario=marble&paused=1');
   await page.waitForFunction(() => EBS.app?.sim);
-  assert.equal(await page.inputValue('#p-factoryMode'), 'classic');
+  assert.equal(await page.inputValue('#scenario'), 'marble');
+  assert.equal(await page.locator('#p-factoryMode').count(), 0);
   assert.ok(await page.locator('#p-balls').isVisible());
-  await page.selectOption('#p-factoryMode', 'progressive');
-  assert.equal(await page.locator('#p-balls').isVisible(), false);
+  await page.selectOption('#scenario', 'marbleworks');
+  assert.equal(await page.locator('#p-balls').count(), 0);
   assert.ok(await page.locator('#p-orderSize').isVisible());
   assert.ok(await page.locator('#stat-completed').count());
   await page.selectOption('#p-material', 'mixed');
@@ -86,8 +84,9 @@ test('Progressive UI: switch from Classic, preserve live state on reframe and sa
   await page.click('#segFormat button[data-v="16:9"]');
   assert.equal(await page.evaluate(() => EBS.app.sim.stateHash()), hash);
   assert.equal(await page.evaluate(() => EBS.app.cfg.params.cameraPosition), 80);
-  await page.reload(); await page.waitForFunction(() => EBS.app?.sim);
-  assert.equal(await page.inputValue('#p-factoryMode'), 'progressive');
+  // Reopen without the initial Classic URL override to exercise saved settings.
+  await page.goto(pathToFileURL(INDEX).href + '?paused=1'); await page.waitForFunction(() => EBS.app?.sim);
+  assert.equal(await page.inputValue('#scenario'), 'marbleworks');
   assert.equal(await page.inputValue('#p-material'), 'mixed');
   await page.selectOption('#p-exportLength', 'duration');
   assert.equal(await page.locator('#durationText').isDisabled(), false);
@@ -95,10 +94,12 @@ test('Progressive UI: switch from Classic, preserve live state on reframe and sa
   assert.equal(await page.locator('#durationText').isDisabled(), true);
   assert.match(await page.textContent('#durationHint'), /Produktionsdauer|Auftrag/);
   await page.click('#btnShortPreset');
-  assert.equal(await page.inputValue('#p-factoryMode'), 'progressive');
+  assert.equal(await page.inputValue('#scenario'), 'marbleworks');
   assert.equal(await page.inputValue('#p-orderSize'), '24');
-  await page.selectOption('#p-factoryMode', 'classic');
+  await page.selectOption('#scenario', 'marble');
   assert.ok(await page.locator('#stat-cycles').count());
+  assert.equal(await page.locator('#p-orderSize').count(), 0);
+  assert.equal(await page.locator('#p-factoryMode').count(), 0);
   assert.equal(await page.evaluate(() => EBS.app.sim.L.land), false);
   assert.deepEqual(errors, []);
 });
@@ -112,18 +113,4 @@ for (const tempo of [1, .64]) test(`Progressive export: natural length includes 
   const result = await page.evaluate(s => exportAPI.simulate(s), plan.durationSec);
   assert.equal(result.complete, true); assert.ok(plan.durationSec - result.completedAt / tempo >= 12 / tempo - 1e-6);
   assert.ok(await page.evaluate(() => exportAPI.check().ok));
-});
-
-test('Progressive export: real landscape/portrait H.264/AAC and saved-recipe replay', async t => {
-  const dir = mkdtempSync(join(tmpdir(), 'ebs-progressive-video-')); t.after(() => rmSync(dir, { recursive: true, force: true }));
-  const opts = { gpu: false, encoder: { preset: 'ultrafast' } };
-  const cfg = config({ orderSize: 24, productionSpeed: 2, intensity: 2 });
-  const a = await exportVideo(cfg, { ...opts, out: join(dir, 'landscape.mp4') });
-  const b = await exportVideo({ ...cfg, video: { ...cfg.video, aspect: '9:16' } }, { ...opts, out: join(dir, 'portrait.mp4') });
-  const saved = JSON.parse(readFileSync(a.sidecar, 'utf8'));
-  const replay = await exportVideo(saved.config, { ...opts, out: join(dir, 'replay.mp4') });
-  for (const result of [a, b, replay]) assert.deepEqual(verifyResult(result), []);
-  assert.deepEqual([a.width, a.height, b.width, b.height], [1280, 720, 720, 1280]);
-  assert.equal(a.stateHash, b.stateHash); assert.equal(a.stateHash, replay.stateHash);
-  assert.equal(a.frames, 90);
 });

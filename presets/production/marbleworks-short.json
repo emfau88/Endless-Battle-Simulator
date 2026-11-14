@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "scenario": "marbleworks",
+  "seed": 42,
+  "name": "Progressive Glassworks · Mini-Auftrag",
+  "params": {
+    "exportLength": "order",
+    "material": "glass",
+    "product": "swirl",
+    "palette": "spectrum",
+    "orderSize": 24,
+    "productionSpeed": 2,
+    "intensity": 2,
+    "cameraMode": "auto"
+  },
+  "video": {
+    "aspect": "9:16",
+    "resolution": 1080,
+    "fps": 30,
+    "durationSec": 90,
+    "tempo": 1,
+    "audio": true,
+    "quality": {
+      "crf": 20,
+      "preset": "medium"
+    }
+  },
+  "view": {
+    "hud": true,
+    "camera": true
+  }
+}

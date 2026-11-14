@@ -116,8 +116,7 @@ async function bootLive() {
   });
   for (const [id, kind] of [['btnShortPreset', 'short'], ['btnLongPreset', 'long']]) {
     $(id).addEventListener('click', () => {
-      const preset = session.cfg.scenario === 'marble' && session.cfg.params.factoryMode === 'progressive'
-        ? EBS.MarbleProduction.preset(kind, session.cfg.seed) : EBS.productionPreset(session.cfg.scenario, kind, session.cfg.seed);
+      const preset = EBS.productionPreset(session.cfg.scenario, kind, session.cfg.seed);
       session.start(normalizeConfig(preset));
       speed = 1; acc = 0; fit(); save(); buildScenarioUi(); syncUi();
     });
@@ -363,7 +362,7 @@ async function bootLive() {
   function syncUi() {
     const c = session.cfg;
     scSel.value = c.scenario; $('seed').value = c.seed;
-    const production = c.scenario === 'marble' && c.params.factoryMode === 'progressive';
+    const production = c.scenario === 'marbleworks';
     $('btnShortPreset').textContent = production ? 'Short · Mini-Auftrag' : 'Short · 1 Minute';
     $('btnLongPreset').textContent = production ? 'Langvideo · Vollständiger Auftrag' : 'Langvideo · 10 Minuten';
     for (const ctl of session.scenario.controls) {

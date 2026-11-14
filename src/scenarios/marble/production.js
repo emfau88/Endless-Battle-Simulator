@@ -1,20 +1,17 @@
-/* Progressive production is an opt-in mode of Marble, preserving Classic defaults. */
+/* A separate production scenario. Classic Marble is never read or modified here. */
 (function () {
   'use strict';
-  const sc = EBS.getScenario('marble'), classic = { ...sc }, P = EBS.MarbleProduction;
+  const P = EBS.MarbleProduction;
+  const sc = { id: 'marbleworks', title: 'Marble Works · Progressive Factory' };
   const { clamp, num, fmtInt } = EBS.util;
-  const progressive = p => p.factoryMode === 'progressive';
   const choice = (v, values, fallback) => values.includes(v) ? v : fallback;
   const defaults = {
-    factoryMode: 'classic', material: 'glass', product: 'swirl', palette: 'spectrum', exportLength: 'order',
+    material: 'glass', product: 'swirl', palette: 'spectrum', exportLength: 'order',
     orderSize: 144, productionSpeed: 1, intensity: 1,
     cameraMode: 'auto', cameraPosition: 50, cameraZoom: 1,
   };
-  sc.defaults = { ...classic.defaults, ...defaults };
+  sc.defaults = defaults;
   sc.controls = [
-    { key: 'factoryMode', label: 'Fabrikmodus', type: 'select', restart: true, rebuildUi: true,
-      options: [['classic', 'Classic · Endloskreislauf'], ['progressive', 'Progressive · Produktionsauftrag']] },
-    ...classic.controls.map(c => ({ ...c, visible: p => !progressive(p) })),
     { key: 'material', label: 'Material', type: 'select', restart: true,
       options: [['glass', 'Glas'], ['steel', 'Stahl'], ['rubber', 'Gummi'], ['mixed', 'Materialvergleich']] },
     { key: 'product', label: 'Veredelung', type: 'select', restart: true,
@@ -32,10 +29,8 @@
       enabled: p => p.cameraMode === 'manual', format: v => v + ' %' },
     { key: 'cameraZoom', label: 'Kamera · Ausschnitt', type: 'range', min: .7, max: 1.7, step: .05,
       enabled: p => p.cameraMode === 'manual', format: v => v.toFixed(2) + '×' },
-  ].map(c => c.key === 'factoryMode' || c.visible ? c : { ...c, visible: progressive });
+  ];
   sc.normalizeParams = p => ({
-    ...classic.normalizeParams(p),
-    factoryMode: choice(p.factoryMode, ['classic', 'progressive'], 'classic'),
     material: choice(p.material, ['glass', 'steel', 'rubber', 'mixed'], 'glass'),
     product: choice(p.product, ['swirl', 'clear', 'pearl'], 'swirl'),
     palette: choice(p.palette, ['spectrum', 'ocean', 'ember'], 'spectrum'),
@@ -47,13 +42,12 @@
     cameraPosition: clamp(num(p.cameraPosition, 50), 0, 100),
     cameraZoom: clamp(num(p.cameraZoom, 1), .7, 1.7),
   });
-  sc.create = ctx => progressive(ctx.params) ? new P.Simulation(ctx) : classic.create(ctx);
-  sc.createRenderer = ctx => progressive(ctx.sim.cfg) ? new P.Renderer(ctx) : classic.createRenderer(ctx);
-  sc.canReframe = cfg => progressive(cfg.params);
+  sc.create = ctx => new P.Simulation(ctx);
+  sc.createRenderer = ctx => new P.Renderer(ctx);
   sc.reframe = (renderer, ctx) => renderer.resize(ctx.world, ctx.renderScale);
-  sc.hasNaturalDuration = cfg => progressive(cfg.params) && cfg.params.exportLength === 'order';
+  sc.hasNaturalDuration = cfg => cfg.params.exportLength === 'order';
   sc.durationLabel = { pending: 'Produktionsdauer wird berechnet …', complete: 'Automatisch: vollständiger Auftrag und 12 Sekunden Fabrikfinale (bei Zeitlupe entsprechend länger).' };
-  sc.supportsClips = cfg => progressive(cfg.params);
+  sc.supportsClips = true;
   // Plan the real order using the same model and fixed ticks; video length never drives unlocks.
   sc.createExportPlan = cfg => {
     if (!sc.hasNaturalDuration(cfg)) return null;
@@ -67,16 +61,15 @@
       return { done: true, durationSec };
     } };
   };
-  P.preset = (kind, seed = 42) => ({ version: 1, scenario: 'marble', seed,
+  P.preset = (kind, seed = 42) => ({ version: 1, scenario: sc.id, seed,
     name: kind === 'short' ? 'Progressive Glassworks · Mini-Auftrag' : 'Progressive Glassworks · Von der Rohkugel zur Kollektion',
-    params: { factoryMode: 'progressive', exportLength: 'order', material: 'glass', product: 'swirl', palette: 'spectrum',
+    params: { exportLength: 'order', material: 'glass', product: 'swirl', palette: 'spectrum',
       orderSize: kind === 'short' ? 24 : 144, productionSpeed: kind === 'short' ? 2 : 1, intensity: kind === 'short' ? 2 : 1,
       cameraMode: 'auto' },
     video: { aspect: kind === 'short' ? '9:16' : '16:9', resolution: 1080, fps: 30,
       durationSec: kind === 'short' ? 90 : 480, tempo: 1, audio: true, quality: { crf: 20, preset: 'medium' } },
     view: { hud: true, camera: true } });
   sc.panelStats = sim => {
-    if (!progressive(sim.cfg)) return classic.panelStats(sim);
     const s = sim.snapshot();
     return [
       { key: 'completed', label: 'Fertiger Auftrag', value: `${fmtInt(s.completed)} / ${fmtInt(sim.orderSize)}` },
@@ -87,6 +80,7 @@
       { key: 'queue', label: 'Größter Rückstau', value: fmtInt(s.maxQueue) },
     ];
   };
-  sc.panelNote = sim => progressive(sim.cfg) ? sim.snapshot().summary : classic.panelNote(sim);
-  sc.audioForParams = params => progressive(params) ? { events: P.audioEvents } : classic.audio;
+  sc.panelNote = sim => sim.snapshot().summary;
+  sc.audio = { events: P.audioEvents };
+  EBS.registerScenario(sc);
 })();

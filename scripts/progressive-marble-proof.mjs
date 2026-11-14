@@ -7,26 +7,29 @@ import { exportVideo, verifyResult } from '../lib/exporter.mjs';
 
 const out = join(ROOT, 'output', 'progressive-marble-v1');
 await mkdir(out, { recursive: true });
-const browser = await launchBrowser({ gpu: false });
+const browser = await launchBrowser({ gpu: process.argv.includes('--gpu') });
 const results = [];
-const videoConfig = { scenario: 'marble', seed: 42,
-  params: { factoryMode: 'progressive', exportLength: 'order', orderSize: 24, productionSpeed: 2, intensity: 2 },
+const fullMini = process.argv.includes('--full-video');
+const videoConfig = { scenario: 'marbleworks', seed: 42,
+  params: { exportLength: 'order', orderSize: fullMini ? 24 : 144, productionSpeed: fullMini ? 2 : 1, intensity: fullMini ? 2 : 1 },
   video: { aspect: '16:9', resolution: 720, fps: 30, audio: true, quality: { crf: 20, preset: 'fast' } },
   view: { camera: true, hud: true } };
 let clip;
 try {
   for (const shot of [
     { name: '01-start-16x9', at: 2 },
-    { name: '02-polishing-16x9', at: 60, cameraMode: 'manual', cameraPosition: 25 },
+    { name: '02-polishing-16x9', at: 60, cameraMode: 'manual', cameraPosition: 20, cameraZoom: 1.2 },
     { name: '03-expansion-16x9', at: 210 },
     { name: '04-factory-overview-16x9', at: 280, cameraMode: 'overview' },
-    { name: '05-annealing-9x16', at: 240, aspect: '9:16', cameraMode: 'manual', cameraPosition: 61 },
+    { name: '05-annealing-9x16', at: 280, aspect: '9:16', cameraMode: 'manual', cameraPosition: 46 },
     { name: '06-completed-16x9', at: 490 },
     { name: '07-materials-16x9', at: 210, material: 'mixed', cameraMode: 'manual', cameraPosition: 47 },
+    { name: '08-infusion-16x9', at: 280, cameraMode: 'manual', cameraPosition: 46, cameraZoom: 1.2 },
+    { name: '09-collection-16x9', at: 490, cameraMode: 'manual', cameraPosition: 96, cameraZoom: 1.1 },
   ]) {
-    const { page, errors } = await openExportPage(browser, { scenario: 'marble', seed: 42,
-      params: { factoryMode: 'progressive', exportLength: 'duration', cameraMode: shot.cameraMode || 'auto',
-        cameraPosition: shot.cameraPosition || 50, material: shot.material || 'glass' },
+    const { page, errors } = await openExportPage(browser, { scenario: 'marbleworks', seed: 42,
+      params: { exportLength: 'duration', cameraMode: shot.cameraMode || 'auto',
+        cameraPosition: shot.cameraPosition || 50, cameraZoom: shot.cameraZoom || 1, material: shot.material || 'glass' },
       video: { aspect: shot.aspect || '16:9', resolution: 1080, fps: 30 } });
     await page.evaluate(at => exportAPI.simulate(at), shot.at);
     const [png] = await page.evaluate(() => exportAPI.renderFrames(1, 1, 'image/png'));
@@ -39,8 +42,8 @@ try {
   }
   if (process.argv.includes('--video') && !process.argv.includes('--full-video')) {
     const { page } = await openExportPage(browser, videoConfig);
-    const state = await page.evaluate(() => exportAPI.simulate(180));
-    if (!state.complete) throw new Error('Miniature review order did not finish.');
+    const state = await page.evaluate(() => exportAPI.simulate(600));
+    if (!state.complete) throw new Error('Review order did not finish.');
     clip = { startSec: Math.max(0, Math.floor(state.milestones.find(m => m.type === 'parallel').time) - 5), durationSec: 20 };
     await page.close();
   }

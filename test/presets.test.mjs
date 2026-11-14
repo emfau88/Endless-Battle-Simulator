@@ -36,7 +36,7 @@ test('Einstellungsdatei bewahrt Qualitätswerte und Namen; der PC-Exportbefehl �
 test('Zwölf Produktionsdateien entsprechen den UI-Vorlagen und definierten Videoeinstellungen', async t => {
   const ctx = await browser.newContext(); t.after(() => ctx.close());
   const page = await ctx.newPage(); await page.goto(base + '?paused=1'); await ready(page);
-  assert.deepEqual(await page.locator('#scenario option').evaluateAll(options => options.map(o => o.value)), ids);
+  assert.deepEqual(await page.locator('#scenario option').evaluateAll(options => options.map(o => o.value)), [...ids, 'marbleworks']);
   for (const id of ids) for (const kind of ['short', 'long']) {
     const file = JSON.parse(readFileSync(join(ROOT, 'presets', 'production', `${id}-${kind}.json`), 'utf8'));
     const fromUi = await page.evaluate(([id, kind]) => EBS.productionPreset(id, kind), [id, kind]);
@@ -50,6 +50,30 @@ test('Zwölf Produktionsdateien entsprechen den UI-Vorlagen und definierten Vide
     if (id === 'pyramid') assert.equal(normalized.params.dayMinutes, kind === 'short' ? 1 : 0);
     if (id === 'scrap') assert.deepEqual([normalized.params.arena, normalized.params.episodeMode, normalized.view.camera], ['sunshine', 'endless', false]);
   }
+});
+
+test('Marble Works has its own complete-order presets without changing the Classic preset family', async t => {
+  const ctx = await browser.newContext(); t.after(() => ctx.close());
+  const page = await ctx.newPage(); await page.goto(base + '?scenario=marbleworks&seed=731&paused=1'); await ready(page);
+  for (const kind of ['short', 'long']) {
+    const file = JSON.parse(readFileSync(join(ROOT, 'presets', 'production', `marbleworks-${kind}.json`), 'utf8'));
+    assert.deepEqual(await page.evaluate(kind => EBS.productionPreset('marbleworks', kind), kind), file);
+    await page.click(kind === 'short' ? '#btnShortPreset' : '#btnLongPreset');
+    await page.waitForFunction(() => document.querySelector('#durationOut').textContent !== '…');
+    const actual = await page.evaluate(() => EBS.app.cfg);
+    assert.equal(actual.scenario, 'marbleworks'); assert.equal(actual.seed, 731);
+    assert.equal(actual.params.orderSize, kind === 'short' ? 24 : 144);
+    assert.equal(actual.params.exportLength, 'order');
+    assert.equal(actual.video.aspect, kind === 'short' ? '9:16' : '16:9');
+    assert.equal(await page.isDisabled('#durationText'), true);
+    assert.ok(actual.video.durationSec > 60 && actual.video.durationSec < 600);
+    assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('ebs.cfg'))), actual);
+  }
+  await page.selectOption('#scenario', 'marble');
+  await page.click('#btnShortPreset');
+  assert.equal(await page.inputValue('#durationText'), '1m');
+  assert.equal(await page.locator('#p-orderSize').count(), 0);
+  assert.ok(await page.locator('#p-balls').isVisible());
 });
 
 test('Vorlagenknöpfe erhalten den Seed und laden alle sechs Szenarien mit speicherbaren Einstellungen', async t => {

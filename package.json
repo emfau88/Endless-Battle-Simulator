@@ -19,7 +19,8 @@
   },
   "dependencies": {
     "matter-js": "0.20.0",
-    "pixi.js": "8.22.0"
+    "pixi.js": "8.22.0",
+    "three": "0.160.1"
   },
   "devDependencies": {
     "playwright": "1.60.0"

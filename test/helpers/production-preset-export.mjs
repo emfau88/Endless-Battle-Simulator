@@ -10,19 +10,20 @@ import { ROOT, launchBrowser } from '../../lib/browser.mjs';
 import { probeVideo, verifyResult, run, ffmpegBin } from '../../lib/exporter.mjs';
 
 export function productionPresetTests(scenario) {
+const gpu = scenario === 'marbleworks' && process.env.EBS_GPU === '1';
 const port = 20000 + Math.floor(Math.random() * 1000), base = `http://127.0.0.1:${port}`;
 const evidence = join(ROOT, 'output', 'production-checks', String(Date.now()));
 let server, browser, serverLog = '';
 before(async () => {
   mkdirSync(evidence, { recursive: true });
   server = spawn(process.execPath, [join(ROOT, 'server.mjs')], {
-    env: { ...process.env, PORT: String(port), HOST: '127.0.0.1', EBS_GPU: '0' }, stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, PORT: String(port), HOST: '127.0.0.1', EBS_GPU: gpu ? '1' : '0' }, stdio: ['ignore', 'pipe', 'pipe'],
   });
   for (const stream of [server.stdout, server.stderr]) stream.on('data', data => { serverLog += data; });
   for (let i = 0; i < 100 && !serverLog.includes('läuft auf'); i++) await new Promise(resolve => setTimeout(resolve, 100));
   assert.ok(serverLog.includes('läuft auf'), serverLog);
   const health = await (await fetch(base + '/api/health')).json(); assert.equal(health.ok, true);
-  browser = await launchBrowser({ gpu: false });
+  browser = await launchBrowser({ gpu });
 });
 after(async () => {
   await browser?.close();
@@ -55,7 +56,11 @@ for (const kind of ['short', 'long']) {
     await page.goto(base + `/?scenario=${scenario}&seed=42&paused=1`);
     await page.waitForFunction(() => window.EBS?.app?.sim);
     await page.click(kind === 'short' ? '#btnShortPreset' : '#btnLongPreset');
-    assert.equal(await page.evaluate(() => EBS.app.cfg.video.durationSec), kind === 'short' ? 60 : 600);
+    if (scenario === 'marbleworks') {
+      assert.equal(await page.isDisabled('#durationText'), true, 'production presets plan a complete order');
+      await page.selectOption('#p-exportLength', 'duration');
+      assert.equal(await page.isDisabled('#durationText'), false);
+    } else assert.equal(await page.evaluate(() => EBS.app.cfg.video.durationSec), kind === 'short' ? 60 : 600);
     await page.fill('#durationText', '3s'); await page.dispatchEvent('#durationText', 'change');
     const config = await page.evaluate(() => EBS.app.cfg);
     const [request] = await Promise.all([

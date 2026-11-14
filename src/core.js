@@ -182,6 +182,13 @@ function normalizeVolume(vol, sc, params) {
 
 function normalizeConfig(input) {
   const o = liftConfig(input);
+  // The first Progressive prototype used a Marble sub-mode. Its exact saved
+  // recipe/link now selects the independent scenario; genuine Classic inputs
+  // retain their original schema, defaults and registry definition.
+  if (o.scenario === 'marble' && o.params.factoryMode === 'progressive' && scenarios.has('marbleworks')) {
+    o.scenario = 'marbleworks';
+    delete o.params.factoryMode;
+  }
   // Fehlende Angabe -> Standard-Szenario. Ausdrücklich genannte, aber unbekannte ID -> Fehler (kein stiller Rückfall).
   const wanted = o.scenario === undefined || o.scenario === null || o.scenario === '' ? null : String(o.scenario);
   if (wanted !== null && !scenarios.has(wanted)) {

@@ -1,9 +1,9 @@
 {
   "version": 1,
   "name": "Progressive Glassworks · Ocean pearl collection",
-  "scenario": "marble",
+  "scenario": "marbleworks",
   "seed": 73,
-  "params": { "factoryMode": "progressive", "exportLength": "order", "material": "glass", "product": "pearl", "palette": "ocean", "orderSize": 120, "productionSpeed": 0.9, "intensity": 1.4, "cameraMode": "auto" },
+  "params": { "exportLength": "order", "material": "glass", "product": "pearl", "palette": "ocean", "orderSize": 120, "productionSpeed": 0.9, "intensity": 1.4, "cameraMode": "auto" },
   "video": { "aspect": "16:9", "resolution": 1080, "fps": 30, "durationSec": 480, "tempo": 1, "audio": true, "quality": { "crf": 20, "preset": "medium" } },
   "view": { "hud": true, "camera": true }
 }
