@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "name": "Progressive Glassworks · A complete miniature order",
+  "scenario": "marble",
+  "seed": 42,
+  "params": { "factoryMode": "progressive", "exportLength": "order", "material": "glass", "product": "swirl", "palette": "spectrum", "orderSize": 24, "productionSpeed": 2, "intensity": 2, "cameraMode": "auto" },
+  "video": { "aspect": "9:16", "resolution": 1080, "fps": 30, "durationSec": 90, "tempo": 1, "audio": true, "quality": { "crf": 20, "preset": "medium" } },
+  "view": { "hud": true, "camera": true }
+}

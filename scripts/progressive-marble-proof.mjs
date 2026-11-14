@@ -1,5 +1,5 @@
-// Reproduce review screenshots and the optional complete short test recording.
-// node scripts/progressive-marble-proof.mjs [--video]
+// Reproduce review screenshots and a short upgrade clip (or a complete small order).
+// node scripts/progressive-marble-proof.mjs [--video | --full-video] [--gpu]
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ROOT, launchBrowser, openExportPage } from '../lib/browser.mjs';
@@ -9,6 +9,11 @@ const out = join(ROOT, 'output', 'progressive-marble-v1');
 await mkdir(out, { recursive: true });
 const browser = await launchBrowser({ gpu: false });
 const results = [];
+const videoConfig = { scenario: 'marble', seed: 42,
+  params: { factoryMode: 'progressive', exportLength: 'order', orderSize: 24, productionSpeed: 2, intensity: 2 },
+  video: { aspect: '16:9', resolution: 720, fps: 30, audio: true, quality: { crf: 20, preset: 'fast' } },
+  view: { camera: true, hud: true } };
+let clip;
 try {
   for (const shot of [
     { name: '01-start-16x9', at: 2 },
@@ -32,15 +37,20 @@ try {
     console.log(shot.name + ' · verified');
     await page.close();
   }
+  if (process.argv.includes('--video') && !process.argv.includes('--full-video')) {
+    const { page } = await openExportPage(browser, videoConfig);
+    const state = await page.evaluate(() => exportAPI.simulate(180));
+    if (!state.complete) throw new Error('Miniature review order did not finish.');
+    clip = { startSec: Math.max(0, Math.floor(state.milestones.find(m => m.type === 'parallel').time) - 5), durationSec: 20 };
+    await page.close();
+  }
 } finally { await browser.close(); }
 await writeFile(join(out, 'screenshots.json'), JSON.stringify(results, null, 2) + '\n');
-if (process.argv.includes('--video')) {
-  const result = await exportVideo({ scenario: 'marble', seed: 42,
-    params: { factoryMode: 'progressive', exportLength: 'order', orderSize: 24, productionSpeed: 2, intensity: 2 },
-    video: { aspect: '16:9', resolution: 720, fps: 30, audio: true, quality: { crf: 20, preset: 'fast' } },
-    view: { camera: true, hud: true } },
-  { out: join(out, 'progressive-marble-full-order-test.mp4'), gpu: false, log: console.log,
+if (process.argv.includes('--video') || process.argv.includes('--full-video')) {
+  const file = join(out, clip ? 'progressive-marble-upgrade-test.mp4' : 'progressive-marble-full-order-test.mp4');
+  const result = await exportVideo(videoConfig,
+  { out: file, ...(clip ? { clip } : {}), gpu: process.argv.includes('--gpu'), log: console.log,
     onProgress: p => { if (p.frame && p.frame % 300 === 0) console.log(`Frames ${p.frame}/${p.totalFrames}`); } });
   const issues = verifyResult(result); if (issues.length) throw new Error(issues.join('; '));
-  console.log(JSON.stringify({ duration: result.duration, frames: result.frames, stateHash: result.stateHash, out: result.out }));
+  console.log(JSON.stringify({ duration: result.duration, frames: result.frames, stateHash: result.stateHash, out: file }));
 }
