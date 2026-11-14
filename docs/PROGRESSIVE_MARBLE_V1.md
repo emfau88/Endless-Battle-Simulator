@@ -29,6 +29,12 @@ Gespeicherte Rezepte und Links der ersten Progressive-Fassung mit der exakten Ko
 
 Die Schwellen skalieren mit der Auftragsgröße. Kleine Aufträge halten ein zweites Rohmateriallos zurück, damit der zweite Ausbau tatsächlich produziert. Bis zu 360 Kugeln bleiben vom Rohbestand bis zur fertigen Sammlung eindeutig identifizierbar. Keine Kugel wird während der Episode erzeugt, gelöscht oder automatisch als fertig gezählt.
 
+## Werkstatt, Glas und Prozesseffekte
+
+Die Anlage steht in einer warmen Werkstatt mit fein gekörntem mineralischem Boden, salbeifarbenen Wänden, großen Fenstern und zurückhaltenden Tageslichtflächen. Kräftigere Pigmentfüllungen, klarere Patronenhüllen und deutlicher sichtbare innere Glasbänder heben die Produkte vor der ruhigen Umgebung hervor. Diese Materialänderungen betreffen ausschließlich die Darstellung.
+
+Drei sparsame Effekte folgen der tatsächlichen Verarbeitung: kurzer farbiger Sprühnebel während der freigeschalteten Farbinfusion, ein ausblendender Glanzpunkt nach dem Polieren und lokale Wärmeschleier an belegten Temperierstationen. Die Farbinfusion sprüht weder vor dem verdienten Ausbau noch ohne Werkstück; nach Abschluss und Auslauf bleiben keine Effekte zurück. Es gibt keinen dauerhaft laufenden Nebel. Die vorhandene automatische Kamera, Übersicht und manuelle Kamera bleiben unverändert.
+
 ## Varianten
 
 | Einstellung | Wirkung |
@@ -49,7 +55,9 @@ Die vier Dateien `presets/marble-progressive-*.json` liefern einen Glas-Langfilm
 
 `production-renderer.js` stellt denselben Produktionszustand als eigene 3D-Szene dar; `production-3d-kit.js` und `production-machines3d.js` liefern Geometrien, Materialien und Maschinen. Three.js 0.160.1 wird lokal aus `vendor/three.min.js` geladen. Die bestehende Pixi-/Exportschnittstelle bleibt der äußere Ausgabepfad. Die Kamera liest Zeit, Produktionsereignisse und Ansicht; Formatwechsel erhalten den laufenden Produktionszustand. Kamerawerte, Bildrate und Auflösung verändern weder Zustandshash noch Produktionsereignisse.
 
-`production-audio.js` verwendet vorhandene Samples und Syntheseklänge mit materialabhängigen Varianten, Mindestabständen und zurückhaltenden Maschinenimpulsen. Die bestehende Audio-/AAC-Pipeline übernimmt Mischung und Lautheitsmessung. Stereo richtet sich nach der festen Fabrikbreite, unabhängig vom Videoformat. `production.js` verbindet Konfiguration und natürlichen Exportplan über eine eigene `marbleworks`-Registrierung.
+`production-environment3d.js` baut die statische Umgebung samt prozeduraler Oberflächentextur mit einem eigenen festen Seed. `production-effects3d.js` rekonstruiert die drei Effekte analytisch aus Maschinenbelegung, Produktionsfortschritt und vorhandenen Ereignissen. Drei feste Zeichenbündel begrenzen sie auf höchstens 44 Nebelpartikel, zwei Glanzpunkte und acht Wärmeschleier. Sie besitzen keine eigene Simulationsuhr und verändern weder Produktionszufall noch Zustand oder Ereignisliste. Direkte Zeitsprünge ergeben deshalb dieselbe Darstellung wie vorherige Zwischenbilder.
+
+`production-audio.js` verwendet vorhandene Samples und Syntheseklänge mit materialabhängigen Varianten und Mindestabständen. Die störenden Rauschlagen der Politur und Beschichtung wurden ausschließlich durch Entfernen der Klangzuordnungen `factoryPolish` und `factoryCoat` beseitigt. Ihre Produktionsereignisse bleiben erhalten. Die acht übrigen Klangdefinitionen für Rollen, Kontakt, Vereinzelung, Presse, Prüfung, Sortierung, Ausbau und Abschluss bleiben unverändert; eine umfassende Klangüberarbeitung ist damit nicht verbunden. Die bestehende Audio-/AAC-Pipeline übernimmt Mischung und Lautheitsmessung. Stereo richtet sich nach der festen Fabrikbreite, unabhängig vom Videoformat. `production.js` verbindet Konfiguration und natürlichen Exportplan über eine eigene `marbleworks`-Registrierung.
 
 Die neue Registrierung verwendet vorhandene Hooks für Reframing, natürliches Videoende und Clip-Export. Die ursprüngliche Marble-Registrierung sowie deren Simulation, Renderer, Klangtabelle und Vorlagen werden nicht verändert. Das Original bleibt unter `scenario=marble` erreichbar, die neue Fabrik unter `scenario=marbleworks`.
 
@@ -68,10 +76,16 @@ Der Export nutzt dasselbe Seed-/Auftragsmodell. Der direkte Kamerawechsel auf Ho
 ```sh
 node --test test/production-marble-simulation.test.mjs
 node --test test/marble-production-browser.test.mjs test/marbleworks-export.test.mjs test/marble-production-audio.test.mjs test/marbleworks-registration.test.mjs
+node --test test/marbleworks-effects.test.mjs
 node scripts/progressive-marble-proof.mjs --video --gpu
+node scripts/progressive-marble-proof.mjs --process-video --gpu
 ```
 
-Das Proof-Skript erzeugt neun Screenshots, Zustandshashes und einen 20-sekündigen MP4-Testclip um den zweiten Ausbau der Standardepisode samt JSON-Rezept unter `output/progressive-marble-v1/`. Mit `--full-video` entsteht stattdessen die vollständige kleine Glasproduktion. `--gpu` verwendet die vorhandene Hardwarebeschleunigung. Tests prüfen vollständige Episoden, exakte Bilanz, reale Ausbauten, minimalen/maximalen Bestand, alle Materialien, Seed-/Format-/Kameraunabhängigkeit, Zeitlupe, UI, natürliches Videoende, Seeking, H.264/AAC und Rezept-Replay. Die Abschlussmessungen und Regressionsergebnisse stehen im begleitenden Prüfbericht.
+Das Proof-Skript erzeugt elf Screenshots mit Zustandshashes unter `output/progressive-marble-v1/`. `--video` ergänzt einen 20-sekündigen MP4-Testclip um den zweiten Ausbau (194–214 s, 720p30); `--process-video` zeigt die ausgebaute Verarbeitung von 360–380 s in 1080p30 mit manueller Kameraposition 46 und Zoom 1,2. Beide Clips enthalten AAC-Ton und ein JSON-Rezept. Mit `--full-video` entsteht stattdessen die vollständige kleine Glasproduktion. `--gpu` verwendet die vorhandene Hardwarebeschleunigung.
+
+Tests prüfen vollständige Episoden, exakte Bilanz, reale Ausbauten, minimalen/maximalen Bestand, alle Materialien, Seed-/Format-/Kameraunabhängigkeit, Zeitlupe, UI, natürliches Videoende, Seeking, H.264/AAC und Rezept-Replay. Der Effekttest verfolgt einen vollständigen kleinen Auftrag, prüft reale Auslöser, feste Obergrenzen, endliche Shaderwerte sowie unveränderte Zustands-Hashes und Tonereignisse. Wenige gezielte Renderbilder belegen, dass jede Effektart sichtbare Pixel erzeugt und die PNGs nach direktem Seeking mit denen nach Zwischenbildern übereinstimmen, auch bei Hochkantansicht. Standard ist Software-Rendering; `EBS_GPU=1` aktiviert für den Effekttest lokale Hardwaregrafik.
+
+Für diese Überarbeitung wurden gezielt **26 Fälle** erfolgreich geprüft: 19 Modell-/Browser-/Registrierungsfälle, zwei Effekttests und fünf Audiotests. Die früheren 186 Fälle gehören zur vorherigen 3D-Basisprüfung und wurden in dieser Überarbeitung nicht vollständig wiederholt. Details und Belegdateien stehen im [Prüfbericht](PROGRESSIVE_MARBLE_V1_ABNAHME.md).
 
 ### Laufzeiten der 3D-Exporttests
 
