@@ -215,6 +215,20 @@ test('Oberfläche: Pyramide wählen, Regler und Lautstärken vorhanden, Darstell
   assert.ok(await page.evaluate(() => window.EBS.app.sim === window.__sim), 'Umschalten der Darstellung hat neu gestartet');
   await page.fill('#p-beltSpeed', '1.5'); await page.dispatchEvent('#p-beltSpeed', 'input');
   assert.equal(await page.evaluate(() => window.EBS.app.sim.cfg.beltSpeed), 1.5);
+  // Shared restart handling must retain the related defaults introduced by the
+  // Pyramid theme selector when Marble Works adds its own UI lifecycle hooks.
+  await page.selectOption('#p-theme', '1');
+  assert.deepEqual(await page.evaluate(() => {
+    const p = EBS.app.cfg.params;
+    return [p.theme, p.size, p.beltSpeed, p.current, p.pulse, p.figure];
+  }), [1, 23, .85, 1.9, .15, 1]);
+  assert.equal(await page.inputValue('#p-size'), '23');
+  assert.equal(await page.evaluate(() => EBS.app.sim.cfg.beltSpeed), .85);
+  await page.selectOption('#p-theme', '0');
+  assert.deepEqual(await page.evaluate(() => {
+    const p = EBS.app.cfg.params;
+    return [p.theme, p.size, p.beltSpeed, p.current, p.pulse, p.figure];
+  }), [0, 16, 1, 1, 1, 1]);
   await page.click('#segFormat button[data-v="16:9"]');
   assert.equal(await page.evaluate(() => window.EBS.app.sim.L.land), true);
   await page.waitForTimeout(300);

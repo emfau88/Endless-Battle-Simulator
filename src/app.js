@@ -231,7 +231,7 @@ async function bootLive() {
     }
     markCustomProfile(c.key);
     if (c.restart) {
-      restart({ params: { [c.key]: v } });
+      restart({ params: { ...(c.sets && c.sets[v]), [c.key]: v } }); // Apply the selected scene's related defaults.
       if (c.rebuildUi) { buildScenarioUi(); syncUi(); }
     }
     else {
