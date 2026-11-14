@@ -108,3 +108,40 @@ test('Progressive: live tempo change preserves monotonic time and export events 
   sim.setTimeScale(NaN); assert.ok(Number.isFinite(sim.dt));
   assert.ok(sim.checkInvariants().ok);
 });
+
+test('Progressive: queued marbles keep physical clearance across machines, splitter and merge during every handoff', () => {
+  const sim = make({ orderSize: 48, material: 'mixed', productionSpeed: 2, intensity: 2 });
+  let occupiedQueueChecks = 0, outgoingChecks = 0, injected = false;
+  for (let tick = 0; tick < 240 * 60 && sim.completedAt === null; tick++) {
+    sim.stepOnce();
+    const tr = sim.tracks;
+    const boundaries = [
+      ...sim.stations.polish.map((st, i) => [st, tr.polish[i], tr.coat[i]]),
+      ...sim.stations.coat.map((st, i) => [st, tr.coat[i], tr.cool[i]]),
+      ...sim.stations.anneal.map((st, i) => [st, tr.cool[i], tr.inspect[i]]),
+      [sim.stations.inspect, tr.scan, tr.sort],
+    ];
+    for (const [st, input, output] of boundaries) {
+      const incoming = input.balls[0], outgoing = output.balls.at(-1);
+      const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+      if (incoming && st.ball) {
+        occupiedQueueChecks++;
+        assert.ok(distance(incoming, st.ball) >= 43.99, `Queue penetrates ${st.kind} at ${sim.t}`);
+        if (!injected) {
+          const x = incoming.x, y = incoming.y;
+          incoming.x = st.ball.x; incoming.y = st.ball.y;
+          assert.ok(sim.checkInvariants().errors.some(e => e.includes('Maschinenübergang')), 'Invariant must catch the original overlap regression');
+          incoming.x = x; incoming.y = y; injected = true;
+        }
+      }
+      if (incoming && outgoing && !st.ball) {
+        outgoingChecks++;
+        assert.ok(distance(incoming, outgoing) >= 43.99, `Output handoff overlaps at ${st.kind}`);
+      }
+    }
+    if (tick % 6 === 0) assert.ok(sim.checkInvariants().ok, sim.checkInvariants().errors.join('; '));
+  }
+  assert.ok(sim.completedAt !== null);
+  assert.ok(occupiedQueueChecks > 1000 && outgoingChecks > 100, 'Exercise held-machine and departing-ball boundaries');
+  assert.equal(sim.stats.completed, 48);
+});

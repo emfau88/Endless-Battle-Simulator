@@ -97,6 +97,7 @@
         [this.balls[i].color, this.balls[j].color] = [this.balls[j].color, this.balls[i].color];
       }
       this.rawCursor = 0;
+      this.mergeLane = null;
       this.previousPositions = new Float64Array(this.orderSize * 2);
       const track = (name, route, state, speed = 178) => ({ name, path: route, balls: [], state, speed });
       this.tracks = {
@@ -129,15 +130,17 @@
     setParam(key, value) { this.cfg[key] = value; }
     setTimeScale(value) { if (Number.isFinite(value) && value > 0) this.dt = DT * clamp(value, 0.1, 2); }
     _room(tr) { return !tr.balls.length || tr.balls[tr.balls.length - 1].s >= GAP; }
+    _entryClearance(tr) { return tr.balls.length ? Math.max(0, GAP - tr.balls[tr.balls.length - 1].s) : 0; }
+    _machineClearance(st, out) { return st.ball ? GAP : this._entryClearance(out); }
     _enter(tr, b) {
       if (!this._room(tr)) return false;
       b.tr = tr; b.state = tr.state; b.s = 0; b.v = 0; b.route = null;
       pathAt(tr.path, 0, b); tr.balls.push(b); return true;
     }
-    _move(tr, dt, exit, target = null) {
+    _move(tr, dt, exit, target = null, clearance = null) {
       for (let i = 0; i < tr.balls.length;) {
         const b = tr.balls[i], old = b.s, end = target ? target(b) : tr.path.len;
-        const limit = Math.min(end, i ? tr.balls[i - 1].s - GAP : Infinity);
+        const limit = Math.min(end - (clearance ? clearance(b) : 0), i ? tr.balls[i - 1].s - GAP : Infinity);
         const speed = tr.speed * MATERIALS[b.material].speed;
         b.v = Math.min(speed, b.v + dt * 170);
         b.s = Math.max(old, Math.min(limit, old + b.v * dt));
@@ -153,7 +156,7 @@
       b.x = st.x; b.y = st.y;
       const m = MATERIALS[b.material];
       if (st.kind === 'polish') {
-        b.state = 'polishing'; st.duration = 4.25 * m.polishTime * b.variation;
+        b.state = 'polishing'; st.duration = 3.5 * m.polishTime * b.variation;
         this._event(b.material === 'rubber' ? 'factoryPress' : 'factoryPolish', b);
       } else if (st.kind === 'coat') {
         b.state = 'coating';
@@ -161,7 +164,7 @@
         b.finishLevel = this.level;
         this._event('factoryCoat', b, this.level ? 1 : 0.6);
       } else if (st.kind === 'anneal') {
-        b.state = 'cooling'; st.duration = { glass: 4.3, steel: 2.2, rubber: 1.5 }[b.material];
+        b.state = 'cooling'; st.duration = { glass: 3.55, steel: 2.2, rubber: 1.5 }[b.material];
         this._event('factoryRoll', b, 0.35);
       } else { b.state = 'inspecting'; st.duration = b.material === 'steel' ? 1.9 : 1.5; this._event('factoryScan', b); }
       return true;
@@ -193,7 +196,8 @@
       this.releaseCool = Math.max(0, this.releaseCool - dt);
       if (this.pickup) {
         const b = this.pickup, old = b.s;
-        b.s = Math.min(b.route.len, b.s + dt * 152 * MATERIALS[b.material].speed);
+        const stop = b.route.len - (this._room(this.tracks.feed) ? 0 : GAP);
+        b.s = Math.max(old, Math.min(stop, b.s + dt * 152 * MATERIALS[b.material].speed));
         pathAt(b.route, b.s, b); b.rot += (b.s - old) / b.r;
         if (b.s >= b.route.len && this._enter(this.tracks.feed, b)) { this.pickup = null; this._event('factoryFeed', b); }
       }
@@ -202,7 +206,7 @@
       const releasedLot = this.level < 2 ? Math.max(16, Math.ceil(this.orderSize * 0.6)) : this.orderSize;
       if (!this.pickup && !this.releaseCool && this.rawCursor < releasedLot && this.rawCursor < this.balls.length && this._room(this.tracks.feed)) {
         const b = this.balls[this.rawCursor++];
-        b.route = path([[b.x, b.y], [625, 550], [650, 470]], 22); b.state = 'feed'; b.s = 0;
+        b.route = path([[b.x, b.y], [580, 470], [650, 470]], 22); b.state = 'feed'; b.s = 0;
         this.pickup = b; this.stats.released++;
         this.releaseCool = 1.45 / clamp(this.cfg.intensity, 0.5, 2);
         this._event('factoryImpact', b, 0.45);
@@ -271,24 +275,35 @@
       this._advanceDrops(dt);
       this._move(tr.sort, dt, b => this._drop(b), b => BIN_X[b.color] - 4400);
       this._work(this.stations.inspect, dt, tr.sort);
-      this._move(tr.scan, dt, b => this._start(this.stations.inspect, b));
+      this._move(tr.scan, dt, b => this._start(this.stations.inspect, b), null,
+        () => this._machineClearance(this.stations.inspect, tr.sort));
       // A deterministic zipper alternates the merge priority; neither lane can starve.
       const order = Math.floor(this.workTime / 3) % 2 ? [1, 0] : [0, 1];
-      for (const i of order) this._move(tr.inspect[i], dt, b => this._enter(tr.scan, b));
+      if (this.mergeLane === null && this._room(tr.scan)) {
+        const candidates = order.filter(i => tr.inspect[i].balls.length);
+        candidates.sort((a, b) => (tr.inspect[a].path.len - tr.inspect[a].balls[0].s) - (tr.inspect[b].path.len - tr.inspect[b].balls[0].s));
+        this.mergeLane = candidates[0] ?? null;
+      }
+      for (const i of order) this._move(tr.inspect[i], dt, b => this._enter(tr.scan, b), null,
+        () => this.mergeLane === i && this._room(tr.scan) ? 0 : GAP);
+      if (this.mergeLane !== null && !this._room(tr.scan)) this.mergeLane = null;
       for (let i = 0; i < 2; i++) {
         this._work(this.stations.anneal[i], dt, tr.inspect[i]);
-        this._move(tr.cool[i], dt, b => this._start(this.stations.anneal[i], b));
+        this._move(tr.cool[i], dt, b => this._start(this.stations.anneal[i], b), null,
+          () => this._machineClearance(this.stations.anneal[i], tr.inspect[i]));
         this._work(this.stations.coat[i], dt, tr.cool[i]);
-        this._move(tr.coat[i], dt, b => this._start(this.stations.coat[i], b));
+        this._move(tr.coat[i], dt, b => this._start(this.stations.coat[i], b), null,
+          () => this._machineClearance(this.stations.coat[i], tr.cool[i]));
         this._work(this.stations.polish[i], dt, tr.coat[i]);
-        this._move(tr.polish[i], dt, b => this._start(this.stations.polish[i], b));
+        this._move(tr.polish[i], dt, b => this._start(this.stations.polish[i], b), null,
+          () => this._machineClearance(this.stations.polish[i], tr.coat[i]));
       }
       this._move(tr.feed, dt, b => {
         const lanes = this.level === 2 ? [0, 1] : [0];
         lanes.sort((a, z) => (tr.polish[a].balls.length + !!this.stations.polish[a].ball) - (tr.polish[z].balls.length + !!this.stations.polish[z].ball));
         for (const i of lanes) if (this._room(tr.polish[i])) { b.lane = i; return this._enter(tr.polish[i], b); }
         return false;
-      });
+      }, null, () => (this._room(tr.polish[0]) && (this.level < 2 || this._room(tr.polish[1]))) ? 0 : GAP);
       this._release(dt);
       const queue = tr.feed.balls.length + tr.polish.reduce((n, q) => n + q.balls.length, 0);
       this.stats.maxQueue = Math.max(this.stats.maxQueue, queue);
@@ -327,6 +342,28 @@
         mark(st.ball, st.kind);
         if (!st.active || st.ball.tr) errors.push(`Maschinenzuordnung ${st.ball.id}`);
       }
+      const boundaries = [
+        ...this.stations.polish.map((st, i) => [st, this.tracks.polish[i], this.tracks.coat[i]]),
+        ...this.stations.coat.map((st, i) => [st, this.tracks.coat[i], this.tracks.cool[i]]),
+        ...this.stations.anneal.map((st, i) => [st, this.tracks.cool[i], this.tracks.inspect[i]]),
+        [this.stations.inspect, this.tracks.scan, this.tracks.sort],
+      ];
+      for (const [st, input, output] of boundaries) {
+        const incoming = input.balls[0], outgoing = output.balls[output.balls.length - 1];
+        const apart = (a, b) => !a || !b || Math.hypot(a.x - b.x, a.y - b.y) >= 44 - 0.01;
+        if (!apart(incoming, st.ball) || !apart(st.ball, outgoing) || (!st.ball && !apart(incoming, outgoing))) {
+          errors.push(`Maschinenübergang überlappt: ${st.kind}/${st.lane}`);
+        }
+      }
+      const clearPair = (a, b, label) => {
+        if (a && b && Math.hypot(a.x - b.x, a.y - b.y) < 44 - 0.01) errors.push(`Bahnübergang überlappt: ${label}`);
+      };
+      const last = tr => tr.balls[tr.balls.length - 1];
+      clearPair(this.pickup, last(this.tracks.feed), 'Zuführung');
+      for (const tr of this.tracks.polish) clearPair(this.tracks.feed.balls[0], last(tr), 'Verteiler');
+      clearPair(last(this.tracks.polish[0]), last(this.tracks.polish[1]), 'Parallelverteiler');
+      for (const tr of this.tracks.inspect) clearPair(tr.balls[0], last(this.tracks.scan), 'Zusammenführung');
+      clearPair(this.tracks.inspect[0].balls[0], this.tracks.inspect[1].balls[0], 'Parallelzusammenführung');
       if (this.pickup) mark(this.pickup, 'pickup');
       for (const b of this.drops) mark(b, 'drop');
       for (const b of this.balls) {
@@ -353,6 +390,7 @@
       // Presentation settings, world size and render calls are intentionally absent.
       return fnv1a(JSON.stringify({ step: this.step, t: fixed(this.t), dt: this.dt, level: this.level, completedAt: this.completedAt,
         parameters: [this.cfg.material, this.cfg.product, this.cfg.productionSpeed, this.cfg.intensity],
+        mergeLane: this.mergeLane,
         stats: this.stats, reserved: this.reserved, releaseCool: fixed(this.releaseCool), rng: this.rng.s,
         balls: this.balls.map(b => [b.id, b.state, b.material, b.color, b.lane, fixed(b.x), fixed(b.y), fixed(b.s), fixed(b.v), fixed(b.rot), fixed(b.polish), fixed(b.coating), fixed(b.quality), b.binSlot, b.finishLevel, fixed(b.temperature), b.settleAge]),
         stations: [...this.stations.polish, ...this.stations.coat, ...this.stations.anneal, this.stations.inspect].map(st => [st.ball?.id, fixed(st.elapsed), fixed(st.duration)]),
