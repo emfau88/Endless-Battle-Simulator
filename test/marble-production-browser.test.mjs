@@ -33,7 +33,7 @@ test('Progressive production: a complete default episode, useful unlocks and exa
   assert.deepEqual(errors, []);
 });
 
-test('Progressive production: camera, aspect, render cadence and resolution cannot change outcomes or audio', async t => {
+test('Progressive production: camera, aspect, render cadence and resolution cannot change outcomes or raw audio events', async t => {
   const pages = [];
   for (const [aspect, resolution, fps, cameraMode] of [['16:9', 720, 60, 'auto'], ['9:16', 1080, 30, 'manual'], ['1:1', 720, 30, 'overview']]) {
     const { page, errors } = await openExportPage(browser, config({ cameraMode }, { aspect, resolution, fps }));

@@ -6,10 +6,8 @@
   const R = .238, mix = (a,b,f) => a+(b-a)*f;
   const smooth = x => { x=clamp(x,0,1); return x*x*(3-2*x); };
   const X = x => (x-3000)*.0108;
-  function position(x,y) {
-    if(x<=1180) return new T.Vector3(X(x),3.8+Math.max(0,(650-y)/180)*1.1,-3.6);
-    return new T.Vector3(X(x),3.8+smooth((x-4400)/340)*2.5,(y-850)*.018);
-  }
+  const cameraAt=P.cameraAt;
+  function position(x,y) {const p=P.stagePosition(x,y);return new T.Vector3(p.x,p.y,p.z);}
   function rawPosition(b) {
     const i=b.id%60;
     return new T.Vector3(-28.1+(i%5-2)*.47,5.6+Math.floor(i/20)*.47,-3.6+(Math.floor(i/5)%4-1.5)*.47);
@@ -17,31 +15,6 @@
   function collectedPosition(b) {
     const i=b.binSlot;
     return new T.Vector3(X(P.BIN_X[b.bin])+(i%3-1)*.51,1.24+Math.floor(i/9)*.5,6.2+(Math.floor(i/3)%3-1)*.51);
-  }
-  function cameraAt(sim,view,aspect) {
-    const cfg=sim.cfg,t=sim.t,portrait=aspect<1;
-    const overview={x:0,y:2.5,z:.5,span:Math.max(40,75/aspect)};
-    if(cfg.cameraMode==='overview'||view.camera===false) return overview;
-    const expansion=sim.milestones.find(e=>e.type==='parallel');
-    const laneFocus=expansion?smooth((t-expansion.time)/6):0;
-    const focusZ=mix(-3.4,-.2,laneFocus);
-    if(cfg.cameraMode==='manual') return {x:mix(-27,27,cfg.cameraPosition/100),y:3.8,z:cfg.cameraPosition>85?2.5:focusZ,span:(portrait?17:18)/cfg.cameraZoom};
-    const marks=[-27,-16.2,-2.16,7.02,15.12,26,7.02,-2.16,-16.2],phase=Math.max(0,t-11)/24;
-    const i=Math.floor(phase)%marks.length,f=smooth((phase%1-.22)/.78);
-    const shot={x:mix(marks[i],marks[(i+1)%marks.length],f),y:3.8,z:focusZ,span:portrait?17.5:18.5};
-    shot.z=mix(shot.z,2.5,smooth((shot.x-18)/6));
-    for(const event of sim.milestones) {
-      const age=t-event.time;
-      if(age>=0&&age<33) {
-        const weight=smooth(age/7)*(1-smooth((age-24)/9));
-        shot.x=mix(shot.x,event.type==='parallel'?-8.5:-2.16,weight);
-        shot.span=mix(shot.span,event.type==='parallel'?22:19,weight);
-      }
-    }
-    let weight=1-smooth((t-4)/7);
-    if(sim.completedAt!=null) weight=Math.max(weight,smooth((t-sim.completedAt)/8));
-    for(const key of ['x','y','z','span']) shot[key]=mix(shot[key],overview[key],weight);
-    return shot;
   }
   class ProductionRenderer extends EBS.CanvasScene {
     constructor(ctx) {
@@ -248,7 +221,8 @@
     paint(g) {
       const w=this.world.w,h=this.world.h,aspect=w/h,view=this.view,shot=cameraAt(this.sim,view,aspect);
       Object.assign(this.camera3,{left:-shot.span*aspect/2,right:shot.span*aspect/2,top:shot.span/2,bottom:-shot.span/2});
-      this.camera3.position.set(shot.x-33,shot.y+43,shot.z+58);this.camera3.lookAt(shot.x,shot.y,shot.z);this.camera3.updateProjectionMatrix();
+      const offset=P.cameraOffset;
+      this.camera3.position.set(shot.x+offset.x,shot.y+offset.y,shot.z+offset.z);this.camera3.lookAt(shot.x,shot.y,shot.z);this.camera3.updateProjectionMatrix();
       this.beltTexture.offset.x=-this.sim.workTime*.55;this.secondTracks.visible=this.sim.level>=2;
       this._updateBalls();this.machines.update(this.sim);this.effects.update(this.sim,this.ballMeshes,this.camera3);this.gl.render(this.scene,this.camera3);
       g.drawImage(this.gl.domElement,0,0,w,h);if(view.hud!==false)this._hud(g,w,h);
