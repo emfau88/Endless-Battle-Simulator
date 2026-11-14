@@ -46,15 +46,16 @@
   class ProductionRenderer extends EBS.CanvasScene {
     constructor(ctx) {
       super(ctx); this.sim=ctx.sim; this.view=ctx.view||{}; this.kit=P.createDioramaKit(); this.owned=[];
-      this.scene=new T.Scene(); this.scene.background=new T.Color(0xe8e5dd); this.scene.fog=new T.Fog(0xe8e5dd,130,280);
+      this.scene=new T.Scene(); this.scene.background=new T.Color(0xb9b29f); this.scene.fog=new T.Fog(0xb9b29f,130,240);
       this.camera3=new T.OrthographicCamera(-1,1,1,-1,.1,300);
       this.gl=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true,powerPreference:'high-performance'});
       this.gl.setPixelRatio(1); this.gl.setSize(this.canvas.width,this.canvas.height,false);
       this.gl.outputColorSpace=T.SRGBColorSpace; this.gl.toneMapping=T.ACESFilmicToneMapping; this.gl.toneMappingExposure=.86;
       this.gl.shadowMap.enabled=true; this.gl.shadowMap.type=T.PCFSoftShadowMap;
-      this._lighting(); this._stage(); this._tracks(); this._batchStatic(this.scene);this._batchStatic(this.secondTracks);
+      this._lighting();this.environment=P.buildProductionEnvironment3D(this.kit,this.scene);
+      this._stage(); this._tracks(); this._batchStatic(this.scene);this._batchStatic(this.secondTracks);
       this.machines=P.buildMachines3D(this.kit,this.scene,this.sim);
-      this._collectors(); this._balls();
+      this._collectors(); this._balls();this.effects=P.buildProductionEffects3D(this.kit,this.scene,this.sim);
     }
     _own(value) { this.owned.push(value); return value; }
     _batchStatic(parent) {
@@ -90,12 +91,11 @@
     }
     _stage() {
       const k=this.kit,m=k.mat,root=this.scene;
-      k.box(root,360,.1,360,0,-1,0,k.material(0xe1dfd7,.9),0);
       k.box(root,73,.72,20.8,0,-.55,0,m.navy,.3);
       k.box(root,72.6,.26,20.4,0,-.08,0,m.brass,.16);
-      k.box(root,72.2,.38,20,0,.17,0,m.ivory,.14);
+      k.box(root,72.2,.38,20,0,.17,0,this.environment.slabMaterial,.14);
       const zones=[[-28.1,6.6,'01  RAW GLASS'],[-16.2,6.6,'02  POLISH'],[-2.16,8.6,'03  INFUSE'],[7.02,6.6,'04  ANNEAL'],[15.12,6.6,'05  INSPECT'],[26,14.6,'06  COLLECT']];
-      const floor=k.material(0xd7d9cf,.68);
+      const floor=this.environment.zoneMaterial;
       for(const [x,w,name] of zones) {
         k.box(root,w,.12,14.8,x,.42,.15,m.tealLight,.15); k.box(root,w-.2,.04,14.6,x,.5,.15,floor,.1);
         const label=k.label(root,name,x,.38,8.9,Math.min(w-.5,4.7),.65); label.rotation.x=-Math.PI/2;
@@ -177,22 +177,25 @@
       // the small marble size in a production shot.
       const vertices=[],indices=[];
       for(let i=0;i<=48;i++) {
-        const t=i/48,angle=t*Math.PI*2.2,width=.125*Math.pow(Math.sin(Math.PI*t),.75);
+        const t=i/48,angle=t*Math.PI*2.2,width=.145*Math.pow(Math.sin(Math.PI*t),.75);
         for(let j=0;j<=4;j++) {const d=(j/2-1)*width;vertices.push(Math.cos(angle)*d,(t-.5)*.37,Math.sin(angle)*d);}
         if(i)for(let j=0;j<4;j++){const a=(i-1)*5+j;indices.push(a,a+1,a+5,a+1,a+6,a+5);}
       }
       const coreGeo=this._own(new T.BufferGeometry());coreGeo.setAttribute('position',new T.Float32BufferAttribute(vertices,3));coreGeo.setIndex(indices);coreGeo.computeVertexNormals();
       const pearlGeo=this._own(new T.SphereGeometry(.175,24,16));
-      const filamentMaterial=this._own(new T.MeshPhysicalMaterial({color:0xfff3d6,roughness:.24,clearcoat:.65,side:T.DoubleSide}));
+      const filamentMaterial=this._own(new T.MeshPhysicalMaterial({color:0xfff1ca,roughness:.2,clearcoat:.9,
+        clearcoatRoughness:.1,iridescence:.14,iridescenceIOR:1.3,iridescenceThicknessRange:[180,270],side:T.DoubleSide}));
       for(const b of this.sim.balls) {
         const group=new T.Group();this.scene.add(group);
         const material=this._own(new T.MeshPhysicalMaterial({color:0x8a9e9d,roughness:.5,transmission:0,clearcoat:0,iridescence:0,thickness:.10,ior:1.45,envMapIntensity:.72,attenuationColor:0xffffff,attenuationDistance:1.8}));
         const shell=new T.Mesh(shellGeo,material);shell.castShadow=true;shell.receiveShadow=true;group.add(shell);
-        const tint=new T.Color((this.sim.colors||P.COLORS)[b.color].hex);
-        const coreColor=b.pattern==='pearl'?new T.Color(0xfff5e2).lerp(tint,.25):tint.clone().multiplyScalar(.65);
-        const coreMaterial=this._own(new T.MeshPhysicalMaterial({color:coreColor,roughness:b.pattern==='pearl'?.3:.22,clearcoat:.6,side:T.DoubleSide}));
+        const tint=P.pigmentColor((this.sim.colors||P.COLORS)[b.color].hex);
+        const coreColor=b.pattern==='pearl'?new T.Color(0xfff5e2).lerp(tint,.44):tint.clone();
+        const coreMaterial=this._own(new T.MeshPhysicalMaterial({color:coreColor,roughness:b.pattern==='pearl'?.23:.19,
+          clearcoat:1,clearcoatRoughness:.08,iridescence:b.pattern==='pearl'?.5:.1,iridescenceIOR:1.3,
+          iridescenceThicknessRange:[180,290],envMapIntensity:.7,side:T.DoubleSide}));
         const core=new T.Mesh(b.pattern==='pearl'?pearlGeo:coreGeo,coreMaterial),other=new T.Mesh(coreGeo,filamentMaterial);other.rotation.y=1.45;group.add(core,other);
-        this.ballMeshes.push({group,material,core,other,target:new T.Color((this.sim.colors||P.COLORS)[b.color].hex)});
+        this.ballMeshes.push({group,material,core,other,target:tint});
       }
     }
     _updateBalls() {
@@ -212,9 +215,9 @@
         let squash=b.squash||1;if(b.material==='rubber'&&b.state==='polishing') squash=1-Math.sin((sim.stations.polish[b.lane]?.progress||0)*Math.PI)*.18;
         v.group.scale.set(1/Math.sqrt(squash),squash,1/Math.sqrt(squash));
         const finish=smooth((b.coating-.18)/.82),polished=b.polish||0;
-        const glassTint=b.pattern==='clear'?.42:.12;
+        const glassTint=b.pattern==='clear'?.48:.17;
         v.material.color.setHex(0x91a09c).lerp(new T.Color(0xf4fbf9),polished).lerp(v.target,finish*(b.material==='glass'?glassTint:b.material==='steel'?.45:.9));
-        v.material.attenuationColor.setHex(0xffffff).lerp(v.target,finish*.45);
+        v.material.attenuationColor.setHex(0xffffff).lerp(v.target,finish*.5);
         v.material.roughness=b.material==='rubber'?.85:mix(.6,b.material==='steel'?.19:.028,polished);
         v.material.metalness=b.material==='steel'?.96:0;
         // Activate shader features at real processing transitions. Opaque raw
@@ -247,10 +250,10 @@
       Object.assign(this.camera3,{left:-shot.span*aspect/2,right:shot.span*aspect/2,top:shot.span/2,bottom:-shot.span/2});
       this.camera3.position.set(shot.x-33,shot.y+43,shot.z+58);this.camera3.lookAt(shot.x,shot.y,shot.z);this.camera3.updateProjectionMatrix();
       this.beltTexture.offset.x=-this.sim.workTime*.55;this.secondTracks.visible=this.sim.level>=2;
-      this._updateBalls();this.machines.update(this.sim);this.gl.render(this.scene,this.camera3);
+      this._updateBalls();this.machines.update(this.sim);this.effects.update(this.sim,this.ballMeshes,this.camera3);this.gl.render(this.scene,this.camera3);
       g.drawImage(this.gl.domElement,0,0,w,h);if(view.hud!==false)this._hud(g,w,h);
     }
-    destroy() {this.machines?.dispose();this.owned.forEach(x=>x.dispose());this.kit?.dispose();this.env?.dispose();this.gl?.dispose();this.gl?.forceContextLoss();super.destroy();}
+    destroy() {this.effects?.dispose();this.machines?.dispose();this.environment?.dispose();this.owned.forEach(x=>x.dispose());this.kit?.dispose();this.env?.dispose();this.gl?.dispose();this.gl?.forceContextLoss();super.destroy();}
   }
   P.cameraAt=cameraAt;P.Renderer=ProductionRenderer;
 })();

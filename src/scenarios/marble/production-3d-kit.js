@@ -2,6 +2,14 @@
 (function () {
   'use strict';
   const P = EBS.MarbleProduction, T = THREE;
+  // Display-only pigment concentration. Keep the production palette and hue
+  // identity intact while making small reservoirs and glass inserts readable.
+  P.pigmentColor = function (hex) {
+    const color = new T.Color(hex), hsl = {};
+    color.getHSL(hsl, T.SRGBColorSpace);
+    return color.setHSL(hsl.h, Math.min(.98, Math.max(.82, hsl.s + .1)),
+      T.MathUtils.clamp(hsl.l * .83, .42, .59), T.SRGBColorSpace);
+  };
   P.createDioramaKit = function () {
     const geometry = new Map(), materials = new Set(), textures = new Set();
     const material = (color, roughness = .35, metalness = 0, extra = {}) => {

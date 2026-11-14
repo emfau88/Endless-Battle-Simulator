@@ -12,15 +12,19 @@
     const owns = [], animation = [], secondLine = [];
     const palettes = sim.colors || P.COLORS;
     const pigments = palettes.map(c => {
-      const material = new T.MeshStandardMaterial({ color: c.hex, roughness: .24, metalness: .08 });
+      const material = new T.MeshPhysicalMaterial({ color: P.pigmentColor(c.hex), roughness: .2,
+        metalness: .025, clearcoat: 1, clearcoatRoughness: .09, envMapIntensity: .55,
+        iridescence: .08, iridescenceIOR: 1.3, iridescenceThicknessRange: [180, 270] });
       owns.push(material); return material;
     });
     const copper = new T.MeshStandardMaterial({ color: 0xba7848, metalness: .78, roughness: .3 });
     const glass = new T.MeshPhysicalMaterial({ color: 0xe6f8f3, metalness: 0, roughness: .08,
       transparent: true, opacity: .23, depthWrite: false, side: T.DoubleSide, clearcoat: 1 });
+    const cartridgeGlass = new T.MeshPhysicalMaterial({ color: 0xe1f4ef, roughness: .035,
+      transparent: true, opacity: .10, depthWrite: false, side: T.DoubleSide, clearcoat: .9 });
     const amber = new T.MeshStandardMaterial({ color: 0xeab45e, roughness: .25, metalness: .25 });
     const green = new T.MeshStandardMaterial({ color: 0x54a98b, roughness: .22, metalness: .1 });
-    owns.push(copper, glass, amber, green);
+    owns.push(copper, glass, cartridgeGlass, amber, green);
     const boltGeometry = new T.CylinderGeometry(.06, .06, .055, 6);
     owns.push(boltGeometry);
 
@@ -202,7 +206,7 @@
       const reservoirs = [];
       for (let i = 0; i < 6; i++) {
         const x = (i - 2.5) * .59;
-        cylinder(reservoirRack, .205, .205, 1.38, x, 7.95, 0, glass);
+        cylinder(reservoirRack, .205, .205, 1.38, x, 7.95, 0, cartridgeGlass);
         const liquid = cylinder(reservoirRack, .165, .165, 1.15, x, 7.89, 0, pigments[i]);
         cylinder(reservoirRack, .235, .235, .13, x, 8.7, 0, m.ivory);
         cylinder(reservoirRack, .22, .22, .13, x, 7.24, 0, m.brass);
