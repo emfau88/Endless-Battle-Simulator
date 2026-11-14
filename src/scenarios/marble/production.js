@@ -81,6 +81,7 @@
     ];
   };
   sc.panelNote = sim => sim.snapshot().summary;
-  sc.audio = { events: P.audioEvents };
+  sc.audio = { events: P.audioEvents, mixProfile: 'marbleworks-soft-v1', fixedGainDb: 0, ceilingDb: -6 };
+  sc.createAudioMixPlan = (events, context) => P.createAudioMixPlan(events, context);
   EBS.registerScenario(sc);
 })();

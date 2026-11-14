@@ -435,6 +435,7 @@ function installExportAPI(session, extra = {}) {
         naturalDuration: !!session.scenario.hasNaturalDuration?.(session.cfg),
         audio: (session.scenario.audioForParams ? session.scenario.audioForParams(session.cfg.params) : session.scenario.audio) || null, world: session.world,
         audioWorldWidth: session.sim.audioWorldWidth || session.world.w,
+        hasAudioMixPlan: typeof session.scenario.createAudioMixPlan === 'function',
         width: session.app.canvas.width, height: session.app.canvas.height, expected: vs,
         fps: session.cfg.video.fps, physHz: PHYS_HZ, pixi: PIXI.VERSION, matter: global.Matter ? Matter.version : null,
         renderer: session.app.renderer.name, glRenderer: glRendererName(session.app),
@@ -466,6 +467,11 @@ function installExportAPI(session, extra = {}) {
     restart(c) { episodePlan = null; session.start(mergeConfig(session.cfg, c || {})); return session.sim.snapshot(); },
     heap: () => (performance.memory ? performance.memory.usedJSHeapSize : null),
     events: (since) => (session.sim.events || []).filter((e) => e && e.seq >= since).sort((a, b) => a.seq - b.seq),
+    // Presentation-only, after collecting the full episode. Never replace the
+    // original events or read only the simulation's bounded event ring here.
+    audioMixPlan: events => session.scenario.createAudioMixPlan?.(events, {
+      cfg: session.cfg, world: session.world, sim: session.sim, view: session.view,
+    }) || null,
     scenarios: () => [...scenarios.values()].map((s) => ({ id: s.id, title: s.title })),
     ...extra,
   });

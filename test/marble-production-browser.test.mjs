@@ -33,7 +33,7 @@ test('Progressive production: a complete default episode, useful unlocks and exa
   assert.deepEqual(errors, []);
 });
 
-test('Progressive production: camera, aspect, render cadence and resolution cannot change outcomes or audio', async t => {
+test('Progressive production: camera, aspect, render cadence and resolution cannot change outcomes or raw audio events', async t => {
   const pages = [];
   for (const [aspect, resolution, fps, cameraMode] of [['16:9', 720, 60, 'auto'], ['9:16', 1080, 30, 'manual'], ['1:1', 720, 30, 'overview']]) {
     const { page, errors } = await openExportPage(browser, config({ cameraMode }, { aspect, resolution, fps }));
@@ -97,9 +97,16 @@ test('Progressive UI: switch from Classic, preserve live state on reframe and sa
   await page.goto(pathToFileURL(INDEX).href + '?scenario=marble&paused=1');
   await page.waitForFunction(() => EBS.app?.sim);
   assert.equal(await page.inputValue('#scenario'), 'marble');
+  assert.match(await page.textContent('#audioHint'), /−14 LUFS/);
   assert.equal(await page.locator('#p-factoryMode').count(), 0);
   assert.ok(await page.locator('#p-balls').isVisible());
   await page.selectOption('#scenario', 'marbleworks');
+  assert.equal(await page.textContent('#vo-master'), '100 % · Standard');
+  assert.match(await page.textContent('#audioHint'), /Kamerablick/);
+  assert.doesNotMatch(await page.textContent('#audioHint'), /−14 LUFS/);
+  await page.fill('#vol-master', '50'); await page.dispatchEvent('#vol-master', 'input');
+  assert.equal(await page.textContent('#vo-master'), '50 % · −6,0 dB');
+  await page.click('#btnVolumeReset');
   assert.equal(await page.locator('#p-balls').count(), 0);
   assert.ok(await page.locator('#p-orderSize').isVisible());
   assert.ok(await page.locator('#stat-completed').count());
@@ -125,6 +132,7 @@ test('Progressive UI: switch from Classic, preserve live state on reframe and sa
   assert.equal(await page.inputValue('#scenario'), 'marbleworks');
   assert.equal(await page.inputValue('#p-orderSize'), '24');
   await page.selectOption('#scenario', 'marble');
+  assert.match(await page.textContent('#audioHint'), /−14 LUFS/);
   assert.ok(await page.locator('#stat-cycles').count());
   assert.equal(await page.locator('#p-orderSize').count(), 0);
   assert.equal(await page.locator('#p-factoryMode').count(), 0);

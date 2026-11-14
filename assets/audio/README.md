@@ -1,8 +1,48 @@
 # Sounds
 
-Alle Dateien stammen unverändert aus **Kenney – Impact Sounds (1.0)**, www.kenney.nl, Lizenz **Creative Commons Zero
+Die ursprünglichen `impact*.ogg`-Dateien stammen unverändert aus **Kenney – Impact Sounds (1.0)**, www.kenney.nl, Lizenz **Creative Commons Zero
 (CC0)**. Der Lizenztext des Pakets liegt als `KENNEY_LICENSE.txt` bei. Quelle lokal:
 `Dokumente/kenney/kenney_impact-sounds/Audio/`.
+
+## Marble Works · weiche Variante C
+
+Nur Marble Works verwendet die zwölf vorbereiteten `mw-soft-*.ogg`-Dateien. Die ursprünglichen
+Samples bleiben unverändert. Als Basis dienen zwölf lokale Kenney-Aufnahmen aus dem Impact-Sounds-Paket;
+ihre unveränderten Kopien und der originale CC0-Lizenztext liegen in `marbleworks-source/`.
+
+Die Verarbeitung entfernt den harten Anschlag, senkt die Tonhöhe leicht, begrenzt Höhen und Klangdauer
+und blendet die Enden weich aus. Gedämpfte Sinusresonanzen ergänzen den Körper ohne Rauschgenerator,
+Hall oder lange Schleifen. Nach Angleichung der RMS-Pegel werden Glasquellen mit den Amplitudenfaktoren
+0,88 Kenney / 0,12 Synthese gemischt, die übrigen Klänge mit 0,90 / 0,10. Diese Koeffizienten beschreiben
+die Mischung, keine objektiven Prozentwerte der gehörten Klanganteile. Das Ergebnis bleibt Kenney-lastiger
+als die erste separate Hörprobe C.
+
+| Gruppe | Dateien | Verwendung |
+|---|---|---|
+| Glas | `mw-soft-glass-0/1/2.ogg` | Leise Kontakte, Rollen auf der Bahn, kurzer Abschluss |
+| Holz | `mw-soft-wood-0/1/2.ogg` | Vereinzelung, Presse, Weiche und Ausbau |
+| Mechanischer Kontakt | `mw-soft-switch-0/1.ogg` | Prüfung und Sortierung |
+| Weicher Körper | `mw-soft-body-0/1.ogg` | Gummiprodukte |
+| Gedämpftes Metall | `mw-soft-metal-0/1.ogg` | Stahlprodukte, ohne die bisherigen hellen Metallschläge |
+
+`MARBLEWORKS_AUDIO.json` dokumentiert jede Quelle, Bearbeitung, Prüfsumme und den tatsächlich dekodierten
+Pegel. Die Quellenlizenz ist CC0; Kenney verlangt keine Namensnennung, wird hier dennoch genannt.
+Die ergänzende Synthese ist eigener Code in diesem Repository. Der Erzeugungsschritt verwendet
+ausschließlich Node und das vorhandene FFmpeg; im Export werden die fertigen Dateien geladen.
+
+```sh
+node scripts/build-marbleworks-audio.mjs
+node scripts/build-marbleworks-audio.mjs --check
+```
+
+`--check` erzeugt die PCM-Vorstufe erneut im Speicher und prüft Quellen-, PCM-, OGG- und dekodierte
+PCM-Prüfsummen sowie Länge und Spitzenpegel. Bitgleiche Wiedererzeugung ist mit derselben dokumentierten
+FFmpeg-Version geprüft; Encoder-/Decoder-Versionen können Unterschiede in komprimierten Dateien bewirken.
+Die acht vorhandenen Klangrollen und Lautstärkeregler bleiben erhalten. Politur und Beschichtung erhalten
+weiterhin keine Rauschspur. Die Kameraauswahl und der zurückhaltende Gesamtpegel werden separat im
+Marble-Works-Mischprofil angewendet.
+
+## Bestehende Originalklänge
 
 | Datei | Verwendet für |
 |---|---|
