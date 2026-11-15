@@ -24,12 +24,25 @@ test('Scrap-Optik: Bilder nach Seek entsprechen laufendem Zeichnen, auch über d
           const renderer = sc.createRenderer({ sim, world, view: cfg.view, renderScale: 2 / 3 });
           return { sim, renderer };
         };
+        // Map geometry changes round timing. Find the actual explosion/end so
+        // these assertions still cover the pause and transition in each map.
+        const probe = create();
+        while (probe.sim.phase === 'running' && probe.sim.step < 91 * 60) probe.sim.stepOnce();
+        if (probe.sim.phase !== 'pause') throw Error('Expected first round to finish');
+        const endStep = probe.sim.step;
+        const blastStep = probe.sim.events.find(e => e.type === 'blast')?.step ?? 430;
+        probe.renderer.destroy(); probe.sim.destroy();
+        const targets = [Math.ceil((blastStep + 6) / 2) * 2, Math.ceil((endStep + 42) / 2) * 2,
+          Math.ceil((endStep + 210) / 2) * 2];
+        const longSeek = rulesVersion === 'v3' && arena === 'yard' && aspect === '16:9';
+        if (longSeek) targets.push(2100); // Explicit simulate(20) -> 35 s regression.
         // Include a fresh explosion, an end pause and the next round. Drawing
         // AND reading each frame matches the real export path. Rendering-only
         // can switch Chromium's Canvas backend and differs even on the baseline.
-        for (const target of [436, 1530, 2100]) {
+        for (const target of targets) {
           const continuous = create();
-          const start = rulesVersion === 'v3' && arena === 'yard' && aspect === '16:9' && target === 2100 ? 1200 : target - 60;
+          const start = longSeek && target === 2100 ? 1200
+            : target === targets[2] ? Math.max(0, endStep - 60) : Math.max(0, target - 60);
           while (continuous.sim.step < start) continuous.sim.stepOnce();
           let frame;
           while (continuous.sim.step < target) {
@@ -91,13 +104,15 @@ test('Scrap-Optik: dunkle Karten behalten ihren Boden über Seeds und Folgerunde
       // Foundry's thin diagonal strokes differ even for two seed-42 renders.
       // Explicit CPU contexts avoid that backend change; equality stays exact.
       const getContext = HTMLCanvasElement.prototype.getContext;
-      let images, seedsStable, sunny;
+      let images, seedsStable, portraitStable, sunny;
       try {
         HTMLCanvasElement.prototype.getContext = function (type, options) {
           return getContext.call(this, type, type === '2d' ? { ...options, willReadFrequently: true } : options);
         };
         images = maps.map(arena => art.floor(42, 1040, 540, false, arena).toDataURL());
         seedsStable = maps.every((arena, i) => art.floor(314, 1040, 540, false, arena).toDataURL() === images[i]);
+        portraitStable = maps.every(arena => art.floor(42, 540, 1040, false, arena).toDataURL()
+          === art.floor(314, 540, 1040, false, arena).toDataURL());
         sunny = art.floor(42, 1040, 540, true, 'sunshine').toDataURL()
           === EBS.ScrapDaylightArt.floor(42, 1040, 540).toDataURL();
       } finally {
@@ -111,11 +126,11 @@ test('Scrap-Optik: dunkle Karten behalten ihren Boden über Seeds und Folgerunde
       renderer.draw(); const firstFloor = renderer.materialFloor;
       while (sim.roundNumber === 1 && sim.step < 100 * 60) sim.stepOnce();
       renderer.draw();
-      const result = { seedsStable, distinct: new Set(images).size, sunny,
+      const result = { seedsStable, portraitStable, distinct: new Set(images).size, sunny,
         cachedAcrossRounds: firstFloor === renderer.materialFloor, round: sim.roundNumber, ok: sim.checkInvariants().ok };
       renderer.destroy(); sim.destroy(); return result;
     });
-    assert.deepEqual(result, { seedsStable: true, distinct: 3, sunny: true, cachedAcrossRounds: true, round: 2, ok: true });
+    assert.deepEqual(result, { seedsStable: true, portraitStable: true, distinct: 3, sunny: true, cachedAcrossRounds: true, round: 2, ok: true });
     assert.deepEqual(errors.map(e => e.message), []);
   } finally { await page.close(); }
 });

@@ -50,7 +50,7 @@ test('Scrap v3: Material-Tonereignisse verändern den vollständigen Physikzusta
 });
 
 test('Scrap v3: alle vier Karten samt eigener Nord-/Süd-Arena begehbar; drei Seeds kollisionsfrei und im Kamerabild', () => {
-  for(const [arena,portrait] of [['yard',false],['foundry',false],['crossroads',false],['sunshine',false],['sunshine',true]]) {
+  for(const [arena,portrait] of [['yard',false],['yard',true],['foundry',false],['crossroads',false],['sunshine',false],['sunshine',true]]) {
     const world=portrait?{w:1080,h:1920}:{w:1920,h:1080};
     const initial=make({params:{rulesVersion:'v3',arena},world}).roundSim;
     const free=(x,y)=>!initial.blocks.some(b=>Math.hypot(x-Math.max(b.x,Math.min(x,b.x+b.w)),y-Math.max(b.y,Math.min(y,b.y+b.h)))<25);
@@ -78,8 +78,8 @@ test('Scrap v3: alle vier Karten samt eigener Nord-/Süd-Arena begehbar; drei Se
   }
 });
 
-test('Scrap v3: 90% Arena im Querformat; Hochformat, Tempo und Turnierplanung ändern weder Rundenausgang noch Module', () => {
-  const params={rulesVersion:'v3',episodeMode:'tournament',workshop:true},world={w:1920,h:1080};
+test('Scrap v3: 90% Arena im Querformat; Foundrys gedrehte Karte bewahrt Tempo, Rundenausgang und Module', () => {
+  const params={rulesVersion:'v3',arena:'foundry',episodeMode:'tournament',workshop:true},world={w:1920,h:1080};
   const l=EBS.Scrap.layout(world,params);
   assert.ok(l.width*l.height/(world.w*world.h)>.89);
   const a=make({params,world}),b=make({params,timeScale:.64});
@@ -101,9 +101,9 @@ test('Scrap v3: 90% Arena im Querformat; Hochformat, Tempo und Turnierplanung ä
   });
 });
 
-test('Sunny Yard: eigene Nord-/Südstarts im Hochformat; beide Grundrisse bewahren Tempo, Acht-Runden-Ergebnis und Exportplanung', () => {
-  const params={rulesVersion:'v3',arena:'sunshine',episodeMode:'tournament',workshop:true};
-  for(const aspect of ['16:9','9:16']) {
+test('Scrapyard und Sunny Yard: eigene Hochformat-Grundrisse bewahren Tempo, Acht-Runden-Ergebnis und Exportplanung', () => {
+  for(const arena of ['yard','sunshine'])for(const aspect of ['16:9','9:16']) {
+    const params={rulesVersion:'v3',arena,episodeMode:'tournament',workshop:true};
     const world=aspect==='16:9'?{w:1920,h:1080}:{w:1080,h:1920};
     const a=make({params,world}),b=make({params,world,timeScale:.64});
     if(aspect==='9:16') {
@@ -122,6 +122,29 @@ test('Sunny Yard: eigene Nord-/Südstarts im Hochformat; beide Grundrisse bewahr
     const plan=EBS.Scrap.createExportPlan(cfg,world);let result;do{result=plan.advance();}while(!result.done);
     assert.equal(result.durationSec,Math.ceil(a.step/60*30)/30);
   }
+});
+
+test('Scrapyard hochkant: gespiegelte Inseln, 96-AE-Wege und freie Start-/Nachschubpunkte', () => {
+  const round=make({params:{rulesVersion:'v3',arena:'yard'}}).roundSim,blocks=round.blocks;
+  assert.equal(round.arenaVariant,'north-south');
+  const distance=(a,b)=>Math.hypot(Math.max(a.x-b.x-b.w,b.x-a.x-a.w,0),Math.max(a.y-b.y-b.h,b.y-a.y-a.h,0));
+  const pointDistance=(p,b)=>Math.hypot(p.x-Math.max(b.x,Math.min(p.x,b.x+b.w)),p.y-Math.max(b.y,Math.min(p.y,b.y+b.h)));
+  const islands=[];
+  for(const block of blocks) {
+    const connected=islands.filter(group=>group.some(other=>distance(block,other)<.01));
+    if(!connected.length)islands.push([block]);
+    else {
+      connected[0].push(block);
+      for(const rest of connected.slice(1)){connected[0].push(...rest);islands.splice(islands.indexOf(rest),1);}
+    }
+    assert.ok(blocks.some(other=>other.material===block.material&&other.w===block.w&&other.h===block.h&&other.x===1040-block.x-block.w&&other.y===540-block.y-block.h),'180°-gespiegeltes Materialbudget');
+    assert.ok(Math.min(block.x-18,block.y-18,1022-block.x-block.w,522-block.y-block.h)>=96,'96 AE Außenpassage');
+  }
+  assert.equal(islands.length,8);
+  for(let i=0;i<islands.length;i++)for(const a of islands[i])for(const group of islands.slice(i+1))for(const b of group)
+    assert.ok(distance(a,b)>=96,'auch diagonale Passagen zwischen getrennten Inseln sind breit');
+  for(const point of [...round.robots,...round.pickups,...round.pads])
+    assert.ok(blocks.every(block=>pointDistance(point,block)>=40),'Start/Nachschub hält Abstand zur Deckung');
 });
 
 test('Scrap: Quelle und extrahierte Simulation/Renderer sind unverändert', () => {

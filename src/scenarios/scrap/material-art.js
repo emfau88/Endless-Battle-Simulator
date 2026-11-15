@@ -62,7 +62,7 @@
     g.beginPath();g.moveTo(83,101);g.lineTo(101,101);g.lineTo(101,83);
     g.strokeStyle=color;g.lineWidth=3;g.stroke();g.restore();
   }
-  function floorMarkings(seed,w,h,arena,places) {
+  function floorMarkings(seed,w,h,arena,places,northSouth=false) {
     const c=canvas(w*2,h*2),g=c.getContext('2d'),accent=floorStyles[arena].accent;g.scale(2,2);
     g.lineCap='butt';g.lineJoin='round';g.strokeStyle=accent;
     g.globalAlpha=.12;
@@ -74,7 +74,8 @@
       line(g,w/2+Math.cos(a)*57,h/2+Math.sin(a)*57,w/2+Math.cos(a)*64,h/2+Math.sin(a)*64,accent,1.5);
     }
     g.globalAlpha=.14;
-    for(const y of [h/2-47,h/2+47])line(g,80,y,w-80,y,accent,3);
+    if(northSouth)for(const x of [w/2-47,w/2+47])line(g,x,80,x,h-80,accent,3);
+    else for(const y of [h/2-47,h/2+47])line(g,80,y,w-80,y,accent,3);
     if(arena==='crossroads') {
       g.globalAlpha=.16;g.setLineDash([18,22]);
       for(const [x,y,xx,yy] of [[80,h/2,w/2-80,h/2],[w/2+80,h/2,w-80,h/2],
@@ -91,7 +92,12 @@
       }
     }
     const colors=['#ff725e','#54dce8','#ffce63','#b0e779'];
-    places.starts.forEach(([x,y],i)=>startField(g,x>w/2?w:0,y>h/2?h:0,x>w/2,y>h/2,colors[i]));
+    places.starts.forEach(([x,y],i)=>{
+      // Authored portrait starts need their own painted bays, rather than
+      // inherited corner fields from the rotated landscape arena.
+      if(northSouth)startField(g,x+(x>w/2?78:-78),y+(y>h/2?78:-78),x>w/2,y>h/2,colors[i]);
+      else startField(g,x>w/2?w:0,y>h/2?h:0,x>w/2,y>h/2,colors[i]);
+    });
     g.globalAlpha=.12;
     for(const [x,y] of places.weapons) {
       g.setLineDash([4,6]);g.strokeStyle=accent;g.lineWidth=1;g.strokeRect(x-22,y-22,44,44);g.setLineDash([]);
@@ -106,11 +112,16 @@
     for(let i=0;i<360;i++) {
       const a=noise(seed+31,i),b=noise(seed+37,i),d=noise(seed+41,i);let x,y;
       const area=i%5;
-      if(area===0) {x=80+a*(w-160);y=h/2+(b>.5?47:-47)+(d-.5)*6;}
+      if(area===0) {
+        if(northSouth){x=w/2+(b>.5?47:-47)+(d-.5)*6;y=80+a*(h-160);}
+        else{x=80+a*(w-160);y=h/2+(b>.5?47:-47)+(d-.5)*6;}
+      }
       else if(area===1) {
         const angle=a*Math.PI*2,r=(b>.5?67:52)+(d-.5)*5;x=w/2+Math.cos(angle)*r;y=h/2+Math.sin(angle)*r;
       } else if(area===2 || (area===4&&arena!=='crossroads')) {
-        const [sx,sy]=places.starts[Math.floor(i/5)%4];x=sx>w/2?w-18-a*120:18+a*120;y=sy>h/2?h-18-b*120:18+b*120;
+        const [sx,sy]=places.starts[Math.floor(i/5)%4];
+        if(northSouth){x=sx-60+a*120;y=sy-60+b*120;}
+        else{x=sx>w/2?w-18-a*120:18+a*120;y=sy>h/2?h-18-b*120:18+b*120;}
       } else if(area===3) {
         const [sx,sy]=places.weapons[(i>>2)%places.weapons.length];
         x=sx+(b>.5?22:-22);y=sy+(a-.5)*44;if(d>.5)[x,y]=[sx+(a-.5)*44,sy+(b>.5?22:-22)];
@@ -185,16 +196,20 @@
     // A map is a stable place: neither the match seed nor round number changes
     // its painted marks, slabs, grime or wear. Sunny retains its original art.
     seed=EBS.util.hashSeed('scrap-floor-'+arena);
-    const style=floorStyles[arena],portrait=h>w,wide=portrait?h:w,short=portrait?w:h;
-    const places=EBS.ScrapMaterials.placements(arena,false),c=canvas(w*2,h*2),g=c.getContext('2d');g.scale(2,2);
+    const style=floorStyles[arena],portrait=h>w,northSouth=portrait&&arena==='yard';
+    const wide=portrait&&!northSouth?h:w,short=portrait&&!northSouth?w:h;
+    const authored=EBS.ScrapMaterials.placements(arena,northSouth);
+    const toScreen=([x,y])=>[EBS.ScrapMaterials.height-y,x];
+    const places=northSouth?Object.fromEntries(Object.entries(authored).map(([key,points])=>[key,points.map(toScreen)])):authored;
+    const c=canvas(w*2,h*2),g=c.getContext('2d');g.scale(2,2);
     rect(g,0,0,w,h,11,'#0b141b');
     const light=g.createLinearGradient(0,0,w,h);light.addColorStop(0,style.top);light.addColorStop(1,style.bottom);
     g.fillStyle=light;g.fillRect(18,18,w-36,h-36);
     g.save();g.beginPath();g.rect(18,18,w-36,h-36);g.clip();
-    g.save();if(portrait){g.translate(w,0);g.rotate(Math.PI/2);}
+    g.save();if(portrait&&!northSouth){g.translate(w,0);g.rotate(Math.PI/2);}
     floorSurface(g,seed,wide,short,arena);
     floorWear(g,seed,wide,short,arena,places.pads);
-    const marks=floorMarkings(seed,wide,short,arena,places);g.drawImage(marks,0,0,wide,short);marks.width=marks.height=1;
+    const marks=floorMarkings(seed,wide,short,arena,places,northSouth);g.drawImage(marks,0,0,wide,short);marks.width=marks.height=1;
     g.restore();
     // Illumination stays at screen top-left even when the authored map turns.
     const top=g.createLinearGradient(0,18,0,32);top.addColorStop(0,'#00000059');top.addColorStop(1,'#00000000');
@@ -206,7 +221,7 @@
       g.fillStyle=shade;g.fillRect(x-155,y-155,310,310);
     }
     g.restore();
-    const pads=portrait?places.pads.map(([x,y])=>[EBS.ScrapMaterials.height-y,x]):places.pads;
+    const pads=portrait&&!northSouth?places.pads.map(toScreen):places.pads;
     floorRim(g,w,h,pads);return c;
   }
   function block(b,cache,sunny=false) {
