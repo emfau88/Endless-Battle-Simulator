@@ -565,6 +565,7 @@
       });
     }
     finale(g) {
+      if (this._usesDarkMaterialArt()) { this.materialFinale(g); return; }
       const s = this.sim, l = this.overlayLayout(), champions = s.champions();
       const rows = [...s.roundSim.robots].sort((a,b) => s.wins[b.id] - s.wins[a.id] || a.id - b.id);
       g.save(); g.translate(l.x, l.y); g.scale(l.size / 1000, l.size / 1000);
@@ -695,15 +696,148 @@
       g.restore();
       if(final)this.finale(g);
       else if(r.phase==='ended') {
-        const winner=r.robots.find(p=>p.id===r.winner),xx=l.x+l.width/2,yy=l.y+l.height/2;
-        box(g,xx-260,yy-62,520,124,12);g.fillStyle='#101e29ed';g.fill();g.strokeStyle=winner?colorOf(winner):'#c2c9c6';g.lineWidth=2;g.stroke();
-        text(g,winner?`${winner.name} WINS`:'DRAW',xx,yy-13,34,winner?colorOf(winner):'#d1d9d5','center');
-        text(g,s.phase==='pause'?`NEXT ROUND IN ${Math.ceil((s.pauseUntil-s.step)/60)}s`:'ROUND COMPLETE',xx,yy+30,17,'#aabfc8','center');
+        if (this._usesDarkMaterialArt()) this.materialRoundBanner(g);
+        else {
+          const winner=r.robots.find(p=>p.id===r.winner),xx=l.x+l.width/2,yy=l.y+l.height/2;
+          box(g,xx-260,yy-62,520,124,12);g.fillStyle='#101e29ed';g.fill();g.strokeStyle=winner?colorOf(winner):'#c2c9c6';g.lineWidth=2;g.stroke();
+          text(g,winner?`${winner.name} WINS`:'DRAW',xx,yy-13,34,winner?colorOf(winner):'#d1d9d5','center');
+          text(g,s.phase==='pause'?`NEXT ROUND IN ${Math.ceil((s.pauseUntil-s.step)/60)}s`:'ROUND COMPLETE',xx,yy+30,17,'#aabfc8','center');
+        }
         this.workshopPanel(g);
       }
       if(this.view.hud)this.materialHud(g,final);
     }
+    _usesDarkMaterialArt() {
+      return this.sim.cfg.rulesVersion === 'v3' && this.sim.cfg.arena !== 'sunshine';
+    }
+    _materialResultProgress(final = false) {
+      const s = this.sim;
+      let elapsed;
+      if (final) elapsed = 5 - (s.outroUntil - s.step) / 60;
+      else if (s.phase === 'pause') elapsed = s.cfg.endPauseSec - (s.pauseUntil - s.step) / 60;
+      else {
+        // With repeatRounds=false there is no future pause deadline. The
+        // retained round-end event gives the same analytic entrance instead.
+        let end = null;
+        for (let i = s.events.length - 1; i >= 0; i--) {
+          const event = s.events[i];
+          if (event.round < s.roundNumber) break;
+          if (event.type === 'round_end' && event.round === s.roundNumber) { end = event; break; }
+        }
+        elapsed = end ? (s.step - end.step) / 60 : .25;
+      }
+      return Math.max(0, Math.min(1, elapsed / .25));
+    }
+    _materialResultIcon(g, robot, x, y, size = 64) {
+      if (robot) {
+        const body = this.arena._bodyTexture(colorOf(robot), false, damageStage(robot));
+        // Crop only transparent padding; the complete chassis and tracks fit.
+        g.drawImage(body, 64, 64, 288, 288, x, y, size, size);
+      } else {
+        box(g, x + 5, y + 5, size - 10, size - 10, 8);
+        g.strokeStyle = '#899ba3'; g.lineWidth = 2; g.stroke();
+        text(g, '=', x + size / 2, y + size / 2 - 1, 35, '#c2c9c6', 'center', 700);
+      }
+    }
+    materialRoundBanner(g) {
+      const s = this.sim, r = s.roundSim, l = this.layout;
+      const winner = r.robots.find(robot => robot.id === r.winner), color = winner ? colorOf(winner) : '#c2c9c6';
+      const progress = this._materialResultProgress();
+      if (progress <= 0) return;
+      const width = Math.min(560, l.width - 32), height = 136;
+      g.save(); g.translate(l.x + l.width / 2, l.y + l.height / 2);
+      g.scale(.94 + .06 * progress, .94 + .06 * progress); g.globalAlpha *= progress;
+      g.shadowColor = rgba(color, .35); g.shadowBlur = 18;
+      box(g, -width / 2, -height / 2, width, height, 12); g.fillStyle = '#101e29ed'; g.fill();
+      g.shadowBlur = 0; g.shadowColor = 'transparent'; g.strokeStyle = color; g.lineWidth = 2; g.stroke();
+      this._materialResultIcon(g, winner, -width / 2 + 23, -32);
+      const left = -width / 2 + 108;
+      text(g, winner ? `${winner.name} WINS` : 'DRAW', left, -16, 34, color);
+      const status = s.phase === 'pause'
+        ? `NEXT ROUND IN ${Math.max(0, Math.ceil((s.pauseUntil - s.step) / 60))}s` : 'COMPLETE';
+      text(g, `ROUND ${s.roundNumber} · ${status}`, left, 25, 17, '#aabfc8');
+      g.restore();
+    }
+    materialFinale(g) {
+      const s = this.sim, l = this.overlayLayout(), champions = s.champions();
+      const rows = [...s.roundSim.robots].sort((a, b) => s.wins[b.id] - s.wins[a.id] || a.id - b.id);
+      const winner = champions.length === 1 ? rows[0] : null, color = winner ? colorOf(winner) : '#c2c9c6';
+      const progress = this._materialResultProgress(true);
+      g.save(); g.translate(l.x, l.y); g.scale(l.size / 1000, l.size / 1000);
+      g.fillStyle = '#07131bb8'; g.fillRect(0, 0, 1000, 1000);
+      if (progress <= 0) { g.restore(); return; }
+      g.translate(500, 500); g.scale(.94 + .06 * progress, .94 + .06 * progress); g.translate(-500, -500);
+      g.globalAlpha *= progress;
+      g.shadowColor = rgba(color, .35); g.shadowBlur = 18;
+      box(g, 100, 150, 800, 700, 26); g.fillStyle = '#132532f5'; g.fill();
+      g.shadowBlur = 0; g.shadowColor = 'transparent'; g.strokeStyle = color; g.lineWidth = 2; g.stroke();
+      text(g, 'TOURNAMENT COMPLETE', 500, 214, 26, '#c1d4df', 'center');
+      const title = winner ? `${winner.name} WINS` : 'TIED FOR FIRST';
+      g.font = `700 46px ${FONT}`;
+      const left = 500 - (82 + g.measureText(title).width) / 2;
+      this._materialResultIcon(g, winner, left, 250);
+      text(g, title, left + 82, 282, 46, color);
+      text(g, '8 ROUNDS  ·  FINAL STANDINGS', 500, 337, 23, '#9eb4bf', 'center');
+      rows.forEach((robot, i) => {
+        const y = 425 + i * 84, leading = champions.includes(robot.id), team = colorOf(robot);
+        box(g, 158, y - 30, 684, 65, 10); g.fillStyle = leading ? '#2d3e42' : '#1b303c'; g.fill();
+        text(g, leading ? '★' : '·', 185, y, 24, leading ? team : '#80949d');
+        text(g, robot.name, 232, y, 32, team);
+        const wins = s.wins[robot.id];
+        text(g, `${wins} ${wins === 1 ? 'WIN' : 'WINS'}`, 808, y, 28, team, 'right');
+      });
+      text(g, `${s.draws} DRAW${s.draws === 1 ? '' : 'S'}  ·  SEE YOU IN THE NEXT ARENA`, 500, 793, 21, '#9eb4bf', 'center');
+      g.restore();
+    }
+    materialHudPolished(g, final) {
+      const s = this.sim, r = s.roundSim, wide = this.world.w > 1500;
+      const round = s.cfg.episodeMode === 'tournament' ? `ROUND ${s.roundNumber}/8` : `ROUND ${String(s.roundNumber).padStart(2, '0')}`;
+      const clock = final ? 'END' : EBS.util.fmtTime(Math.ceil(Math.max(0, r.duration - r.t)));
+      text(g, 'SCRAP WARS', 24, 27, 24, '#edf1e5');
+      text(g, EBS.ScrapRules.arenas[s.cfg.arena].name, 25, 52, 12, '#a1b2b9');
+      text(g, round, wide ? 240 : this.world.w - 210, 26, 19, '#dec598');
+      text(g, clock, wide ? 436 : this.world.w - 24, 26, 22, '#edf1e5', 'right');
+      const legendX = wide ? 240 : this.world.w - 326;
+      for (const [i, key] of ['wood', 'stone', 'concrete'].entries()) {
+        const x = legendX + i * 72, material = EBS.ScrapMaterials.materials[key];
+        box(g, x, 46, 9, 9, 1); g.fillStyle = material.color; g.fill();
+        text(g, key.toUpperCase(), x + 14, 51, 10, '#9caeb6');
+      }
+      const start = wide ? 480 : 12, y = wide ? 9 : 70, gap = 12, width = (this.world.w - start - 12 - gap * 3) / 4;
+      r.robots.forEach((robot, i) => {
+        const x = start + i * (width + gap), color = robot.alive ? colorOf(robot) : '#718087';
+        box(g, x, y, width, 54, 6); g.fillStyle = robot.alive ? '#1b2a32' : '#1b252b'; g.fill();
+        g.fillStyle = color; g.fillRect(x, y + 10, 3, 30);
+        text(g, robot.name, x + 13, y + 17, wide ? 17 : 16, color);
+        text(g, `★ ${s.wins[robot.id]}`, x + width - 12, y + 17, 14, color, 'right');
+        const barWidth = width - 112;
+        box(g, x + 13, y + 32, barWidth, 7, 3.5); g.fillStyle = '#0b141b'; g.fill();
+        if (robot.alive) {
+          const hp = Math.max(0, Math.min(1, robot.hp / robot.maxHp)), fillWidth = barWidth * hp;
+          if (fillWidth > 0) {
+            box(g, x + 13, y + 32, fillWidth, 7, Math.min(3.5, fillWidth / 2)); g.fillStyle = color; g.fill();
+          }
+          if (robot.weapon) {
+            g.save(); g.translate(x + width - 72, y + 35); g.scale(.8, .8);
+            this.arena._weapon(g, robot.weapon.kind, robot.weapon.ammo > 0, color, true); g.restore();
+          } else {
+            // An empty silhouette makes the missing weapon visible without
+            // adding another word to the compact status row.
+            g.save(); g.translate(x + width - 59, y + 35);
+            path(g, [[-9,-4],[2,-4],[2,-2],[12,-2],[12,2],[2,2],[2,5],[-9,5]]);
+            g.strokeStyle = '#8096a2'; g.lineWidth = 1.1; g.stroke(); g.restore();
+          }
+          text(g, robot.weapon ? Math.max(0, Math.ceil(robot.weapon.ammo)) : '—', x + width - 12, y + 35, 13, '#c4d1d6', 'right', 650);
+        } else text(g, 'KNOCKED OUT', x + width - 12, y + 35, 10, '#87969d', 'right', 650);
+        if (s.cfg.workshop) {
+          const key = robot.module || s.workshop.modules[robot.id];
+          text(g, key ? EBS.ScrapRules.modules[key].name : `${s.workshop.balances[robot.id]}/4`, x + 13, y + 46, 8,
+            robot.alive ? '#c8ba92' : '#87969d', 'left', 600);
+        }
+      });
+    }
     materialHud(g,final) {
+      if (this._usesDarkMaterialArt()) { this.materialHudPolished(g, final); return; }
       const s=this.sim,r=s.roundSim,portrait=this.layout.kind==='portrait',wide=this.world.w>1500;
       const round=s.cfg.episodeMode==='tournament'?`ROUND ${s.roundNumber}/8`:`ROUND ${String(s.roundNumber).padStart(2,'0')}`;
       const clock=final?'END':EBS.util.fmtTime(Math.ceil(Math.max(0,r.duration-r.t)));

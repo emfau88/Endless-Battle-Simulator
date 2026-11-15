@@ -2,7 +2,9 @@
 
 Umsetzung des [Optikplans](SCRAP_OPTIK_PLAN_2026-11-14.md) bis einschließlich P3,
 auf Branch `codex/scrap-optik`, ausgehend von `09caa3d`.
-Die visuelle Abnahme steht aus. P4–P6 und die Geometrieänderungen M2/M3 sind nicht umgesetzt.
+P1–P3 sind visuell abgenommen. Die anschließende Umsetzung von P4/P5 wird im
+[Fortsetzungsbericht](SCRAP_OPTIK_P4_P5_2026-11-15.md) dokumentiert.
+Dieser Bericht hält den ersten Abnahmestand fest; P6 und M2/M3 bleiben offen.
 Kein Push und kein PR.
 
 ## Änderungen
@@ -118,5 +120,6 @@ Der lokale Belegordner enthält außerdem `capture.mjs` und `compare.mjs` für d
 Bildzeitpunkte und Vergleichsblätter. Die 3-Sekunden-Produktionsprüfungen sind technische
 Exportproben, keine Abnahme eines vollständigen Langvideos.
 
-**Nächster Schritt:** Vorher-/Nachher-Bilder durch den Nutzer abnehmen lassen. Erst danach
-über P4/P5 entscheiden; eine Freigabe dafür oder zum Push ist bisher nicht erteilt.
+**Fortsetzung:** P1–P3 wurden vom Nutzer abgenommen, P4/P5 anschließend freigegeben und
+umgesetzt. Die neuen [Vorher-/Nachher-Belege](SCRAP_OPTIK_P4_P5_2026-11-15.md) warten auf
+ihre Abnahme. Ein Push ist weiterhin nicht freigegeben.
