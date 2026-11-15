@@ -13,7 +13,9 @@
   // Each quadrant mirrors the same cover budget. The central cross and outer
   // circuit stay passable at full robot radius, before anything is destroyed.
   const quadrants = {
-    yard: [[250,112,82,64,'stone'],[342,112,64,64,'wood'],[250,186,82,42,'concrete'],[424,186,64,42,'wood']],
+    // Each outer crate leaves 96 units to the wall and the existing stone
+    // island. Starts and supplies keep their original landscape positions.
+    yard: [[250,112,82,64,'stone'],[342,112,64,64,'wood'],[250,186,82,42,'concrete'],[424,186,64,42,'wood'],[114,150,40,40,'wood']],
     foundry: [[234,108,58,104,'concrete'],[304,108,64,64,'wood'],[390,108,72,64,'stone'],[390,182,72,42,'wood']],
     crossroads: [[232,100,86,60,'stone'],[328,100,64,60,'wood'],[328,170,64,56,'concrete'],[418,184,64,42,'wood']],
     sunshine: [[314,114,124,44,'concrete'],[232,148,64,76,'stone'],[316,176,56,48,'wood'],[382,176,56,48,'wood']],

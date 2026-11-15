@@ -147,6 +147,21 @@ test('Scrapyard hochkant: gespiegelte Inseln, 96-AE-Wege und freie Start-/Nachsc
     assert.ok(blocks.every(block=>pointDistance(point,block)>=40),'Start/Nachschub hält Abstand zur Deckung');
 });
 
+test('Scrapyard quer: zusätzliche Außendeckung lässt breite Wege und freie Starts/Waffen', () => {
+  const round=make({params:{rulesVersion:'v3',arena:'yard'},world:{w:1920,h:1080}}).roundSim;
+  const outer=round.blocks.filter(b=>b.x<200||b.x>840);
+  assert.equal(outer.length,4);
+  const distance=(a,b)=>Math.hypot(Math.max(a.x-b.x-b.w,b.x-a.x-a.w,0),Math.max(a.y-b.y-b.h,b.y-a.y-a.h,0));
+  for(const block of outer) {
+    assert.equal(block.material,'wood');
+    assert.ok(Math.min(block.x-18,block.y-18,1022-block.x-block.w,522-block.y-block.h)>=96);
+    assert.ok(round.blocks.filter(b=>b!==block).every(b=>distance(block,b)>=96),'neue Durchgänge auch diagonal frei');
+    for(const point of [...round.robots,...round.pickups,...round.pads])
+      assert.ok(Math.hypot(point.x-Math.max(block.x,Math.min(point.x,block.x+block.w)),
+        point.y-Math.max(block.y,Math.min(point.y,block.y+block.h)))>=40,'Start/Nachschub frei');
+  }
+});
+
 test('Scrap: Quelle und extrahierte Simulation/Renderer sind unverändert', () => {
   const source = readFileSync(new URL('../docs/reference/scrap-arena.source.html', import.meta.url));
   const manifest = JSON.parse(read('src/scenarios/scrap/SOURCE.json'));
