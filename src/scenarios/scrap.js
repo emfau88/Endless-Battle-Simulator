@@ -508,11 +508,27 @@
     }
     _result(g, round) {
       if (this._sourceLabelPass) this._labels(g, round.robots || [], 900, 900);
-      if (this.skipResult) return;
+      if (this.skipResult || round.phase !== 'ended') return;
       // Preserve the source result banner; enlarge and move it into the arena
       // centre, where it remains legible in a phone-sized portrait export.
       g.save(); g.translate(450, 430); g.scale(2.3, 2.3); g.translate(-450, -112.5);
-      super._result(g, round); g.restore();
+      const winner = typeof round.winner === 'object' && round.winner !== null ? round.winner
+        : (round.robots || []).find(r => r.id === round.winner);
+      const color = winner ? winner.color || colorOf(winner) : '#c5b18e';
+      // Keep the archived banner geometry/font. Its thin vertical stroke can
+      // rasterize differently on the first Canvas draw after a seek; an equal
+      // filled rectangle is stable, including under software rendering.
+      g.beginPath(); g.moveTo(293, 91); g.lineTo(607, 91); g.quadraticCurveTo(615, 91, 615, 99);
+      g.lineTo(615, 126); g.quadraticCurveTo(615, 134, 607, 134); g.lineTo(293, 134);
+      g.quadraticCurveTo(285, 134, 285, 126); g.lineTo(285, 99); g.quadraticCurveTo(285, 91, 293, 91); g.closePath();
+      g.fillStyle = 'rgba(9,18,25,.96)'; g.fill(); g.strokeStyle = rgba(color, .65); g.lineWidth = 1; g.stroke();
+      g.fillStyle = color; g.fillRect(300.75, 102, 2.5, 21);
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = '700 6px "Inter", "Segoe UI", Arial, sans-serif'; g.fillStyle = '#8ba0a9'; g.fillText('ROUND COMPLETE', 450, 103);
+      const c = parseInt(color.slice(1), 16), bright = [c >> 16 & 255, c >> 8 & 255, c & 255].map(v => Math.round(v + (255 - v) * .3));
+      g.font = '800 13px "Inter", "Segoe UI", Arial, sans-serif'; g.fillStyle = `rgb(${bright.join(',')})`;
+      g.fillText(winner ? `${winner.name || ['EMBER', 'AZURE', 'AMBER', 'MOSS'][winner.id % 4]} WINS` : 'DRAW', 450, 119);
+      g.restore();
     }
   }
   class ScrapRenderer extends EBS.CanvasScene {
