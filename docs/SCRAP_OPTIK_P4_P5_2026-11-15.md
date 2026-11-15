@@ -4,8 +4,8 @@ Abschluss: 15.11.2026. Umsetzung begonnen am 14.11.2026.
 
 Fortsetzung des [Optikplans](SCRAP_OPTIK_PLAN_2026-11-14.md) nach der Abnahme von
 [P1–P3](SCRAP_OPTIK_2026-11-14.md). Vorher ist der abgenommene Stand `e21496d`;
-nachher zeigt zusätzlich P4 und P5 auf `codex/scrap-optik`. Alles bleibt lokal,
-ohne Push oder PR. Die visuelle Abnahme dieser Fortsetzung steht aus.
+nachher zeigt zusätzlich P4 und P5 auf `codex/scrap-optik`. Der Nutzer hat am 15.11.2026
+den Push auf diesen Branch freigegeben; ein Merge in `main` ist ausdrücklich nicht vorgesehen.
 
 ## Änderungen
 
@@ -27,7 +27,8 @@ ohne Push oder PR. Die visuelle Abnahme dieser Fortsetzung steht aus.
 Sunny behält seine eigene Arena-, Stations-, Trümmer- und Waffengrafik sowie seine bisherige
 Kopfzeile und Ergebnisanzeige. Auch die Kopfzeilen/Banner von Classic und V2 bleiben erhalten.
 Blockgrafiken, Kameraverhalten, Kollisionen, Regeln und Simulation sind unverändert.
-P6 und die Kartenumbauten M2/M3 sind nicht umgesetzt.
+Die Kartenumbauten M2/M3 sind nicht umgesetzt. P6 (eigene Schrift) ist auf Nutzerwunsch
+nicht vorgesehen.
 
 ## Vorher / Nachher
 
@@ -110,6 +111,7 @@ Der neue Vorher-Lauf misst P3 im aktuellen Messfenster; zusätzlich wird die kum
 
 ## Stand
 
-- P4: `0d431f3`, separat geprüft und lokal committed.
-- P5: zusammen mit diesen Abnahmebelegen lokal committed.
-- Nächster Schritt: visuelle Abnahme von P4/P5. Kein Push und kein PR freigegeben.
+- P4: `0d431f3`, separat geprüft und committed.
+- P5: `41db9a8`, zusammen mit diesen Abnahmebelegen committed.
+- Push auf `codex/scrap-optik` freigegeben; kein Merge in `main`.
+- Offene Erweiterungen: M2/M3. P6 entfällt auf Nutzerwunsch.

@@ -6,13 +6,13 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Was | Commit | Bericht |
 |---|---|---|
-| Scrap-Optik P4/P5: gemeinsame Schilder, ruhigere Stationen/Trümmer, Waffenschatten, englisches HUD und neue Runden-/Turnierbanner auf den dunklen V3-Karten. Lokal umgesetzt; visuelle Abnahme ausstehend, kein Push. | Branch `codex/scrap-optik` | [Vorher/Nachher und Prüfungen](SCRAP_OPTIK_P4_P5_2026-11-15.md) |
+| Scrap-Optik P4/P5: gemeinsame Schilder, ruhigere Stationen/Trümmer, Waffenschatten, englisches HUD und neue Runden-/Turnierbanner auf den dunklen V3-Karten. Umgesetzt und geprüft; Push auf den Branch freigegeben, kein Merge. | `0d431f3`, `41db9a8` | [Vorher/Nachher und Prüfungen](SCRAP_OPTIK_P4_P5_2026-11-15.md) |
 
 ## 14.11.2026
 
 | Was | Commit | Bericht |
 |---|---|---|
-| Scrap-Optik P1–P3: Ereigniseffekte und Brandflecken, konstante Kartenböden mit eigener Identität, 4×-Robotertexturen, Doppelrohr, Schadensstufen und Wracks. Simulation und Kamera unverändert. Lokal umgesetzt und visuell abgenommen, kein Push. | Branch `codex/scrap-optik` | [Vorher/Nachher und Prüfungen](SCRAP_OPTIK_2026-11-14.md) |
+| Scrap-Optik P1–P3: Ereigniseffekte und Brandflecken, konstante Kartenböden mit eigener Identität, 4×-Robotertexturen, Doppelrohr, Schadensstufen und Wracks. Simulation und Kamera unverändert. Umgesetzt und visuell abgenommen. | Branch `codex/scrap-optik` | [Vorher/Nachher und Prüfungen](SCRAP_OPTIK_2026-11-14.md) |
 
 ## 13.11.2026
 
