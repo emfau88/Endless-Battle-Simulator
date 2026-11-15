@@ -6,6 +6,8 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Was | Commit | Bericht |
 |---|---|---|
+| Zusätzlich geprüfter Classic-Ergebnisbanner: vorbestehende 43-Pixel-Abweichung beim ersten Bild nach Seek durch gefüllten Farbbalken im Adapter behoben. Archivquellen erhalten; exakte Software-Bildvergleiche und Classic-Clip bestanden. | `01510fb` | [Prüfungen](SCRAP_GEOMETRIE_2026-11-15.md#prüfungen-und-grenzen) |
+| Scrapyard M3/M2: eigener Hochformat-Grundriss mit Nord-/Südstarts und passendem Nachschub; vier zusätzliche gespiegelte Holzkisten im Querformat. Verändert bewusst V3-Scrapyard-Ergebnisse. Foundry, Crossroads, Sunny und Original/V2 erhalten. | `3655ae6`, `b056906` | [Geometrie, Bilder und Prüfungen](SCRAP_GEOMETRIE_2026-11-15.md) |
 | Scrap-Optik P4/P5: gemeinsame Schilder, ruhigere Stationen/Trümmer, Waffenschatten, englisches HUD und neue Runden-/Turnierbanner auf den dunklen V3-Karten. Umgesetzt und geprüft; Push auf den Branch freigegeben, kein Merge. | `0d431f3`, `41db9a8` | [Vorher/Nachher und Prüfungen](SCRAP_OPTIK_P4_P5_2026-11-15.md) |
 
 ## 14.11.2026
