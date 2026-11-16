@@ -95,3 +95,18 @@ node export.mjs --config presets/production/territory-short.json --param videoEn
 ```
 
 Im Simulator: Szenario Territory Wars, Knopf „Short-Vorlage“. Die Videolänge wird automatisch berechnet.
+
+## 7 · Vorschlag: Speerträger und Champions
+
+**Speerträger (gebaut als Vorschau, Branch `feat/territory-soldaten`).** Die Panzer des Originals sind auf der Karte
+kaum zu sehen und passen nicht zu den Burgen. Mit dem Regler „Einheiten: Speerträger“ stehen und marschieren
+stattdessen kleine Soldaten mit Schild in der Fraktionsfarbe, Helm und Speer. Gleiche Anzahl und gleiche Stellen wie
+bisher die Panzer; die Simulation ist unberührt. Der archivierte Renderer bleibt unverändert: Eine abgeleitete
+Ansicht (`units.js`) lässt ihn alles außer seinen Panzern zeichnen und setzt die Soldaten in einem zweiten Durchgang
+mit demselben Licht dazu. Standard bleibt „Panzer“, bis die Optik freigegeben ist; dann stellt die Short-Vorlage um.
+
+**Champions (nur Vorschlag).** Ein großes Wesen je Fraktion wäre ein starker Blickfang, als vier eigene Monster aber
+ein großes Paket (vier Modelle, Bewegung, Einbindung). Empfohlen wird ein kleiner erster Schritt: je Fraktion ein
+großer Champion aus demselben Baukasten wie die Soldaten, etwa dreimal so groß, mit eigener Silhouette je Farbe. Er
+steht an der Burg und führt die Angriffe auf Burgen an, also genau die drei Höhepunkte. Reine Darstellung, keine neue
+Regel. Erst wenn das im Clip trägt, lohnen echte Monster.
