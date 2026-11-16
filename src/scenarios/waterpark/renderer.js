@@ -463,7 +463,7 @@ class WaterparkRenderer extends EBS.CanvasScene {
   }
   /** Metal cup of the lift: back rim before the animal, front shell after it (its edge covers the belly). */
   drawCup(g, x, y, front) {
-    const R = this.L.R, y0 = y + R * 0.12, y1 = y + R * 1.02, tw = R * 1.18, bw = R * 0.82, rr = R * 0.26;
+    const R = this.L.R, y0 = y + R * 0.52, y1 = y + R * 1.32, tw = R * 1.18, bw = R * 0.84, rr = R * 0.26;
     if (!front) { ellipse(g, x, y0, tw + 2.5, rr + 2.5, '#3d4f58'); ellipse(g, x, y0, tw, rr, '#6c7f8a'); return; }
     g.lineJoin = 'round';
     const gr = g.createLinearGradient(x - tw, 0, x + tw, 0); gr.addColorStop(0, '#dfe8ef'); gr.addColorStop(.45, '#a5bacb'); gr.addColorStop(1, '#7d93a4');
@@ -542,21 +542,26 @@ class WaterparkRenderer extends EBS.CanvasScene {
     return out.sort((a, b) => a.y - b.y);
   }
   swimmers() {
-    const out = [], t = this.sim.t, wv = this.sim.cfg.waves ?? 0.7;
+    const out = [], t = this.sim.t, wv = this.sim.cfg.waves ?? 0.7, L = this.L, edge = L.waterY + L.R, span = L.H - edge;
     for (const b of this.sim.animals) {
       if (b.state !== 'pool' && b.state !== 'gather' && b.state !== 'route') continue;
       const d = this.display(b); if (d.mode !== 'pool') continue;
-      d.y += Math.sin(t * 2.4 + b.id * 1.7) * 2.2 * wv; d.ang = 0; out.push(d);
+      d.y += Math.sin(t * 2.4 + b.id * 1.7) * 2.2 * wv; d.ang = 0;
+      d.k = 1 + 0.2 * clamp((d.y - edge) / span, 0, 1);   // slight perspective only: at ×1.45 the front swimmers read as giants
+      out.push(d);
     }
     return out.sort((a, b) => a.y - b.y);
   }
   mood(b) {
     const d = this.dayState, cfg = this.sim.cfg, st = this.sim.story || {};
     if (st.show && b.state === 'gather') return { cheer: true, cap: !!(cfg.sleepy && d.p > 0.8) };
-    if (!cfg.sleepy || !d) return null;
-    const p = d.p, t = this.sim.t, per = 6 + (b.id % 4) * 1.3, ph = (t + b.id * 1.37) % per;
+    const t = this.sim.t, share = b.state === 'pool' ? 0.3 : b.state === 'platform' ? 0.2 : 0, waves = share > 0 && (t * 0.21 + b.id * 0.618) % 1 < share;
+    if (!cfg.sleepy || !d) return waves ? { cheer: true } : null;
+    const p = d.p, per = 6 + (b.id % 4) * 1.3, ph = (t + b.id * 1.37) % per;
     const yawn = p > 0.66 && p < 0.9 && ph < 1.4 ? Math.sin(Math.PI * ph / 1.4) : 0;
-    return { yawn, cap: p > 0.8 || p < 0.03, sleep: (p > 0.84 || p < 0.02) && b.state === 'gather' };
+    const m = { yawn, cap: p > 0.8 || p < 0.03, sleep: (p > 0.84 || p < 0.02) && b.state === 'gather' };
+    if (waves && !m.cap && !m.sleep && yawn === 0) m.cheer = true;
+    return m;
   }
   drawCritterAt(g, b, d) {
     this.critters.drawCritter(g, this.sprites[b.kind], b.kind, b.id, d.x, d.y, d.ang, d.mode, this.sim.t, d.speed, d.look, this.sim.cfg.wiggle ?? 1, this.L.R, this.mood(b));
@@ -588,18 +593,18 @@ class WaterparkRenderer extends EBS.CanvasScene {
   drawPool(g, swimmers) {
     const L = this.L, R = L.R, t = this.sim.t, wv = this.sim.cfg.waves ?? 0.7;
     for (const d of swimmers) {
-      const { x, y, b } = d;
+      const { b } = d, x = 0, y = 0;
+      g.save(); g.translate(d.x, d.y); g.scale(d.k, d.k);
       g.lineWidth = 2.6; g.strokeStyle = 'rgba(255,255,255,.85)';
-      g.beginPath(); g.ellipse(x, y + R * 0.47, R * 1.02, R * 0.24, 0, 0, TAU); g.stroke();   // bright collar at the waterline
+      g.beginPath(); g.ellipse(x, y + R * 0.62, R * 0.92, R * 0.2, 0, 0, TAU); g.stroke();   // bright collar at the waterline
       g.lineWidth = 3;
       for (let k = 0; k < 2; k++) {
         const ph = (t * 0.55 + b.id * 0.37 + k / 2) % 1;
         g.strokeStyle = `rgba(255,255,255,${(0.8 * (1 - ph) ** 1.3).toFixed(3)})`;
-        g.beginPath(); g.ellipse(x, y + R * 0.47, R * (1.1 + ph * 1.0) + Math.sin(t * 3 + b.id) * wv, R * (0.3 + ph * 0.3), 0, 0, TAU); g.stroke();
+        g.beginPath(); g.ellipse(x, y + R * 0.62, R * (1.05 + ph * 1.0) + Math.sin(t * 3 + b.id) * wv, R * (0.26 + ph * 0.28), 0, 0, TAU); g.stroke();
       }
-      this.drawCritterAt(g, b, d);
-      g.save(); g.beginPath(); g.rect(x - R * 2, y + R * 0.35, R * 4, R * 1.2); g.clip();
-      g.beginPath(); g.arc(x, y, R + 0.5, 0, TAU); g.fillStyle = 'rgba(28,186,206,.55)'; g.fill(); g.restore();
+      this.drawCritterAt(g, b, { ...d, x, y });
+      this.waterBand(g, b, t);
       const m = this.mood(b);
       if (m && m.sleep) {
         g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -610,7 +615,18 @@ class WaterparkRenderer extends EBS.CanvasScene {
         }
         g.globalAlpha = 1;
       }
+      g.restore();
     }
+  }
+  /** Half-submerged look in the swimmer's own frame: water over the lower third with a moving wavy edge and a bright line on it. */
+  waterBand(g, b, t) {
+    const R = this.L.R, top = u => R * 0.54 + Math.sin(u * 4.5 + t * 3.2 + b.id) * R * 0.05;
+    g.save(); g.beginPath(); g.moveTo(-R * 2, R * 1.6);
+    for (let i = 0; i <= 16; i++) { const u = -2 + i * 0.25; g.lineTo(u * R, top(u)); }
+    g.lineTo(R * 2, R * 1.6); g.closePath(); g.clip();
+    g.beginPath(); g.arc(0, 0, R + 0.5, 0, TAU); g.fillStyle = 'rgba(28,186,206,.58)'; g.fill(); g.restore();
+    g.strokeStyle = 'rgba(255,255,255,.88)'; g.lineWidth = 2.2; g.lineCap = 'round';
+    g.beginPath(); for (let i = 0; i <= 12; i++) { const u = -0.82 + i * 0.1367; i ? g.lineTo(u * R, top(u)) : g.moveTo(u * R, top(u)); } g.stroke();
   }
   drawSplashes(g, t) {
     for (const e of this.sim.recent || []) {
@@ -637,12 +653,12 @@ class WaterparkRenderer extends EBS.CanvasScene {
     g.globalAlpha = a * 0.6;
     for (const b of this.sim.animals) if (b.state === 'lift') {
       const q = this.sim.pose(b); if (q.y > L.waterY) continue;
-      g.save(); g.beginPath(); g.rect(q.x - R * 2, q.y - R * 3, R * 4, R * 3.12); g.clip();
+      g.save(); g.beginPath(); g.rect(q.x - R * 2, q.y - R * 3, R * 4, R * 3.52); g.clip();
       this.drawCritterAt(g, b, { x: q.x, y: q.y, ang: 0, mode: 'lift', speed: 0, look: [0, -1] }); g.restore();
     }
     g.globalAlpha = a;
     for (const d of riders) this.drawCritterAt(g, d.b, d);
-    for (const d of swimmers) { g.save(); g.beginPath(); g.rect(d.x - R * 2, d.y - R * 3, R * 4, R * 3.35); g.clip(); this.drawCritterAt(g, d.b, d); g.restore(); }
+    for (const d of swimmers) { g.save(); g.translate(d.x, d.y); g.scale(d.k, d.k); g.beginPath(); g.rect(-R * 2, -R * 3, R * 4, R * 3.33); g.clip(); this.drawCritterAt(g, d.b, { ...d, x: 0, y: 0 }); g.restore(); }
     g.globalAlpha = 1;
   }
 
