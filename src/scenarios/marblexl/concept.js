@@ -742,6 +742,8 @@ const ST = (() => {
 })();
 const BIG_ROT0 = A_PICK + BIG_W * ST.ride;                         // eine Tasche steht bei der Übergabe bereit
 const railTime = (c) => colS[c] / 230;
+// Glühen: wächst im Ofen von null an und klingt auf dem Weg zur Farbstation wieder ganz ab
+const cooling = (u) => 1 - smooth((u - ST.drop) / (ST.colour - ST.drop));
 const slotIndex = (n) => { const c = colorOf(n), first = Math.ceil(-ST.rail / PERIOD); let k = BASE[c]; for (let m = first; m < n; m++) if (colorOf(m) === c) k++; return k; };
 const fallTime = (c, idx) => Math.sqrt(2 * Math.max(40, SLOT0 - idx * SP - COLS[c].yRail) / 1500);
 
@@ -766,15 +768,16 @@ function poseOf(n, t) {
   if (u < ST.polOut) { const f = seg('polish', 'polOut'); o.x = 1970; o.y = 800; o.kind = f > 0.55 ? 'clear' : 'washed'; o.work = f; return o; }
   o.kind = 'clear';
   if (u < ST.kiln) { o.x = lerp(1970, 2400, smooth(seg('polOut', 'kiln'))); o.y = 800; return o; }
-  if (u < ST.dropIn) { const f = seg('kiln', 'dropIn'); o.x = lerp(2400, 3200, f); o.y = 800; o.heat = 0.06 + 0.94 * smooth(f * 1.15); o.kf = f; return o; }
+  if (u < ST.dropIn) { const f = seg('kiln', 'dropIn'); o.x = lerp(2400, 3200, f); o.y = 800; o.heat = smooth(f / 0.9); o.kf = f; return o; }
   o.heat = 1;
   if (u < ST.drop) { o.x = lerp(3200, 3240, seg('dropIn', 'drop')); o.y = 800; o.trail = true; return o; }
-  if (u < ST.toCradle) { const f = seg('drop', 'toCradle'), q = pathAt(PATHS.drop, PATHS.drop.len * (0.35 * f + 0.65 * f * f), P); o.x = q.x; o.y = q.y; o.heat = 1 - 0.1 * f; o.trail = true; return o; }
-  if (u < ST.colour) { const f = smooth(seg('toCradle', 'colour')); o.x = lerp(3450, CRADLE.x, f); o.y = 1440; o.heat = 0.9; o.trail = true; return o; }
-  if (u < ST.colourOut) { const f = seg('colour', 'colourOut'); o.x = CRADLE.x; o.y = 1440; o.kind = 'color'; o.tint = smooth((f - 0.14) / 0.5); o.cf = f; o.heat = 0.9 - 0.2 * f; o.work = f; return o; }
+  if (u < ST.toCradle) { const f = seg('drop', 'toCradle'), q = pathAt(PATHS.drop, PATHS.drop.len * (0.35 * f + 0.65 * f * f), P); o.x = q.x; o.y = q.y; o.heat = cooling(u); o.trail = true; return o; }
+  if (u < ST.colour) { const f = smooth(seg('toCradle', 'colour')); o.x = lerp(3450, CRADLE.x, f); o.y = 1440; o.heat = cooling(u); o.trail = true; return o; }
+  o.heat = 0;                                                      // ab der Farbstation ist die Kugel abgekühlt
+  if (u < ST.colourOut) { const f = seg('colour', 'colourOut'); o.x = CRADLE.x; o.y = 1440; o.kind = 'color'; o.tint = smooth((f - 0.14) / 0.5); o.cf = f; o.work = f; return o; }
   o.kind = 'color'; o.tint = 1;
-  if (u < ST.cool) { o.x = lerp(CRADLE.x, 2960, seg('colourOut', 'cool')); o.y = 1440; o.heat = 0.7; return o; }
-  if (u < ST.toWheel) { const f = seg('cool', 'toWheel'), q = pathAt(PATHS.cool, PATHS.cool.len * f, P); o.x = q.x; o.y = q.y; o.heat = Math.max(0, 0.7 - f * 1.0); o.scan = Math.abs(q.x - 2040) < 26; return o; }
+  if (u < ST.cool) { o.x = lerp(CRADLE.x, 2960, seg('colourOut', 'cool')); o.y = 1440; return o; }
+  if (u < ST.toWheel) { const f = seg('cool', 'toWheel'), q = pathAt(PATHS.cool, PATHS.cool.len * f, P); o.x = q.x; o.y = q.y; o.scan = Math.abs(q.x - 2040) < 26; return o; }
   o.heat = 0;
   if (u < ST.ride) { const f = seg('toWheel', 'ride'), q = pathAt(PATHS.toWheel, PATHS.toWheel.len * f, P), e = smooth((f - 0.75) / 0.25); o.x = lerp(q.x, BIG.x + Math.cos(A_PICK) * BIG.rp, e); o.y = lerp(q.y, BIG.y + Math.sin(A_PICK) * BIG.rp, e); return o; }
   if (u < ST.rail) { const a = A_PICK - BIG_W * (u - ST.ride); o.x = BIG.x + Math.cos(a) * BIG.rp; o.y = BIG.y + Math.sin(a) * BIG.rp; return o; }

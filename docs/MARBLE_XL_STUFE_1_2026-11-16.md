@@ -2,7 +2,7 @@
 
 Stand: 16.11.2026. Branch `marble-xl/stufe-1`. Gehört zu R35 und zum
 [Gesamtplan, Abschnitt 9](GESAMTPLAN_2026-11-16.md). **Status: bewegter Entwurf; Rückmeldung zum ersten Testclip
-eingearbeitet; dritte Fassung mit größeren Kugeln und abschaltbaren Schildern liegt als Testclip vor; Rückmeldung dazu
+eingearbeitet; vierte Fassung (größere Kugeln, abschaltbare Schilder, Glühen nur zwischen Ofen und Farbstation) liegt als Testclip vor; Rückmeldung dazu
 steht aus.**
 
 ## Was es ist
@@ -81,9 +81,9 @@ es läuft keine Simulation. Bilder lokal unter `output/marblexl-vorschau/konzept
 | 01 RAW | Vorratskasten, Kettenaufzug, Behälter mit Zellenrad | matte, gesprenkelte Rohkugel |
 | 02 WASH | Glastrommel mit Schaufeln und Wasser | wird sauber und nass glänzend |
 | 03 POLISH | zwei Bürstenräder, Funken | wird klar und glänzend |
-| 04 KILN | Tunnelofen mit Sichtfenster und Abzügen | glüht orange bis weiß |
+| 04 KILN | Tunnelofen mit Sichtfenster und Abzügen | beginnt zu glühen, orange bis weiß; kühlt im Fallrohr danach wieder ab |
 | 05 COLOUR | sechs Pigmenttanks, Injektor, Glaskammer | bekommt Farbe und Wirbel |
-| 06 COOL | geschwungene Glasrohrstrecke vor drei Lüftern | das Glühen klingt ab |
+| 06 COOL | geschwungene Glasrohrstrecke vor drei Lüftern | seit der vierten Fassung ohne Glühen (siehe unten) |
 | 07 INSPECT | Prüfring, Bildschirm, Ausschusskasten | wird geprüft, Ausschuss fällt heraus |
 | 08 LIFT | großes Rad mit zehn Taschen | wird zur Sortierung gehoben |
 | 09 SORT | sechs hohe Röhren | sammelt sich nach Farbe, die Röhren füllen sich |
@@ -203,8 +203,27 @@ Referenz). Kein vollständiger `npm test`.
 **Dritter Testclip** (lokal, `output/marblexl-vorschau/testclip-2026-11-16-v3/`): Querformat, 20 s, 1080p30, Schilder
 aus. Ton unverändert (−24,8 LUFS, Spitze −6 dBFS). Dazu je ein Standbild mit und ohne Schilder.
 
+## Glühen nur zwischen Ofen und Farbstation (16.11.2026, vierte Fassung)
+
+Auftrag des Nutzers: Die Kugeln sollen im Ofen anfangen zu glühen und nach dem Ofen auf dem Weg zur Farbstation
+wieder abkühlen.
+
+| Abschnitt | Vorher | Jetzt |
+|---|---|---|
+| Im Ofen | Glühen beginnt sofort mit einem Sprung | Glühen wächst von null an, volle Glut nach rund 90 % der Ofenstrecke |
+| Fallrohr zur Farbstation | Kugel bleibt fast voll glühend | Glühen klingt weich ab; am unteren Bogen ist die Kugel wieder klar |
+| Farbstation | Kugel kommt glühend an | Kugel kommt abgekühlt und klar an und wird dann gefärbt |
+| 06 COOL | Glühen klingt dort ab | Kein Glühen mehr; die Station kühlt sichtbar nichts mehr ab (offener Punkt) |
+
+Reine Darstellung: Ort und Zustand der Kugeln sind unverändert, der Zustands-Hash des 20-Sekunden-Clips ist gleich
+(`8aa05504`). **Geprüft:** Bildfolge aus dem Clip (Ofen, Fallrohr, Farbstation). Die Tests liefen dafür nicht erneut.
+
+**Vierter Testclip** (lokal, `output/marblexl-vorschau/testclip-2026-11-16-v4/`): Querformat, 20 s, 1080p30, dazu eine
+Bildfolge vom Ofen bis zur Farbstation.
+
 ## Nächster Schritt
 
-Rückmeldung des Nutzers zum dritten Testclip abwarten (Kugelgröße, Bild ohne Schilder; Ton, Ofen und Farbstation
-aus dem zweiten Clip sind ebenfalls noch offen). Offen bleiben: mehr Kugeln gleichzeitig (kürzerer Takt), eigene
+Rückmeldung des Nutzers zum vierten Testclip abwarten (Glühen, Kugelgröße, Bild ohne Schilder; Ton, Ofen und
+Farbstation aus dem zweiten Clip sind ebenfalls noch offen). Zu klären: Was zeigt die Station 06 COOL, wenn die
+Kugeln schon vorher abgekühlt sind? Offen bleiben: mehr Kugeln gleichzeitig (kürzerer Takt), eigene
 Klänge für Trommel, Ofen und Sprühen, Hochformat, danach echte Warteschlangen und Physik.
