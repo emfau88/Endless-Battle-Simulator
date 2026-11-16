@@ -70,8 +70,8 @@ Short-Vorlage geändert wurden.
 
 ## 5 · Grenzen
 
-- **Kein ganzes Short exportiert.** Der Export über 20 Sekunden braucht einen ausdrücklichen Auftrag. Vorhanden sind
-  ein 20-Sekunden-Clip mit Ton und Standbilder über die ganze Länge.
+- **Ein ganzes Short exportiert** (Auftrag vom 16.11.): Seed 42 mit Speerträgern, Messwerte in Abschnitt 8. Die Datei
+  liegt lokal unter `output/` und gehört nicht ins Repository.
 - **Hör- und Handyabnahme offen.** Lautheit und Dichte sind gemessen, nicht gehört. Ob Tempo 2 auf der kleinen
   Karte hektisch wirkt, zeigt erst der laufende Clip.
 - **Die Regie ist eine Inszenierung.** Der Außenseiter gewinnt immer. Wer das nicht will, wählt „Ohne Drehbuch“;
@@ -96,16 +96,17 @@ node export.mjs --config presets/production/territory-short.json --param videoEn
 
 Im Simulator: Szenario Territory Wars, Knopf „Short-Vorlage“. Die Videolänge wird automatisch berechnet.
 
-## 7 · Vorschlag: Speerträger und Champions
+## 7 · Speerträger und Vorschlag Champions
 
 ![Links Panzer wie bisher, rechts Speerträger](reference/territory-speertraeger-vergleich-2026-11-16.jpg)
 
-**Speerträger (gebaut als Vorschau, Branch `feat/territory-soldaten`).** Die Panzer des Originals sind auf der Karte
+**Speerträger (vom Nutzer am 16.11. freigegeben).** Die Panzer des Originals sind auf der Karte
 kaum zu sehen und passen nicht zu den Burgen. Mit dem Regler „Einheiten: Speerträger“ stehen und marschieren
 stattdessen kleine Soldaten mit Schild in der Fraktionsfarbe, Helm und Speer. Gleiche Anzahl und gleiche Stellen wie
 bisher die Panzer; die Simulation ist unberührt. Der archivierte Renderer bleibt unverändert: Eine abgeleitete
 Ansicht (`units.js`) lässt ihn alles außer seinen Panzern zeichnen und setzt die Soldaten in einem zweiten Durchgang
-mit demselben Licht dazu. Standard bleibt „Panzer“, bis die Optik freigegeben ist; dann stellt die Short-Vorlage um.
+mit demselben Licht dazu. Der Standard des Reglers bleibt „Panzer“, damit die Originalkarten aussehen wie bisher; die
+Short-Vorlage nutzt die Speerträger.
 
 **Champions (nur Vorschlag).** Ein großes Wesen je Fraktion wäre ein starker Blickfang, als vier eigene Monster aber
 ein großes Paket (vier Modelle, Bewegung, Einbindung). Empfohlen wird ein kleiner erster Schritt: je Fraktion ein
