@@ -230,7 +230,8 @@ async function bootLive() {
     $('btnVolumeReset').disabled = !on;
     $('btnVolumeReset').textContent = currentAudio()?.defaultVolume ? 'Standardmischung wiederherstellen' : 'Alle auf Standard (100 %)';
     $('audioHint').textContent = !hasAudio ? 'Dieses Szenario hat noch keinen Ton.'
-      : on ? (['pyramid-water-v1', 'waterpark-water-v1'].includes(currentAudio()?.mixProfile) ? `Ruhige ${session.scenario.id === 'waterpark' ? 'Wasserpark' : 'Pyramiden'}-Mischung mit durchgehendem Wasserloop und leisen Aktionsgeräuschen. Gesamtlautstärke 70 % = Standard. `
+      : on ? (currentAudio()?.mixProfile === 'naval-sea-v1' ? 'Ruhige Seeschlacht-Mischung mit durchgehendem Meeresrauschen und festen Pegeln. Gesamtlautstärke 100 % = Standard. '
+        : ['pyramid-water-v1', 'waterpark-water-v1'].includes(currentAudio()?.mixProfile) ? `Ruhige ${session.scenario.id === 'waterpark' ? 'Wasserpark' : 'Pyramiden'}-Mischung mit durchgehendem Wasserloop und leisen Aktionsgeräuschen. Gesamtlautstärke 70 % = Standard. `
         : usesCameraAudio() ? 'Der Ton folgt dem Kamerablick. 100 % = ruhige Standardmischung. Nach links leiser, nach rechts lauter. '
         : Number.isFinite(currentAudio()?.fixedGainDb) ? 'Leise, feste Mischung: nur wichtige Ereignisse sind hörbar. 100 % = Standard. Nach links leiser, nach rechts lauter. '
         : 'Standard 100 % = YouTube-Lautheit (−14 LUFS). Nach links leiser, nach rechts lauter (bis 200 % = +6 dB). ')

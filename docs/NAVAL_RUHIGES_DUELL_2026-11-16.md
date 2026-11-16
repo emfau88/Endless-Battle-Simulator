@@ -37,7 +37,7 @@ Noch **nicht** enthalten: Finale am Videoende, Wetter, eigene Tonabstimmung.
 | Schaden je Treffer | rund 0,09 Prozentpunkte, gedämpft, mit Reparatur | fest 2 Prozentpunkte, ohne Dämpfung |
 | Ausgang | keiner, Schaden pendelt bei etwa 70 % | bei 100 % Schaden sinkt das Schiff; Punkt, Feuerpause, neues Schiff |
 | Segelschäden | keine | vier Stufen, an den Schiffsschaden gekoppelt |
-| Standardmischung Ton | 100 % | 65 % Gesamtlautstärke, zusätzlicher Klang „Abpraller“ |
+| Ton | Einmessung auf −14 LUFS | feste Mischung mit leisem Meeresrauschen (Abschnitt 3e, Vorschau) |
 
 **Halbes Flugtempo:** Eine nur langsamere Kugel würde das Ziel nicht erreichen. Deshalb sinkt die Schwerkraft mit dem
 Quadrat des Tempos und die Mündungsgeschwindigkeit mit dem Tempo; die Bahn bleibt gleich, sie dauert doppelt so
@@ -141,6 +141,34 @@ pro Minute per Notfall verschwinden. Das sieht schlechter aus als wenige Abprall
 
 Rundenlänge mit größeren Kanonen (fünf Seeds zu je 20 Minuten, 34 Runden): 134 bis 196 s, Median 168 s.
 
+## 3e · Ton (Vorschau, wartet auf das Hörurteil)
+
+Vierter der freigegebenen Vorschläge.
+
+**Das Problem:** Der Exporter misst jede Tonspur auf −14 LUFS ein. Im ruhigen Duell fallen nur rund 40 Schüsse pro
+Minute; die Einmessung hob die Pegel deshalb so weit an, dass der Begrenzer bis zu 20 dB abfangen musste. Als
+Notlösung stand die Gesamtlautstärke auf 65 %.
+
+**Die Lösung:** eine feste Mischung nach dem Muster von Pyramide und Wasserpark (Profil `naval-sea-v1`).
+
+- **Meeresrauschen als Grundton.** Dieselbe CC0-Aufnahme, die Pyramide und Wasserpark schon nutzen
+  (`pyramid-water-loop.wav`, Nachweis in `assets/audio/PYRAMID_WATER.json`). Es kommt keine neue Datei dazu. Eigener
+  Regler „Meeresrauschen“.
+- **Feste Pegel.** Jeder Klang behält sein Verhältnis; nichts wird nachträglich auf eine Ziellautheit gezogen.
+  100 % Gesamtlautstärke ist wieder der Standard.
+- **Neue Klänge:** Segeldurchschuss (weicher Schlag) und Versenkung (tiefes Holzkrachen). Abpraller, Rakete, Knall
+  und Goldtreffer wie bisher.
+
+| Messwert | vorher (65 %) | feste Mischung |
+|---|---|---|
+| Lautheit der 10-Minuten-Episode | −17,7 LUFS | −20,6 LUFS |
+| Spitze | −5,7 dBFS | −3,0 dBFS |
+| stärkster Eingriff des Begrenzers | bis −20 dB | −6,7 dB, sonst rund −2 dB |
+| 20-Sekunden-Probe, fertiges AAC | −17,8 LUFS | −20,7 LUFS, höchstens −2,9 dBTP |
+
+Die Mischung ist damit etwas leiser, aber die Schüsse behalten ihren Anschlag. Ob die Balance stimmt, entscheidet
+das Hörurteil des Nutzers.
+
 ## 4 · Aufbau im Code
 
 | Datei | Inhalt |
@@ -211,13 +239,12 @@ Modus. Der Standardmodus ist davon nicht betroffen.
   sich oft in den letzten Treffern.
 - **Abpraller sehen aus wie Treffer, zählen aber nicht.** Sie haben keinen Blitz und keinen Holzsplitter-Regen,
   trotzdem kann das beim Zusehen verwirren.
-- **Die Versenkung hat noch keinen eigenen Klang.**
 - **Hochformat und drei oder vier Schiffe** laufen fehlerfrei (auch die Runden), sind aber nicht eigens abgestimmt.
   Bei drei und vier Schiffen tauchen neue Schiffe in der Mitte aus dem Dunst auf, statt hereinzusegeln.
 - **Wenig Abpraller.** Das Deck ist zum Bug hin offen; etwa jeder zweite Treffer springt einmal nach. Eine erhöhte
   Bugkante wurde gemessen und verworfen (Abschnitt 3d).
-- **Der Ton ist vorläufig.** Bei so wenigen Schüssen hebt die Einmessung auf −14 LUFS die Pegelspitzen über die
-  Prüfgrenze des Exporters. Deshalb steht die Standardmischung auf 65 %. Der Segeldurchschuss ist stumm.
+- **Der Ton wartet auf das Hörurteil.** Rakete, Knall und Goldtreffer nutzen vorhandene Klänge; die feste Mischung
+  ist mit −20,6 LUFS leiser als die −14 LUFS des Standardmodus.
 - **Kein Ausschnittsexport.** Die Seek-Regel ist für die Seeschlacht insgesamt noch nicht nachgewiesen.
 - **Offen aus dem Plan:** die Prüflücke R21 und die vollständige Aufteilung von `naval.js` (N0).
 
