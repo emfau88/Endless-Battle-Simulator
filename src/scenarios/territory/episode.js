@@ -7,8 +7,8 @@
   const { clamp, num, bool, hashSeed, fnv1a } = EBS.util;
   const ruleKeys = ['incomeMultiplier', 'aggression', 'offensiveInterval', 'marchDuration'];
   const normalizeParams = (p = {}) => ({
-    profile: ['calm', 'balanced', 'intense', 'custom'].includes(p.profile) ? p.profile : 'balanced',
-    layout: p.layout === 'portrait' ? 'portrait' : 'landscape',
+    profile: ['calm', 'balanced', 'intense', 'blitz', 'custom'].includes(p.profile) ? p.profile : 'balanced',
+    layout: ['portrait', 'short'].includes(p.layout) ? p.layout : 'landscape',
     incomeMultiplier: clamp(num(p.incomeMultiplier, 1), .5, 2),
     aggression: clamp(num(p.aggression, .5), 0, 1),
     offensiveInterval: clamp(num(p.offensiveInterval, 4), 2, 8),
@@ -24,6 +24,13 @@
     showFactions: bool(p.showFactions, true),
     showClock: bool(p.showClock, true),
     showWinner: bool(p.showWinner, true),
+    // Presentation: 'auto' keeps the full panels in 16:9 and shows the slim Shorts frame in 9:16.
+    display: ['auto', 'full', 'slim', 'off'].includes(p.display) ? p.display : 'auto',
+    // Short map only (rule version territory-short-v1): hidden director and story length in round seconds.
+    story: ['none', 'crown'].includes(p.story) ? p.story : 'crown',
+    storySec: clamp(num(p.storySec, 60), 40, 180),
+    // 'victory': the video ends with the first result plus the result hold (planned before the export).
+    videoEnd: p.videoEnd === 'victory' ? 'victory' : 'free',
   });
   const roundSeed = (seed, round) => round === 1 ? seed >>> 0 : hashSeed('territory-round-v1', seed >>> 0, round);
   const serializeRound = sim => JSON.stringify(sim, (_, value) => value instanceof Map ? { entries: [...value] } : value);
@@ -82,7 +89,10 @@
     _startRound() {
       this.roundNumber++;
       this.roundSeed = roundSeed(this.seed, this.roundNumber);
-      this.roundSim = new ObservedRound({ seed: this.roundSeed, ...this.cfg });
+      // The short map is its own rule version; the two original maps keep the archived rules untouched.
+      const Round = this.cfg.layout === 'short' ? EBS.Territory.ShortRound : ObservedRound;
+      if (!Round) throw new Error('Territory: Short-Karte nicht geladen (short.js fehlt).');
+      this.roundSim = new Round({ seed: this.roundSeed, ...this.cfg });
       Object.defineProperty(this.roundSim, 'emit', { value: (...args) => this._event(...args) });
       this.initialUnits = totalUnits(this.roundSim);
       this.phase = 'running'; this.pauseUntil = 0; this.resultStep = 0; this.accumulator = 0;

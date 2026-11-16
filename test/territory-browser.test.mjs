@@ -16,12 +16,13 @@ const config = (video = {}, params = {}) => ({ scenario: 'territory', seed: 42, 
 const settle = page => page.evaluate(() => new Promise(resolve => {
   let n = 4; const frame = () => --n ? requestAnimationFrame(frame) : resolve(); requestAnimationFrame(frame);
 }));
-async function live(t) {
+async function live(t, display = 'full') {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
   t.after(() => context.close());
   const page = await context.newPage(), errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  await page.goto(pathToFileURL(INDEX).href + '?scenario=territory&seed=42&paused=1');
+  // display=full: these tests cover the full panels; 9:16 would otherwise start in the slim Shorts frame.
+  await page.goto(pathToFileURL(INDEX).href + '?scenario=territory&seed=42&paused=1&display=' + display);
   await page.waitForFunction(() => window.EBS?.app?.cfg.scenario === 'territory');
   await settle(page);
   return { page, errors };
@@ -131,6 +132,41 @@ test('Territory: Filmtempo, Kamera, Anzeige und Regeln überstehen JSON-Speicher
   await page.selectOption('#scenario', 'naval');
   assert.equal(await page.locator('#filmTempo').count(), 0, 'bestehende Szenarien behalten ihre segmentierte Tempoauswahl');
   assert.deepEqual(await page.locator('#segSpeed button').evaluateAll(nodes => nodes.map(n => n.dataset.v)), ['0.64', '0.8', '1', '2', '5', '10']);
+  assert.deepEqual(errors, []);
+});
+
+test('Territory: Hochformat zeigt automatisch die schlanke Anzeige, Querformat die volle; Short-Karte läuft mit Drehbuch', async t => {
+  const { page, errors } = await live(t, 'auto');
+  const texts = () => page.evaluate(() => {
+    const s = EBS.app.session, r = s.renderer, original = CanvasRenderingContext2D.prototype.fillText, seen = [], images = [], draw = r.ctx.drawImage;
+    CanvasRenderingContext2D.prototype.fillText = function (text, ...args) { seen.push(String(text)); return original.call(this, text, ...args); };
+    r.ctx.drawImage = function (image, ...args) { images.push(image); return draw.call(this, image, ...args); };
+    try { const before = s.sim.stateHash(); s.render(); return { seen, labels: images.includes(r.labelCanvas), world: images.includes(r.worldCanvas),
+      same: before === s.sim.stateHash(), mode: r.layout.mode, frame: [r.layout.w, r.layout.h], aspect: s.cfg.video.aspect }; }
+    finally { CanvasRenderingContext2D.prototype.fillText = original; r.ctx.drawImage = draw; }
+  });
+  if (await page.evaluate(() => EBS.app.cfg.video.aspect) !== '9:16') { await page.click('#segFormat button[data-v="9:16"]'); await settle(page); }
+  const slim = await texts();
+  assert.deepEqual([slim.mode, slim.world, slim.labels, slim.same], ['slim', true, false, true]);
+  assert.equal(slim.frame[0], 1080); assert.ok(slim.frame[1] >= 1920, 'die Karte füllt das Bild ohne Bänder');
+  assert.ok(slim.seen.includes('4 KINGDOMS · 1 CROWN') && slim.seen.includes('PICK YOUR COLOR'), 'Einstiegsfrage im ersten Bild');
+  for (const name of ['AZUR', 'EMBER', 'JADE', 'SOLAR']) assert.ok(slim.seen.includes(name), name + ' als Namensschild');
+  assert.equal(slim.seen.some(text => /HEX DOMINION|STRENGTH|TILES|\d{2}:\d{2}/.test(text)), false, 'kein Titel, keine Uhr, keine Fraktionskarten');
+  await page.click('#segFormat button[data-v="16:9"]'); await settle(page);
+  const full = await texts();
+  assert.deepEqual([full.mode, full.labels], ['full', true]);
+  assert.ok(full.seen.includes('HEX DOMINION') && full.seen.some(text => /\d{2}:\d{2}/.test(text)), 'Querformat behält Titel und Uhr');
+  // The Short preset: small map, hidden story, video length planned up to the victory.
+  await page.click('#btnShortPreset');
+  await page.waitForFunction(() => document.querySelector('#durationOut').textContent !== '…');
+  const short = await page.evaluate(() => {
+    const s = EBS.app.session; while (s.sim.phase === 'running' && s.sim.step < 12000) s.step(); s.render();
+    const r = s.sim.roundSim;
+    return { layout: s.cfg.params.layout, rules: r.rules, phase: s.sim.phase, winner: r.winner, hero: r.story.hero, falls: r.falls.length,
+      check: s.sim.checkInvariants().ok, duration: s.cfg.video.durationSec, end: s.sim.resultStep / 60, caption: EBS.Territory.captionAt(s.sim, 0).kind };
+  });
+  assert.deepEqual([short.layout, short.rules, short.phase, short.falls, short.check, short.caption], ['short', 'territory-short-v1', 'ended', 3, true, 'victory']);
+  assert.equal(short.winner, short.hero); assert.ok(Math.abs(short.duration - short.end - 3) < .05, JSON.stringify(short));
   assert.deepEqual(errors, []);
 });
 
