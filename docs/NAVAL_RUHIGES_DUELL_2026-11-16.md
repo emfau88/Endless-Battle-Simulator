@@ -1,7 +1,7 @@
 # Naval: Modus „Ruhiges Duell“ (in Arbeit)
 
-Stand: 16.11.2026, nachts. Erste zwei Pakete des Naval-Ausbaus (R34, im [Gesamtplan](GESAMTPLAN_2026-11-16.md) Abschnitt 8.4
-als N1a und N2a geführt). Der Nutzer hat die Richtung anhand von Standbildern und Testclips freigegeben, den Einbau als
+Stand: 16.11.2026, nachts. Erste drei Pakete des Naval-Ausbaus (R34, im [Gesamtplan](GESAMTPLAN_2026-11-16.md) Abschnitt 8.4
+als N1a, N2a und N2b geführt). Der Nutzer hat die Richtung anhand von Standbildern und Testclips freigegeben, den Einbau als
 neuen Modus beauftragt und danach die Vorschläge zu Lebensanzeige, Runden und Segeln zur Umsetzung freigegeben.
 
 ## 1 · Umfang
@@ -20,7 +20,7 @@ node export.mjs --scenario naval --param mode=calm --duration 20 --aspect 16:9 -
 ```
 
 Seit dem zweiten Paket enthalten: Runden mit Versenkung, Punktestand und neuem Schiff (Abschnitt 3a).
-Als Vorschau in einem eigenen Branch: die Rakete vom Heck (Abschnitt 3b).
+Seit dem dritten Paket enthalten: die Rakete vom Heck (Abschnitt 3b).
 Noch **nicht** enthalten: Finale am Videoende, Wetter, eigene Tonabstimmung.
 
 ## 2 · Werte des Modus
@@ -79,9 +79,10 @@ leitet alles Sichtbare daraus ab; das Schwingen von Streifen und Rah ist eine re
 Warum die Reparatur: Ohne sie waren beide Schiffe am Rundenende fast gleich beschädigt, und der Sieger sank im
 Schnitt rund 40 Sekunden später selbst. Mit ihr dauert jede Runde etwa gleich lang.
 
-## 3b · Rakete vom Heck (Vorschau, wartet auf Freigabe)
+## 3b · Rakete vom Heck
 
-Idee des Nutzers vom 16.11.: eine seltene zweite Attacke neben den Kanonen.
+Idee des Nutzers vom 16.11.: eine seltene zweite Attacke neben den Kanonen. Als Vorschau gebaut und von ihm anhand
+eines Testclips freigegeben.
 
 - **Takt:** Jedes Schiff startet etwa alle 20 Sekunden eine Rakete; die Schiffe wechseln sich ab, im Duell fliegt also
   etwa alle 10 Sekunden eine.
