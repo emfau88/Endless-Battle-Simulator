@@ -154,7 +154,8 @@ test('Territory: neue Anzeige- und Short-Einstellungen bleiben beim Speichern er
   assert.deepEqual([normalizeParams({}).display, normalizeParams({}).videoEnd, normalizeParams({}).layout], ['auto', 'free', 'landscape']);
   assert.equal(normalizeParams({ display: 'x', storySec: 999 }).storySec, 180);
   const cfg = preset(731);
-  assert.deepEqual([cfg.seed, cfg.video.aspect, cfg.video.tempo, cfg.params.layout, cfg.params.story, cfg.params.videoEnd, cfg.params.repeatRounds],
-    [731, '9:16', 2, 'short', 'crown', 'victory', false]);
+  assert.deepEqual([cfg.seed, cfg.video.aspect, cfg.video.tempo, cfg.params.layout, cfg.params.story, cfg.params.videoEnd, cfg.params.repeatRounds, cfg.params.units],
+    [731, '9:16', 2, 'short', 'crown', 'victory', false, 'soldiers']);
+  assert.deepEqual([normalizeParams({}).units, normalizeParams({ units: 'soldiers' }).units, normalizeParams({ units: 'x' }).units], ['tanks', 'soldiers', 'tanks']);
   assert.deepEqual(plain(EBS.productionPreset('territory', 'short')), JSON.parse(readFileSync(new URL('../presets/production/territory-short.json', import.meta.url), 'utf8')));
 });

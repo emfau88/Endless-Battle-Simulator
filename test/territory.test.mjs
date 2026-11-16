@@ -155,7 +155,7 @@ test('Territory: configuration preserves every rule, camera and display setting'
   const params = { profile: 'custom', layout: 'portrait', incomeMultiplier: 1.7, aggression: .23, offensiveInterval: 6.5, marchDuration: 3.7,
     repeatRounds: false, endPauseSec: 12, garrisonMode: 'always', cameraMode: 'top', cameraAzimuth: -.8,
     cameraElevation: 1.2, cameraZoom: 1.4, highQuality: false, showFactions: false, showClock: false, showWinner: false,
-    display: 'full', story: 'none', storySec: 75, videoEnd: 'victory' };
+    display: 'full', story: 'none', storySec: 75, videoEnd: 'victory', units: 'soldiers' };
   assert.deepEqual(plain(normalizeParams(JSON.parse(JSON.stringify(params)))), params);
 });
 

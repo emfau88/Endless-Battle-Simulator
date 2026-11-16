@@ -33,7 +33,8 @@
       this.sim = ctx.sim; this.view = ctx.view; this.video = ctx.video;
       this.worldCanvas = document.createElement('canvas');
       this.labelCanvas = document.createElement('canvas');
-      this.hexView = new HexView(this.worldCanvas);
+      // Derived view: the source renderer plus optional spearmen instead of tanks (units.js).
+      this.hexView = new (EBS.Territory.UnitView || HexView)(this.worldCanvas);
       this.overlay = EBS.Territory.createOverlay(this.labelCanvas, this.hexView);
       this.unsubscribe = this.sim.addTickObserver(round => this.overlay.observe(round));
       this.resize(ctx);
@@ -56,7 +57,7 @@
         this.hexView.resize(l.w, l.h, dpr);
         this.overlay.resize(l.w, l.h, dpr, l.portrait ? 'portrait' : 'landscape');
       }
-      this.hexView.mode = p.cameraMode;
+      this.hexView.mode = p.cameraMode; this.hexView.units = p.units;
       this.hexView.camera.azimuth = p.cameraMode === 'top' ? 0 : p.cameraAzimuth;
       this.hexView.camera.elevation = p.cameraMode === 'top' ? 1.48 : p.cameraElevation;
       this.hexView.camera.zoom = p.cameraZoom;
@@ -242,6 +243,7 @@
       { key: 'offensiveInterval', label: 'Angriffsrhythmus', type: 'range', min: 2, max: 8, step: .5, format: v => `${v} s` },
       { key: 'marchDuration', label: 'Marschdauer', type: 'range', min: 1.5, max: 4, step: .1, format: v => `${v} s` },
       { key: 'garrisonMode', label: 'Garnisonen', type: 'select', options: [['front','An der Front'],['always','Immer'],['never','Nie']] },
+      { key: 'units', label: 'Einheiten', type: 'select', options: [['tanks','Panzer (Original)'],['soldiers','Speerträger']] },
       { key: 'cameraMode', label: 'Kamerablick', type: 'select', options: [['perspective','Perspektive'],['top','Draufsicht']] },
       { key: 'cameraAzimuth', label: 'Kameradrehung', type: 'range', min: -3.14, max: 3.14, step: .01, enabled: p => p.cameraMode !== 'top', format: v => `${Math.round(v*180/Math.PI)}°` },
       { key: 'cameraElevation', label: 'Kamerahöhe', type: 'range', min: .48, max: 1.55, step: .01, enabled: p => p.cameraMode !== 'top', format: v => `${Math.round(v*180/Math.PI)}°` },
