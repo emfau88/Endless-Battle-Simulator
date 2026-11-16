@@ -2,7 +2,7 @@
 
 Stand: 16.11.2026. Branch `marble-xl/stufe-1`. Gehört zu R35 und zum
 [Gesamtplan, Abschnitt 9](GESAMTPLAN_2026-11-16.md). **Status: bewegter Entwurf; Rückmeldung zum ersten Testclip
-eingearbeitet; vierte Fassung (größere Kugeln, abschaltbare Schilder, Glühen nur zwischen Ofen und Farbstation) liegt als Testclip vor; Rückmeldung dazu
+eingearbeitet; fünfte Fassung (größere Kugeln, abschaltbare Schilder, Glühen nur zwischen Ofen und Farbstation, Trockenstrecke) liegt als Testclip vor; Rückmeldung dazu
 steht aus.**
 
 ## Was es ist
@@ -83,7 +83,7 @@ es läuft keine Simulation. Bilder lokal unter `output/marblexl-vorschau/konzept
 | 03 POLISH | zwei Bürstenräder, Funken | wird klar und glänzend |
 | 04 KILN | Tunnelofen mit Sichtfenster und Abzügen | beginnt zu glühen, orange bis weiß; kühlt im Fallrohr danach wieder ab |
 | 05 COLOUR | sechs Pigmenttanks, Injektor, Glaskammer | bekommt Farbe und Wirbel |
-| 06 COOL | geschwungene Glasrohrstrecke vor drei Lüftern | seit der vierten Fassung ohne Glühen (siehe unten) |
+| 06 DRY (bis zur vierten Fassung 06 COOL) | geschwungene Glasrohrstrecke vor drei Lüftern | die frische Farbe trocknet (siehe unten) |
 | 07 INSPECT | Prüfring, Bildschirm, Ausschusskasten | wird geprüft, Ausschuss fällt heraus |
 | 08 LIFT | großes Rad mit zehn Taschen | wird zur Sortierung gehoben |
 | 09 SORT | sechs hohe Röhren | sammelt sich nach Farbe, die Röhren füllen sich |
@@ -221,9 +221,29 @@ Reine Darstellung: Ort und Zustand der Kugeln sind unverändert, der Zustands-Ha
 **Vierter Testclip** (lokal, `output/marblexl-vorschau/testclip-2026-11-16-v4/`): Querformat, 20 s, 1080p30, dazu eine
 Bildfolge vom Ofen bis zur Farbstation.
 
+## Kühlstrecke wird Trockenstrecke (16.11.2026, fünfte Fassung)
+
+Vorschlag des Assistenten, vom Nutzer bestätigt („mach das so“): Weil die Kugeln schon vor der Farbstation
+abgekühlt sind, trocknet die Station 06 jetzt die frische Farbe.
+
+| Teil | Umsetzung | Stand |
+|---|---|---|
+| Nasse Farbe | Ab dem Sprühstoß trägt die Kugel helle Farbtropfen und einen nassen Glanz | **Erledigt** |
+| Farbschleier | Hinter der nassen Kugel zieht ein schwacher Schleier in ihrer Farbe her | **Erledigt** |
+| Trocknen | Tropfen, Glanz und Schleier klingen auf den ersten 80 % der Strecke weich ab | **Erledigt** |
+| Fertig | Kurzer Glanzstern, wenn die Kugel trocken ist, kurz vor der Prüfung | **Erledigt** |
+| Luftzug | Helle Striche ziehen vor den Lüftern über die Tafel | **Erledigt** |
+| Namen | Schild „06 DRY“, Messingschild „DRYING LINE“ (beide nur bei eingeschalteten Schildern sichtbar) | **Erledigt** |
+
+Reine Darstellung, Zustands-Hash des 20-Sekunden-Clips unverändert (`8aa05504`). **Geprüft:** Standbild der
+Trockenstrecke. Die Tests liefen dafür nicht erneut. Im Code heißen Bahn und Abschnitt weiter `cool`.
+
+**Fünfter Testclip** (lokal, `output/marblexl-vorschau/testclip-2026-11-16-v5/`): Querformat, 20 s, 1080p30.
+
 ## Nächster Schritt
 
-Rückmeldung des Nutzers zum vierten Testclip abwarten (Glühen, Kugelgröße, Bild ohne Schilder; Ton, Ofen und
-Farbstation aus dem zweiten Clip sind ebenfalls noch offen). Zu klären: Was zeigt die Station 06 COOL, wenn die
-Kugeln schon vorher abgekühlt sind? Offen bleiben: mehr Kugeln gleichzeitig (kürzerer Takt), eigene
-Klänge für Trommel, Ofen und Sprühen, Hochformat, danach echte Warteschlangen und Physik.
+Rückmeldung des Nutzers zum fünften Testclip abwarten (Trockenstrecke, Glühen, Kugelgröße, Bild ohne Schilder;
+Ton aus dem zweiten Clip ist ebenfalls noch offen). Vorschläge für kleine Deko-Animationen (Nadeln der Anzeigen,
+Lämpchen, Dampf, Sortierklappen) liegen als Vorschau-Clip aus einer Kopie vor und sind noch nicht eingebaut.
+Offen bleiben: mehr Kugeln gleichzeitig (kürzerer Takt), eigene Klänge für Trommel, Ofen und Sprühen,
+Hochformat, danach echte Warteschlangen und Physik.

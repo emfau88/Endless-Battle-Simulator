@@ -2,14 +2,14 @@
  * Marble Factory XL – Entwurfsbild der Produktionslinie (Vorschau, kein laufendes Szenario)
  *
  * Zeichnet eine Halle mit einer Kette verschiedener Maschinen im Stil der klassischen Kugelfabrik:
- * Rohkugeln -> Waschtrommel -> Polierer -> Ofen -> Farbstation -> Kühlstrecke -> Prüfung -> Radaufzug -> Sortierung.
+ * Rohkugeln -> Waschtrommel -> Polierer -> Ofen -> Farbstation -> Trockenstrecke -> Prüfung -> Radaufzug -> Sortierung.
  * Die Kugeln sind von Hand gesetzt und zeigen ihren Zustand an jeder Station. Dient der Freigabe des Aussehens,
  * bevor die Maschinen einzeln mit Simulation gebaut werden.
  */
 (function () {
 'use strict';
 const C = EBS.MarbleClassic, K = C.kit, R0 = C.R, COLORS = C.COLORS;
-const { lin, rad, shadow, noShadow, rr, circ, css, STEEL, STEEL_DARK, CYL, BRASS_CYL, BRASS,
+const { lin, rad, shadow, noShadow, rr, circ, css, tone, STEEL, STEEL_DARK, CYL, BRASS_CYL, BRASS,
   plate, bolt, band, trace, onLayer, rod, post, hopperPath, drawGear, drawBall, drawSwirl, drawGloss, buildPath, pathAt } = K;
 // Kugeln und Glasrohre sind hier größer als in der klassischen Fabrik, damit sie in der festen Übersicht gut
 // zu sehen sind. MS = Vergrößerung; R und die Rohrbreiten gelten in Hallen-Einheiten.
@@ -73,8 +73,8 @@ function glow(g, x, y, hex, a, r) {
   g.fillStyle = rad(g, x, y, 0, x, y, r, [[0, css(hex, a)], [0.5, css(hex, a * 0.4)], [1, css(hex, 0)]]);
   g.fillRect(x - r, y - r, 2 * r, 2 * r); g.restore();
 }
-/** kind: raw | washed | clear | color; heat 0..1 lässt die Kugel orange glühen */
-function marble(g, x, y, kind, color = 0, heat = 0) {
+/** kind: raw | washed | clear | color; heat 0..1 lässt die Kugel orange glühen; wet 0..1 zeigt frische, nasse Farbe */
+function marble(g, x, y, kind, color = 0, heat = 0, wet = 0) {
   const c0 = (R0 + 3) * MS;
   const hex = kind === 'raw' ? RAW : kind === 'washed' ? WASHED : kind === 'clear' ? CLEAR : COLORS[color].hex;
   if (kind === 'color') glow(g, x, y, hex, 0.30 * (1 - heat * 0.6), R * 2.1);
@@ -84,6 +84,12 @@ function marble(g, x, y, kind, color = 0, heat = 0) {
   g.drawImage(t, x - c0, y - c0, 2 * c0, 2 * c0);
   if (kind === 'washed') for (const [dx, dy, r] of [[-8, -9, 2.6], [7, -2, 1.7], [-2, 9, 2.1], [10, 9, 1.4]]) { circ(g, x + dx * MS, y + dy * MS, r * MS); g.fillStyle = 'rgba(190,242,255,.9)'; g.fill(); }
   if (kind === 'clear' && heat < 0.05) sparkle(g, x - R * 0.44, y - R * 0.48, 14 * MS);
+  if (kind === 'color' && wet > 0.02) {                // frische Farbe: helle Tropfen und nasser Glanz, beides trocknet weg
+    g.save(); g.globalAlpha *= Math.min(1, wet * 1.25); g.fillStyle = tone(hex, 0.62);
+    for (const [dx, dy, r] of [[-9, -6, 3.2], [8, -10, 2.4], [3, 8, 3.6], [-6, 11, 2.2], [12, 4, 2.6]]) { circ(g, x + dx * MS, y + dy * MS, r * MS * (0.5 + 0.5 * wet)); g.fill(); }
+    g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2.4 * MS; g.lineCap = 'round';
+    g.beginPath(); g.arc(x, y, R - 5 * MS, 2.2, 3.3); g.stroke(); g.restore();
+  }
   if (heat > 0.02) {
     g.save(); circ(g, x, y, R); g.clip(); g.globalCompositeOperation = 'lighter';
     g.fillStyle = rad(g, x, y, 0, x, y, R, [[0, `rgba(255,236,190,${0.75 * heat})`], [0.7, `rgba(255,140,40,${0.6 * heat})`], [1, `rgba(255,90,20,${0.35 * heat})`]]);
@@ -512,11 +518,18 @@ function coolBack(g) {
     circ(g, fx, fy, 13); g.fillStyle = rad(g, fx - 4, fy - 4, 1, fx, fy, 13, [[0, '#e6ecf2'], [0.6, '#8a96a3'], [1, '#3b444f']]); g.fill();
     g.strokeStyle = 'rgba(140,170,200,.22)'; g.lineWidth = 1.5; for (const r of [28, 50, 72]) { circ(g, fx, fy, r); g.stroke(); }
   }
+  // Luftzug der Trockenstrecke: helle Striche ziehen über die Tafel
+  g.save(); rr(g, x + 16, y + 44, w - 32, h - 60, 12); g.clip(); g.lineCap = 'round'; g.lineWidth = 3;
+  for (let k = 0; k < 18; k++) {
+    const ph = mod(T * (0.42 + (k % 4) * 0.09) + k * 0.283, 1), sx = x + w - 16 - ph * (w - 32), sy = y + 70 + ((k * 61) % (h - 110)), len = 54 + (k % 3) * 28;
+    g.strokeStyle = `rgba(190,232,255,${(0.2 * Math.sin(Math.PI * ph)).toFixed(3)})`; g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx - len, sy); g.stroke();
+  }
+  g.restore();
 }
 function coolFront(g) {
   const x = 2210, y = 1392, w = 740, h = 452;
   cornerBolts(g, x, y, w, h, 5, 14);
-  nameplate(g, x + 24, y + 12, 'CONTROLLED COOLING');
+  nameplate(g, x + 24, y + 12, 'DRYING LINE');
   led(g, x + w - 30, y + 24, 0x35d8ff); led(g, x + w - 54, y + 24, 0x35d8ff, 4);
 }
 
@@ -749,7 +762,7 @@ const fallTime = (c, idx) => Math.sqrt(2 * Math.max(40, SLOT0 - idx * SP - COLS[
 
 /** Ort und Zustand der Kugel n zur Zeit t (null = noch im Behälter). */
 function poseOf(n, t) {
-  const u = t - n * PERIOD, c = colorOf(n), o = { x: 0, y: 0, kind: 'raw', color: c, heat: 0, tint: 0, n };
+  const u = t - n * PERIOD, c = colorOf(n), o = { x: 0, y: 0, kind: 'raw', color: c, heat: 0, tint: 0, wet: 0, n };
   const seg = (a, b) => (u - ST[a]) / (ST[b] - ST[a]);
   if (u < -2 * PERIOD) return null;
   if (u < 0) { const a = HALF_PI + (u / PERIOD) * HALF_PI; o.x = WHEEL.x + Math.cos(a) * WHEEL.rp; o.y = WHEEL.y + Math.sin(a) * WHEEL.rp; return o; }
@@ -774,10 +787,10 @@ function poseOf(n, t) {
   if (u < ST.toCradle) { const f = seg('drop', 'toCradle'), q = pathAt(PATHS.drop, PATHS.drop.len * (0.35 * f + 0.65 * f * f), P); o.x = q.x; o.y = q.y; o.heat = cooling(u); o.trail = true; return o; }
   if (u < ST.colour) { const f = smooth(seg('toCradle', 'colour')); o.x = lerp(3450, CRADLE.x, f); o.y = 1440; o.heat = cooling(u); o.trail = true; return o; }
   o.heat = 0;                                                      // ab der Farbstation ist die Kugel abgekühlt
-  if (u < ST.colourOut) { const f = seg('colour', 'colourOut'); o.x = CRADLE.x; o.y = 1440; o.kind = 'color'; o.tint = smooth((f - 0.14) / 0.5); o.cf = f; o.work = f; return o; }
+  if (u < ST.colourOut) { const f = seg('colour', 'colourOut'); o.x = CRADLE.x; o.y = 1440; o.kind = 'color'; o.tint = smooth((f - 0.14) / 0.5); o.cf = f; o.work = f; o.wet = o.tint; return o; }
   o.kind = 'color'; o.tint = 1;
-  if (u < ST.cool) { o.x = lerp(CRADLE.x, 2960, seg('colourOut', 'cool')); o.y = 1440; return o; }
-  if (u < ST.toWheel) { const f = seg('cool', 'toWheel'), q = pathAt(PATHS.cool, PATHS.cool.len * f, P); o.x = q.x; o.y = q.y; o.scan = Math.abs(q.x - 2040) < 26; return o; }
+  if (u < ST.cool) { o.x = lerp(CRADLE.x, 2960, seg('colourOut', 'cool')); o.y = 1440; o.wet = 1; return o; }
+  if (u < ST.toWheel) { const f = seg('cool', 'toWheel'), q = pathAt(PATHS.cool, PATHS.cool.len * f, P); o.x = q.x; o.y = q.y; o.wet = 1 - smooth(f / 0.8); if (f > 0.8 && f < 0.93) o.dry = (f - 0.8) / 0.13; o.scan = Math.abs(q.x - 2040) < 26; return o; }
   o.heat = 0;
   if (u < ST.ride) { const f = seg('toWheel', 'ride'), q = pathAt(PATHS.toWheel, PATHS.toWheel.len * f, P), e = smooth((f - 0.75) / 0.25); o.x = lerp(q.x, BIG.x + Math.cos(A_PICK) * BIG.rp, e); o.y = lerp(q.y, BIG.y + Math.sin(A_PICK) * BIG.rp, e); return o; }
   if (u < ST.rail) { const a = A_PICK - BIG_W * (u - ST.ride); o.x = BIG.x + Math.cos(a) * BIG.rp; o.y = BIG.y + Math.sin(a) * BIG.rp; return o; }
@@ -838,8 +851,10 @@ function placeMarbles(g) {
   COLS.forEach((c, i) => { for (let k = 0; k < BASE[i]; k++) marble(g, c.x, SLOT0 - k * SP, 'color', i); });
   for (const p of fl.list) {
     if (p.trail) for (let j = 3; j >= 1; j--) { const q = poseOf(p.n, tf - 0.05 * j); if (q) glow(g, q.x, q.y, 0xff8a2a, 0.2 * p.heat * (1 - j / 4), R * 2.3); }   // Nachglühen
-    if (p.kind === 'color' && p.tint < 1) { marble(g, p.x, p.y, 'clear', 0, p.heat); g.save(); g.globalAlpha = p.tint; marble(g, p.x, p.y, 'color', p.color, p.heat); g.restore(); }
-    else marble(g, p.x, p.y, p.kind, p.color, p.heat);
+    if (p.wet > 0.02 && p.tint >= 1) for (let j = 3; j >= 1; j--) { const q = poseOf(p.n, tf - 0.06 * j); if (q) glow(g, q.x, q.y, COLORS[p.color].hex, 0.24 * p.wet * (1 - j / 4), R * 2.1); }   // Farbschleier
+    if (p.kind === 'color' && p.tint < 1) { marble(g, p.x, p.y, 'clear', 0, p.heat); g.save(); g.globalAlpha = p.tint; marble(g, p.x, p.y, 'color', p.color, p.heat, p.wet); g.restore(); }
+    else marble(g, p.x, p.y, p.kind, p.color, p.heat, p.wet);
+    if (p.dry !== undefined) sparkle(g, p.x - R * 0.44, p.y - R * 0.48, 22 * MS * Math.sin(Math.PI * p.dry));                    // trocken: kurzer Glanzstern
   }
 }
 
@@ -884,7 +899,7 @@ function drawScene(g, t, px, bgScale = 1, opts = null) {
   if (SIGNS) neon(g, 1790, 150, 'MARBLE FACTORY ', 'XL', 78);
   board(g, 1790, SIGNS ? 318 : 132, FLOW ? FLOW.done : 35);
   if (SIGNS) for (const [x, y, a, b] of [[560, 232, '01 ', 'RAW'], [1110, 440, '02 ', 'WASH'], [1970, 520, '03 ', 'POLISH'], [2800, 610, '04 ', 'KILN'],
-    [3300, 1650, '05 ', 'COLOUR'], [2580, 1910, '06 ', 'COOL'], [2040, 1490, '07 ', 'INSPECT'], [1640, 1180, '08 ', 'LIFT'], [960, 1230, '09 ', 'SORT']]) neon(g, x, y, a, b, 40);
+    [3300, 1650, '05 ', 'COLOUR'], [2580, 1910, '06 ', 'DRY'], [2040, 1490, '07 ', 'INSPECT'], [1640, 1180, '08 ', 'LIFT'], [960, 1230, '09 ', 'SORT']]) neon(g, x, y, a, b, 40);
 }
 function vignette(g, w, h) { g.fillStyle = rad(g, w / 2, h * 0.46, Math.min(w, h) * 0.55, w / 2, h / 2, Math.max(w, h) * 0.62, [[0, 'rgba(0,0,0,0)'], [0.6, 'rgba(0,0,0,.14)'], [1, 'rgba(0,0,0,.55)']]); g.fillRect(0, 0, w, h); }
 /** Standbild der ganzen Halle (für Entwurfsbilder). */
