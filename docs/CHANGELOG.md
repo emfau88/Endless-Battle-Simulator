@@ -2,6 +2,12 @@
 
 Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen in der [ROADMAP](ROADMAP.md).
 
+## 17.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| R34, Naval, fünftes Paket (N2d): Lesbarkeit im Modus „Ruhiges Duell“, vom Nutzer anhand von Bild und Testclip freigegeben. Kanonen 30 % größer, Leuchtspur trotz halbem Flugtempo in voller Länge. Eine erhöhte Bugkante wurde gemessen und verworfen (fast doppelt so viele Abpraller, aber 55 statt 1 Notfall in 50 Minuten). | PR #28 | [NAVAL_RUHIGES_DUELL_2026-11-16.md](NAVAL_RUHIGES_DUELL_2026-11-16.md) |
+
 ## 16.11.2026
 
 | Was | Commit | Bericht |

@@ -89,7 +89,10 @@ const MODES = {
   // Ruhiges Duell (in Arbeit): wenige, gut verfolgbare Kugeln. Zwei Kanonen je Schiff, halbe Feuerrate, halbes
   // Flugtempo bei gleichen Bögen (Schwerkraft ∝ Tempo², Mündungsgeschwindigkeit ∝ Tempo), mehr Rückprall,
   // Schiffe 25 % kleiner (Kugeln bleiben gleich groß), dazu sichtbar wachsende Segelschäden.
-  calm: { cannons: 2, fireTempo: 0.5, flightTempo: 0.5, shipScale: 0.75, restitution: 0.7 },
+  // Lesbarkeit: Kanonen 30 % größer (es sind nur zwei), Leuchtspur trotz halbem Tempo in voller Länge (trailEvery).
+  // Eine erhöhte Bugkante wurde gemessen und verworfen: fast doppelt so viele Abpraller, aber Kugeln verklemmen sich an
+  // Deck (55 Notfälle statt 1 in 50 Minuten).
+  calm: { cannons: 2, fireTempo: 0.5, flightTempo: 0.5, shipScale: 0.75, restitution: 0.7, cannonScale: 1.3, trailEvery: 4 },
 };
 
 // Runden im ruhigen Duell: Jeder zählende Treffer nimmt denselben festen Betrag, bei 100 % Schaden sinkt das Schiff,
@@ -224,6 +227,7 @@ class NavalBattle {
     // Modus (null = Standard). Ein Modus legt die Kanonenzahl fest und hat für die Segel einen eigenen Zufallsstrom.
     const M = (this.modeDef = MODES[cfg.mode] || null);
     this.fireTempo = M ? M.fireTempo : 1;
+    this.trailEvery = M ? M.trailEvery : 2;
     this.calm = M ? { bounces: 0, sailHits: 0, score: new Array(L.n).fill(0), sunk: 0, round: 1, last: null, rockets: 0, shardHits: 0, goldHits: 0, gold: null } : null;
     if (M) { cfg.cannons = M.cannons; this.sailRng = new RNG(hashSeed(cfg.seed, 'sail')); }
     this.engine = Engine.create({ gravity: { x: 0, y: L.g / 1000, scale: 0.001 }, positionIterations: 8, velocityIterations: 6 });
@@ -325,6 +329,7 @@ class NavalBattle {
       // Rakete: Zeit bis zum nächsten Start, fliegende Rakete, Fuß der Startschiene am Heck (Schiffskoordinaten)
       rocketT: ROCKET.period * (0.6 + i / n), rk: { on: false, t: 0, x0: 0, y0: 0, cx: 0, cy: 0, x1: 0, y1: 0, x: 0, y: 0, ang: 0 },
       railX: facing * -0.56 * len, railY: geo.castle.y0 + 0.04 * len, shardsTaken: 0,
+      cannonScale: this.modeDef ? this.modeDef.cannonScale : 1,
       ammo: 0, magBalls: [], lane: [], cannons: [], totalBalls: 0,
       shots: 0, hitsDealt: 0, hitsTaken: 0, smokeAcc: 0, fireAcc: 0,
       liftX: L.xs[i] + geo.port.x, footY: 0, headY: 0, liftLen: 0, portX: 0, portY: 0, rackX: 0, rackY: 0, ballMask: 0,
@@ -355,11 +360,11 @@ class NavalBattle {
   }
 
   _initCannons(ship) {
-    const c = this.cfg.cannons, L = ship.len;
+    const c = this.cfg.cannons, L = ship.len, cs = ship.cannonScale;   // cs = 1 im Standardmodus (× 1 ist exakt)
     for (let k = 0; k < c; k++) {
       const u = (k + 0.5) / c;
       const cannon = {
-        k, lx: ship.facing * lerp(-0.2 * L, 0.43 * L, u), ly: ship.geo.deckY - 0.035 * L, len: 0.105 * L,
+        k, lx: ship.facing * lerp(-0.2 * L, 0.43 * L, u), ly: ship.geo.deckY - 0.035 * L * cs, len: 0.105 * L * cs,
         arc: k % 2 ? 'high' : 'low',
         interval: 2.9 * CANNON_PACE[k] * this.rng.range(0.92, 1.08),
         speedF: CANNON_SPEED[k] * this.rng.range(0.97, 1.03),
@@ -851,7 +856,7 @@ class NavalBattle {
       if (ball.state === 'fly') {
         const b = ball.body, p = b.position;
         ball.age += this.dt;
-        if ((this.step & 1) === 0) {
+        if (this.step % this.trailEvery === 0) {      // Standard: jeder zweite Schritt; ruhiges Duell: jeder vierte (halbes Tempo, gleiche Länge)
           ball.trail[ball.trailHead * 2] = p.x; ball.trail[ball.trailHead * 2 + 1] = p.y;
           ball.trailHead = (ball.trailHead + 1) % TRAIL_N; ball.trailLen = Math.min(TRAIL_N, ball.trailLen + 1);
         }
@@ -1330,8 +1335,8 @@ class ShipView {
     this.rack = new PIXI.Graphics(); root.addChild(this.rack); this.rackAmmo = -1;
     // Kanonen
     this.cannons = ship.cannons.map((cn) => {
-      const cc = new PIXI.Container(); cc.position.set(cn.lx, cn.ly);
-      const barrel = new PIXI.Graphics(), bl = cn.len, bw = 0.022 * len;
+      const cc = new PIXI.Container(); cc.position.set(cn.lx, cn.ly); cc.scale.set(ship.cannonScale);   // ruhiges Duell: als Ganzes vergrößert
+      const barrel = new PIXI.Graphics(), bl = cn.len / ship.cannonScale, bw = 0.022 * len;
       barrel.poly([-0.03 * len, -bw, bl, -bw * 0.7, bl, bw * 0.7, -0.03 * len, bw]).fill(0x2b313b).stroke({ width: 2, color: 0x0e1116 });
       barrel.rect(bl - 0.014 * len, -bw * 0.95, 0.014 * len, bw * 1.9).fill(0x3c4452).stroke({ width: 1.5, color: 0x0e1116 });
       barrel.moveTo(-0.02 * len, -bw * 0.45).lineTo(bl - 0.02 * len, -bw * 0.32).stroke({ width: 2, color: 0x7a8597, alpha: 0.7 });
