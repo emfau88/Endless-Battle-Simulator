@@ -12,13 +12,15 @@ Ausgangslage vor dem Aufräumen fest und wird nicht fortgeschrieben.
 |---|---|
 | Wasserpark | Fertig und in `main` (PR #13), Anzeige englisch. |
 | 0.2 Komplettsicherung | Erledigt: `EBS-Sicherung-2026-11-16.bundle` (86 MB, geprüft) neben dem Projektordner. |
-| 0.4 Scrap-Optik | Pull Request #15 offen, mit `main` zusammengeführt, Scrap-Tests lokal bestanden. Merge durch den Nutzer. |
+| 0.4 Scrap-Optik | Pull Request #15: mit `main` zusammengeführt, Scrap-Tests lokal bestanden. Der Scrap-Browsertest bekam eine eigene Prüfgruppe und 90 s Navigationszeit, weil er auf dem GitHub-Rechner sein Zeitlimit riss. |
+| Wasserpark-Merkliste | Pull Request #14 am 16.11. zusammengeführt. |
 | 0.6 Doku-Paket | Dieser Pull Request: Gesamtplan, `AGENTS.md`, `ARCHITEKTUR.md`, neue kurze Roadmap, Abriss/Burrow-Plan, Sunny-Yard-Bericht. |
 | 0.8 Branches | Erledigt: 42 lokale und 35 GitHub-Branches gelöscht (alle vollständig in `main` enthalten). Drei Diagnose-Stände als Marken `archive/…` gesichert, dann gelöscht. |
 | 0.9 Arbeitskopien | Erledigt: acht alte Arbeitskopien entfernt, Hauptordner steht auf `main`. Ihre Review-Medien liegen in `output/aus-arbeitskopien/`. |
 | 0.3, 0.10 `output/` | **Geändert:** Auf Wunsch des Nutzers bleibt `output/` lokal und wird weder ins Repository übernommen noch geleert. |
 | 0.5 Kennzeichen „in Arbeit“, Sammelprüfung | Verschoben: Das Kennzeichen entsteht mit dem ersten Marble-XL-Paket; die Sammelprüfung nur, falls der Schutz von `main` gewünscht wird. |
 | 0.11 Schutz, Versionsmarke | Offen (Entscheidung des Nutzers). |
+| Marble XL | Erster Prototyp abgelehnt, Entwurfsbild der Produktionslinie liegt vor (Abschnitt 9). Branch `marble-xl/stufe-1`. |
 
 ---
 
@@ -122,7 +124,7 @@ Berichte verweisen auf einzelne Commit-Nummern; ein Squash würde diese Verweise
 
 - Schutz für `main`: nur über Pull Request, Prüflauf Pflicht, kein Force-Push, kein Löschen.
 - „Branches nach dem Merge automatisch löschen“ einschalten.
-- Eine **Sammelprüfung** `ci-ok` im Prüflauf ergänzen, die nur grün wird, wenn alle 17 Gruppen grün sind. Sie ist
+- Eine **Sammelprüfung** `ci-ok` im Prüflauf ergänzen, die nur grün wird, wenn alle Gruppen grün sind. Sie ist
   dann die eine Pflichtprüfung.
 - Bricht ein Lauf am Zeitlimit ab: neu starten, nie umgehen.
 
@@ -204,7 +206,7 @@ eindeutig“.
 ## 5 · Block 1: Architektur absichern
 
 **Was gut ist und bleibt:** szenario-neutraler Kern, Szenario-Anmeldung, fester 60-Hz-Takt, Seed-Zufall,
-Einstellungsschema, Exportweg mit Wiederholungsrezept, Prüflauf in 17 Gruppen, Referenz-Hashes. Kein Umbau der
+Einstellungsschema, Exportweg mit Wiederholungsrezept, Prüflauf in 18 Gruppen, Referenz-Hashes. Kein Umbau der
 Engine, kein Framework.
 
 **Grundsatz:** Neue Bausteine entstehen als neue Dateien, wenn das erste Szenario sie braucht. Bestehende
@@ -322,23 +324,40 @@ Referenz-Hashes sowie Short-Vorlage hängen daran. Daneben entsteht ein **neues 
 Warum das trägt: Echte Physik läuft in der klassischen Fabrik nur im Behälter. Alles andere sind geführte Bahnen
 mit Stau-Logik. Das bleibt mit einigen hundert Kugeln schnell und wiederholbar.
 
-### 9.2 Pakete
+### 9.2 Richtung nach der ersten Vorschau (16.11.2026)
+
+Der erste Prototyp stellte vier Linien der klassischen Fabrik in eine große Halle. Der Nutzer hat ihn als zu
+gleichförmig abgelehnt („immer alles dasselbe“, „mehr Maschinen“) und Marble Works als Ideengeber genannt,
+ausdrücklich ohne dessen Grafik.
+
+**Neue Richtung:** Marble XL ist eine **Produktionslinie mit verschiedenen Maschinen** im Stil der klassischen
+Fabrik. Die Kugel macht eine Reise und verändert sich sichtbar: roh und matt, gewaschen, klar poliert, glühend,
+gefärbt, abgekühlt, geprüft, sortiert. Die Fabrik entwickelt sich in Kapiteln; ein Auftragszähler zeigt den
+Fortschritt. Die klassische Sortierung ist nur noch die letzte Station.
+
+Stationen des Entwurfs: 01 RAW (Vorrat, Aufzug, Behälter), 02 WASH (Waschtrommel), 03 POLISH (Bürstenräder),
+04 KILN (Tunnelofen), 05 COLOUR (sechs Pigmenttanks), 06 COOL (Kühlstrecke mit Lüftern), 07 INSPECT (Prüfung mit
+Ausschuss), 08 LIFT (Radaufzug), 09 SORT (sechs hohe Röhren, die sich füllen).
+
+Aus dem ersten Prototyp bleiben die Kamera rein aus der Videozeit, die ausblendende Anzeige und die Tests.
+
+### 9.3 Pakete
 
 | Nr. | Paket | Inhalt | Abnahme |
 |---|---|---|---|
-| M0 | **Baukasten herauslösen** | Bahn-Funktionen und Zeichenhelfer aus `marble.js` in eine gemeinsame Datei. | Referenz-Hashes und Referenzbilder der klassischen Fabrik unverändert. |
-| M1 | **Vorschau** | Aus einer Kopie: Übersicht der großen Welt, zwei Nahaufnahmen, Hochformat-Turm. | **Stopp: deine Freigabe.** |
-| M2 | **Stufe 1: breite Welt** | Vorhandene Stationen doppelt (zwei Sortierer, zwei Aufzüge, lange Bänder), 100 und mehr Kugeln, gekachelter Hintergrund (A6), Kamera mit goldener Kugel (A5). | Keine Kugel geht verloren. 20 Minuten Simulationsvorlauf ohne Stau. Seek-Regel erfüllt. **Stopp: Gefallen dir Kamera und große Fläche?** |
-| M3 | **Neue Stationen** | Je Station ein eigener PR mit Simulation, Grafik, Klang, Test: Plinko-Brett, Kippeimer, Klangtreppe, Spiraltrichter, Wechselweiche, Lawinen-Speicher. | Je Station: Ein- und Ausgang halten die Kugelbilanz. |
-| M4 | **Wachstum** | Meilensteine schalten Stationen frei (Gerüst, Aufbau, Anschluss). Kugeln kommen aus einem sichtbaren Vorrat; es wird nie eine erzeugt oder gelöscht. Fortschrittsbalken, Hallenlicht von Tag zu Nacht, Finale mit großer Entleerung. | Fahrplan-Test: alle 2 bis 3 Minuten eine neue Station. |
-| M5 | **Hochformat-Turm und Shorts** | Kamera fährt mit dem Aufzug hoch und mit den Kugeln herunter. Ausschnittsexport. | 20-Sekunden-Proben. |
+| M0 | **Baukasten bereitstellen** | Zeichen- und Bahnhelfer der klassischen Fabrik als `EBS.MarbleClassic.kit`. | Erledigt am 16.11.: Referenz-Hashes unverändert. |
+| M1 | **Entwurfsbild der Produktionslinie** | Gezeichnete Halle mit allen neun Stationen, Kugeln von Hand gesetzt; Übersicht und vier Nahansichten. | Erledigt am 16.11. **Stopp: Freigabe des Nutzers steht aus.** |
+| M2 | **Grundlinie mit Simulation** | Vorrat, Aufzug, Behälter, Polierer und Sortierröhren laufen wirklich; Kugelzustände, Auftragszähler, Kamera. | Keine Kugel geht verloren, Seek-Regel erfüllt. **Stopp: 20-Sekunden-Clip ansehen.** |
+| M3 | **Weitere Stationen** | Je Station ein eigener PR mit Simulation, Grafik, Klang, Test: Waschtrommel, Tunnelofen, Farbstation, Kühlstrecke, Prüfung mit Ausschuss, Radaufzug. | Je Station: Ein- und Ausgang halten die Kugelbilanz. |
+| M4 | **Kapitel und Ausbauten** | Stationen gehen nacheinander in Betrieb, später eine zweite Linie; Finale, wenn der Auftrag voll ist. | Fahrplan-Test: alle 2 bis 3 Minuten ein sichtbarer Ausbau. |
+| M5 | **Hochformat und Shorts** | Eigene Anordnung für 9:16, Ausschnittsexport. | 20-Sekunden-Proben. |
 | M6 | **Vorlagen 20 Minuten** | Vorlauf-Prüfung des ganzen Films. | **Stopp: Langexport erst auf deinen Auftrag.** |
-| M7 | **Themen** (später) | Nachtfabrik, Holzwerkstatt, Bonbon als Vorlagen. | Je Thema eine Vorschau. |
+| M7 | **Themen** (später) | Andere Hallen und Farbwelten als Vorlagen. | Je Thema eine Vorschau. |
 
-**Startwerte** (am Checkpoint nach M2 anzupassen): Welt quer 5 760 × 2 160 Einheiten (drei mal zwei Bildschirme),
-Turm hochkant 1 080 × 5 760; Kugeln von 24 auf 240; Stationen von 2 auf 8; Zoom 1,0 bis 1,8.
+**Startwerte** (am Checkpoint nach M2 anzupassen): Halle quer 3 840 × 2 160 Einheiten (zwei mal zwei Bildschirme)
+mit Zwischendeck; Auftrag im Entwurf 96 Kugeln, endgültig nach Laufzeitmessung; neun Stationen; Zoom 0,5 bis 1,3.
 
-Die Klangtreppe nimmt den Merkposten R24 (Melodie) auf.
+Der Merkposten R24 (Melodie aus Ereignissen) passt zu den Sortierröhren: jede Farbe ein eigener Ton.
 
 ---
 

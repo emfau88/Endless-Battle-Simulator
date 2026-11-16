@@ -28,7 +28,7 @@ geprüft** (mit Umfang und Programmstand) und **abgenommen** (laufender Clip wir
 | Nr. | Aufgabe | Nächster Schritt | Fertig, wenn |
 |---|---|---|---|
 | **R31** | **Ein Main: Ordnung halten** | Entscheidung zum leichten Schutz von `main`; erste Versionsmarke `v0.8.0` | Nur `main` und laufende Arbeit sichtbar; Regeln aus [AGENTS.md](../AGENTS.md) gelten |
-| **R35** | **Marble XL, Stufe 1** ([Gesamtplan, Abschnitt 9](GESAMTPLAN_2026-11-16.md#9--block-5-marble-xl)) | M0 Baukasten herauslösen, M1 Vorschau-Bilder, dann Stopp für die Freigabe | M2: breite Welt mit Kamera läuft, keine Kugel geht verloren |
+| **R35** | **Marble XL als Produktionslinie** ([Gesamtplan, Abschnitt 9](GESAMTPLAN_2026-11-16.md#9--block-5-marble-xl)) | Entwurfsbild mit neun verschiedenen Maschinen liegt vor (M1); Freigabe des Nutzers steht aus, danach M2 Grundlinie mit Simulation | M2: Grundlinie läuft, keine Kugel geht verloren, 20-Sekunden-Clip abgenommen |
 | **R04** | **Kanalpilot fortsetzen** | Ein Short und ein Langvideo pro Woche aus Pyramid, Naval oder Scrap Wars | Auswertung nach 7 und 28 Tagen entscheidet über Ausbau |
 | **R33** | **Abnahme-Mappe** | 16 Clips zu je 20 Sekunden (acht Szenarien, hochkant und quer, mit Ton) | Jeder Clip von dir bewertet; daraus folgt die Reihenfolge für R36 |
 
@@ -40,7 +40,7 @@ R33 bündelt die bisherigen Einzelabnahmen **R18** (Naval), **R20** (Scrap Wars)
 | Nr. | Aufgabe | Hinweis |
 |---|---|---|
 | **R34** | **Naval-Langvideo „Who survives the night?“** (20 bis 30 Minuten) | Pakete N0 bis N6 im [Gesamtplan, Abschnitt 8](GESAMTPLAN_2026-11-16.md#8--block-4-naval-langvideo-20-bis-30-minuten). N0 schließt zuerst die Prüflücke **R21** (Besitz und Reihenfolge der Kugeln im Zustands-Hash). **R01** und **R05** gehen darin auf. |
-| **R35** | **Marble XL, Stufen 2 und 3** | Neue Stationen, Wachstum, Hochformat-Turm, 20-Minuten-Vorlagen (M3 bis M7). |
+| **R35** | **Marble XL, weitere Pakete** | Weitere Stationen, Kapitel und Ausbauten, Hochformat, 20-Minuten-Vorlagen (M3 bis M7). |
 | **R36** | **Wichtigste Verbesserungen je Szenario** | Höchstens drei je Szenario, Vorschlag im [Gesamtplan, Abschnitt 7](GESAMTPLAN_2026-11-16.md#7--block-3-die-wichtigsten-verbesserungen-je-szenario); Reihenfolge nach R33. |
 | **R32** | **Architektur absichern** | A1 (Beschreibung) ist erledigt. A2 Vertragstest für jedes Szenario; A4 bis A7 entstehen mit dem ersten Szenario, das sie braucht. |
 | **R23** | **Pyramid: Ausbau für lange Videos** | P2 und P3 erledigt. Offen: P4 seltene Ereignisse, P5 Rennen, P6 Ausschnittsexport (Abweichung in der Dämmerung). |

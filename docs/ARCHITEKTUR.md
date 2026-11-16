@@ -127,7 +127,7 @@ Richtwert: Der 20-Minuten-Export der Pyramide in 1080p60 lief mit rund 21 Bilder
 
 ## 7 · Tests und Prüflauf
 
-- `scripts/test-ci.mjs` ordnet jede Testdatei über ihren Dateinamen einer von 17 Gruppen zu; der Prüflauf auf GitHub
+- `scripts/test-ci.mjs` ordnet jede Testdatei über ihren Dateinamen einer von 18 Gruppen zu; der Prüflauf auf GitHub
   startet jede Gruppe einzeln (`.github/workflows/ci.yml`).
 - **Referenz-Hashes** (`npm run golden`) decken Naval, Kugelfabrik und Mycelium ab. Die anderen Szenarien halten
   ihre Zustandsreferenzen in den eigenen Testdateien.
