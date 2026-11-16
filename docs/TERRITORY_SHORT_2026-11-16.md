@@ -98,6 +98,8 @@ Im Simulator: Szenario Territory Wars, Knopf „Short-Vorlage“. Die Videoläng
 
 ## 7 · Vorschlag: Speerträger und Champions
 
+![Links Panzer wie bisher, rechts Speerträger](reference/territory-speertraeger-vergleich-2026-11-16.jpg)
+
 **Speerträger (gebaut als Vorschau, Branch `feat/territory-soldaten`).** Die Panzer des Originals sind auf der Karte
 kaum zu sehen und passen nicht zu den Burgen. Mit dem Regler „Einheiten: Speerträger“ stehen und marschieren
 stattdessen kleine Soldaten mit Schild in der Fraktionsfarbe, Helm und Speer. Gleiche Anzahl und gleiche Stellen wie
