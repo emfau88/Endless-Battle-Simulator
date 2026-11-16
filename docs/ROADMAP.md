@@ -503,6 +503,9 @@ aufgreifen; R21 spätestens vor Änderungen an Besitz-/Recyclingmechanik schlie�
   Am selben Tag wurde die Optik nach Mockup und Pyramide neu gestaltet
   ([Vorher/Nachher](WASSERPARK_OPTIK_2026-11-16.md)). Offen ist dabei nur die Frage, ob die
   Anzeige deutsch bleiben oder wie die Pyramide englisch werden soll.
+  **Nächster Schritt:** Der Nutzer findet das Mockup weiterhin deutlich besser. Dafür gibt es jetzt den
+  [Optik-Plan „so gut wie das Mockup“](WASSERPARK_MOCKUP_PLAN_2026-11-16.md) mit Stilbibel, Paketen P1–P9
+  und Stil-Checkpoint nach P3. Die Umsetzung ist noch nicht beauftragt.
   **Restabnahme:** die kurzen laufenden Proben persönlich auf PC/Kopfhörer und echtem Handy ansehen
   und anhören; nur daraus entstehende konkrete Mängel nacharbeiten. Ganze Shorts/Langfilme werden
   separat produziert. Ausschnittsexport, Rennen und Auftragsmodus bleiben spätere Erweiterungen.
