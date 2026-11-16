@@ -1,7 +1,7 @@
 # Naval: Modus „Ruhiges Duell“ (in Arbeit)
 
-Stand: 17.11.2026. Erste vier Pakete des Naval-Ausbaus (R34, im [Gesamtplan](GESAMTPLAN_2026-11-16.md) Abschnitt 8.4
-als N1a, N2a, N2b und N2c geführt). Der Nutzer hat die Richtung anhand von Standbildern und Testclips freigegeben, den Einbau als
+Stand: 17.11.2026. Erste fünf Pakete des Naval-Ausbaus (R34, im [Gesamtplan](GESAMTPLAN_2026-11-16.md) Abschnitt 8.4
+als N1a, N2a, N2b, N2c und N2d geführt). Der Nutzer hat die Richtung anhand von Standbildern und Testclips freigegeben, den Einbau als
 neuen Modus beauftragt und danach die Vorschläge zu Lebensanzeige, Runden und Segeln zur Umsetzung freigegeben.
 
 ## 1 · Umfang
@@ -119,9 +119,10 @@ Minute; Runden 140 bis 204 s, Median 172 s (ohne Goldtreffer 182 s).
 
 Der Klang des Goldtreffers ist vorläufig ein weicher Metallklang aus dem Marble-Works-Satz.
 
-## 3d · Lesbarkeit (Vorschau, wartet auf Freigabe)
+## 3d · Lesbarkeit
 
-Dritter der freigegebenen Vorschläge; sichtbare Änderungen kommen zuerst als Vorschau.
+Dritter der freigegebenen Vorschläge. Als Vorschau gebaut und vom Nutzer anhand eines Vorher-Nachher-Bilds und eines
+Testclips freigegeben.
 
 - **Kanonen 30 % größer.** Es sind nur noch zwei je Schiff; neben den gleich groß gebliebenen Kugeln wirkten sie
   klein. Die Mündung sitzt dadurch etwas weiter vorn.
@@ -213,10 +214,10 @@ Modus. Der Standardmodus ist davon nicht betroffen.
 - **Die Versenkung hat noch keinen eigenen Klang.**
 - **Hochformat und drei oder vier Schiffe** laufen fehlerfrei (auch die Runden), sind aber nicht eigens abgestimmt.
   Bei drei und vier Schiffen tauchen neue Schiffe in der Mitte aus dem Dunst auf, statt hereinzusegeln.
-- **Wenig Abpraller.** Das Deck ist zum Bug hin offen; etwa jeder zweite Treffer springt einmal nach.
+- **Wenig Abpraller.** Das Deck ist zum Bug hin offen; etwa jeder zweite Treffer springt einmal nach. Eine erhöhte
+  Bugkante wurde gemessen und verworfen (Abschnitt 3d).
 - **Der Ton ist vorläufig.** Bei so wenigen Schüssen hebt die Einmessung auf −14 LUFS die Pegelspitzen über die
   Prüfgrenze des Exporters. Deshalb steht die Standardmischung auf 65 %. Der Segeldurchschuss ist stumm.
-- **Leuchtspuren sind kürzer,** weil sie an der Zeit hängen. Die zwei Kanonen wirken neben den Kugeln klein.
 - **Kein Ausschnittsexport.** Die Seek-Regel ist für die Seeschlacht insgesamt noch nicht nachgewiesen.
 - **Offen aus dem Plan:** die Prüflücke R21 und die vollständige Aufteilung von `naval.js` (N0).
 

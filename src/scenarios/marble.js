@@ -1046,8 +1046,10 @@ function drawGloss(g, c) {
 //  Renderer (PixiJS) – liest nur den Simulationszustand
 // =====================================================================
 class MarbleRenderer {
-  constructor({ sim, view, renderScale = 1 }) {
-    this.sim = sim; this.view = view; this.frame = 0; this.own = [];
+  // embedded: Betrieb als eine Linie innerhalb einer größeren Halle (Marble XL): keine eigene Kamera, keine Vignette,
+  // Schildtext frei wählbar. Ohne Angabe bleibt alles wie bisher.
+  constructor({ sim, view, renderScale = 1, embedded = null }) {
+    this.sim = sim; this.view = view; this.frame = 0; this.own = []; this.embedded = embedded;
     const L = (this.L = sim.L);
     PX = L.fit * renderScale;
     const ts = clamp(PX * 1.5, 1, 4);
@@ -1177,7 +1179,7 @@ class MarbleRenderer {
     // ---------- Vignette (nicht in der Kamera)
     const tVig = canvasTex(256, 256, (g) => { g.fillStyle = rad(g, 128, 118, 70, 128, 128, 190, [[0, 'rgba(0,0,0,0)'], [0.6, 'rgba(0,0,0,.16)'], [1, 'rgba(0,0,0,.62)']]); g.fillRect(0, 0, 256, 256); });
     this.own.push(tVig);
-    const vig = new PIXI.Sprite(tVig); vig.width = L.W; vig.height = L.H; this.root.addChild(vig);
+    const vig = new PIXI.Sprite(tVig); vig.width = L.W; vig.height = L.H; if (!embedded) this.root.addChild(vig);
     // ---------- HUD
     this.hud = new PIXI.Container(); this.hud.position.set(L.ox, L.oy); this.hud.scale.set(L.fit); this.root.addChild(this.hud);
     this._buildHud(spr);
@@ -1209,10 +1211,11 @@ class MarbleRenderer {
       dropShadow: glow ? { color: glow, alpha: 0.9, blur: 18, distance: 0, angle: 0 } : { color: 0x000000, alpha: 0.8, blur: 6, distance: 0, angle: 0 },
     });
     const g = new PIXI.Graphics();
-    const a = new PIXI.Text({ text: 'ENDLESS MARBLE ', style: style(T.size, '800', 0xeafcff, 4, 0x22d3ee) });
-    const b = new PIXI.Text({ text: 'FACTORY', style: style(T.size, '800', 0xffe1f1, 4, 0xff3f9e) });
+    const [ta, tb] = (this.embedded && this.embedded.title) || ['ENDLESS MARBLE ', 'FACTORY'];
+    const a = new PIXI.Text({ text: ta, style: style(T.size, '800', 0xeafcff, 4, 0x22d3ee) });
+    const b = new PIXI.Text({ text: tb, style: style(T.size, '800', 0xffe1f1, 4, 0xff3f9e) });
     // Rahmenbreite folgt der tatsächlichen Schriftbreite (die Schrift ragte im Querformat über den festen Rahmen hinaus)
-    const total = a.width + b.width, tw = Math.max(L.land ? 820 : 960, total + 64), th = T.size + 44;
+    const total = a.width + b.width, tw = Math.max(this.embedded ? 0 : L.land ? 820 : 960, total + 64), th = T.size + 44;
     g.roundRect(T.x - tw / 2, T.y - th / 2, tw, th, 16).fill({ color: 0x0a0e15, alpha: 0.82 }).stroke({ width: 2, color: 0x4a5767, alpha: 0.9 });
     g.roundRect(T.x - tw / 2 + 8, T.y - th / 2 + 8, tw - 16, th - 16, 10).stroke({ width: 1.5, color: 0x22d3ee, alpha: 0.35 });
     g.roundRect(B.x - B.w / 2, B.y - 52, B.w, 104, 14).fill({ color: 0x0a0e15, alpha: 0.78 }).stroke({ width: 2, color: 0x3a4554, alpha: 0.9 });
@@ -1240,7 +1243,7 @@ class MarbleRenderer {
     const sim = this.sim, L = this.L, t = sim.clock, lf = L.lift, bl = this.beltLoop;
     this.frame++;
     this.hud.visible = !!this.view.hud;
-    if (this.view.camera) { this.cam.scale.set(1.012 + 0.006 * Math.sin(t * 0.21)); this.cam.position.set(L.W / 2 + Math.sin(t * 0.13) * 3 * L.fit, L.H / 2 + Math.cos(t * 0.17) * 2.5 * L.fit); }
+    if (this.view.camera && !this.embedded) { this.cam.scale.set(1.012 + 0.006 * Math.sin(t * 0.21)); this.cam.position.set(L.W / 2 + Math.sin(t * 0.13) * 3 * L.fit, L.H / 2 + Math.cos(t * 0.17) * 2.5 * L.fit); }
     else { this.cam.scale.set(1); this.cam.position.set(L.W / 2, L.H / 2); }
     // Förderband
     const arc = Math.PI * bl.r, run = bl.x1 - bl.x0;
@@ -1306,6 +1309,15 @@ class MarbleRenderer {
 // =====================================================================
 //  Registrierung
 // =====================================================================
+// Bausteine der klassischen Fabrik für Marble XL (src/scenarios/marblexl.js)
+EBS.MarbleClassic = {
+  MarbleFactory, MarbleRenderer, COLORS, R, drawBall,
+  // Zeichen- und Bahnhelfer im Stil der klassischen Fabrik (setPX: Gerätepixel je Einheit für Schatten)
+  kit: { lin, rad, shadow, noShadow, rr, circ, css, tone, STEEL, STEEL_DARK, CYL, BRASS_CYL, BRASS, TUBE_IN, TUBE_OUT,
+    plate, bolt, band, trace, onLayer, tubesBack, tubesFront, rod, collar, post, hopperPath, drawGear, drawDiscLight,
+    drawBall, drawSwirl, drawGloss, buildPath, pathAt, sAtAxis, setPX: (v) => { PX = v; } },
+};
+
 EBS.registerScenario({
   id: 'marble',
   title: 'Endless Marble Factory',
