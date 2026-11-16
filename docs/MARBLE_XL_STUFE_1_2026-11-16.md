@@ -2,7 +2,7 @@
 
 Stand: 16.11.2026. Branch `marble-xl/stufe-1`. Gehört zu R35 und zum
 [Gesamtplan, Abschnitt 9](GESAMTPLAN_2026-11-16.md). **Status: bewegter Entwurf; Rückmeldung zum ersten Testclip
-eingearbeitet; fünfte Fassung (größere Kugeln, abschaltbare Schilder, Glühen nur zwischen Ofen und Farbstation, Trockenstrecke) liegt als Testclip vor; Rückmeldung dazu
+eingearbeitet; sechste Fassung (größere Kugeln, abschaltbare Schilder, Glühen nur zwischen Ofen und Farbstation, Trockenstrecke mit deutlich nasser Farbe, kleine Deko-Animationen) liegt als Testclip vor; Rückmeldung dazu
 steht aus.**
 
 ## Was es ist
@@ -240,10 +240,32 @@ Trockenstrecke. Die Tests liefen dafür nicht erneut. Im Code heißen Bahn und A
 
 **Fünfter Testclip** (lokal, `output/marblexl-vorschau/testclip-2026-11-16-v5/`): Querformat, 20 s, 1080p30.
 
+## Nasse Farbe deutlicher, kleine Deko-Animationen (16.11.2026, sechste Fassung)
+
+Rückmeldung des Nutzers zum fünften Clip: Die Kugeln könnten nach der Farbstation deutlicher nass aussehen. Von den
+vorgeschlagenen Deko-Animationen hat er alle bis auf die Schaltwand freigegeben.
+
+| Punkt | Umsetzung | Stand |
+|---|---|---|
+| Nasse Farbe | Heller Glanzfilm, sieben dicke Tropfen mit Lichtpunkt, unten löst sich ein Tropfen, Farbspur am Rohrboden, kräftigerer Farbschleier, Glitzern. Die Kugel bleibt auf dem ersten Fünftel der Trockenstrecke ganz nass und trocknet dann bis rund 80 % der Strecke. | **Erledigt** |
+| Ofen-Anzeigen | Nadel schlägt aus, wenn eine Kugel hinein- oder herausrollt, und pendelt gedämpft aus. Die Anzeigen sind rund 30 % größer, damit man das in der Übersicht sieht. | **Erledigt** |
+| Lämpchen | Polierer blinkt beim Polieren, Trockenstrecke blinkt im Wechsel, Prüfung leuchtet bei jeder Kugel grün | **Erledigt** |
+| Prüfbildschirm | Abtastzeile läuft, Ring und Haken leuchten nach jeder Prüfung auf | **Erledigt** |
+| Dampf | Steigt über der Waschtrommel auf (vorher stehende Wolken) | **Erledigt** |
+| Sortierklappen | Die Klappe der passenden Röhre öffnet sich, wenn ihre Kugel kommt (vorher stand eine dauerhaft offen) | **Erledigt** |
+| Zähler | Leuchtet kurz auf, wenn eine Kugel landet | **Erledigt** |
+| Kleinigkeiten | Wasserstand im Schauglas schwankt, rote Warnlichter auf den Schloten hinter den Fenstern | **Erledigt** |
+| Schaltwand (Anzeigen und Lauflicht) | Vorschlag, vom Nutzer nicht genannt | **Nicht eingebaut** |
+
+Alle Animationen hängen nur von der Bildzeit und vom Ablauf ab (Seek-Regel). Zustands-Hash des 20-Sekunden-Clips
+unverändert (`8aa05504`). **Geprüft:** `node --test test/marblexl.test.mjs` (3 von 3 bestanden, darin der
+Bildvergleich Sprung gegen durchgehende Wiedergabe), Bildfolgen aus dem Clip (Trockenstrecke, Sortierklappen, Ofen).
+
+**Sechster Testclip** (lokal, `output/marblexl-vorschau/testclip-2026-11-16-v6/`): Querformat, 20 s, 1080p30.
+
 ## Nächster Schritt
 
-Rückmeldung des Nutzers zum fünften Testclip abwarten (Trockenstrecke, Glühen, Kugelgröße, Bild ohne Schilder;
-Ton aus dem zweiten Clip ist ebenfalls noch offen). Vorschläge für kleine Deko-Animationen (Nadeln der Anzeigen,
-Lämpchen, Dampf, Sortierklappen) liegen als Vorschau-Clip aus einer Kopie vor und sind noch nicht eingebaut.
-Offen bleiben: mehr Kugeln gleichzeitig (kürzerer Takt), eigene Klänge für Trommel, Ofen und Sprühen,
-Hochformat, danach echte Warteschlangen und Physik.
+Rückmeldung des Nutzers zum sechsten Testclip abwarten (nasse Farbe, Deko; Ton aus dem zweiten Clip ist ebenfalls
+noch offen). Weitere Vorschläge, noch nicht eingebaut: Muster der Kugel dreht sich beim Rollen mit, Füllstand der
+Farbtanks sinkt beim Sprühen, Anzeigen der Schaltwand. Offen bleiben: mehr Kugeln gleichzeitig (kürzerer Takt),
+eigene Klänge für Trommel, Ofen und Sprühen, Hochformat, danach echte Warteschlangen und Physik.

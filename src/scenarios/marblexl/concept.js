@@ -74,7 +74,7 @@ function glow(g, x, y, hex, a, r) {
   g.fillRect(x - r, y - r, 2 * r, 2 * r); g.restore();
 }
 /** kind: raw | washed | clear | color; heat 0..1 lässt die Kugel orange glühen; wet 0..1 zeigt frische, nasse Farbe */
-function marble(g, x, y, kind, color = 0, heat = 0, wet = 0) {
+function marble(g, x, y, kind, color = 0, heat = 0, wet = 0, seed = 0) {
   const c0 = (R0 + 3) * MS;
   const hex = kind === 'raw' ? RAW : kind === 'washed' ? WASHED : kind === 'clear' ? CLEAR : COLORS[color].hex;
   if (kind === 'color') glow(g, x, y, hex, 0.30 * (1 - heat * 0.6), R * 2.1);
@@ -84,17 +84,32 @@ function marble(g, x, y, kind, color = 0, heat = 0, wet = 0) {
   g.drawImage(t, x - c0, y - c0, 2 * c0, 2 * c0);
   if (kind === 'washed') for (const [dx, dy, r] of [[-8, -9, 2.6], [7, -2, 1.7], [-2, 9, 2.1], [10, 9, 1.4]]) { circ(g, x + dx * MS, y + dy * MS, r * MS); g.fillStyle = 'rgba(190,242,255,.9)'; g.fill(); }
   if (kind === 'clear' && heat < 0.05) sparkle(g, x - R * 0.44, y - R * 0.48, 14 * MS);
-  if (kind === 'color' && wet > 0.02) {                // frische Farbe: helle Tropfen und nasser Glanz, beides trocknet weg
-    g.save(); g.globalAlpha *= Math.min(1, wet * 1.25); g.fillStyle = tone(hex, 0.62);
-    for (const [dx, dy, r] of [[-9, -6, 3.2], [8, -10, 2.4], [3, 8, 3.6], [-6, 11, 2.2], [12, 4, 2.6]]) { circ(g, x + dx * MS, y + dy * MS, r * MS * (0.5 + 0.5 * wet)); g.fill(); }
-    g.globalCompositeOperation = 'lighter'; g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2.4 * MS; g.lineCap = 'round';
-    g.beginPath(); g.arc(x, y, R - 5 * MS, 2.2, 3.3); g.stroke(); g.restore();
-  }
+  if (kind === 'color' && wet > 0.02) wetLook(g, x, y, hex, wet, seed);
   if (heat > 0.02) {
     g.save(); circ(g, x, y, R); g.clip(); g.globalCompositeOperation = 'lighter';
     g.fillStyle = rad(g, x, y, 0, x, y, R, [[0, `rgba(255,236,190,${0.75 * heat})`], [0.7, `rgba(255,140,40,${0.6 * heat})`], [1, `rgba(255,90,20,${0.35 * heat})`]]);
     g.fillRect(x - R, y - R, 2 * R, 2 * R); g.restore();
   }
+}
+
+/** Frische, nasse Farbe: Glanzfilm, dicke Tropfen mit Lichtpunkt, unten löst sich ein Tropfen. Alles trocknet mit wet weg. */
+function wetLook(g, x, y, hex, wet, seed) {
+  g.save(); g.globalAlpha *= Math.min(1, wet * 1.3);
+  g.save(); circ(g, x, y, R - 0.5); g.clip(); g.globalCompositeOperation = 'lighter';              // nasser Film
+  g.fillStyle = rad(g, x - R * 0.3, y - R * 0.45, 0, x - R * 0.3, y - R * 0.45, R * 1.25, [[0, 'rgba(255,255,255,.46)'], [0.45, 'rgba(255,255,255,.12)'], [1, 'rgba(255,255,255,0)']]);
+  g.fillRect(x - R, y - R, 2 * R, 2 * R);
+  g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineCap = 'round'; g.lineWidth = 3 * MS; g.beginPath(); g.arc(x, y, R - 5 * MS, 2.0, 3.5); g.stroke();
+  g.lineWidth = 1.8 * MS; g.beginPath(); g.arc(x, y, R - 4 * MS, -0.5, 0.5); g.stroke();
+  g.restore();
+  for (const [dx, dy, r] of [[-10, -5, 4.2], [8, -11, 3.2], [2, 7, 4.8], [-7, 11, 3.0], [12, 3, 3.6], [-1, -13, 2.6], [-14, 5, 2.4]]) {   // Tropfen
+    const px = x + dx * MS, py = y + dy * MS, pr = r * MS * (0.45 + 0.55 * wet);
+    circ(g, px, py, pr); g.fillStyle = tone(hex, 0.55); g.fill(); g.strokeStyle = tone(hex, -0.45); g.lineWidth = 0.8; g.stroke();
+    circ(g, px - pr * 0.3, py - pr * 0.35, pr * 0.38); g.fillStyle = 'rgba(255,255,255,.95)'; g.fill();
+  }
+  const ph = mod(T * 1.5 + seed * 0.37, 1), dr = 4.6 * MS * (1 - 0.45 * ph), dy = y + R - 2 * MS + ph * 7 * MS;   // Tropfen löst sich unten
+  circ(g, x + 3 * MS, dy, dr); g.fillStyle = tone(hex, 0.3); g.fill();
+  circ(g, x + 3 * MS - dr * 0.3, dy - dr * 0.3, dr * 0.35); g.fillStyle = 'rgba(255,255,255,.9)'; g.fill();
+  g.restore();
 }
 
 // ---------------------------------------------------------------- kleine Bausteine
@@ -119,7 +134,12 @@ function neon(g, x, y, a, b, size, frame = true) {
   g.restore();
 }
 function led(g, x, y, hex, r = 5) { glow(g, x, y, hex, 0.9, r * 4); circ(g, x, y, r); g.fillStyle = css(hex, 1); g.fill(); circ(g, x - r * 0.3, y - r * 0.3, r * 0.35); g.fillStyle = 'rgba(255,255,255,.8)'; g.fill(); }
+function ledOff(g, x, y, hex, r = 5) { circ(g, x, y, r); g.fillStyle = css(hex, 0.3); g.fill(); g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 1; g.stroke(); }
+const lamp = (g, x, y, hex, r, on) => (on ? led(g, x, y, hex, r) : ledOff(g, x, y, hex, r));
+// Ausschlag einer Nadel nach einem Ereignis, das sich in jedem Takt wiederholt (t0 = Zeitpunkt im Takt); klingt gedämpft aus
+const kick = (t0) => { const e = mod(T - t0, PERIOD); return smooth(e / 0.05) * Math.exp(-3.4 * e) * Math.cos(15 * e); };
 function gauge(g, gx, gy, gr, val) {
+  val = val < 0 ? 0 : val > 1 ? 1 : val;
   circ(g, gx, gy, gr + 5); g.fillStyle = lin(g, gx - gr, gy - gr, gx + gr, gy + gr, BRASS); g.fill(); g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = 1.2; g.stroke();
   circ(g, gx, gy, gr); g.fillStyle = rad(g, gx, gy - gr * 0.3, 2, gx, gy, gr, [[0, '#f4f1e6'], [1, '#bdb8a6']]); g.fill(); g.stroke();
   g.strokeStyle = 'rgba(30,30,30,.8)'; g.lineWidth = 1.2;
@@ -347,7 +367,7 @@ function polisherFront(g) {
   glassShine(g, p.x + 40, p.y + 56, p.w - 80, p.h - 96, 14);
   cornerBolts(g, p.x, p.y, p.w, p.h, 5, 14);
   nameplate(g, p.x + 26, p.y + 16, 'PRECISION POLISH · MK II');
-  led(g, p.x + p.w - 30, p.y + 28, 0x54ff9a); led(g, p.x + p.w - 54, p.y + 28, 0xffc13a, 4);
+  led(g, p.x + p.w - 30, p.y + 28, 0x54ff9a); lamp(g, p.x + p.w - 54, p.y + 28, 0xffc13a, 4, mod(T - ST.polish, PERIOD) < ST.polOut - ST.polish && Math.floor(T * 7) % 2 === 0);
   vents(g, p.x + 44, p.y + p.h - 34, p.w - 88, 2);
   for (const x of [p.x, p.x + p.w]) band(g, x, 800, 16, TUBE_OUT + 8, 0, BRASS_CYL);
 }
@@ -400,9 +420,9 @@ function kilnFront(g) {
   rr(g, cx0, cy0, cw, 100, 22); g.strokeStyle = 'rgba(255,200,140,.5)'; g.lineWidth = 2; g.stroke();
   for (let x = k.x + 30; x < k.x + k.w - 10; x += 62) { bolt(g, x, k.y + 22, 4.6); bolt(g, x, k.y + k.h - 22, 4.6); }
   for (const x of [k.x + 250, k.x + 480, k.x + 710]) { g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(x - 2, k.y + 44, 4, 152); }
-  gauge(g, k.x + 140, k.y + 208, 20, 0.8 + 0.04 * Math.sin(T * 2.6)); gauge(g, k.x + k.w - 140, k.y + 208, 20, 0.7 + 0.05 * Math.sin(T * 3.3 + 1));
+  gauge(g, k.x + 140, k.y + 207, 26, 0.62 + 0.03 * Math.sin(T * 2.6) + 0.24 * kick(ST.kiln)); gauge(g, k.x + k.w - 140, k.y + 207, 26, 0.56 + 0.03 * Math.sin(T * 3.3 + 1) + 0.26 * kick(ST.dropIn));
   nameplate(g, k.x + k.w / 2 - 92, k.y + 196, 'TUNNEL KILN · 1200 °C', 184);
-  led(g, k.x + 190, k.y + 208, 0xff5a2a, 4 + pulse); led(g, k.x + k.w - 190, k.y + 208, 0xff5a2a, 4 + (1 - pulse));
+  led(g, k.x + 200, k.y + 208, 0xff5a2a, 4 + pulse); led(g, k.x + k.w - 200, k.y + 208, 0xff5a2a, 4 + (1 - pulse));
   for (const x of [k.x, k.x + k.w]) band(g, x, 800, 18, TUBE_OUT + 9, 0, BRASS_CYL);
   // Aufflammen, wenn eine Kugel hinein- oder herausrollt
   if (fl.kilnIn > 0.01) glow(g, k.x + 8, 800, 0xffb060, 0.75 * fl.kilnIn, 150);
@@ -530,7 +550,7 @@ function coolFront(g) {
   const x = 2210, y = 1392, w = 740, h = 452;
   cornerBolts(g, x, y, w, h, 5, 14);
   nameplate(g, x + 24, y + 12, 'DRYING LINE');
-  led(g, x + w - 30, y + 24, 0x35d8ff); led(g, x + w - 54, y + 24, 0x35d8ff, 4);
+  lamp(g, x + w - 30, y + 24, 0x35d8ff, 5, Math.floor(T * 1.25) % 2 === 0); lamp(g, x + w - 54, y + 24, 0x35d8ff, 4, Math.floor(T * 1.25) % 2 === 1);
 }
 
 function inspectBack(g) {
@@ -538,7 +558,9 @@ function inspectBack(g) {
   plate(g, 1968, 1556, 144, 150, 10, { blur: 20 });
   rr(g, 1982, 1570, 116, 84, 6); g.fillStyle = '#050a0d'; g.fill(); g.strokeStyle = 'rgba(0,0,0,.8)'; g.lineWidth = 2; g.stroke();
   // Prüfbild: Kugelumriss mit Haken
-  g.save(); g.shadowColor = 'rgba(84,255,154,.9)'; g.shadowBlur = 10; g.strokeStyle = '#54ff9a'; g.lineWidth = 2.4;
+  const hit = Math.exp(-2.6 * mod(T - SCAN_T, PERIOD)), ly = 1572 + mod(T * 0.9, 1) * 80;
+  g.save(); rr(g, 1982, 1570, 116, 84, 6); g.clip(); g.fillStyle = lin(g, 0, ly - 16, 0, ly + 2, [[0, 'rgba(84,255,154,0)'], [1, 'rgba(84,255,154,.30)']]); g.fillRect(1982, ly - 16, 116, 18); g.restore();
+  g.save(); g.shadowColor = 'rgba(84,255,154,.9)'; g.shadowBlur = 8 + 16 * hit; g.strokeStyle = '#54ff9a'; g.lineWidth = 2.4; g.globalAlpha = 0.42 + 0.58 * hit;
   circ(g, 2018, 1612, 24); g.stroke(); g.beginPath(); g.moveTo(2060, 1612); g.lineTo(2070, 1624); g.lineTo(2088, 1598); g.stroke(); g.restore();
   // Ausschussbehälter
   plate(g, 1884, 1946, 150, 122, 10, { blur: 16 });
@@ -549,7 +571,7 @@ function inspectFront(g) {
   glow(g, 2040, 1803, 0x7fe9ff, FLOW && FLOW.scan ? 0.95 : 0.3, 110 * MS);
   const sh = TUBE_OUT + 31;
   g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = lin(g, 0, 1803 - sh, 0, 1803 + sh, [[0, 'rgba(127,233,255,0)'], [0.5, 'rgba(127,233,255,.55)'], [1, 'rgba(127,233,255,0)']]); g.fillRect(2036, 1803 - sh, 8, 2 * sh); g.restore();
-  led(g, 2000, 1680, 0x54ff9a); led(g, 2026, 1680, 0xffc13a, 4); led(g, 2052, 1680, 0x35d8ff, 4);
+  lamp(g, 2000, 1680, 0x54ff9a, 5, mod(T - SCAN_T, PERIOD) < 0.55); lamp(g, 2026, 1680, 0xffc13a, 4, Math.floor(T * 2) % 2 === 0); led(g, 2052, 1680, 0x35d8ff, 4);
   nameplate(g, 1972, 1706, 'OPTICAL CONTROL', 136);
   glassShine(g, 1898, 1960, 122, 80, 8);
   nameplate(g, 1912, 2042, 'REWORK', 94);
@@ -608,7 +630,7 @@ function sorterFront(g) {
     band(g, c.x, 2012, 12, TUBE_OUT + 6, HALF_PI);
     rr(g, c.x - TUBE_OUT, 2026, 2 * TUBE_OUT, 12, 6); g.fillStyle = css(COLORS[i].hex, 0.9); g.fill(); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1.2; g.stroke();
     // Klappe an der Sortierschiene
-    g.save(); g.translate(c.x + 30 * MS, c.yRail + 24 * MS); g.rotate(i === 2 ? -1.3 : -0.06); rr(g, -4, -3, 56, 6, 3); g.fillStyle = lin(g, 0, -3, 0, 3, BRASS); g.fill(); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1; g.stroke(); g.restore();
+    g.save(); g.translate(c.x + 30 * MS, c.yRail + 24 * MS); g.rotate(-0.06 - 1.24 * (FLOW ? FLOW.flaps[i] : 0)); rr(g, -4, -3, 56, 6, 3); g.fillStyle = lin(g, 0, -3, 0, 3, BRASS); g.fill(); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1; g.stroke(); g.restore();
   });
 }
 
@@ -685,6 +707,12 @@ function depth(g) {
   nameplate(g, 3440, 1748, 'RESERVED · LINE 2', 192);
   crate(g, 3560, 1950, 126, 'PARTS'); crate(g, 3430, 1986, 90); crate(g, 3586, 1838, 96);
 }
+function beacons(g) {                                // Warnlichter auf den fernen Schloten hinter den Fenstern
+  for (const [bx, by, o] of [[873, 252, 0], [1093, 252, 1.1], [3390, 361, 0.5], [3640, 361, 1.7]]) {
+    const e = mod(T + o, 2.6); if (e >= 0.5) continue;
+    const a = Math.sin(Math.PI * e / 0.5); glow(g, bx, by, 0xff3b30, 0.9 * a, 18); circ(g, bx, by, 2.6); g.fillStyle = `rgba(255,120,100,${a.toFixed(3)})`; g.fill();
+  }
+}
 function zoneLights(g) {
   glow(g, 1110, 700, 0x2fd6e6, 0.11, 560); glow(g, 1970, 790, 0xffe2a8, 0.09, 480);
   glow(g, 2800, 800, 0xff7a1f, 0.13, 980); glow(g, 3300, 1330, 0xb46bff, 0.09, 600);
@@ -694,7 +722,7 @@ function zoneLights(g) {
 function waterTank(g) {                              // Wasserversorgung der Waschtrommel
   for (const x of [390, 560]) post(g, x, 952, DECK + 4, 18);
   band(g, 474, 892, 250, 62, 0, CYL); band(g, 356, 892, 16, 68, 0, STEEL); band(g, 592, 892, 16, 68, 0, STEEL);
-  rr(g, 440, 846, 16, 92, 8); g.fillStyle = 'rgba(8,15,24,.9)'; g.fill(); g.fillStyle = 'rgba(70,205,240,.8)'; rr(g, 443, 880, 10, 55, 5); g.fill(); g.strokeStyle = 'rgba(176,220,246,.6)'; g.lineWidth = 1.5; rr(g, 440, 846, 16, 92, 8); g.stroke();
+  rr(g, 440, 846, 16, 92, 8); g.fillStyle = 'rgba(8,15,24,.9)'; g.fill(); g.fillStyle = 'rgba(70,205,240,.8)'; { const wl = 49 + 6 * Math.sin(T * 0.45) + 2 * Math.sin(T * 2.1); rr(g, 443, 935 - wl, 10, wl, 5); } g.fill(); g.strokeStyle = 'rgba(176,220,246,.6)'; g.lineWidth = 1.5; rr(g, 440, 846, 16, 92, 8); g.stroke();
   glow(g, 448, 900, 0x2fd6e6, 0.35, 70); nameplate(g, 490, 880, 'WATER', 72);
   pipeRun(g, [[600, 904], [900, 904], [958, 854]], 16);
 }
@@ -710,8 +738,9 @@ function chevrons(g, p, fs) {
 function quietDetails(g) {
   // Dampf über der Waschtrommel
   g.save(); g.globalCompositeOperation = 'lighter';
-  for (const [dx, dy, r, a] of [[-40, -214, 46, 0.10], [10, -262, 62, 0.085], [-18, -330, 78, 0.06], [44, -396, 92, 0.04], [70, -230, 38, 0.07]]) {
-    g.fillStyle = rad(g, DRUM.x + dx, DRUM.y + dy, 2, DRUM.x + dx, DRUM.y + dy, r, [[0, `rgba(205,240,255,${a})`], [1, 'rgba(205,240,255,0)']]); g.fillRect(DRUM.x + dx - r, DRUM.y + dy - r, 2 * r, 2 * r);
+  for (let k = 0; k < 7; k++) {
+    const ph = mod(T * 0.13 + k / 7, 1), sx = DRUM.x - 20 + Math.sin(k * 2.4) * 46 + Math.sin(T * 0.5 + k * 1.7) * 14 + ph * 26, sy = DRUM.y - 196 - ph * 230, r = 40 + ph * 62, a = 0.13 * Math.sin(Math.PI * ph);
+    g.fillStyle = rad(g, sx, sy, 2, sx, sy, r, [[0, `rgba(205,240,255,${a.toFixed(3)})`], [1, 'rgba(205,240,255,0)']]); g.fillRect(sx - r, sy - r, 2 * r, 2 * r);
   }
   g.restore();
   chevrons(g, PATHS.top, [0.3]); chevrons(g, PATHS.feed, [0.28]); chevrons(g, PATHS.polOut, [0.52]);
@@ -756,6 +785,7 @@ const ST = (() => {
 const BIG_ROT0 = A_PICK + BIG_W * ST.ride;                         // eine Tasche steht bei der Übergabe bereit
 const railTime = (c) => colS[c] / 230;
 // Glühen: wächst im Ofen von null an und klingt auf dem Weg zur Farbstation wieder ganz ab
+const SCAN_T = ST.cool + (PATHS.cool.len - 40) / 265;                // Zeitpunkt der Prüfung im Takt
 const cooling = (u) => 1 - smooth((u - ST.drop) / (ST.colour - ST.drop));
 const slotIndex = (n) => { const c = colorOf(n), first = Math.ceil(-ST.rail / PERIOD); let k = BASE[c]; for (let m = first; m < n; m++) if (colorOf(m) === c) k++; return k; };
 const fallTime = (c, idx) => Math.sqrt(2 * Math.max(40, SLOT0 - idx * SP - COLS[c].yRail) / 1500);
@@ -790,31 +820,35 @@ function poseOf(n, t) {
   if (u < ST.colourOut) { const f = seg('colour', 'colourOut'); o.x = CRADLE.x; o.y = 1440; o.kind = 'color'; o.tint = smooth((f - 0.14) / 0.5); o.cf = f; o.work = f; o.wet = o.tint; return o; }
   o.kind = 'color'; o.tint = 1;
   if (u < ST.cool) { o.x = lerp(CRADLE.x, 2960, seg('colourOut', 'cool')); o.y = 1440; o.wet = 1; return o; }
-  if (u < ST.toWheel) { const f = seg('cool', 'toWheel'), q = pathAt(PATHS.cool, PATHS.cool.len * f, P); o.x = q.x; o.y = q.y; o.wet = 1 - smooth(f / 0.8); if (f > 0.8 && f < 0.93) o.dry = (f - 0.8) / 0.13; o.scan = Math.abs(q.x - 2040) < 26; return o; }
+  if (u < ST.toWheel) { const f = seg('cool', 'toWheel'), q = pathAt(PATHS.cool, PATHS.cool.len * f, P); o.x = q.x; o.y = q.y; o.wet = 1 - smooth((f - 0.2) / 0.62); if (f > 0.82 && f < 0.95) o.dry = (f - 0.82) / 0.13; o.scan = Math.abs(q.x - 2040) < 26; return o; }
   o.heat = 0;
   if (u < ST.ride) { const f = seg('toWheel', 'ride'), q = pathAt(PATHS.toWheel, PATHS.toWheel.len * f, P), e = smooth((f - 0.75) / 0.25); o.x = lerp(q.x, BIG.x + Math.cos(A_PICK) * BIG.rp, e); o.y = lerp(q.y, BIG.y + Math.sin(A_PICK) * BIG.rp, e); return o; }
   if (u < ST.rail) { const a = A_PICK - BIG_W * (u - ST.ride); o.x = BIG.x + Math.cos(a) * BIG.rp; o.y = BIG.y + Math.sin(a) * BIG.rp; return o; }
   const ur = u - ST.rail, rt = railTime(c), idx = slotIndex(n);
+  o.rel = ur - 0.35 - rt;                                          // Zeit bis (negativ) oder seit dem Abwurf in die Röhre
   if (ur < 0.35) { const f = smooth(ur / 0.35), q = pathAt(PATHS.sortRail, 0, P); o.x = lerp(BIG.x + Math.cos(A_REL) * BIG.rp, q.x, f); o.y = lerp(BIG.y + Math.sin(A_REL) * BIG.rp, q.y, f); return o; }
   if (ur < 0.35 + rt) { const q = pathAt(PATHS.sortRail, colS[c] * ((ur - 0.35) / rt), P); o.x = q.x; o.y = q.y; return o; }
   if (idx >= CAP) return null;                                     // Röhre voll (in der Vorschau, vor dem Neubeginn)
   const ft = fallTime(c, idx), f = Math.min(1, (ur - 0.35 - rt) / ft);
-  o.x = COLS[c].x; o.y = lerp(COLS[c].yRail + 6, SLOT0 - idx * SP, f * f); o.landed = f >= 1;
+  o.x = COLS[c].x; o.y = lerp(COLS[c].yRail + 6, SLOT0 - idx * SP, f * f); o.landed = f >= 1; if (o.landed) o.since = o.rel - ft;
   return o;
 }
 /** Alle sichtbaren Kugeln zur Zeit t und die Zahl der fertigen. */
 function flowAt(t) {
   const list = [], first = Math.ceil(-ST.rail / PERIOD), last = Math.floor(t / PERIOD + 2);
-  let done = BASE.reduce((a, b) => a + b, 0), scan = false, kilnIn = 0, kilnOut = 0, colour = null;
+  let done = BASE.reduce((a, b) => a + b, 0), scan = false, kilnIn = 0, kilnOut = 0, colour = null, since = 9;
+  const flaps = [0, 0, 0, 0, 0, 0];
   for (let n = first; n <= last; n++) {
     const p = poseOf(n, t); if (!p) continue;
     if (p.landed) done++;
     if (p.scan) scan = true;
     if (p.kf !== undefined) { kilnIn = Math.max(kilnIn, 1 - p.kf / 0.07); kilnOut = Math.max(kilnOut, 1 - (1 - p.kf) / 0.07); }
     if (p.cf !== undefined) colour = { color: p.color, f: p.cf };
+    if (p.rel !== undefined) flaps[p.color] = Math.max(flaps[p.color], smooth((p.rel + 0.6) / 0.3) * (1 - smooth((p.rel - 0.15) / 0.3)));
+    if (p.since !== undefined && p.since < since) since = p.since;
     list.push(p);
   }
-  return { list, done, scan, kilnIn, kilnOut, colour };
+  return { list, done, scan, kilnIn, kilnOut, colour, flaps, since };
 }
 /** Tonereignisse im Zeitraum (t0, t1]: gleiche Zeitpunkte wie im Bild. */
 function eventsBetween(t0, t1, emit) {
@@ -851,9 +885,11 @@ function placeMarbles(g) {
   COLS.forEach((c, i) => { for (let k = 0; k < BASE[i]; k++) marble(g, c.x, SLOT0 - k * SP, 'color', i); });
   for (const p of fl.list) {
     if (p.trail) for (let j = 3; j >= 1; j--) { const q = poseOf(p.n, tf - 0.05 * j); if (q) glow(g, q.x, q.y, 0xff8a2a, 0.2 * p.heat * (1 - j / 4), R * 2.3); }   // Nachglühen
-    if (p.wet > 0.02 && p.tint >= 1) for (let j = 3; j >= 1; j--) { const q = poseOf(p.n, tf - 0.06 * j); if (q) glow(g, q.x, q.y, COLORS[p.color].hex, 0.24 * p.wet * (1 - j / 4), R * 2.1); }   // Farbschleier
-    if (p.kind === 'color' && p.tint < 1) { marble(g, p.x, p.y, 'clear', 0, p.heat); g.save(); g.globalAlpha = p.tint; marble(g, p.x, p.y, 'color', p.color, p.heat, p.wet); g.restore(); }
-    else marble(g, p.x, p.y, p.kind, p.color, p.heat, p.wet);
+    if (p.wet > 0.02 && p.tint >= 1) for (let j = 3; j >= 1; j--) { const q = poseOf(p.n, tf - 0.06 * j); if (q) glow(g, q.x, q.y, COLORS[p.color].hex, 0.36 * p.wet * (1 - j / 4), R * 2.2); }   // Farbschleier
+    if (p.wet > 0.02 && p.tint >= 1) for (let j = 7; j >= 1; j--) { const q = poseOf(p.n, tf - 0.08 * j); if (q) { circ(g, q.x, q.y + R * 0.95, (4.6 - 0.45 * j) * MS); g.fillStyle = css(COLORS[p.color].hex, 0.8 * p.wet * (1 - j / 8)); g.fill(); } }   // Farbspur am Rohrboden
+    if (p.kind === 'color' && p.tint < 1) { marble(g, p.x, p.y, 'clear', 0, p.heat); g.save(); g.globalAlpha = p.tint; marble(g, p.x, p.y, 'color', p.color, p.heat, p.wet, p.n); g.restore(); }
+    else marble(g, p.x, p.y, p.kind, p.color, p.heat, p.wet, p.n);
+    if (p.wet > 0.25) { sparkle(g, p.x + R * 0.38, p.y - R * 0.22, 13 * MS * p.wet * Math.abs(Math.sin(T * 4.2 + p.n * 1.9))); sparkle(g, p.x - R * 0.2, p.y + R * 0.4, 10 * MS * p.wet * Math.abs(Math.sin(T * 3.1 + p.n * 2.7 + 1))); }   // nasses Glitzern
     if (p.dry !== undefined) sparkle(g, p.x - R * 0.44, p.y - R * 0.48, 22 * MS * Math.sin(Math.PI * p.dry));                    // trocken: kurzer Glanzstern
   }
 }
@@ -878,7 +914,7 @@ function drawScene(g, t, px, bgScale = 1, opts = null) {
   const bg = background(bgScale);
   g.drawImage(bg, 0, 0, W, H);
   K.setPX(px);
-  fan(g, 500, 1196, 74, 0.5 + T * 2.6); fan(g, 3640, 660, 62, 1.1 - T * 3.1);
+  fan(g, 500, 1196, 74, 0.5 + T * 2.6); fan(g, 3640, 660, 62, 1.1 - T * 3.1); beacons(g);
   const tubes = [
     { p: PATHS.shaft, s0: 0, s1: PATHS.shaft.len }, { p: PATHS.top, s0: 0, s1: PATHS.top.len - 34 }, { p: PATHS.feed, s0: 30, s1: PATHS.feed.len },
     { p: PATHS.drumOut, s0: 0, s1: PATHS.drumOut.len }, { p: PATHS.polIn, s0: 0, s1: PATHS.polIn.len }, { p: PATHS.polOut, s0: 0, s1: PATHS.polOut.len },
@@ -897,7 +933,7 @@ function drawScene(g, t, px, bgScale = 1, opts = null) {
   colourFront(g); coolFront(g); inspectFront(g); bigWheelFront(g); sorterFront(g); rawBin(g, true);
   quietDetails(g);
   if (SIGNS) neon(g, 1790, 150, 'MARBLE FACTORY ', 'XL', 78);
-  board(g, 1790, SIGNS ? 318 : 132, FLOW ? FLOW.done : 35);
+  board(g, 1790, SIGNS ? 318 : 132, FLOW ? FLOW.done : 35, FLOW ? Math.exp(-4 * FLOW.since) : 0);
   if (SIGNS) for (const [x, y, a, b] of [[560, 232, '01 ', 'RAW'], [1110, 440, '02 ', 'WASH'], [1970, 520, '03 ', 'POLISH'], [2800, 610, '04 ', 'KILN'],
     [3300, 1650, '05 ', 'COLOUR'], [2580, 1910, '06 ', 'DRY'], [2040, 1490, '07 ', 'INSPECT'], [1640, 1180, '08 ', 'LIFT'], [960, 1230, '09 ', 'SORT']]) neon(g, x, y, a, b, 40);
 }
@@ -909,11 +945,11 @@ function render(t = 30, signs = false) {
   drawScene(g, t, 1, 1, { signs }); vignette(g, W, H);
   return cv;
 }
-function board(g, x, y, done) {
+function board(g, x, y, done, pulse = 0) {
   const w = 900, h = 104, total = 96, n = Math.min(total, done);
   rr(g, x - w / 2, y - h / 2, w, h, 14); g.fillStyle = 'rgba(10,14,21,.82)'; g.fill(); g.strokeStyle = 'rgba(58,69,84,.9)'; g.lineWidth = 2; g.stroke();
   g.save(); g.textBaseline = 'middle';
-  g.font = `800 44px ${FONT}`; g.fillStyle = '#ffffff'; g.textAlign = 'left'; g.shadowColor = 'rgba(0,0,0,.8)'; g.shadowBlur = 6; g.fillText(`${n} / ${total}`, x - w / 2 + 30, y - 10);
+  g.font = `800 44px ${FONT}`; g.fillStyle = '#ffffff'; g.textAlign = 'left'; g.shadowColor = pulse > 0.03 ? `rgba(34,211,238,${pulse.toFixed(3)})` : 'rgba(0,0,0,.8)'; g.shadowBlur = 6 + 24 * pulse; g.fillText(`${n} / ${total}`, x - w / 2 + 30, y - 10); g.shadowColor = 'rgba(0,0,0,.8)'; g.shadowBlur = 6;
   g.font = `600 16px ${FONT}`; g.fillStyle = '#8fa0b8'; g.fillText('M A R B L E S   F I N I S H E D', x - w / 2 + 30, y + 30);
   g.textAlign = 'right'; g.font = `800 32px ${FONT}`; g.fillStyle = '#ffe1f1'; g.shadowColor = 'rgba(255,63,158,.9)'; g.shadowBlur = 12; g.fillText('II · COLOUR', x + w / 2 - 30, y - 12);
   g.font = `600 16px ${FONT}`; g.fillStyle = '#8fa0b8'; g.shadowColor = 'rgba(0,0,0,.8)'; g.shadowBlur = 6; g.fillText('N E X T :   S E C O N D   L I N E', x + w / 2 - 30, y + 30);
