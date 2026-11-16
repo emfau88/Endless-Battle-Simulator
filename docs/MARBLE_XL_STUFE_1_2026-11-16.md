@@ -2,7 +2,8 @@
 
 Stand: 16.11.2026. Branch `marble-xl/stufe-1`. Gehört zu R35 und zum
 [Gesamtplan, Abschnitt 9](GESAMTPLAN_2026-11-16.md). **Status: erster Prototyp abgelehnt; Entwurfsbild der
-Produktionslinie vom Nutzer als richtige Richtung bestätigt; Bau noch nicht beauftragt.**
+Produktionslinie als richtige Richtung bestätigt und in zweiter Fassung überarbeitet; Rückmeldung zur zweiten Fassung
+und Bau stehen aus.**
 
 ## Was es ist
 
@@ -90,21 +91,23 @@ es läuft keine Simulation. Bilder lokal unter `output/marblexl-vorschau/konzept
 **Rückmeldung des Nutzers:** „Das geht in die richtige Richtung, gefällt mir gut.“ Weiterbauen erst nach
 gesonderter Freigabe.
 
-## Besprochene Verbesserungen (noch nicht umgesetzt)
+## Verbesserungen am Entwurfsbild (16.11.2026, zweite Fassung)
 
-1. **Tiefe statt Deko:** leere Wandflächen mit einer dunklen, kontrastarmen Hintergrundebene füllen (ferne
-   Rohrbrücken, Maschinen, Fenster), nicht mit hellen Einzelteilen.
-2. **Ruhige, funktionale Details:** Wandlüfter, Dampf an der Waschtrommel, Hitzeflimmern über dem Ofen,
-   Kabel- und Rohrtrassen von den Maschinen zur Decke, Schaltschränke. Höchstens ein bewegtes Detail je leerer
-   Fläche, nichts heller als die Kugeln.
-3. **Platz freihalten** für die zweite Linie und spätere Ausbauten (unter dem Ofen, rechts unten).
-4. **Verwandlung deutlicher:** stärkere Unterschiede zwischen roh, gewaschen und poliert.
-5. **Farbstation als Höhepunkt:** größere Glaskammer, sichtbarer Farbstrahl.
-6. **Lichtzonen je Station** (Ofen orange, Kühlung blau, Wäsche türkis), die übrige Halle etwas dunkler.
-7. **Weg lesbarer:** Richtungsmarken an den Rohren, klare Anschlüsse an Trommel und Radaufzug.
-8. **Hochformat** für Shorts fehlt noch (drei Ebenen übereinander).
+Vom Nutzer beauftragt („setz die Verbesserungen um“). Bilder lokal unter
+`output/marblexl-vorschau/konzept-produktionslinie-v2/`, darunter ein Vorher/Nachher der Übersicht.
+
+| Nr. | Verbesserung | Stand |
+|---|---|---|
+| 1 | Tiefe statt Deko: Bogenfenster mit Nachtlicht, ferne Rohrtrassen, alles kontrastarm | **Erledigt** |
+| 2 | Ruhige, funktionale Details: Wandlüfter, Wasserversorgung der Waschtrommel, Absaugung am Polierer, Schaltwand, Dampf, Hitzeflimmern | **Erledigt** |
+| 3 | Platz für die zweite Linie freihalten: markierter Bereich „BAY 2 · RESERVED · LINE 2“ mit Kisten | **Erledigt** |
+| 4 | Verwandlung deutlicher: roh erdig und matt, gewaschen nass mit Tropfen, poliert klar mit Glanzstern | **Erledigt** |
+| 5 | Farbstation als Höhepunkt: Glaskuppel, Farbstrahl aus der Düse, Farbring um die Kugel | **Erledigt** |
+| 6 | Lichtzonen je Station (Wäsche türkis, Ofen orange, Kühlung blau, Farbe violett), Halle etwas dunkler | **Erledigt** |
+| 7 | Weg lesbarer: Richtungsmarken an den Rohren, Messingflansche an Trommel und Radaufzug | **Erledigt** |
+| 8 | Hochformat für Shorts | **Offen**: braucht eine eigene Anordnung in fünf Ebenen, weil Halle und Laufrichtungen anders sind. |
 
 ## Nächster Schritt
 
-Nach Freigabe des Nutzers: Verbesserungen ins Entwurfsbild einarbeiten oder die Grundlinie mit Simulation bauen
-(Vorrat, Aufzug, Behälter, Polierer, Sortierröhren) und einen 20-Sekunden-Clip zeigen.
+Rückmeldung des Nutzers zur zweiten Fassung abwarten. Danach wahlweise das Hochformat entwerfen oder die Grundlinie
+mit Simulation bauen (Vorrat, Aufzug, Behälter, Polierer, Sortierröhren) und einen 20-Sekunden-Clip zeigen.
