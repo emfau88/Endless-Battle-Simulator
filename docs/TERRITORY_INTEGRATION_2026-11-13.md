@@ -1,5 +1,9 @@
 # Territory Wars / Hex Dominion V0.3 – Integration und Prüfgrenzen
 
+> Nachtrag 16.11.2026: Die Short-Vorlage nutzt seitdem eine eigene kleine Karte mit Drehbuch, schlanker Anzeige und
+> leisem Ton. Stand und Messwerte dazu: [Territory-Short „Die letzte Krone“](TERRITORY_SHORT_2026-11-16.md).
+> Dieser Bericht beschreibt weiter die beiden Originalkarten.
+
 Territory ist als sechstes Szenario im gemeinsamen Generator integriert. Der Ausgangspunkt war
 `bd4f9904af7292e3df4b43581ceaf17f3c12051b`, am 13.11.2026 lokal und gegen `origin/main` geprüft.
 Der Arbeitsbaum war sauber. Die Arbeit liegt auf `codex/territory-integration`; ein Merge ist nicht beauftragt.
