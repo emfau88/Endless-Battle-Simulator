@@ -145,7 +145,7 @@ class WaterparkRenderer extends EBS.CanvasScene {
     g.drawImage(this.struct, 0, 0, L.W, L.H);
     this.drawFlow(g, vt);
     this.drawLift(g);
-    this.drawSeesaw(g);
+    this.drawSeesaw(g, vt);
     this.drawSpring(g, vt);
     const riders = this.riders();
     for (const d of riders) if (d.behindFunnel) this.drawRider(g, d);
@@ -369,12 +369,39 @@ class WaterparkRenderer extends EBS.CanvasScene {
     g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.beginPath(); g.ellipse(x, y0 + 4, T.hw + 16, 6, 0, 0, TAU); g.stroke();
     WP.paintTowerFront(g, this.A);
   }
-  drawSeesaw(g) {
-    const L = this.L, f = L.seesaw, phi = (this.sim.seesawAngle || 0) * (f.dir || 1);
-    g.save(); g.translate(f.x, f.y); g.rotate(phi); const board = [[-f.length / 2, 0], [f.length / 2, 0]]; WP.paintTrough(g, board, L.R);
-    if (this.sim.story?.openRoutes?.[2] === false) line(g, board, WP.troughSize(L.R).inner - 9, WP.ART_COLORS.innerWall, 0.5, 3.5);
+  /** Tilting board. The feed slide pours onto its entry end, the exit end pours into the catch chute (mockup hand-overs). */
+  drawSeesaw(g, t) {
+    const L = this.L, R = L.R, f = L.seesaw, d = f.dir || 1, phi = (this.sim.seesawAngle || 0) * d, half = f.length / 2;
+    const open = this.sim.story?.openRoutes?.[2] !== false, at = lx => [f.x + Math.cos(phi) * lx, f.y + Math.sin(phi) * lx];
+    g.save(); g.translate(f.x, f.y); g.rotate(phi); const board = [[-half, 0], [half, 0]]; WP.paintTrough(g, board, R);
+    if (!open) line(g, board, WP.troughSize(R).inner - 9, WP.ART_COLORS.innerWall, 0.5, 3.5);
+    else {                                                                    // water running towards the exit end
+      g.lineCap = 'round'; g.setLineDash([16, 42, 6, 54]); g.lineDashOffset = -t * 110 * (this.sim.cfg.rollSpeed || 1);
+      line(g, [[-d * half, 2.5], [d * half, 2.5]], 2.4, 'rgba(255,255,255,.5)'); g.setLineDash([]);
+    }
     g.restore();
     WP.paintSeesawWheel(g, this.A, phi);
+    if (!open) return;
+    const [sx, sy] = f.spout, entry = at(-d * half), exit = at(d * half);
+    this.pour(g, t, [sx, sy + R * 0.85], entry, R, 0);
+    this.pour(g, t, [exit[0] + d * R * 0.6, exit[1] + 4], f.catchTop, R, 1);
+  }
+  /** Short water curtain from a slide end down into the next trough, with a foam ring where it lands. */
+  pour(g, t, [ax, ay], [bx, by], R, k) {
+    const w = R * 0.62;
+    g.save(); g.lineCap = 'round';
+    const gr = g.createLinearGradient(0, ay, 0, by); gr.addColorStop(0, 'rgba(232,252,255,.8)'); gr.addColorStop(1, 'rgba(150,228,246,.5)');
+    g.fillStyle = gr; g.beginPath(); g.moveTo(ax - w * 0.75, ay); g.lineTo(ax + w * 0.75, ay); g.lineTo(bx + w, by); g.lineTo(bx - w, by); g.closePath(); g.fill();
+    g.setLineDash([9, 15]); g.lineDashOffset = -t * 170 - k * 11; g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 2;
+    for (const u of [-0.55, 0, 0.55]) { g.beginPath(); g.moveTo(ax + u * w * 0.75, ay); g.lineTo(bx + u * w, by); g.stroke(); }
+    g.setLineDash([]);
+    for (let i = 0; i < 2; i++) {
+      const ph = (t * 1.4 + i / 2 + k * 0.3) % 1;
+      g.strokeStyle = `rgba(255,255,255,${0.6 * (1 - ph)})`; g.lineWidth = 2;
+      g.beginPath(); g.ellipse(bx, by, w * (0.9 + ph * 0.8), 3 + ph * 4, 0, 0, TAU); g.stroke();
+    }
+    ellipse(g, bx, by, w * 0.95, 4.5, 'rgba(255,255,255,.75)');
+    g.restore();
   }
   drawSpring(g, t) {
     const L = this.L, R = L.R, j = L.jump;
@@ -398,6 +425,7 @@ class WaterparkRenderer extends EBS.CanvasScene {
     if (p.kind === 'deck') { d.mode = 'roll'; d.ang = 0; d.y -= Math.abs(Math.sin(b.s / L.R * 1.2)) * 3; d.speed = Math.min(d.speed, 200); }
     else if (p.kind === 'funnel') { d.mode = 'roll'; d.speed = 420; }
     else if (p.kind === 'seesaw') { d.mode = 'lift'; d.tilt = q.angle; d.ang = q.angle; }
+    else if (p.kind === 'drop') { d.mode = 'fall'; d.tilt = 0; d.ang = 0; }       // short plop onto / off the seesaw
     else if (p.kind !== 'flight') {
       const incl = p.tx >= 0 ? Math.atan2(p.ty, p.tx) : Math.atan2(-p.ty, -p.tx);
       d.tilt = incl; d.ang = clamp(incl * 0.55, -0.55, 0.55); d.mode = Math.abs(p.ty) > 0.62 ? 'fall' : 'lift';

@@ -48,13 +48,13 @@ const PLANS = {
     waterY: .72, horizon: .30, lift: { x: .34, deck: .19, bottom: .80 },
     mouths: [.22, .71, .625, .945],
     funnel: { x: .69, y: .335, rx: .105, ry: .07 },
-    seesaw: { x: .50, y: .58, length: .19 },
+    seesaw: { x: .50, y: .52, length: .19 },
     jump: { x: .88, y: .62 },
     panorama: { deckTo: .27, pts: [[.245,.232],[.17,.268],[.108,.318],[.12,.38],[.205,.425],[.262,.47],[.222,.53],[.13,.57],[.102,.63],[.145,.68]] },
     funnelIn: { deckTo: .55, pts: [[.575,.245],[.596,.292]] },
     tube: [[.693,.43],[.699,.53],[.705,.63]],
-    seesawIn: { deckTo: .425, pts: [[.44,.25],[.437,.33],[.423,.42],[.405,.50]] },
-    seesawOut: [[.618,.625],[.632,.675]],
+    seesawIn: { deckTo: .425, pts: [[.44,.25],[.43,.31],[.405,.36]] },
+    seesawOut: [[.611,.678]],
     jumpIn: { deckTo: .79, pts: [[.815,.236],[.843,.33],[.86,.45],[.869,.55]] },
     pool: [[.09,.80],[.12,.89],[.40,.94],[.76,.93],[.92,.87],[.74,.84],[.55,.87],[.44,.86]],
   },
@@ -67,8 +67,8 @@ const PLANS = {
     panorama: { deckTo: .27, pts: [[.24,.198],[.135,.222],[.072,.268],[.10,.318],[.205,.35],[.25,.40],[.172,.44],[.085,.48],[.082,.54],[.18,.572],[.248,.612],[.215,.66]] },
     funnelIn: { deckTo: .48, pts: [[.495,.20],[.505,.245]] },
     tube: [[.685,.34],[.665,.39],[.60,.418],[.515,.435],[.477,.48],[.468,.57],[.475,.645]],
-    seesawIn: { deckTo: .74, pts: [[.765,.21],[.785,.30],[.80,.38],[.83,.43]] },
-    seesawOut: [[.567,.53],[.588,.60],[.614,.655]],
+    seesawIn: { deckTo: .74, pts: [[.765,.21],[.80,.29],[.835,.35]] },
+    seesawOut: [[.58,.60],[.607,.655]],
     jumpIn: { deckTo: .93, pts: [[.95,.22],[.957,.33],[.952,.45],[.932,.53],[.90,.578]] },
     pool: [[.09,.80],[.12,.89],[.40,.94],[.76,.93],[.92,.87],[.74,.84],[.55,.87],[.44,.86]],
   },
@@ -92,6 +92,11 @@ WP.createLayout = function (world, size = 28) {
   const dir = P.seesaw.leftward ? -1 : 1;
   const boardStart = [seesaw.x - dir * seesaw.length / 2, seesaw.y], boardEnd = [seesaw.x + dir * seesaw.length / 2, seesaw.y];
   seesaw.dir = dir;
+  // Übergaben wie im Mockup: Die Zulaufrinne endet als Ausguss über dem Einstiegsende, das Ausstiegsende gießt in eine
+  // Auffangrinne. Abstände aus Rinnenbreite (2R+30, siehe art.js) und größter Neigung, damit sich nichts überdeckt.
+  const tilt = seesaw.length / 2 * Math.sin(seesaw.maxAngle), rim = 2 * (R + 15);
+  const spout = [boardStart[0], boardStart[1] - (rim + tilt + 8)], catchTop = [boardEnd[0] + dir * R * .5, boardEnd[1] + rim + tilt + 12];
+  seesaw.spout = spout; seesaw.catchTop = catchTop;
   const jump = { x: W * P.jump.x, y: H * P.jump.y, landing: [mouths[3] * W, waterY] };
   const flight = [];
   for (let j = 0; j <= 40; j++) { const f = j / 40; flight.push([jump.x + (jump.landing[0] - jump.x) * f, jump.y + (jump.landing[1] - jump.y) * f - Math.sin(Math.PI * f) * H * (land ? .09 : .07)]); }
@@ -99,7 +104,7 @@ WP.createLayout = function (world, size = 28) {
   const routes = [];
   function route(id, name, color, parts, feature) {
     const path = makePath(parts), r = { id, name, color, path, drawSegments: path.drawSegments, feature, start: origin, end: [mouths[id] * W, waterY] };
-    if (feature) { const part = parts.find(p => p.hidden); feature.entryS = part.startS; feature.exitS = part.endS; feature.start = part.points[0]; feature.end = part.points[part.points.length - 1]; }
+    if (feature) { const part = parts.find(p => p.hidden && p.kind !== 'drop'); feature.entryS = part.startS; feature.exitS = part.endS; feature.start = part.points[0]; feature.end = part.points[part.points.length - 1]; }
     const first = parts.find(p => p.kind !== 'deck'); r.launch = first.points[0]; r.launchS = first.startS;
     routes.push(r);
   }
@@ -111,9 +116,11 @@ WP.createLayout = function (world, size = 28) {
     { points: [spiral[spiral.length - 1], ...points(P.tube), [mouths[1] * W, waterY]], kind: 'tube' }
   ], funnel);
   route(2, 'Wippe', '#efc98a', [deckTo(P.seesawIn.deckTo),
-    { points: [[P.seesawIn.deckTo * W, deckY], ...points(P.seesawIn.pts), boardStart] },
+    { points: [[P.seesawIn.deckTo * W, deckY], ...points(P.seesawIn.pts), spout] },
+    { points: [spout, boardStart], smooth: false, kind: 'drop', hidden: true },
     { points: [boardStart, boardEnd], smooth: false, kind: 'seesaw', hidden: true },
-    { points: [boardEnd, ...points(P.seesawOut), [mouths[2] * W, waterY]] }
+    { points: [boardEnd, catchTop], smooth: false, kind: 'drop', hidden: true },
+    { points: [catchTop, ...points(P.seesawOut), [mouths[2] * W, waterY]] }
   ], seesaw);
   route(3, 'Sprung', '#f2a9b5', [deckTo(P.jumpIn.deckTo),
     { points: [[P.jumpIn.deckTo * W, deckY], ...points(P.jumpIn.pts), [jump.x, jump.y]] },
