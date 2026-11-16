@@ -19,7 +19,8 @@ const CALM = { params: { mode: 'calm' }, video: { aspect: '16:9' } };
 // Verhaltensänderung des Modus neu eintragen und im Pull Request begründen.
 // Stand 2: Runden mit festem Schaden je Treffer, Segel am Schiffsschaden (vorher '30430187', '36607512').
 // Stand 3: Rakete vom Heck (vorher 'ccf6c083', '6096ac27').
-const REFERENCE = ['5a64ecd4', '66d227d3'];
+// Stand 4: Goldtreffer zählt doppelt (vorher '5a64ecd4', '66d227d3').
+const REFERENCE = ['48a74102', 'dff41b7b'];
 
 test('Standardmodus bleibt unberührt: Modus endless, bekannte Klangliste, kein Segelzustand', async () => {
   const page = await open();
@@ -41,7 +42,7 @@ test('Ruhiges Duell: Grundwerte des Modus (2 Kanonen je Schiff, halbe Feuerrate,
   const page = await open(CALM), base = await open({ video: { aspect: '16:9' } });
   const c = await config(page);
   assert.equal(c.params.mode, 'calm');
-  assert.deepEqual(c.video.volume, { master: 65, shot: 100, hit: 100, bounce: 100, rocket: 100, burst: 100, splash: 100, land: 100, reload: 100 });
+  assert.deepEqual(c.video.volume, { master: 65, shot: 100, hit: 100, bounce: 100, rocket: 100, burst: 100, gold: 100, splash: 100, land: 100, reload: 100 });
   const s = await run(page, 120), b = await run(base, 120);
   assert.equal(s.mode, 'calm');
   assert.equal(s.ballsExpected, 20, 'zwei Schiffe × zwei Kanonen × fünf Kugeln');
@@ -78,11 +79,13 @@ test('Ruhiges Duell: Runde endet mit Versenkung, Punkt, Feuerpause mit Reparatur
   const page = await open(CALM);
   let s = await run(page, 120), sinkAt = 0, shotsAtSink = 0;
   assert.deepEqual([s.sunk, s.round, s.score], [0, 1, [0, 0]]);
-  // jeder Treffer nimmt denselben Betrag: Kanonenkugel 2 %, Raketensplitter 0,5 % (bis zur ersten Versenkung)
+  // jeder Treffer nimmt einen festen Betrag: Kanonenkugel 2 %, goldene Kugel das Doppelte, Raketensplitter 0,5 %
   for (const ship of s.ships) {
-    const want = ship.hitsTaken * 0.02 + ship.shardsTaken * 0.005;
-    assert.ok(Math.abs(ship.damage - want) < 1e-9, `${ship.name}: Schaden ${ship.damage} bei ${ship.hitsTaken} Treffern und ${ship.shardsTaken} Splittern`);
+    const want = ship.hitsTaken * 0.02 + ship.goldTaken * 0.02 + ship.shardsTaken * 0.005;
+    assert.ok(Math.abs(ship.damage - want) < 1e-9, `${ship.name}: Schaden ${ship.damage} bei ${ship.hitsTaken} Treffern (${ship.goldTaken} golden) und ${ship.shardsTaken} Splittern`);
   }
+  assert.ok(s.goldHits >= 2, `Goldtreffer in 2 Minuten: ${s.goldHits}`);
+  assert.equal(s.goldHits, s.ships[0].goldTaken + s.ships[1].goldTaken);
   assert.ok(s.rockets >= 8 && s.rockets <= 14, `Raketen in 2 Minuten: ${s.rockets} (erwartet etwa 11)`);
   assert.ok(s.shardHits > 0, 'kein Splitter hat getroffen');
   for (let t = 121; t <= 260 && !sinkAt; t++) { s = await run(page, 1); if (s.sunk) { sinkAt = t; shotsAtSink = s.shots; } }

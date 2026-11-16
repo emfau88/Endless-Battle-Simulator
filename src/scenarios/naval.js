@@ -109,6 +109,9 @@ const ROCKET = {
   rail: 0.16,        // Länge der Startschiene (Anteil der Schiffslänge)
   railAngle: 1.26,   // Winkel der Schiene über der Waagerechten (rund 72°)
 };
+// Goldene Kugel im ruhigen Duell: Ihr Treffer zählt doppelt und bekommt einen eigenen Auftritt (Blitz, Ring, Funkenregen,
+// „GOLDEN HIT!“). Im Flug zieht sie Glitzer hinter sich her; ein Fehlschuss endet in einem goldenen Platscher.
+const GOLD_HIT = { mult: 2 };
 const CANNON_PACE = [1, 1.17, 0.9, 1.08, 0.96, 1.12], CANNON_SPEED = [1, 0.97, 1.04, 0.95, 1.02, 0.99];
 const ROUND = {
   hit: 0.02,          // Schaden je Treffer bei Standard-Intensität (35 %): 50 Treffer bis zum Untergang
@@ -221,7 +224,7 @@ class NavalBattle {
     // Modus (null = Standard). Ein Modus legt die Kanonenzahl fest und hat für die Segel einen eigenen Zufallsstrom.
     const M = (this.modeDef = MODES[cfg.mode] || null);
     this.fireTempo = M ? M.fireTempo : 1;
-    this.calm = M ? { bounces: 0, sailHits: 0, score: new Array(L.n).fill(0), sunk: 0, round: 1, last: null, rockets: 0, shardHits: 0 } : null;
+    this.calm = M ? { bounces: 0, sailHits: 0, score: new Array(L.n).fill(0), sunk: 0, round: 1, last: null, rockets: 0, shardHits: 0, goldHits: 0, gold: null } : null;
     if (M) { cfg.cannons = M.cannons; this.sailRng = new RNG(hashSeed(cfg.seed, 'sail')); }
     this.engine = Engine.create({ gravity: { x: 0, y: L.g / 1000, scale: 0.001 }, positionIterations: 8, velocityIterations: 6 });
     this.world = this.engine.world;
@@ -317,7 +320,7 @@ class NavalBattle {
       maxSink: geo.fb * 0.42, damage: 0, holes: [], dmgVer: 0, lastPatch: 0,
       sails: this.modeDef ? NavalSails.create(geo, len, facing, (k) => hashSeed(this.cfg.seed, `sail${i}_${k}`)) : null, sailVer: 0,
       // Runden (nur ruhiges Duell): Zustand afloat | sinking | arriving, Versatz beim Sinken und Einlaufen, Schiffsnummer
-      phase: 'afloat', phaseT: 0, down: 0, list: 0, slide: 0, alpha: 1, gen: 0, hitT: -9, hitFrom: 0, repairFrom: 0,
+      phase: 'afloat', phaseT: 0, down: 0, list: 0, slide: 0, alpha: 1, gen: 0, hitT: -9, hitFrom: 0, hitGold: false, goldTaken: 0, repairFrom: 0,
       edge: i === 0 ? -1 : i === n - 1 ? 1 : 0, enter: (i === 0 ? L.xs[i] : L.W - L.xs[i]) + 0.8 * len,
       // Rakete: Zeit bis zum nächsten Start, fliegende Rakete, Fuß der Startschiene am Heck (Schiffskoordinaten)
       rocketT: ROCKET.period * (0.6 + i / n), rk: { on: false, t: 0, x0: 0, y0: 0, cx: 0, cy: 0, x1: 0, y1: 0, x: 0, y: 0, ang: 0 },
@@ -599,9 +602,16 @@ class NavalBattle {
       if (this.calm) {
         // Ruhiges Duell: jeder zählende Treffer nimmt denselben festen Betrag – der Balken sinkt sichtbar und nachvollziehbar.
         // Die Segel folgen dem Schaden (zweite Lebensanzeige).
-        ship.hitFrom = ship.damage; ship.hitT = this.t;
-        ship.damage = Math.min(1, ship.damage + ROUND.hit * (this.cfg.intensity / 0.35));
+        const gold = this.cfg.goldenBall && ball === this.goldBall;
+        ship.hitFrom = ship.damage; ship.hitT = this.t; ship.hitGold = gold;
+        ship.damage = Math.min(1, ship.damage + ROUND.hit * (gold ? GOLD_HIT.mult : 1) * (this.cfg.intensity / 0.35));
         if (NavalSails.setDamage(ship.sails, ship.damage)) ship.sailVer++;
+        if (gold) {
+          ship.goldTaken++; this.calm.goldHits++; this.calm.gold = { t: this.t, x: h.x, y: h.y };
+          this._fxGold(h.x, h.y);
+          this.shake = Math.min(18 * u, this.shake + 7 * u);
+          this._event('gold', h.x, h.y, 1);
+        }
       } else ship.damage = Math.min(TUNING.maxDamage, ship.damage + dd);
       ship.hitsTaken++; this.ships[ball.owner].hitsDealt++; this.stats.hits++;
       // sichtbare Löcher folgen dem Schadenswert -> Zerstörung wächst langsam und gleichmäßig
@@ -674,7 +684,7 @@ class NavalBattle {
     }
     if (key !== ball.sailKey) {
       // Segel verlassen, bevor das Loch gesetzt war: an der letzten Stelle im Tuch setzen
-      if (ball.sailKey >= 0 && ball.sailGo > 0) { this._sailHole(ball.sailShip, ball.sailRef, ball.sailX, ball.sailY, b); ball.sailGo = 0; }
+      if (ball.sailKey >= 0 && ball.sailGo > 0) { this._sailHole(ball.sailShip, ball.sailRef, ball.sailX, ball.sailY, b, ball); ball.sailGo = 0; }
       ball.sailKey = key;
       if (key >= 0) {
         // das Loch entsteht ein Stück hinter der Eintrittskante, genau auf der Flugbahn
@@ -686,10 +696,10 @@ class NavalBattle {
     if (key >= 0 && ball.sailGo > 0) {
       ball.sailX = lx; ball.sailY = ly;
       ball.sailGo -= b.speed;
-      if (ball.sailGo <= 0) { ball.sailGo = 0; this._sailHole(ship, sail, lx, ly, b); }
+      if (ball.sailGo <= 0) { ball.sailGo = 0; this._sailHole(ship, sail, lx, ly, b, ball); }
     }
   }
-  _sailHole(ship, s, x, y, b) {
+  _sailHole(ship, s, x, y, b, ball) {
     const r = this.sailRng, u = this.L.u, P = this.particles;
     const fresh = NavalSails.punch(s, x, y, r, this.L.ballR, this._sailMax(s));
     if (fresh) ship.sailVer++;
@@ -698,6 +708,12 @@ class NavalBattle {
     const w = this._localToWorld(ship, s.x + x, s.y + y), cloth = lerpColor(ship.team.sail, 0x6e6252, 0.12);
     const vx = b.velocity.x * PHYS_HZ, vy = b.velocity.y * PHYS_HZ;
     if (fresh) P.spawn(w.x, w.y, 0, 0, 0.16, 14 * u, 46 * u, 0.55, 0xfff4dc, T_SOFT, 1, 0, 0, 0, 0);
+    if (this.cfg.goldenBall && ball === this.goldBall) {      // goldene Kugel: Goldfunken stieben aus dem Tuch
+      for (let i = 0; i < 9; i++) {
+        const a = r.range(0, 6.283), sp = r.range(80, 260) * u;
+        P.spawn(w.x, w.y, Math.cos(a) * sp + vx * 0.15, Math.sin(a) * sp + vy * 0.15, r.range(0.35, 0.8), r.range(4, 6) * u, 1 * u, 1, 0xffd766, T_SPARK, 1, 260 * u, 1.4, 0, 0);
+      }
+    }
     for (let i = 0, n = fresh ? 7 : 3; i < n; i++) {
       P.spawn(w.x + r.range(-5, 5) * u, w.y + r.range(-5, 5) * u, vx * r.range(0.1, 0.32) + r.range(-60, 60) * u, vy * r.range(0.1, 0.32) + r.range(-70, 30) * u,
         r.range(0.9, 1.7), r.range(6, 11) * u, r.range(5, 9) * u, 0.95, i % 3 ? cloth : ship.team.sail, T_SPLINTER, 0, 150 * u, 1.9, r.range(-9, 9), F_DROPLET);
@@ -766,7 +782,7 @@ class NavalBattle {
     this._event('hit', sh.x, sh.y, 0.5);
     // In der Feuerpause ist die Runde entschieden: Nachzügler richten keinen Schaden mehr an
     if (!this.ships.every((o) => o.phase === 'afloat')) return;
-    ship.hitFrom = ship.damage; ship.hitT = this.t;
+    ship.hitFrom = ship.damage; ship.hitT = this.t; ship.hitGold = false;
     ship.damage = Math.min(1, ship.damage + ROCKET.shardHit * (this.cfg.intensity / 0.35));
     ship.shardsTaken++; this.calm.shardHits++;
     if (NavalSails.setDamage(ship.sails, ship.damage)) ship.sailVer++;
@@ -842,6 +858,11 @@ class NavalBattle {
         const sy = this.surfaceY(p.x, this.t);
         if (p.y + ball.r * 0.35 > sy) { this._splash(ball, p.x, sy); continue; }
         if (this.calm && !ball.ghost) this._sailCheck(ball, p, b);
+        if (this.calm && this.cfg.goldenBall && ball === this.goldBall && this.step % 3 === 0) {   // Glitzerspur der goldenen Kugel
+          const f = this.fx;
+          this.particles.spawn(p.x + f.range(-5, 5) * u, p.y + f.range(-5, 5) * u, f.range(-24, 24) * u, f.range(-12, 30) * u, f.range(0.45, 0.9),
+            f.range(3, 5.5) * u, 1 * u, 0.95, f.next() < 0.5 ? 0xffe08a : 0xfff6d0, T_SPARK, 1, 70 * u, 1, 0, 0);
+        }
         if (!ball.ghost) {
           if (b.speed < 0.45 * ft && ball.age > 0.4) {
             if (++ball.still > 30) { // Kugel liegt an Deck -> Richtung Bug (offene Seite) anstoßen
@@ -895,6 +916,7 @@ class NavalBattle {
     this.stats.splashes++;
     this._fxSplash(ball.x, sy, Math.hypot(vx, vy));
     this._event('splash', ball.x, sy, Math.hypot(vx, vy));
+    if (this.calm && this.cfg.goldenBall && ball === this.goldBall) this._fxGoldSplash(ball.x, sy);
   }
 
   _enterLane(ball) {
@@ -972,6 +994,28 @@ class NavalBattle {
     for (let i = 0; i < 5; i++) {
       P.spawn(x + r.range(-8, 8), y + r.range(-8, 8), r.range(-30, 30) * u, -r.range(20, 60) * u, r.range(1.2, 2.4), 14 * u, 56 * u,
         0.5, 0x3d3d42, T_SOFT, 0, -14 * u, 1.2, 0, F_FADEIN);
+    }
+  }
+  // Goldtreffer (ruhiges Duell): großer goldener Blitz, Ring, Funkenregen und trudelnde Goldsplitter
+  _fxGold(x, y) {
+    const P = this.particles, r = this.fx, u = this.L.u;
+    P.spawn(x, y, 0, 0, 0.26, 50 * u, 200 * u, 1, 0xffe9a8, T_SOFT, 1, 0, 0, 0, 0);
+    P.spawn(x, y, 0, 0, 0.55, 24 * u, 220 * u, 0.85, 0xffd766, T_RING, 1, 0, 0, 0, 0);
+    for (let i = 0; i < 28; i++) {
+      const a = r.range(0, 6.283), s = r.range(160, 520) * u;
+      P.spawn(x, y, Math.cos(a) * s, Math.sin(a) * s - 80 * u, r.range(0.5, 1.1), r.range(5, 8) * u, 1 * u, 1, 0xffd766, T_SPARK, 1, 420 * u, 1.3, 0, 0);
+    }
+    for (let i = 0; i < 12; i++) {
+      P.spawn(x, y, r.range(-220, 220) * u, -r.range(160, 420) * u, r.range(1.3, 2.2), r.range(8, 13) * u, r.range(8, 13) * u, 1,
+        i % 2 ? 0xffcf5a : 0xfff0b0, T_SPLINTER, 0, 620 * u, 0.4, r.range(-16, 16), F_DROPLET);
+    }
+  }
+  _fxGoldSplash(x, y) {
+    const P = this.particles, r = this.fx, u = this.L.u;
+    P.spawn(x, y + 2 * u, 0, 0, 0.8, 16 * u, 130 * u, 0.75, 0xffd766, T_RING, 1, 0, 0, 0, 0);
+    for (let i = 0; i < 14; i++) {
+      P.spawn(x + r.range(-6, 6) * u, y, r.range(-130, 130) * u, -r.range(180, 460) * u, r.range(0.5, 1.0), r.range(4, 7) * u, r.range(3, 5) * u, 0.95,
+        i % 2 ? 0xffd766 : 0xfff3c4, T_DROP, 1, 900 * u, 0.2, 0, F_DROPLET);
     }
   }
   _fxSplash(x, y, speed) {
@@ -1124,11 +1168,11 @@ class NavalBattle {
       ships: this.ships.map((s) => ({
         name: s.team.name, damage: s.damage, health: 1 - s.damage, ammo: s.ammo, shots: s.shots, hitsTaken: s.hitsTaken,
         holes: s.holes.filter((h) => !h.patched).length, patches: s.holes.filter((h) => h.patched).length, sink: s.sink,
-        ...(s.sails ? { sails: s.sails.map((x) => ({ hits: x.hits, holes: x.holes.length, wear: x.wear })), phase: s.phase, gen: s.gen, shardsTaken: s.shardsTaken, rocketIn: s.rocketT } : {}),
+        ...(s.sails ? { sails: s.sails.map((x) => ({ hits: x.hits, holes: x.holes.length, wear: x.wear })), phase: s.phase, gen: s.gen, shardsTaken: s.shardsTaken, goldTaken: s.goldTaken, rocketIn: s.rocketT } : {}),
       })),
       ...(this.calm ? { mode: this.cfg.mode, bounces: this.calm.bounces, sailHits: this.calm.sailHits,
         score: [...this.calm.score], sunk: this.calm.sunk, round: this.calm.round,
-        rockets: this.calm.rockets, shardHits: this.calm.shardHits, shardsFlying: this.shards.filter((o) => o.on).length } : {}),
+        rockets: this.calm.rockets, shardHits: this.calm.shardHits, goldHits: this.calm.goldHits, shardsFlying: this.shards.filter((o) => o.on).length } : {}),
     };
   }
   stateHash() {
@@ -1149,7 +1193,7 @@ class NavalBattle {
         s += `${sh.phase[0]}${sh.gen},${f(sh.down)},${f(sh.slide)},${f(sh.rocketT)},${sh.rk.on ? f(sh.rk.t) : '-'}:`;
         for (const sl of sh.sails) s += `${sl.hits},${sl.holes.length},${f(sl.wear)};`;
       }
-      s += `|${this.calm.rockets},${this.calm.shardHits}|`;
+      s += `|${this.calm.rockets},${this.calm.shardHits},${this.calm.goldHits}|`;
       for (const o of this.shards) if (o.on) s += `${f(o.x)},${f(o.y)};`;
     }
     return fnv1a(s).toString(16).padStart(8, '0');
@@ -1631,6 +1675,9 @@ class NavalRenderer {
       this.hPoint.anchor.set(0.5); this.hPoint.position.set(W / 2, cy + 62 * u);
       this.hSink.visible = this.hPoint.visible = false;
       this.hud.addChild(this.hSink, this.hPoint);
+      this.hGoldHit = new PIXI.Text({ text: 'GOLDEN HIT!', style: style(38 * u, '900', GOLD, 3 * u) });
+      this.hGoldHit.anchor.set(0.5); this.hGoldHit.visible = false;
+      this.hud.addChild(this.hGoldHit);
       this.sinkKey = -1;
     }
     // Goldene Kugel: „GOLDEN BALL · fired 12×“ mit kleiner Goldkugel davor. Querformat-Duell: oben mittig, sobald der
@@ -1917,11 +1964,19 @@ class NavalRenderer {
       g.roundRect(b.x + 3 * u, b.y + 3 * u, Math.max(0, (b.w - 6 * u) * hp), b.h - 6 * u, (b.h - 6 * u) / 2).fill(b.s.team.color);
       if (flash > 0 && b.s.phase === 'afloat') {   // das gerade verlorene Stück leuchtet weiß nach
         const x0 = b.x + 3 * u + (b.w - 6 * u) * hp, lost = (b.w - 6 * u) * (b.s.damage - b.s.hitFrom);
-        g.rect(x0, b.y + 3 * u, lost, b.h - 6 * u).fill({ color: 0xffffff, alpha: flash });
+        g.rect(x0, b.y + 3 * u, lost, b.h - 6 * u).fill({ color: b.s.hitGold ? GOLD : 0xffffff, alpha: flash });
       }
     }
     if (sim.calm) {
       for (const b of this.hBars) if (b.scoreVal !== sim.calm.score[b.s.i]) { b.scoreVal = sim.calm.score[b.s.i]; b.score.text = String(b.scoreVal); }
+      // Goldtreffer: Schriftzug steigt vom Einschlag auf und verblasst
+      const gh = sim.calm.gold, gdt = gh ? sim.t - gh.t : 99, gon = gdt >= 0 && gdt < 1.6 && !!sim.cfg.goldenBall;
+      this.hGoldHit.visible = gon;
+      if (gon) {
+        this.hGoldHit.position.set(clamp(gh.x, 140 * u, this.L.W - 140 * u), gh.y - (46 + 54 * gdt) * u);
+        this.hGoldHit.alpha = clamp(gdt / 0.1, 0, 1) * clamp((1.6 - gdt) / 0.5, 0, 1);
+        this.hGoldHit.scale.set(1 + 0.6 * Math.pow(clamp(1 - gdt / 0.35, 0, 1), 2));
+      }
       const last = sim.calm.last, dt = last ? sim.t - last.t : 99, on = dt >= 0 && dt < 4.2;
       this.hSink.visible = this.hPoint.visible = on;
       if (on) {
@@ -1976,6 +2031,7 @@ function calmAudioTable(base) {
     // Rakete: vorläufig aus dem Kanonenklang abgeleitet (heller Start, dumpfer Knall); eigene Klänge folgen mit der Tonabstimmung
     rocket: { label: 'Raketenstart', samples: ['synth:cannon'], gain: 0.16, semis: 9, detune: 1.5, minGap: 0.2 },
     burst: { label: 'Raketenknall', samples: ['synth:cannon'], gain: 0.3, semis: -4, detune: 1.5, minGap: 0.2 },
+    gold: { label: 'Goldtreffer', samples: ['mw-soft-metal-0', 'mw-soft-metal-1'], gain: 0.3, semis: 0, detune: 1, minGap: 0.3 },
     ...rest } });
 }
 

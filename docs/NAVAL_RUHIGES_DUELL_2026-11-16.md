@@ -99,6 +99,25 @@ Messwerte (reine Simulation, Querformat, fünf Seeds zu je 20 Minuten, 30 Runden
 
 Die Klänge für Start und Knall sind vorläufig aus dem Kanonenklang abgeleitet.
 
+## 3c · Goldene Kugel (Vorschau, wartet auf Freigabe)
+
+Idee des Nutzers vom 16.11.: Die goldene Kugel soll etwas Besonderes tun, damit es mehr fürs Auge gibt. Bisher war sie
+nur anders gefärbt und wurde gezählt.
+
+- **Goldtreffer:** Ihr Treffer zählt doppelt (4 % statt 2 %). Dazu ein goldener Blitz, ein Ring, Funkenregen und
+  trudelnde Goldsplitter; am Einschlag steigt kurz „GOLDEN HIT!“ auf, und das verlorene Stück des Balkens leuchtet
+  golden statt weiß.
+- **Im Flug:** Sie zieht eine Glitzerspur hinter sich her.
+- **Im Segel:** Beim Durchschuss stieben Goldfunken aus dem Tuch.
+- **Fehlschuss:** goldener Platscher mit Ring.
+- **Schalter:** Alles hängt am vorhandenen Regler „Goldene Kugel mit Zähler“ und gilt nur im ruhigen Duell; im
+  Standardmodus bleibt die goldene Kugel wie bisher.
+
+Messwerte (reine Simulation, Querformat, fünf Seeds zu je 20 Minuten, 33 Runden): Goldtreffer etwa dreimal pro
+Minute; Runden 140 bis 204 s, Median 172 s (ohne Goldtreffer 182 s).
+
+Der Klang des Goldtreffers ist vorläufig ein weicher Metallklang aus dem Marble-Works-Satz.
+
 ## 4 · Aufbau im Code
 
 | Datei | Inhalt |
