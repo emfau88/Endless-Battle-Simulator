@@ -39,11 +39,16 @@ test('Standardmodus bleibt unberührt: Modus endless, bekannte Klangliste, kein 
   await other.close();
 });
 
-test('Ruhiges Duell: Grundwerte des Modus (2 Kanonen je Schiff, halbe Feuerrate, eigene Standardmischung)', async () => {
+test('Ruhiges Duell: Grundwerte des Modus (2 Kanonen je Schiff, halbe Feuerrate, feste Mischung mit Meeresrauschen)', async () => {
   const page = await open(CALM), base = await open({ video: { aspect: '16:9' } });
   const c = await config(page);
   assert.equal(c.params.mode, 'calm');
-  assert.deepEqual(c.video.volume, { master: 65, shot: 100, hit: 100, bounce: 100, rocket: 100, burst: 100, gold: 100, splash: 100, land: 100, reload: 100 });
+  // feste Mischung des Modus: 100 % = Standard, eigener Regler für das Meeresrauschen, Klänge für Segel und Versenkung
+  assert.deepEqual(c.video.volume, { master: 100, shot: 100, hit: 100, bounce: 100, rocket: 100, burst: 100, gold: 100, sail: 100, sink: 100,
+    splash: 100, land: 100, reload: 100, sea: 100 });
+  const audio = (await page.evaluate(() => window.exportAPI.info())).audio;
+  assert.equal(audio.mixProfile, 'naval-sea-v1');
+  assert.equal(audio.background.file, 'pyramid-water-loop.wav');
   const s = await run(page, 120), b = await run(base, 120);
   assert.equal(s.mode, 'calm');
   assert.equal(s.ballsExpected, 20, 'zwei Schiffe × zwei Kanonen × fünf Kugeln');
@@ -135,7 +140,7 @@ test('Ruhiges Duell: läuft auch im Hochformat und mit drei Schiffen (je 1 Minut
   }
 });
 
-test('Oberfläche: Moduswechsel blendet den Kanonenregler aus und lädt die Standardmischung des Modus', async (t) => {
+test('Oberfläche: Moduswechsel blendet den Kanonenregler aus und baut die Klangregler des Modus auf', async (t) => {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });   // frisches Profil, eigener localStorage
   t.after(() => ctx.close());
   const page = await ctx.newPage(), errors = [];
@@ -147,13 +152,13 @@ test('Oberfläche: Moduswechsel blendet den Kanonenregler aus und lädt die Stan
     scenario: window.EBS.app.cfg.scenario, mode: document.getElementById('p-mode').value, simMode: window.EBS.app.cfg.params.mode,
     cannonsHidden: document.getElementById('p-cannons').closest('.ctl, label').hidden,
     master: +document.getElementById('vol-master').value, cfgMaster: window.EBS.app.cfg.video.volume.master,
-    bounce: !!document.getElementById('vol-bounce'), balls: window.EBS.app.sim.balls.length,
+    bounce: !!document.getElementById('vol-bounce'), sea: !!document.getElementById('vol-sea'), balls: window.EBS.app.sim.balls.length,
   }));
-  const endless = { scenario: 'naval', mode: 'endless', simMode: 'endless', cannonsHidden: false, master: 100, cfgMaster: 100, bounce: false, balls: 40 };
+  const endless = { scenario: 'naval', mode: 'endless', simMode: 'endless', cannonsHidden: false, master: 100, cfgMaster: 100, bounce: false, sea: false, balls: 40 };
   assert.deepEqual(await state(), endless);
   await page.selectOption('#p-mode', 'calm');
   await page.waitForFunction(() => window.EBS.app.cfg.params.mode === 'calm' && document.getElementById('vol-bounce'));
-  assert.deepEqual(await state(), { scenario: 'naval', mode: 'calm', simMode: 'calm', cannonsHidden: true, master: 65, cfgMaster: 65, bounce: true, balls: 20 });
+  assert.deepEqual(await state(), { scenario: 'naval', mode: 'calm', simMode: 'calm', cannonsHidden: true, master: 100, cfgMaster: 100, bounce: true, sea: true, balls: 20 });
   await page.selectOption('#p-mode', 'endless');
   await page.waitForFunction(() => window.EBS.app.cfg.params.mode === 'endless' && !document.getElementById('vol-bounce'));
   assert.deepEqual(await state(), endless);

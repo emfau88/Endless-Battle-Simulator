@@ -473,6 +473,7 @@ class NavalBattle {
     this._fxImpact(m.x, m.y, 1.3); this._fxImpact(m.x - ship.facing * 0.25 * ship.len, m.y, 1);
     this.shake = Math.min(18 * u, this.shake + 12 * u);
     this._event('hit', m.x, m.y, 1.3);
+    this._event('sink', m.x, m.y, 1);
   }
   _arrive(ship) {
     // neues Schiff an derselben Stelle: unbeschädigt, frische Segel; Munition und Rohr gehören zum Liegeplatz
@@ -709,6 +710,7 @@ class NavalBattle {
     const fresh = NavalSails.punch(s, x, y, r, this.L.ballR, this._sailMax(s));
     if (fresh) ship.sailVer++;
     this.calm.sailHits++;
+    if (fresh) this._event('sail', ship.x, ship.y + s.y, 1);
     // Stofffetzen fliegen ein Stück mit der Kugel und trudeln herunter (Partikel stehen nicht im Zustands-Hash)
     const w = this._localToWorld(ship, s.x + x, s.y + y), cloth = lerpColor(ship.team.sail, 0x6e6252, 0.12);
     const vx = b.velocity.x * PHYS_HZ, vy = b.velocity.y * PHYS_HZ;
@@ -2024,19 +2026,26 @@ class NavalRenderer {
 // =====================================================================
 //  Registrierung
 // =====================================================================
-// Ruhiges Duell: zusätzlich ein leiser Holzton für Abpraller. Bei so wenigen Schüssen hebt die Einmessung auf −14 LUFS
-// die Pegelspitzen über die Prüfgrenze des Exporters; die Standardmischung des Modus steht deshalb vorläufig auf 65 %
-// (so wurde der Testclip abgenommen). Eine eigene Abstimmung mit Meeresatmosphäre steht noch aus.
+// Ruhiges Duell: feste Mischung statt Einmessung auf −14 LUFS. Bei so wenigen Schüssen hob die Einmessung die Pegel
+// so weit an, dass der Begrenzer bis zu 20 dB abfangen musste. Jetzt liegt ein leises Meeresrauschen als Grundton
+// darunter (vorhandene CC0-Aufnahme, siehe assets/audio/README.md), und jeder Klang behält seinen festen Pegel.
+const FIXED_GAIN_DB = 3, ACTION_ATT_DB = 0, SEA_GAIN_DB = -4;   // feste Pegel des Modus (dB)
 let calmAudio = null;
 function calmAudioTable(base) {
   if (calmAudio) return calmAudio;
   const { shot, hit, ...rest } = base.events;
-  return (calmAudio = { ...base, defaultVolume: { master: 65 }, events: { shot, hit,
+  return (calmAudio = { ...base,
+    mixProfile: 'naval-sea-v1', fixedGainDb: FIXED_GAIN_DB, actionAttenuationDb: ACTION_ATT_DB, ceilingDb: -3, aacNoPns: true,
+    background: { file: 'pyramid-water-loop.wav', label: 'Meeresrauschen', volumeKey: 'sea',
+      gainDb: SEA_GAIN_DB, referenceMaster: 100, loopStartSec: 4, loopEndSec: 67.2, fadeSec: 0.05 },
+    events: { shot, hit,
     bounce: { label: 'Abpraller', samples: ['impactWood_medium_000', 'impactWood_medium_001'], gain: 0.2, semis: 5, detune: 2, minGap: 0.06, ref: 0.8 },
     // Rakete: vorläufig aus dem Kanonenklang abgeleitet (heller Start, dumpfer Knall); eigene Klänge folgen mit der Tonabstimmung
     rocket: { label: 'Raketenstart', samples: ['synth:cannon'], gain: 0.16, semis: 9, detune: 1.5, minGap: 0.2 },
     burst: { label: 'Raketenknall', samples: ['synth:cannon'], gain: 0.3, semis: -4, detune: 1.5, minGap: 0.2 },
     gold: { label: 'Goldtreffer', samples: ['mw-soft-metal-0', 'mw-soft-metal-1'], gain: 0.3, semis: 0, detune: 1, minGap: 0.3 },
+    sail: { label: 'Segeldurchschuss', samples: ['impactSoft_medium_000'], gain: 0.1, semis: -3, detune: 2, minGap: 0.15 },
+    sink: { label: 'Versenkung', samples: ['impactWood_heavy_000'], gain: 0.5, semis: -6, detune: 0.5, minGap: 1 },
     ...rest } });
 }
 

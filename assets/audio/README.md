@@ -149,6 +149,13 @@ Für Licht-Füllung und Finale, ebenfalls im Code erzeugt: `synth:fanfare` (aufs
 Glockentönen, wenn die Pyramide voll ist), `synth:launch` (leises Pfeifen der aufsteigenden Rakete) und
 `synth:firework` (Knall mit Knistern; die große Schlussrakete klingt lauter).
 
+## Endless Naval Battle · Modus „Ruhiges Duell“
+
+Das Profil `naval-sea-v1` verwendet den vorhandenen `pyramid-water-loop.wav` als leises Meeresrauschen und
+ausschließlich vorhandene CC0- und Syntheseklänge für Schuss, Treffer, Abpraller, Rakete, Goldtreffer,
+Segeldurchschuss und Versenkung. Feste Pegel, keine Einmessung auf −14 LUFS, keine Musik. Die 10-Minuten-Episode
+liegt bei −20,6 LUFS; Messwerte im [Bericht](../../docs/NAVAL_RUHIGES_DUELL_2026-11-16.md), Abschnitt 3e.
+
 ## Endless Waterpark
 
 Das eigene Profil `waterpark-water-v1` verwendet den vorhandenen `pyramid-water-loop.wav`
