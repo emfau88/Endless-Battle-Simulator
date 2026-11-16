@@ -1,9 +1,8 @@
 # Marble Factory XL: Stufe 1 (Vorschau)
 
 Stand: 16.11.2026. Branch `marble-xl/stufe-1`. Gehört zu R35 und zum
-[Gesamtplan, Abschnitt 9](GESAMTPLAN_2026-11-16.md). **Status: erster Prototyp abgelehnt; Entwurfsbild der
-Produktionslinie als richtige Richtung bestätigt und in zweiter Fassung überarbeitet; Rückmeldung zur zweiten Fassung
-und Bau stehen aus.**
+[Gesamtplan, Abschnitt 9](GESAMTPLAN_2026-11-16.md). **Status: Entwurfsbild in zweiter Fassung vom Nutzer
+bestätigt; bewegter Entwurf mit 20-Sekunden-Testclips liegt vor; Rückmeldung zu den Clips steht aus.**
 
 ## Was es ist
 
@@ -107,7 +106,57 @@ Vom Nutzer beauftragt („setz die Verbesserungen um“). Bilder lokal unter
 | 7 | Weg lesbarer: Richtungsmarken an den Rohren, Messingflansche an Trommel und Radaufzug | **Erledigt** |
 | 8 | Hochformat für Shorts | **Offen**: braucht eine eigene Anordnung in fünf Ebenen, weil Halle und Laufrichtungen anders sind. |
 
+## Bewegter Entwurf und Testclip (16.11.2026)
+
+Der Nutzer hat die zweite Fassung bestätigt („finde ich gut soweit“) und einen 20-Sekunden-Testclip verlangt.
+
+**Was jetzt läuft:** Das Szenario `marblexl` zeigt die Produktionslinie in Bewegung. Die vier gleichen Linien des
+ersten Prototyps sind ersetzt. Der Ablauf ist bewusst einfach: Alle 1,6 Sekunden startet eine Kugel und folgt
+demselben Zeitplan durch alle neun Stationen (rund 50 Sekunden vom Zellenrad bis in die Röhre). Ort, Zustand und
+Zähler hängen nur von der Zeit ab. Es gibt **noch keine Warteschlangen und keine echte Physik**; die Trommel, der
+Polierer und die Farbstation sind immer genau passend belegt.
+
+| Teil | Stand |
+|---|---|
+| Kugeln durchlaufen alle neun Stationen und wechseln sichtbar den Zustand | **Erledigt** (Zeitplan) |
+| Drehende Teile: Aufzugskette, Zellenrad, Trommel, Zahnräder, Bürsten, Lüfter, Radaufzug | **Erledigt** |
+| Zähler „… / 96“ zählt mit | **Erledigt** |
+| Kamera quer: Übersicht, obere Ebene, untere Ebene, zurück (20 s, Zoom 0,5 bis 0,75) | **Erledigt** |
+| Kamera hoch: volle Hallenhöhe, langsame Fahrt die Linie entlang | **Erledigt** (Vorschlag statt eigener Hochformat-Halle) |
+| Ton | **Vorläufig**: Klänge der klassischen Fabrik an neun Stellen |
+| Warteschlangen, echte Physik in Behälter und Trommel, Ausschuss | **Offen** |
+| Kapitel und Ausbauten, zweite Linie, Finale | **Offen** |
+| Neubeginn in der Vorschau nach 76,8 s | sichtbarer Sprung, bis der Auftrag ein echtes Ende hat |
+
+**Testclips** (lokal, `output/marblexl-vorschau/testclip-2026-11-16/`): Querformat und Hochformat, je 20 s,
+1080p30 mit Ton. Renderzeit je 56 s (10,7 Bilder pro Sekunde).
+
+### Ton: Messwerte, kein Hörurteil
+
+| Wert | Marble XL (20 s) | Klassische Fabrik (20 s, zum Vergleich) |
+|---|---|---|
+| Tonereignisse | 125 | 222 |
+| Lautheit | −14,1 LUFS (Ziel −14) | −14,1 LUFS |
+| Spitze nach AAC | −1 dBTP | – |
+| Anhebung beim Einmessen | +35,9 dB | – |
+| Stärkster Eingriff des Begrenzers | −36,4 dB | −23,6 dB |
+
+Lautheit und Spitzen stimmen formal. Der Weg dorthin ist aber grob: Wenige, kurze Klänge werden um fast 36 dB
+angehoben und die Spitzen wieder weggedrückt. Das kann gepresst oder pumpend klingen. Abgehört hat das noch
+niemand. Für Trommel (Wasser, Purzeln), Ofen, Farbstation und Kühlung gibt es noch keine eigenen Klänge, und die
+Lautstärke folgt nicht dem Bildausschnitt.
+
+**Empfehlung:** wie bei Marble Works weiche Klänge mit fester Mischung statt Einmessen auf −14 LUFS, ein leiser
+Dauerklang der Halle, je Station ein eigener Klang, Lautstärke nach Bildausschnitt.
+
+### Beschriftungen: Einschätzung
+
+Die neun Leuchtschilder helfen bei der Reihenfolge, sind aber so hell wie der Titel und konkurrieren mit den
+Kugeln. Vorschlag: Nummer hell, Wort gedämpft, insgesamt kleiner; nur das Schild der Station, an der die Kamera
+gerade ist, leuchtet voll. Die kleinen Messingschilder sind am Handy nicht lesbar und bleiben reine Zierde.
+Schreibweise vereinheitlichen: derzeit „COLOUR“ (Schild) neben „COLOR SORTER“ (Messingschild).
+
 ## Nächster Schritt
 
-Rückmeldung des Nutzers zur zweiten Fassung abwarten. Danach wahlweise das Hochformat entwerfen oder die Grundlinie
-mit Simulation bauen (Vorrat, Aufzug, Behälter, Polierer, Sortierröhren) und einen 20-Sekunden-Clip zeigen.
+Rückmeldung des Nutzers zu den Testclips abwarten (Bewegung, Kamera, Ton, Beschriftung, Hochformat als Fahrt).
+Danach: Ton nach der Empfehlung oben, Beschriftungen beruhigen, dann echte Warteschlangen und Physik.

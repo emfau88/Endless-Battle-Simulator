@@ -16,7 +16,6 @@ const crops = [
 const browser = await launchAuto();
 try {
   const { page, errors } = await openExportPage(browser, { scenario: 'marble', seed: 42, video: { aspect: '16:9' } });
-  await page.addScriptTag({ path: join(ROOT, 'src', 'scenarios', 'marblexl', 'concept.js') });
   const res = await page.evaluate((c) => window.EBS.MarbleXLConcept.exportImages(c), crops);
   if (errors.length) throw errors[0];
   await mkdir(out, { recursive: true });

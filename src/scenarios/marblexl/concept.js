@@ -15,6 +15,7 @@ const TAU = Math.PI * 2, HALF_PI = Math.PI / 2;
 const W = 3840, H = 2160, FLOOR = 2080, DECK = 1010;
 const FONT = 'Bahnschrift, "Segoe UI", Arial, sans-serif';
 const P = { x: 0, y: 0, tx: 1, ty: 0 };
+let T = 0, FLOW = null;                                          // Bildzeit in Sekunden, Kugeln des aktuellen Bildes
 
 // ---------------------------------------------------------------- Kugeln in ihren Zuständen
 const RAW = 0x5c5145, WASHED = 0x8496aa, CLEAR = 0x93c4e8;
@@ -187,11 +188,11 @@ function liftBack(g) {
   rr(g, sx + 12, sy0 + 12, sw - 24, sy1 - sy0 - 24, 18); g.fillStyle = lin(g, sx, 0, sx + sw, 0, [[0, '#0a0d12'], [0.5, '#141a22'], [1, '#0a0d12']]); g.fill(); g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 2; g.stroke();
   for (let y = lf.top + 30; y < lf.bot - 20; y += 92) { g.fillStyle = 'rgba(255,255,255,.03)'; g.fillRect(sx + 14, y, sw - 28, 2); g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(sx + 14, y + 2, sw - 28, 2); }
   // Kette, Kettenräder, Träger
-  g.save(); g.strokeStyle = '#59636f'; g.lineWidth = 6; g.setLineDash([11, 4]);
+  g.save(); g.strokeStyle = '#59636f'; g.lineWidth = 6; g.setLineDash([11, 4]); g.lineDashOffset = -T * LIFT_V;
   g.beginPath(); g.moveTo(lf.cx + lf.rs, lf.bot); g.lineTo(lf.cx + lf.rs, lf.top); g.arc(lf.cx, lf.top, lf.rs, 0, Math.PI, true); g.lineTo(lf.cx - lf.rs, lf.bot); g.arc(lf.cx, lf.bot, lf.rs, Math.PI, 0, true); g.stroke(); g.restore();
-  for (const y of [lf.top, lf.bot]) gearAt(g, lf.cx, y, 14, 5);
-  for (let y = lf.bot - 60; y > lf.top + 20; y -= 185) carrier(g, lf.cx + lf.rs, y, 1);
-  for (let y = lf.top + 110; y < lf.bot - 40; y += 185) carrier(g, lf.cx - lf.rs, y, -1);
+  for (const y of [lf.top, lf.bot]) gearAt(g, lf.cx, y, 14, 5, { rot: -T * LIFT_V / lf.rs });
+  for (let k = 0; k < 9; k++) carrier(g, lf.cx + lf.rs, lf.bot - 30 - mod(k * 185 + T * LIFT_V, 1665), 1);
+  for (let k = 0; k < 9; k++) carrier(g, lf.cx - lf.rs, lf.top + 5 + mod(k * 185 + T * LIFT_V, 1665), -1);
 }
 function carrier(g, x, y, dir) {
   g.save(); g.translate(x, y); g.scale(dir, 1);
@@ -207,7 +208,7 @@ function hopperBack(g) {
   g.save(); shadow(g, 18, 6, 10, 0.55); circ(g, w.x, w.y, w.r + 15); g.fillStyle = '#12171e'; g.fill(); g.restore();
   circ(g, w.x, w.y, w.r + 2); g.fillStyle = rad(g, w.x, w.y, 10, w.x, w.y, w.r, [[0, '#0d1117'], [1, '#05070a']]); g.fill();
   // Rotor mit vier Taschen
-  g.save(); g.translate(w.x, w.y); g.rotate(0.35);
+  g.save(); g.translate(w.x, w.y); g.rotate((T / PERIOD) * HALF_PI);
   circ(g, 0, 0, w.r - 1); g.fillStyle = rad(g, 0, 0, 6, 0, 0, w.r, [[0, '#2b323b'], [0.6, '#56616d'], [0.92, '#a3aeba'], [1, '#5c6672']]); g.fill();
   for (let k = 0; k < 4; k++) { circ(g, Math.cos(k * HALF_PI) * w.rp, Math.sin(k * HALF_PI) * w.rp, R + 3.5); g.fillStyle = '#06080b'; g.fill(); g.strokeStyle = 'rgba(0,0,0,.8)'; g.lineWidth = 2; g.stroke(); }
   g.restore();
@@ -238,7 +239,7 @@ function drumBack(g) {
   g.save(); circ(g, d.x, d.y, d.r); g.clip();
   g.fillStyle = lin(g, 0, d.y + 70, 0, d.y + d.r, [[0, 'rgba(60,190,230,.10)'], [1, 'rgba(60,190,230,.34)']]); g.fillRect(d.x - d.r, d.y + 78, 2 * d.r, d.r);
   g.fillStyle = 'rgba(170,235,255,.5)'; g.fillRect(d.x - d.r, d.y + 78, 2 * d.r, 2);
-  g.translate(d.x, d.y); g.rotate(0.5);
+  g.translate(d.x, d.y); g.rotate(0.5 - T * DRUM_W);
   for (let k = 0; k < 6; k++) { g.rotate(TAU / 6); rr(g, d.r - 64, -7, 60, 14, 4); g.fillStyle = lin(g, 0, -7, 0, 7, BRASS); g.fill(); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1.2; g.stroke(); }
   g.restore();
 }
@@ -255,7 +256,7 @@ function drumFront(g) {
   circ(g, d.x, d.y, d.r + 2); g.strokeStyle = 'rgba(0,0,0,.8)'; g.lineWidth = 2; g.stroke();
   for (let k = 0; k < 16; k++) { const a = (k + 0.5) * TAU / 16; bolt(g, d.x + Math.cos(a) * (d.r + 15), d.y + Math.sin(a) * (d.r + 15), 4); }
   circ(g, d.x, d.y, 20); g.fillStyle = rad(g, d.x - 5, d.y - 6, 1, d.x, d.y, 20, [[0, '#fff3c4'], [0.6, '#d19c3a'], [1, '#6e4613']]); g.fill(); g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = 1.5; g.stroke(); bolt(g, d.x, d.y, 6);
-  gearAt(g, d.x - 60, d.y + d.r + 62, 16, 6, { brass: true });       // Antrieb am Trommelkranz
+  gearAt(g, d.x - 60, d.y + d.r + 62, 16, 6, { brass: true, rot: T * 3.2 });       // Antrieb am Trommelkranz
   nameplate(g, d.x + 40, d.y + d.r + 52, 'WASH DRUM · MK I');
 }
 
@@ -266,14 +267,14 @@ function beltBack(g) {
   g.save(); shadow(g, 14, 6, 12, 0.5);
   g.beginPath(); g.moveTo(b.x0, b.cy - br); g.lineTo(b.x1, b.cy - br); g.arc(b.x1, b.cy, br, -HALF_PI, HALF_PI); g.lineTo(b.x0, b.cy + br); g.arc(b.x0, b.cy, br, HALF_PI, 3 * HALF_PI); g.closePath();
   g.lineWidth = 7; g.strokeStyle = '#14171c'; g.stroke(); g.restore();
-  for (let x = b.x0 + 8; x < b.x1; x += 24) { rr(g, x, b.cy - br - 9, 5, 12, 2); g.fillStyle = '#59636f'; g.fill(); }
+  for (let x = b.x0 + mod(T * 165, 24); x < b.x1; x += 24) { rr(g, x, b.cy - br - 9, 5, 12, 2); g.fillStyle = '#59636f'; g.fill(); }
   for (const x of [b.x0, b.x1]) { circ(g, x, b.cy, 32); g.fillStyle = rad(g, x, b.cy, 4, x, b.cy, 32, [[0, '#2b323b'], [0.6, '#59636f'], [0.9, '#98a3af'], [1, '#4e5863']]); g.fill(); g.strokeStyle = 'rgba(0,0,0,.75)'; g.lineWidth = 1.5; g.stroke(); }
 }
 function beltFront(g) {
   const b = BELT;
   plate(g, b.x0 - 6, b.cy - 13, b.x1 - b.x0 + 12, 26, 13, { blur: 10, sa: 0.5 });
   g.save(); g.shadowColor = 'rgba(40,220,255,.9)'; g.shadowBlur = 10; g.fillStyle = 'rgba(120,235,255,.95)'; rr(g, b.x0 + 30, b.cy + 15.5, b.x1 - b.x0 - 60, 2.4, 1.2); g.fill(); g.restore();
-  gearAt(g, 1700, 861, 12, 6); gearAt(g, 1612, 912, 22, 6, { rot: 0.1 }); gearAt(g, 1456, 898, 30, 6, { rot: 0.2 }); gearAt(g, 1336, 898, 10, 6, { brass: true });
+  gearAt(g, 1700, 861, 12, 6, { rot: T * 5.2 }); gearAt(g, 1612, 912, 22, 6, { rot: 0.1 - T * 5.2 * 12 / 22 }); gearAt(g, 1456, 898, 30, 6, { rot: 0.2 + T * 5.2 * 12 / 30 }); gearAt(g, 1336, 898, 10, 6, { brass: true, rot: -T * 5.2 * 12 / 10 });
 }
 
 function polisherBack(g) {
@@ -283,7 +284,7 @@ function polisherBack(g) {
   glassPane(g, p.x + 40, p.y + 56, p.w - 80, p.h - 96, 14);
   // Bürstenräder: weicher Filz mit Borsten
   for (const [by, dir] of [[716, 1], [884, -1]]) {
-    g.save(); g.translate(cx, by); g.rotate(dir * 0.4);
+    g.save(); g.translate(cx, by); g.rotate(dir * (0.4 + T * 11));
     circ(g, 0, 0, 60); g.fillStyle = rad(g, 0, 0, 8, 0, 0, 60, [[0, '#7a5a2a'], [0.5, '#d9b878'], [0.85, '#f3e2b8'], [1, '#b89455']]); g.fill();
     g.strokeStyle = 'rgba(90,60,20,.55)'; g.lineWidth = 1.4;
     for (let k = 0; k < 40; k++) { const a = k * TAU / 40; g.beginPath(); g.moveTo(Math.cos(a) * 30, Math.sin(a) * 30); g.lineTo(Math.cos(a + 0.12) * 59, Math.sin(a + 0.12) * 59); g.stroke(); }
@@ -297,7 +298,7 @@ function polisherFront(g) {
   // Funken und Glanzlicht an der Kugel
   g.save(); g.globalCompositeOperation = 'lighter';
   for (let k = 0; k < 22; k++) {
-    const a = -0.5 + ((k * 53) % 100) / 100 * 1.0 + (k % 2 ? Math.PI : 0), d = 26 + ((k * 31) % 70), len = 7 + (k * 7) % 12;
+    const a = -0.5 + ((k * 53 + Math.floor(T * 24) * 37) % 100) / 100 * 1.0 + (k % 2 ? Math.PI : 0), d = 26 + ((k * 31) % 70), len = 7 + (k * 7) % 12;
     g.strokeStyle = `rgba(255,${200 + (k * 13) % 55},120,${0.9 - d / 130})`; g.lineWidth = 2; g.lineCap = 'round';
     g.beginPath(); g.moveTo(cx + Math.cos(a) * d, 800 + Math.sin(a) * d); g.lineTo(cx + Math.cos(a) * (d + len), 800 + Math.sin(a) * (d + len) + 2); g.stroke();
   }
@@ -326,7 +327,7 @@ function kilnBack(g) {
   g.save(); rr(g, k.x + 56, k.y + 70, k.w - 112, 100, 22); g.clip(); g.globalCompositeOperation = 'lighter';
   for (let x = k.x + 110; x < k.x + k.w - 80; x += 92) {     // Flammenzungen
     g.fillStyle = rad(g, x, k.y + 178, 4, x, k.y + 150, 60, [[0, 'rgba(255,244,200,.85)'], [0.5, 'rgba(255,170,60,.45)'], [1, 'rgba(255,90,20,0)']]);
-    g.beginPath(); g.ellipse(x, k.y + 150, 30, 58, 0, 0, TAU); g.fill();
+    g.beginPath(); g.ellipse(x, k.y + 150, 30, 58 * (0.8 + 0.2 * Math.sin(T * 9 + x * 0.05)), 0, 0, TAU); g.fill();
   }
   g.restore();
 }
@@ -413,7 +414,7 @@ function coolBack(g) {
     const fy = 1622, fr = 86;
     circ(g, fx, fy, fr + 8); g.fillStyle = '#161d26'; g.fill(); g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 2; g.stroke();
     circ(g, fx, fy, fr); g.fillStyle = rad(g, fx, fy, 6, fx, fy, fr, [[0, '#0e1a26'], [1, '#060b11']]); g.fill();
-    g.save(); g.translate(fx, fy); g.rotate(fx * 0.01);
+    g.save(); g.translate(fx, fy); g.rotate(fx * 0.01 + T * 6);
     for (let k = 0; k < 5; k++) { g.rotate(TAU / 5); g.beginPath(); g.moveTo(8, -6); g.bezierCurveTo(34, -40, 70, -30, fr - 8, 2); g.bezierCurveTo(60, 8, 30, 10, 8, 6); g.closePath(); g.fillStyle = lin(g, 0, -30, fr, 10, [[0, '#5d6b7a'], [1, '#27313c']]); g.fill(); g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 1; g.stroke(); }
     g.restore();
     circ(g, fx, fy, 13); g.fillStyle = rad(g, fx - 4, fy - 4, 1, fx, fy, 13, [[0, '#e6ecf2'], [0.6, '#8a96a3'], [1, '#3b444f']]); g.fill();
@@ -440,7 +441,7 @@ function inspectBack(g) {
 }
 function inspectFront(g) {
   band(g, 2040, 1803, 34, TUBE_OUT + 10, 0, STEEL); band(g, 2040, 1803, 10, TUBE_OUT + 12, 0, BRASS_CYL, false);
-  glow(g, 2040, 1803, 0x7fe9ff, 0.55, 110);
+  glow(g, 2040, 1803, 0x7fe9ff, FLOW && FLOW.scan ? 0.95 : 0.3, 110);
   g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = lin(g, 0, 1740, 0, 1866, [[0, 'rgba(127,233,255,0)'], [0.5, 'rgba(127,233,255,.55)'], [1, 'rgba(127,233,255,0)']]); g.fillRect(2036, 1740, 8, 126); g.restore();
   led(g, 2000, 1680, 0x54ff9a); led(g, 2026, 1680, 0xffc13a, 4); led(g, 2052, 1680, 0x35d8ff, 4);
   nameplate(g, 1972, 1706, 'OPTICAL CONTROL', 136);
@@ -456,7 +457,7 @@ function bigWheelBack(g) {
   g.save(); shadow(g, 28, 8, 16, 0.55); circ(g, b.x, b.y, b.r + 22); g.fillStyle = '#12171e'; g.fill(); g.restore();
   circ(g, b.x, b.y, b.r); g.fillStyle = rad(g, b.x, b.y, 40, b.x, b.y, b.r, [[0, '#101720'], [1, '#05080c']]); g.fill();
   // Rad mit zehn Taschen und Speichen
-  g.save(); g.translate(b.x, b.y); g.rotate(-0.26);
+  g.save(); g.translate(b.x, b.y); g.rotate(BIG_ROT0 - BIG_W * T);
   g.beginPath(); g.arc(0, 0, b.rp + 34, 0, TAU); g.arc(0, 0, b.rp - 34, 0, TAU, true);
   g.fillStyle = rad(g, 0, 0, b.rp - 40, 0, 0, b.rp + 36, [[0, '#3a434e'], [0.5, '#6f7b88'], [1, '#353d47']]); g.fill('evenodd');
   g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 1.5; circ(g, 0, 0, b.rp + 34); g.stroke(); circ(g, 0, 0, b.rp - 34); g.stroke();
@@ -474,9 +475,9 @@ function bigWheelFront(g) {
   circ(g, b.x, b.y, b.r + 24); g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 1.6; g.stroke();
   for (let k = 0; k < 24; k++) { const a = (k + 0.5) * TAU / 24; bolt(g, b.x + Math.cos(a) * (b.r + 12), b.y + Math.sin(a) * (b.r + 12), 4); }
   g.save(); g.lineCap = 'round'; g.strokeStyle = 'rgba(255,255,255,.22)'; g.lineWidth = 8; g.beginPath(); g.arc(b.x, b.y, b.r - 14, Math.PI * 1.08, Math.PI * 1.4); g.stroke(); g.restore();
-  gearAt(g, b.x, b.y, 20, 6, { brass: true });
+  gearAt(g, b.x, b.y, 20, 6, { brass: true, rot: -BIG_W * T });
   circ(g, b.x, b.y, 16); g.fillStyle = rad(g, b.x - 5, b.y - 6, 1, b.x, b.y, 16, [[0, '#e6ecf2'], [0.6, '#8a96a3'], [1, '#3b444f']]); g.fill(); bolt(g, b.x, b.y, 6);
-  gearAt(g, b.x + 112, b.y + 112, 14, 6); nameplate(g, b.x - 78, b.y + b.r + 34, 'WHEEL LIFT · MK I', 156);
+  gearAt(g, b.x + 112, b.y + 112, 14, 6, { rot: T * 1.4 }); nameplate(g, b.x - 78, b.y + b.r + 34, 'WHEEL LIFT · MK I', 156);
 }
 
 function sorterBack(g) {
@@ -562,7 +563,6 @@ function depth(g) {
   pipeRun(g, [[300, 596], [900, 596]], 20, 0.5); pipeRun(g, [[2200, 584], [2330, 584]], 20, 0.5);
   pipeRun(g, [[330, 1096], [1310, 1096]], 22, 0.6); pipeRun(g, [[330, 1136], [820, 1136], [820, 1262]], 14, 0.6);
   pipeRun(g, [[2196, 1090], [2980, 1090]], 22, 0.55); pipeRun(g, [[3460, 640], [3460, 992]], 18, 0.5); pipeRun(g, [[3760, 600], [3760, 2000]], 20, 0.5);
-  fan(g, 500, 1196, 74, 0.5); fan(g, 3640, 660, 62, 1.1);
   // Schaltwand unter dem Ofen
   plate(g, 2440, 1150, 330, 190, 12, { blur: 22, stops: STEEL_DARK });
   rr(g, 2454, 1164, 302, 162, 7); g.strokeStyle = 'rgba(255,255,255,.06)'; g.lineWidth = 1; g.stroke();
@@ -623,50 +623,152 @@ function sparkle(g, x, y, s) {
   g.restore();
 }
 
+// ---------------------------------------------------------------- Ablauf: jede Kugel folgt demselben Zeitplan
+// Bewusst einfach: reine Funktion der Zeit, noch ohne Warteschlangen. Alle PERIOD Sekunden startet eine Kugel;
+// ihr Ort und Zustand hängen nur von ihrem Alter u ab. Damit ist jedes Bild nach einem Sprung sofort richtig.
+const PERIOD = 1.6, LOOP = PERIOD * 48;
+const SEQ = [2, 5, 0, 3, 1, 4, 4, 1, 5, 2, 0, 3];                // Farbfolge der Kugeln
+const BASE = [5, 3, 5, 2, 4, 3];                                  // Füllstand der Röhren zu Beginn (Cyan … Grün)
+const mod = (a, m) => ((a % m) + m) % m;
+const colorOf = (n) => SEQ[mod(n, SEQ.length)];
+const smooth = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
+const lerp = (a, b, f) => a + (b - a) * f;
+const LIFT_V = 185 / PERIOD, DRUM_W = 1.232;                      // Kettentempo, Drehzahl der Trommel (rad/s)
+const BIG_W = (TAU / 10) / PERIOD;                                // Radaufzug: eine Tasche je Kugel
+const A_PICK = Math.atan2(1722 - BIG.y, 1812 - BIG.x), A_REL = Math.atan2(1350 - BIG.y, 1470 - BIG.x);
+const RIDE = (A_PICK - A_REL) / BIG_W;
+const colS = COLS.map((c) => { for (let s = 0; s < PATHS.sortRail.len; s += 2) { if (pathAt(PATHS.sortRail, s, P).x <= c.x) return s; } return PATHS.sortRail.len; });
+// Abschnitte in Sekunden nach dem Start aus dem Zellenrad
+const ST = (() => {
+  const t = {}; let u = 0;
+  const add = (name, dur) => { t[name] = u; u += dur; };
+  add('feed', 2.0); add('slide', 0.5); add('drum', 2 * 2.4 + 0.824); add('drumExit', 0.3); add('belt', 4.2); add('polish', 1.4);
+  add('polOut', 1.8); add('kiln', 7.6); add('dropIn', 0.25); add('drop', 2.8); add('toCradle', 0.5); add('colour', 1.4);
+  add('colourOut', 1.2); add('cool', PATHS.cool.len / 265); add('toWheel', 1.0); add('ride', RIDE); t.rail = u;
+  return t;
+})();
+const BIG_ROT0 = A_PICK + BIG_W * ST.ride;                         // eine Tasche steht bei der Übergabe bereit
+const railTime = (c) => colS[c] / 230;
+const slotIndex = (n) => { const c = colorOf(n), first = Math.ceil(-ST.rail / PERIOD); let k = BASE[c]; for (let m = first; m < n; m++) if (colorOf(m) === c) k++; return k; };
+const fallTime = (c, idx) => Math.sqrt(2 * Math.max(40, 1984 - idx * 46 - COLS[c].yRail) / 1500);
+
+/** Ort und Zustand der Kugel n zur Zeit t (null = noch im Behälter). */
+function poseOf(n, t) {
+  const u = t - n * PERIOD, c = colorOf(n), o = { x: 0, y: 0, kind: 'raw', color: c, heat: 0, tint: 0, n };
+  const seg = (a, b) => (u - ST[a]) / (ST[b] - ST[a]);
+  if (u < -2 * PERIOD) return null;
+  if (u < 0) { const a = HALF_PI + (u / PERIOD) * HALF_PI; o.x = WHEEL.x + Math.cos(a) * WHEEL.rp; o.y = WHEEL.y + Math.sin(a) * WHEEL.rp; return o; }
+  if (u < ST.slide) { const f = seg('feed', 'slide'), q = pathAt(PATHS.feed, PATHS.feed.len * f * f * (0.4 + 0.6 * f) / 1, P); o.x = q.x; o.y = q.y; return o; }
+  if (u < ST.drum) { const f = smooth(seg('slide', 'drum')); o.x = lerp(946, DRUM.x + 150 * Math.cos(1.745), f); o.y = lerp(800, DRUM.y + 150 * Math.sin(1.745), f) + Math.sin(f * Math.PI) * 14; return o; }
+  if (u < ST.drumExit) {                                          // Schaufeln heben die Kugel an, dann fällt sie zurück
+    const ud = u - ST.drum, cyc = Math.floor(ud / 2.4), p = (ud - cyc * 2.4) / 2.4, last = cyc >= 2;
+    o.kind = ud > 2.9 ? 'washed' : 'raw';
+    if (p < 0.62 || last) { const a = 1.745 - DRUM_W * (ud - cyc * 2.4); o.x = DRUM.x + 150 * Math.cos(a); o.y = DRUM.y + 150 * Math.sin(a); }
+    else { const q = (p - 0.62) / 0.38, a0 = 1.745 - DRUM_W * 0.62 * 2.4; o.x = lerp(DRUM.x + 150 * Math.cos(a0), DRUM.x + 150 * Math.cos(1.745), q); o.y = lerp(DRUM.y + 150 * Math.sin(a0), DRUM.y + 150 * Math.sin(1.745), q * q); }
+    return o;
+  }
+  o.kind = 'washed';
+  if (u < ST.belt) { const f = seg('drumExit', 'belt'); o.x = lerp(DRUM.x + 150 * Math.cos(0.73), 1276, f); o.y = 800; return o; }
+  if (u < ST.polish) { o.x = lerp(1276, 1970, seg('belt', 'polish')); o.y = 800; return o; }
+  if (u < ST.polOut) { const f = seg('polish', 'polOut'); o.x = 1970; o.y = 800; o.kind = f > 0.55 ? 'clear' : 'washed'; o.work = f; return o; }
+  o.kind = 'clear';
+  if (u < ST.kiln) { o.x = lerp(1970, 2400, smooth(seg('polOut', 'kiln'))); o.y = 800; return o; }
+  if (u < ST.dropIn) { const f = seg('kiln', 'dropIn'); o.x = lerp(2400, 3200, f); o.y = 800; o.heat = 0.06 + 0.94 * smooth(f * 1.15); return o; }
+  o.heat = 1;
+  if (u < ST.drop) { o.x = lerp(3200, 3240, seg('dropIn', 'drop')); o.y = 800; return o; }
+  if (u < ST.toCradle) { const f = seg('drop', 'toCradle'), q = pathAt(PATHS.drop, PATHS.drop.len * (0.35 * f + 0.65 * f * f), P); o.x = q.x; o.y = q.y; o.heat = 1 - 0.1 * f; return o; }
+  if (u < ST.colour) { const f = smooth(seg('toCradle', 'colour')); o.x = lerp(3450, CRADLE.x, f); o.y = 1440; o.heat = 0.9; return o; }
+  if (u < ST.colourOut) { const f = seg('colour', 'colourOut'); o.x = CRADLE.x; o.y = 1440; o.kind = 'color'; o.tint = smooth(f * 1.3); o.heat = 0.9 - 0.2 * f; o.work = f; return o; }
+  o.kind = 'color'; o.tint = 1;
+  if (u < ST.cool) { o.x = lerp(CRADLE.x, 2960, smooth(seg('colourOut', 'cool'))); o.y = 1440; o.heat = 0.7; return o; }
+  if (u < ST.toWheel) { const f = seg('cool', 'toWheel'), q = pathAt(PATHS.cool, PATHS.cool.len * f, P); o.x = q.x; o.y = q.y; o.heat = Math.max(0, 0.7 - f * 1.0); o.scan = Math.abs(q.x - 2040) < 26; return o; }
+  o.heat = 0;
+  if (u < ST.ride) { const f = seg('toWheel', 'ride'), q = pathAt(PATHS.toWheel, PATHS.toWheel.len * f, P), e = smooth((f - 0.75) / 0.25); o.x = lerp(q.x, BIG.x + Math.cos(A_PICK) * BIG.rp, e); o.y = lerp(q.y, BIG.y + Math.sin(A_PICK) * BIG.rp, e); return o; }
+  if (u < ST.rail) { const a = A_PICK - BIG_W * (u - ST.ride); o.x = BIG.x + Math.cos(a) * BIG.rp; o.y = BIG.y + Math.sin(a) * BIG.rp; return o; }
+  const ur = u - ST.rail, rt = railTime(c), idx = slotIndex(n);
+  if (ur < 0.35) { const f = smooth(ur / 0.35), q = pathAt(PATHS.sortRail, 0, P); o.x = lerp(BIG.x + Math.cos(A_REL) * BIG.rp, q.x, f); o.y = lerp(BIG.y + Math.sin(A_REL) * BIG.rp, q.y, f); return o; }
+  if (ur < 0.35 + rt) { const q = pathAt(PATHS.sortRail, colS[c] * ((ur - 0.35) / rt), P); o.x = q.x; o.y = q.y; return o; }
+  if (idx > 12) return null;                                       // Röhre voll (in der Vorschau, vor dem Neubeginn)
+  const ft = fallTime(c, idx), f = Math.min(1, (ur - 0.35 - rt) / ft);
+  o.x = COLS[c].x; o.y = lerp(COLS[c].yRail + 6, 1984 - idx * 46, f * f); o.landed = f >= 1;
+  return o;
+}
+/** Alle sichtbaren Kugeln zur Zeit t und die Zahl der fertigen. */
+function flowAt(t) {
+  const list = [], first = Math.ceil(-ST.rail / PERIOD), last = Math.floor(t / PERIOD + 2);
+  let done = BASE.reduce((a, b) => a + b, 0), scan = false;
+  for (let n = first; n <= last; n++) {
+    const p = poseOf(n, t); if (!p) continue;
+    if (p.landed) done++;
+    if (p.scan) scan = true;
+    list.push(p);
+  }
+  return { list, done, scan };
+}
+/** Tonereignisse im Zeitraum (t0, t1]: gleiche Zeitpunkte wie im Bild. */
+function eventsBetween(t0, t1, emit) {
+  const fixed = [['pick', 0, WHEEL.x, WHEEL.y, 1], ['tick', ST.drum + 2.4, DRUM.x, DRUM.y + 140, 200], ['tick', ST.drum + 4.8, DRUM.x, DRUM.y + 140, 230],
+    ['belt', ST.drumExit + 0.3, 1290, 800, 150], ['valve', ST.polish, 1970, 800, 1], ['flap', ST.cool + (PATHS.cool.len - 40) / 265, 2040, 1803, 1],
+    ['lift', ST.ride, 1812, 1722, 1], ['rail', ST.rail + 0.3, 1470, 1350, 200], ['hopper', -2 * PERIOD - 0.2, 470, 380, 180]];
+  for (const [type, e, x, y, p] of fixed) for (let n = Math.floor((t0 - e) / PERIOD) + 1; n * PERIOD + e <= t1; n++) emit(type, n * PERIOD + e, x, y, p, colorOf(n));
+  for (let n = Math.floor((t0 - ST.rail - 6) / PERIOD); n * PERIOD + ST.rail <= t1; n++) {
+    const c = colorOf(n), idx = Math.min(12, BASE[c] + mod(Math.floor(n / 6), 5)), land = n * PERIOD + ST.rail + 0.35 + railTime(c) + fallTime(c, idx);
+    if (land > t0 && land <= t1) emit('clink', land, COLS[c].x, 1984 - idx * 46, 330, c);
+  }
+}
+
+// ---------------------------------------------------------------- Kamera: ruhige Fahrt, rein aus der Videozeit
+function cameraAt(t, world, auto) {
+  const land = world.w >= world.h;
+  if (!land) {                                                    // Hochformat: volle Hallenhöhe, langsame Fahrt die Linie entlang
+    const s = world.h / H, hw = world.w / (2 * s), f = auto ? smooth(1 - Math.abs(mod(t, 48) / 24 - 1)) : 0.5;
+    return { s, cx: lerp(hw, W - hw, f), cy: H / 2 };
+  }
+  const A = { cx: W / 2, cy: H / 2, s: world.w / W }, U = { cx: 1900, cy: 720, s: 0.75 }, U2 = { cx: 2060, cy: 720, s: 0.75 }, L = { cx: 1980, cy: 1440, s: 0.75 }, L2 = { cx: 1860, cy: 1440, s: 0.75 };
+  if (!auto) return A;
+  const keys = [[0, A], [4, A], [8, U], [10.5, U2], [15.5, L], [17, L2], [20, A]], u = mod(t, 20);
+  for (let i = 1; i < keys.length; i++) if (u <= keys[i][0]) {
+    const [t0, a] = keys[i - 1], [t1, b] = keys[i], f = smooth((u - t0) / (t1 - t0));
+    return { cx: lerp(a.cx, b.cx, f), cy: lerp(a.cy, b.cy, f), s: Math.exp(lerp(Math.log(a.s), Math.log(b.s), f)) };
+  }
+  return A;
+}
+
 // ---------------------------------------------------------------- Kugeln entlang der Linie
 function placeMarbles(g) {
-  const lf = LIFT;
-  for (let y = lf.bot - 60 - 34; y > lf.top + 20; y -= 185) marble(g, lf.ballX, y, 'raw');
-  // Vorrat und Behälter
+  const lf = LIFT, tf = mod(T, LOOP), fl = (FLOW = flowAt(tf));
+  // Aufzug: beladene Träger fahren rechts hoch
+  for (let k = 0; k < 9; k++) { const y = lf.bot - 30 - mod(k * 185 + T * LIFT_V, 1665); if (y > 344) marble(g, lf.ballX, y - 34, 'raw'); }
+  { const q = pathAt(PATHS.top, PATHS.top.len * mod(T / PERIOD, 1), P); marble(g, q.x, q.y, 'raw'); }
+  // Vorrat und Behälter (ruhende Kugeln)
   for (const [dx, dy] of [[40, 0], [86, 2], [132, 0], [170, -2], [62, -40], [108, -39], [150, -40], [84, -78], [128, -78], [34, -40]]) marble(g, 316 + dx, 1984 + dy, 'raw');
   for (const [dx, dy] of [[0, 0], [-46, -30], [-92, -58], [-138, -86], [-24, -62], [-70, -92], [-116, -120], [-12, -110]]) marble(g, 646 + dx * 0.98, 490 + dy * 0.82, 'raw');
-  for (const a of [0.35 + HALF_PI, 0.35 + Math.PI]) marble(g, WHEEL.x + Math.cos(a) * WHEEL.rp, WHEEL.y + Math.sin(a) * WHEEL.rp, 'raw');
-  marble(g, at(PATHS.top, 0.5).x, at(PATHS.top, 0.5).y, 'raw'); marble(g, at(PATHS.feed, 0.55).x, at(PATHS.feed, 0.55).y, 'raw');
-  // Waschtrommel: Kugeln purzeln rechts unten
-  for (const [dx, dy] of [[20, 130], [66, 118], [108, 92], [-28, 140], [136, 54], [62, 72], [100, 40], [-74, 132]]) marble(g, DRUM.x + dx, DRUM.y + dy, dx > 90 ? 'washed' : 'raw');
-  marble(g, 1330, 800, 'washed');
-  for (const x of [1440, 1540, 1650]) marble(g, x, 800, 'washed');
-  marble(g, 1770, 800, 'washed');
-  marble(g, POL.x + POL.w / 2, 800, 'clear');
-  for (const x of [2200, 2290]) marble(g, x, 800, 'clear');
-  // Ofen: wird von links nach rechts heißer
-  [2440, 2560, 2680, 2800, 2920, 3040, 3160].forEach((x, i) => marble(g, x, 800, 'clear', 0, 0.12 + i * 0.145));
-  for (const f of [0.14, 0.4, 0.66]) { const p = at(PATHS.drop, f); marble(g, p.x, p.y, 'clear', 0, 1 - f * 0.25); }
-  // Farbstation: die Kugel in der Kammer bekommt gerade ihre Farbe
-  marble(g, CRADLE.x, CRADLE.y, 'color', 2, 0.55);
-  marble(g, 3060, 1440, 'color', 4, 0.6);
-  // Kühlstrecke: das Glühen klingt ab
-  [[0.04, 0], [0.11, 3], [0.19, 1], [0.27, 5], [0.36, 2], [0.45, 4], [0.54, 0], [0.63, 3], [0.72, 5], [0.81, 1], [0.9, 2]].forEach(([f, c]) => { const p = at(PATHS.cool, f); marble(g, p.x, p.y, 'color', c, Math.max(0, 0.55 - f * 0.75)); });
-  marble(g, 2040, 1803, 'color', 4);
   marble(g, 1930, 2012, 'washed'); marble(g, 1982, 2014, 'raw');
-  { const p = at(PATHS.toWheel, 0.55); marble(g, p.x, p.y, 'color', 1); }
-  // Radaufzug: sechs Taschen sind besetzt
-  [1, 0, 9, 8, 7, 6].forEach((k, i) => { const a = -0.26 + k * TAU / 10; marble(g, BIG.x + Math.cos(a) * BIG.rp, BIG.y + Math.sin(a) * BIG.rp, 'color', (i * 2 + 1) % 6); });
-  // Sortierschiene und Röhren
-  [[0.1, 2], [0.42, 5], [0.7, 0]].forEach(([f, c]) => { const p = at(PATHS.sortRail, f); marble(g, p.x, p.y, 'color', c); });
-  COLS.forEach((c, i) => { const n = [7, 5, 8, 4, 6, 5][i]; for (let k = 0; k < n; k++) marble(g, c.x, 1984 - k * 46, 'color', i); });
+  // ruhende Kugeln in den Röhren, darüber die laufenden
+  COLS.forEach((c, i) => { for (let k = 0; k < BASE[i]; k++) marble(g, c.x, 1984 - k * 46, 'color', i); });
+  for (const p of fl.list) {
+    if (p.kind === 'color' && p.tint < 1) { marble(g, p.x, p.y, 'clear', 0, p.heat); g.save(); g.globalAlpha = p.tint; marble(g, p.x, p.y, 'color', p.color, p.heat); g.restore(); }
+    else marble(g, p.x, p.y, p.kind, p.color, p.heat);
+  }
 }
 
 // ---------------------------------------------------------------- Gesamtbild
-function render() {
-  K.setPX(1);
-  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
-  const g = cv.getContext('2d'); g.lineJoin = 'round';
-  const lamps = hall(g);
-  depth(g);
-  zoneLights(g);
-  deck(g);
-  lampBars(g, lamps);
+let BG = null;                                                    // unbewegter Hintergrund, einmal vorgezeichnet
+function background(scale) {
+  if (BG && BG.scale === scale) return BG.canvas;
+  const cv = document.createElement('canvas'); cv.width = Math.round(W * scale); cv.height = Math.round(H * scale);
+  const g = cv.getContext('2d'); g.scale(scale, scale); g.lineJoin = 'round';
+  K.setPX(scale);
+  const lamps = hall(g); depth(g); zoneLights(g); deck(g); lampBars(g, lamps);
+  BG = { scale, canvas: cv }; return cv;
+}
+/** Zeichnet die Halle zur Zeit t in den vorbereiteten Kontext (Hallen-Einheiten). px = Gerätepixel je Einheit. */
+function drawScene(g, t, px, bgScale = 1) {
+  T = t; g.lineJoin = 'round';
+  const bg = background(bgScale);
+  g.drawImage(bg, 0, 0, W, H);
+  K.setPX(px);
+  fan(g, 500, 1196, 74, 0.5 + T * 2.6); fan(g, 3640, 660, 62, 1.1 - T * 3.1);
   const tubes = [
     { p: PATHS.shaft, s0: 0, s1: PATHS.shaft.len }, { p: PATHS.top, s0: 0, s1: PATHS.top.len - 34 }, { p: PATHS.feed, s0: 30, s1: PATHS.feed.len },
     { p: PATHS.drumOut, s0: 0, s1: PATHS.drumOut.len }, { p: PATHS.polIn, s0: 0, s1: PATHS.polIn.len }, { p: PATHS.polOut, s0: 0, s1: PATHS.polOut.len },
@@ -674,39 +776,39 @@ function render() {
     { p: PATHS.toWheel, s0: 0, s1: PATHS.toWheel.len - 20 }, { p: PATHS.sortRail, s0: 0, s1: PATHS.sortRail.len },
     ...COLS.map((c) => ({ p: c.path, s0: 0, s1: c.path.len })),
   ];
-  // Rückseiten
   liftBack(g); rawBin(g, false); waterTank(g); ducts(g); hopperBack(g); drumBack(g); beltBack(g); polisherBack(g); kilnBack(g);
   colourBack(g); coolBack(g); inspectBack(g); bigWheelBack(g); sorterBack(g);
   tubesBack(g, tubes);
-  // Kugeln
   placeMarbles(g);
-  // Vorderseiten
   tubesFront(g, tubes);
   for (const [p, f] of [[PATHS.top, 0.04], [PATHS.top, 0.55], [PATHS.shaft, 0.02], [PATHS.shaft, 0.3], [PATHS.shaft, 0.6], [PATHS.drop, 0.1], [PATHS.drop, 0.5], [PATHS.drop, 0.82], [PATHS.cool, 0.02], [PATHS.cool, 0.33], [PATHS.cool, 0.66], [PATHS.cool, 0.97], [PATHS.sortRail, 0.03]]) collar(g, p, p.len * f, 14, 6, f < 0.05 ? BRASS_CYL : CYL);
   band(g, 3680, DECK + 15, 44, TUBE_OUT + 12, HALF_PI, STEEL);            // Durchführung durch das Deck
   hopperFront(g); drumFront(g); beltFront(g); polisherFront(g); kilnFront(g);
   colourFront(g); coolFront(g); inspectFront(g); bigWheelFront(g); sorterFront(g); rawBin(g, true);
   quietDetails(g);
-  // Leuchtschilder
   neon(g, 1790, 150, 'MARBLE FACTORY ', 'XL', 78);
-  board(g, 1790, 318);
+  board(g, 1790, 318, FLOW ? FLOW.done : 35);
   for (const [x, y, a, b] of [[560, 250, '01 ', 'RAW'], [1110, 440, '02 ', 'WASH'], [1970, 520, '03 ', 'POLISH'], [2800, 610, '04 ', 'KILN'],
     [3300, 1650, '05 ', 'COLOUR'], [2580, 1910, '06 ', 'COOL'], [2040, 1490, '07 ', 'INSPECT'], [1640, 1180, '08 ', 'LIFT'], [960, 1230, '09 ', 'SORT']]) neon(g, x, y, a, b, 40);
-  // Vignette
-  g.fillStyle = rad(g, W / 2, H * 0.46, H * 0.55, W / 2, H / 2, W * 0.62, [[0, 'rgba(0,0,0,0)'], [0.6, 'rgba(0,0,0,.14)'], [1, 'rgba(0,0,0,.55)']]); g.fillRect(0, 0, W, H);
+}
+function vignette(g, w, h) { g.fillStyle = rad(g, w / 2, h * 0.46, h * 0.55, w / 2, h / 2, w * 0.62, [[0, 'rgba(0,0,0,0)'], [0.6, 'rgba(0,0,0,.14)'], [1, 'rgba(0,0,0,.55)']]); g.fillRect(0, 0, w, h); }
+/** Standbild der ganzen Halle (für Entwurfsbilder). */
+function render(t = 30) {
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const g = cv.getContext('2d');
+  drawScene(g, t, 1); vignette(g, W, H);
   return cv;
 }
-function board(g, x, y) {
-  const w = 900, h = 104;
+function board(g, x, y, done) {
+  const w = 900, h = 104, total = 96, n = Math.min(total, done);
   rr(g, x - w / 2, y - h / 2, w, h, 14); g.fillStyle = 'rgba(10,14,21,.82)'; g.fill(); g.strokeStyle = 'rgba(58,69,84,.9)'; g.lineWidth = 2; g.stroke();
   g.save(); g.textBaseline = 'middle';
-  g.font = `800 44px ${FONT}`; g.fillStyle = '#ffffff'; g.textAlign = 'left'; g.shadowColor = 'rgba(0,0,0,.8)'; g.shadowBlur = 6; g.fillText('35 / 96', x - w / 2 + 30, y - 10);
+  g.font = `800 44px ${FONT}`; g.fillStyle = '#ffffff'; g.textAlign = 'left'; g.shadowColor = 'rgba(0,0,0,.8)'; g.shadowBlur = 6; g.fillText(`${n} / ${total}`, x - w / 2 + 30, y - 10);
   g.font = `600 16px ${FONT}`; g.fillStyle = '#8fa0b8'; g.fillText('M A R B L E S   F I N I S H E D', x - w / 2 + 30, y + 30);
   g.textAlign = 'right'; g.font = `800 32px ${FONT}`; g.fillStyle = '#ffe1f1'; g.shadowColor = 'rgba(255,63,158,.9)'; g.shadowBlur = 12; g.fillText('II · COLOUR', x + w / 2 - 30, y - 12);
   g.font = `600 16px ${FONT}`; g.fillStyle = '#8fa0b8'; g.shadowColor = 'rgba(0,0,0,.8)'; g.shadowBlur = 6; g.fillText('N E X T :   S E C O N D   L I N E', x + w / 2 - 30, y + 30);
-  // Fortschrittsbalken
   rr(g, x - 130, y - 20, 260, 14, 7); g.fillStyle = '#0d1219'; g.fill(); g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 1.2; g.stroke();
-  g.shadowColor = 'rgba(34,211,238,.9)'; g.shadowBlur = 10; rr(g, x - 128, y - 18, 256 * (35 / 96), 10, 5); g.fillStyle = '#22d3ee'; g.fill();
+  g.shadowColor = 'rgba(34,211,238,.9)'; g.shadowBlur = 10; rr(g, x - 128, y - 18, 256 * (n / total), 10, 5); g.fillStyle = '#22d3ee'; g.fill();
   g.restore();
 }
 /** Liefert Übersicht und Ausschnitte als PNG-Daten (Base64 ohne Präfix). crops: [{ x, y, w, h }] */
@@ -716,5 +818,5 @@ function exportImages(crops = []) {
   return { overview: scaled(0, 0, W, H, 1920, 1080), crops: crops.map((c) => scaled(c.x, c.y, c.w, c.h, c.w, c.h)) };
 }
 
-EBS.MarbleXLConcept = { render, exportImages, W, H };
+EBS.MarbleXLConcept = { render, exportImages, drawScene, vignette, cameraAt, flowAt, eventsBetween, W, H, PERIOD, LOOP };
 })();
