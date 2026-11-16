@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "name": "Wüsten-Pyramide mit Tierchen – ruhiger 25-Sekunden-Kurzfilm",
+  "scenario": "pyramid",
+  "seed": 42,
+  "params": {
+    "theme": 1,
+    "figure": 1,
+    "dayMinutes": 0.4166666666666667,
+    "orbs": 16,
+    "size": 24,
+    "beltSpeed": 0.85,
+    "rollSpeed": 0.85,
+    "current": 1.35,
+    "glow": 0.8,
+    "pulse": 0,
+    "rays": 0.7,
+    "clouds": 0.4,
+    "reflection": 0.9,
+    "waves": 0.7,
+    "wiggle": 0.6,
+    "shortFilm": true,
+    "speed": 0.85,
+    "sparkle": 0.4,
+    "fillGlow": 0.25,
+    "nightDark": 0.65,
+    "fireworks": 0.75,
+    "skyFun": false,
+    "little": false,
+    "birds": false,
+    "sleepy": false
+  },
+  "video": {
+    "aspect": "9:16",
+    "resolution": 1080,
+    "fps": 60,
+    "durationSec": 25,
+    "tempo": 1,
+    "audio": true,
+    "volume": {
+      "master": 70,
+      "scoop": 110,
+      "pulse": 55.25,
+      "tip": 110,
+      "cap": 100,
+      "splash": 110,
+      "boing": 100,
+      "wheee": 55,
+      "squeak": 110,
+      "full": 100,
+      "launch": 100,
+      "firework": 100,
+      "emote": 110,
+      "fish": 110,
+      "ufo": 110,
+      "twinkle": 110,
+      "chirp": 110,
+      "water": 100
+    },
+    "quality": {
+      "crf": 18,
+      "preset": "medium",
+      "bitrate": null
+    }
+  },
+  "view": {
+    "hud": true,
+    "camera": false
+  }
+}

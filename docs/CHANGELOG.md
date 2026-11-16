@@ -2,6 +2,12 @@
 
 Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen in der [ROADMAP](ROADMAP.md).
 
+## 16.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| R30: Endless Waterpark als achtes Szenario. Originale Pyramid-Tierchen, Glaslift und sichtbarer Rücklauf, Panorama, Trichter, Wippe und Sprungbrett; eigene Hoch-/Querformate. Vier-Tiere-Short, Parktag mit Öffnungen und Sammelschluss sowie Dauerbetrieb; Tag/Nacht, Himmel/UFO, Wasserleben, ruhiger Wasserklang, optionale Fontänenshow und Feuerwerk. Acht Vorlagendateien, endliche Exportvorprüfung und kompletter UI-/Exportanschluss. Gemeinsame Tiergrafik gegen die vorhandene Pyramide verglichen. Persönliche Hör-/Handyabnahme bleibt R30, ganze Filmproduktionen sind gesonderte Aufträge. | Arbeitsbranch `codex/waterpark`, Basis `09caa3d` | [Umsetzung und Prüfungen](WASSERPARK_UMSETZUNG_2026-11-16.md) |
+
 ## 13.11.2026
 
 | Was | Commit | Bericht |

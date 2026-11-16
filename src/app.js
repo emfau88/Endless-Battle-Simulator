@@ -72,6 +72,13 @@ async function bootLive() {
     if (['crf', 'preset'].some((k) => fromUrl[k] !== undefined)) delete over.quality;
     initial = mergeConfig(initial, { video: over });
   }
+  // A scenario's own sound recipe replaces gains inherited from another scenario.
+  // Explicit saved settings for the same scenario and volume values in the URL remain authoritative.
+  if (saved.scenario !== initial.scenario && (sc0.audio?.defaultVolume || getScenario(saved.scenario)?.audio?.defaultVolume)) {
+    const defaults = normalizeConfig({ scenario: initial.scenario, params: initial.params }).video.volume;
+    initial = normalizeConfig({ ...initial, video: { ...initial.video,
+      volume: { ...defaults, ...EBS.liftConfig(fromUrl).video.volume } } });
+  }
   const a0 = ASPECTS[initial.video.aspect];
   const app = await createStage({ w: a0.w, h: a0.h }, { renderScale: 1 });
   $('stage').appendChild(app.canvas);
@@ -108,9 +115,12 @@ async function bootLive() {
   const scSel = $('scenario');
   for (const s of scenarios.values()) scSel.add(new Option(s.title, s.id));
   scSel.addEventListener('change', () => {
-    const c = session.cfg, vd = getScenario(scSel.value).videoDefaults;
+    const c = session.cfg, nextScenario = getScenario(scSel.value), vd = nextScenario.videoDefaults;
     // Bringt das neue Szenario eigene Videostandards mit (z. B. YouTube-Qualität), gelten diese; Format und Länge bleiben
-    const video = vd ? { ...c.video, ...vd, quality: { ...c.video.quality, ...(vd.quality || {}) } } : c.video;
+    const video = vd ? { ...c.video, ...vd, quality: { ...c.video.quality, ...(vd.quality || {}) } } : { ...c.video };
+    if (nextScenario.audio?.defaultVolume || session.scenario.audio?.defaultVolume) {
+      video.volume = normalizeConfig({ scenario: scSel.value }).video.volume;
+    }
     session.start({ scenario: scSel.value, seed: c.seed, video, view: c.view }); // neue Standardwerte des Szenarios
     acc = 0; fit(); save(); buildScenarioUi(); syncUi();
   });
@@ -170,12 +180,16 @@ async function bootLive() {
     }
   }
   // ---- Lautstärke: Gesamtregler + je Klang der Klangtabelle (Prozent, nur für den Export; wirkt ohne Neustart)
-  // Other scenarios retain their −14 LUFS reference; Marble Works has a fixed, quiet mix.
+  // Other scenarios retain their −14 LUFS reference; fixed profiles keep their chosen balance.
+  const currentAudio = () => session.scenario.audioForParams ? session.scenario.audioForParams(session.cfg.params) : session.scenario.audio;
   const usesCameraAudio = () => session.scenario.audio?.mixProfile === 'marbleworks-soft-v1';
   const dB = (v) => { const d = 20 * Math.log10(v / 100); return (d > 0 ? '+' : '−') + Math.abs(d).toFixed(1).replace('.', ','); };
   const fmtVol = (key, v) => {
     if (v === 0) return '0 % · aus';
-    if (key === 'master' && usesCameraAudio()) return v === 100 ? '100 % · Standard' : `${v} % · ${dB(v)} dB`;
+    if (key === 'master' && Number.isFinite(currentAudio()?.fixedGainDb)) {
+      const reference = currentAudio().defaultVolume?.master ?? 100;
+      return v === reference ? `${v} % · Standard` : `${v} % · ${dB(v / reference * 100)} dB`;
+    }
     // Gesamt unter 100 % wirkt hinter dem Begrenzer (exakt), darüber treibt er in den Begrenzer (lauter, Spitzen begrenzt)
     if (key === 'master') return v === 100 ? '100 % · −14 LUFS' : v < 100 ? `${v} % · ≈ −${Math.round(14 - 20 * Math.log10(v / 100))} LUFS` : `${v} % · ${dB(v)} dB, begrenzt`;
     return v === 100 ? '100 %' : `${v} % · ${dB(v)} dB`;
@@ -189,7 +203,8 @@ async function bootLive() {
       const d = document.createElement('div'); d.className = 'ctl';
       d.innerHTML = `<label for="vol-${key}">${label} <output id="vo-${key}"></output></label>`;
       const el = document.createElement('input');
-      Object.assign(el, { type: 'range', id: 'vol-' + key, min: 0, max: EBS.VOLUME_MAX, step: 5 });
+      Object.assign(el, { type: 'range', id: 'vol-' + key, min: 0, max: EBS.VOLUME_MAX,
+        step: audio?.volumePrecision ? 10 ** -audio.volumePrecision : 5 });
       el.dataset.key = key;
       el.addEventListener('input', () => {
         session.cfg.video.volume[key] = +el.value; $('vo-' + key).textContent = fmtVol(key, +el.value); save();
@@ -198,6 +213,7 @@ async function bootLive() {
     };
     if (!sc.audio) return;
     row('master', 'Gesamtlautstärke');
+    if (audio.background?.volumeKey) row(audio.background.volumeKey, audio.background.label || 'Hintergrund');
     const sub = document.createElement('div'); sub.className = 'subhead'; sub.textContent = 'Einzelne Klänge';
     box.appendChild(sub);
     for (const [key, def] of Object.entries(events)) row(key, def.label || key);
@@ -212,14 +228,16 @@ async function bootLive() {
       $('vo-' + el.dataset.key).textContent = fmtVol(el.dataset.key, v);
     }
     $('btnVolumeReset').disabled = !on;
+    $('btnVolumeReset').textContent = currentAudio()?.defaultVolume ? 'Standardmischung wiederherstellen' : 'Alle auf Standard (100 %)';
     $('audioHint').textContent = !hasAudio ? 'Dieses Szenario hat noch keinen Ton.'
-      : on ? (usesCameraAudio() ? 'Der Ton folgt dem Kamerablick. 100 % = ruhige Standardmischung. Nach links leiser, nach rechts lauter. '
+      : on ? (['pyramid-water-v1', 'waterpark-water-v1'].includes(currentAudio()?.mixProfile) ? `Ruhige ${session.scenario.id === 'waterpark' ? 'Wasserpark' : 'Pyramiden'}-Mischung mit durchgehendem Wasserloop und leisen Aktionsgeräuschen. Gesamtlautstärke 70 % = Standard. `
+        : usesCameraAudio() ? 'Der Ton folgt dem Kamerablick. 100 % = ruhige Standardmischung. Nach links leiser, nach rechts lauter. '
         : 'Standard 100 % = YouTube-Lautheit (−14 LUFS). Nach links leiser, nach rechts lauter (bis 200 % = +6 dB). ')
         + 'Gilt für den Ton im exportierten Video, im Hoch- wie im Querformat; die Vorschau ist stumm.'
         : 'Ton ist ausgeschaltet – das Video wird ohne Tonspur exportiert.';
   }
   $('btnVolumeReset').addEventListener('click', () => {
-    for (const k of Object.keys(session.cfg.video.volume)) session.cfg.video.volume[k] = 100;
+    session.cfg.video.volume = normalizeConfig({ scenario: session.cfg.scenario, params: session.cfg.params }).video.volume;
     save(); syncVolumeUi();
   });
 
@@ -341,7 +359,12 @@ async function bootLive() {
     $('durationOut').textContent = durationPending ? '…' : fmtTime(d);
     durHint.classList.toggle('err', !!isError);
   };
-  const setDuration = (sec, note) => { session.cfg.video.durationSec = sec; invalidate(); save(); showDuration(note); };
+  const setDuration = (sec, note) => {
+    if (session.scenario.restartOnDuration && sec !== session.cfg.video.durationSec) {
+      restart({ video: { durationSec: sec } }); showDuration(note); return;
+    }
+    session.cfg.video.durationSec = sec; invalidate(); save(); showDuration(note);
+  };
   dur.addEventListener('change', () => { if (dur.value) setDuration(+dur.value); else showDuration(); });
   durText.addEventListener('change', () => {
     const sec = parseDuration(durText.value);
@@ -366,7 +389,7 @@ async function bootLive() {
     const c = session.cfg;
     scSel.value = c.scenario; $('seed').value = c.seed;
     const production = c.scenario === 'marbleworks';
-    $('btnShortPreset').textContent = production ? 'Short · Mini-Auftrag' : 'Short · 1 Minute';
+    $('btnShortPreset').textContent = production ? 'Short · Mini-Auftrag' : c.scenario === 'waterpark' ? 'Short · 30 Sekunden' : 'Short · 1 Minute';
     $('btnLongPreset').textContent = production ? 'Langvideo · Vollständiger Auftrag' : 'Langvideo · 10 Minuten';
     for (const ctl of session.scenario.controls) {
       const el = $('p-' + ctl.key), v = c.params[ctl.key];
@@ -398,7 +421,8 @@ async function bootLive() {
   const cliCmd = () => {
     const c = session.cfg;
     const p = Object.entries(c.params).map(([k, v]) => `--param ${k}=${v}`).join(' ');
-    const vol = c.video.audio ? Object.entries(c.video.volume).filter(([, v]) => v !== 100).map(([k, v]) => ` --volume ${k}=${v}`).join('') : '';
+    const defaultVolume = normalizeConfig({ scenario: c.scenario, params: c.params }).video.volume;
+    const vol = c.video.audio ? Object.entries(c.video.volume).filter(([k, v]) => v !== defaultVolume[k]).map(([k, v]) => ` --volume ${k}=${v}`).join('') : '';
     const q = c.video.quality;
     const quality = ` --crf ${q.crf} --preset ${q.preset}${q.bitrate ? ' --bitrate ' + q.bitrate + 'k' : ''}`;
     return `npm run export -- --scenario ${c.scenario} --seed ${c.seed} --aspect ${c.video.aspect} --resolution ${c.video.resolution} --fps ${c.video.fps} --duration ${c.video.durationSec}${c.video.tempo !== 1 ? ' --tempo ' + c.video.tempo : ''}${quality} ${p}${c.view.hud ? '' : ' --no-hud'}${c.view.camera ? '' : ' --no-camera'}${c.video.audio ? vol : ' --no-audio'}`;
@@ -421,8 +445,9 @@ async function bootLive() {
     $('btnCancel').disabled = !!s.cancelRequested;
     msg.classList.toggle('err', s.state === 'error');
     if (s.state === 'running') {
-      const phases = { starting: 'Starte Renderer …', planning: 'Ermittle das Turnierende …', simulating: 'Berechne den Episodenverlauf …', encoding: 'Schließe die Bildspur ab …',
+      const phases = { starting: 'Starte Renderer …', planning: 'Prüfe den Episodenablauf …', simulating: 'Berechne den Episodenverlauf …', encoding: 'Schließe die Bildspur ab …',
         'audio-loading': 'Lade die Klänge …', 'audio-mixing': 'Mische und prüfe die Tonspur …',
+        'audio-background': 'Mische den Wasser-Hintergrund …',
         muxing: 'Verbinde Bild und Ton …', 'audio-verifying': 'Prüfe die kodierte Tonspur …',
         verifying: 'Prüfe die fertige Videodatei …', saving: 'Speichere Video und Einstellungen …' };
       msg.textContent = s.cancelRequested ? 'Abbruch angefordert – räume auf …'

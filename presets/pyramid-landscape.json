@@ -3,7 +3,41 @@
   "name": "Endless Pyramid – Querformat mit Leuchtkugeln (20 Sekunden)",
   "scenario": "pyramid",
   "seed": 42,
-  "params": { "figure": 0, "orbs": 22, "size": 16 },
-  "video": { "aspect": "16:9", "resolution": 1080, "fps": 30, "durationSec": 20, "tempo": 1, "audio": true },
-  "view": { "hud": true, "camera": true }
+  "params": {
+    "figure": 0,
+    "orbs": 22,
+    "size": 16
+  },
+  "video": {
+    "aspect": "16:9",
+    "resolution": 1080,
+    "fps": 30,
+    "durationSec": 20,
+    "tempo": 1,
+    "audio": true,
+    "volume": {
+      "master": 70,
+      "scoop": 110,
+      "pulse": 55.25,
+      "tip": 110,
+      "cap": 100,
+      "splash": 110,
+      "boing": 100,
+      "wheee": 55,
+      "squeak": 110,
+      "full": 100,
+      "launch": 100,
+      "firework": 100,
+      "emote": 110,
+      "fish": 110,
+      "ufo": 110,
+      "twinkle": 110,
+      "chirp": 110,
+      "water": 100
+    }
+  },
+  "view": {
+    "hud": true,
+    "camera": true
+  }
 }

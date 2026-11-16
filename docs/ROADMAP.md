@@ -74,7 +74,9 @@ neu sind **R20 für Scrap Wars / Scrap Arena**, **R21 für Naval-Zustandsabsiche
 **R24 als Merkposten (Pyramiden-Melodie)** und **R25 für Endless Mycelium**.
 Mycelium hieß im isolierten Featurebranch ebenfalls R23; bei der Integration wird diese Doppelbelegung aufgelöst.
 **R26** bezeichnet den gemeinsamen Produktionsgenerator, **R27** den eingegrenzten Pyramid-Audiofall.
-**R28** hält die abschließenden Linux-Zeitüberschreitungen fest. Nächste freie ID: R29.
+**R28** hält die abschließenden Linux-Zeitüberschreitungen fest.
+**R29** sammelt die Tierchen-Videoideen für SimCascade als Merkposten ohne Umsetzungsauftrag.
+**R30** bezeichnet den Wasserpark für Shorts und Langvideos; technisch umgesetzt, persönliche Sicht-/Hörabnahme noch offen. Nächste freie ID: R31.
 Frühere B-/Schritt-Bezeichnungen sind Herkunftsverweise, keine zweite Aufgabenliste.
 
 ## 1 · Quellen und belastbarer Stand
@@ -493,6 +495,21 @@ aufgreifen; R21 spätestens vor Änderungen an Besitz-/Recyclingmechanik schlie�
 
 ## 5 · Nachrangige offene Punkte und Merkliste
 
+- [ ] **R30 · Endless Waterpark: persönliche Sicht-/Hörabnahme.** Die Umsetzung des
+  [Plans](WASSERPARK_PLAN_2026-11-15.md) wurde am 16.11.2026 ausdrücklich beauftragt und als eigenes
+  Szenario integriert: vier Attraktionen, sichtbarer Kreislauf, eigene Formate, Short, Parktag,
+  Dauerbetrieb, Tag/Nacht, Himmel/UFO, Wasserklang und Abschluss. Technischer Stand, aktuelle Proben
+  und Nachweise im [Umsetzungsbericht](WASSERPARK_UMSETZUNG_2026-11-16.md).
+  **Restabnahme:** die kurzen laufenden Proben persönlich auf PC/Kopfhörer und echtem Handy ansehen
+  und anhören; nur daraus entstehende konkrete Mängel nacharbeiten. Ganze Shorts/Langfilme werden
+  separat produziert. Ausschnittsexport, Rennen und Auftragsmodus bleiben spätere Erweiterungen.
+- [ ] **R29 · Tierchen-Videoideen für SimCascade (Merkposten, nicht beauftragt).** Am 15.11.2026 auf
+  Nutzerwunsch festgehalten: Wasserpark, Rennen, Plinko, Waschstraße, Dorfaufbau, Olympiade,
+  Sortiermaschine und Gute-Nacht-Variante; dazu wiederkehrende Persönlichkeiten und kurze Geschichten.
+  [Ideensammlung mit Umfang und Wasserpark-Einordnung](TIERCHEN_VIDEOIDEEN_2026-11-15.md).
+  Wasserpark inzwischen auf gesonderten Nutzerwunsch als eigenes Szenario unter **R30 umgesetzt**;
+  die vollständige Filmproduktion ist noch nicht beauftragt. Die übrigen Ideen bleiben eine Merkliste.
+  Rennen mit dem bestehenden R23/P5 abgleichen.
 - [ ] **R07 · Oberfläche vervollständigen (früher B09).** Nach Sichtung von V1.2 begrenzt auf noch fehlende
   Qualitätswerte/-profile (CRF, x264-Preset, Bitrate) und ggf. 1:1-Auswahl. Freie Dauer, Auflösung/FPS,
   Speichern/Laden/Teilen und Lautstärkeregler sind vorhanden. Exportstatus/Abbruch und Metadaten wurden mit R11 A/B/C

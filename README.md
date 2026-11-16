@@ -1,6 +1,6 @@
 # Endless Battle Simulator
 
-Sieben deterministische Simulationen für Battle- und „Satisfying“-Videos mit Browser-Vorschau und MP4-Export inklusive Ton. Mit 2D-Szenen und einer 3D-Produktionsanlage in Marble Works.
+Acht deterministische Simulationen für Battle- und „Satisfying“-Videos mit Browser-Vorschau und MP4-Export inklusive Ton. Mit 2D-Szenen und einer 3D-Produktionsanlage in Marble Works.
 
 **[▶ Online-Vorschau öffnen](https://emfau88.github.io/Endless-Battle-Simulator/)** · [Produktionsvorlagen](presets/production/) · [Roadmap](docs/ROADMAP.md) · [Changelog](docs/CHANGELOG.md)
 
@@ -21,10 +21,11 @@ Die folgenden Szenarien und Varianten sind im aktuellen Code vorhanden. Weitere 
 | **Endless Mycelium**<br>`mycelium` | Wachstumszyklus aus Myzel, Laub, Pilzen und Sporen mit neuen Generationen.<br>**Farben:** Wechselnd (Mint, Violett, Bernstein, Blau), Nur Mint, Kühle Töne, Warme Töne. | Freie Dauer |
 | **Endless Pyramid**<br>`pyramid` | **Kulissen:** Glaspyramide in der Lagune oder Wüsten-Baustelle mit wachsender Pyramide.<br>**Figuren:** Leuchtkugeln oder Tierchen (Küken, Pinguin, Schweinchen, Frosch).<br>Tageslauf, Lichtfüllung / Aufbau und Feuerwerk einstellbar. | Freie Dauer; Tageslauf und Finale konfigurierbar |
 | **Territory Wars · Hex Dominion**<br>`territory` | Vier Reiche auf einer Hexkarte.<br>**Profile:** Ruhiger Aufbau, Gebietskrieg, Intensive Front, Eigene Einstellungen.<br>Hoch- oder Querformatkarte, Perspektive oder Draufsicht; optionale Folgerunden. | Freie Dauer |
+| **Endless Waterpark**<br>`waterpark` | Die vier Pyramid-Tierchen in einem Oasen-Wasserpark: Glaslift, Panoramarutsche, Trichter, Wippe, Sprungbrett und sichtbarer Rücklauf.<br>Hoch-/Querformat, Tag/Nacht, UFO und weitere Himmelsgäste, Wasserleben und ruhiger Wasserklang. | Vier-Tiere-Short, Parktag mit Abschluss oder Dauerbetrieb; Vorprüfung für endliche Filme |
 
 ## Was lässt sich exportieren?
 
-**Alle sieben Szenarien samt Varianten** unterstützen den Videoexport.
+**Alle acht Szenarien samt Varianten** unterstützen den Videoexport.
 
 | Ausgabe | Möglichkeiten |
 |---|---|
@@ -40,10 +41,10 @@ Die Online-Vorschau ist stumm und exportiert keine Videos. Gleiche Einstellungen
 
 ### Fertige Video-Vorlagen
 
-Für jedes Szenario gibt es **Short- und Langvideo-Vorlagen**: normalerweise **1 Minute hochkant** bzw. **10 Minuten quer**, jeweils **1080p30 mit Ton**. **Marble Works** verwendet stattdessen einen Mini-Auftrag mit **24** bzw. einen vollständigen Auftrag mit **144 Kugeln**; die Laufzeit ergibt sich aus der Produktion. Scrap-Vorlagen nutzen Sunny Yard mit Folgerunden, Pyramid-Vorlagen die Tierchen.
+Für jedes Szenario gibt es **Short- und Langvideo-Vorlagen**: normalerweise **1 Minute hochkant** bzw. **10 Minuten quer**, jeweils **1080p30 mit Ton**. **Marble Works** verwendet stattdessen einen Mini-Auftrag mit **24** bzw. einen vollständigen Auftrag mit **144 Kugeln**; die Laufzeit ergibt sich aus der Produktion. Scrap-Vorlagen nutzen Sunny Yard mit Folgerunden, Pyramid-Vorlagen die Tierchen. **Waterpark** bietet einen 30-s-Short und einen 10-Minuten-Parktag in **1080p60**; seine Vorschau startet im Dauerbetrieb. Endliche Wasserpark-Filme werden vor dem Export auf einen vollständigen Abschluss geprüft.
 
 <details>
-<summary>Alle 14 Produktionsvorlagen und zusätzliche Varianten</summary>
+<summary>Alle 16 Produktionsvorlagen und zusätzliche Varianten</summary>
 
 | Szenario | Short | Langvideo |
 |---|---|---|
@@ -54,10 +55,18 @@ Für jedes Szenario gibt es **Short- und Langvideo-Vorlagen**: normalerweise **1
 | Mycelium | [Short](presets/production/mycelium-short.json) | [Langvideo](presets/production/mycelium-long.json) |
 | Pyramid | [Short](presets/production/pyramid-short.json) | [Langvideo](presets/production/pyramid-long.json) |
 | Territory Wars | [Short](presets/production/territory-short.json) | [Langvideo](presets/production/territory-long.json) |
+| Waterpark | [30-s-Short](presets/production/waterpark-short.json) | [10-Minuten-Parktag](presets/production/waterpark-long.json) |
 
 Zusätzlich unter [presets/](presets/): [Scrap-Turnier](presets/scrap-tournament.json), [Werkstatt](presets/scrap-workshop.json), [Materialarena](presets/scrap-materials.json), [Sunny Yard](presets/scrap-sunny-yard.json), [Marble-Materialvergleich](presets/marble-progressive-materials.json), [Perlmutt](presets/marble-progressive-pearls.json) und Pyramid-Wüste als [Short](presets/pyramid-desert-short.json) oder [20-Minuten-Video](presets/pyramid-desert-long-20min.json).
 
+Pyramid startet mit der freigegebenen ruhigen Mischung: durchgehender Wasserloop mit weichen
+Übergängen und leise abgestimmte Aktionsgeräusche. Die Wasserdatei liegt fest in `assets/audio/`.
+Neue Pyramiden-Vorlagen und „Lautstärke zurücksetzen“ laden diese Mischung; ausdrücklich gespeicherte
+eigene Lautstärken bleiben erhalten. Der Wasserregler passt nur den Hintergrund an.
+
 </details>
+
+Weitere Wasserpark-Vorlagen: Parktag mit [5](presets/waterpark-day-5min.json), [10](presets/waterpark-day-10min.json) oder [20 Minuten](presets/waterpark-day-20min.json), ruhiger Dauerbetrieb mit [10](presets/waterpark-relax-10min.json) oder [20 Minuten](presets/waterpark-relax-20min.json). Ruhiger Abschluss und Fontänenshow sind wählbar; Feuerwerk ist separat schaltbar. [Umsetzung und geprüfter Stand](docs/WASSERPARK_UMSETZUNG_2026-11-16.md).
 
 ## Details und Entwicklungsstand
 
