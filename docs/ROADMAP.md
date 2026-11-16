@@ -500,6 +500,9 @@ aufgreifen; R21 spätestens vor Änderungen an Besitz-/Recyclingmechanik schlie�
   Szenario integriert: vier Attraktionen, sichtbarer Kreislauf, eigene Formate, Short, Parktag,
   Dauerbetrieb, Tag/Nacht, Himmel/UFO, Wasserklang und Abschluss. Technischer Stand, aktuelle Proben
   und Nachweise im [Umsetzungsbericht](WASSERPARK_UMSETZUNG_2026-11-16.md).
+  Am selben Tag wurde die Optik nach Mockup und Pyramide neu gestaltet
+  ([Vorher/Nachher](WASSERPARK_OPTIK_2026-11-16.md)). Offen ist dabei nur die Frage, ob die
+  Anzeige deutsch bleiben oder wie die Pyramide englisch werden soll.
   **Restabnahme:** die kurzen laufenden Proben persönlich auf PC/Kopfhörer und echtem Handy ansehen
   und anhören; nur daraus entstehende konkrete Mängel nacharbeiten. Ganze Shorts/Langfilme werden
   separat produziert. Ausschnittsexport, Rennen und Auftragsmodus bleiben spätere Erweiterungen.
