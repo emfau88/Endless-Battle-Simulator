@@ -941,7 +941,8 @@ class WaterparkRenderer extends EBS.CanvasScene {
   drawHud(g) {
     const L = this.L, st = this.sim.story || {}, cfg = this.sim.cfg, land = L.land;
     const font = (w, s) => `${w} ${s}px Bahnschrift, "Segoe UI", Arial, sans-serif`;
-    const sub = { short: 'VIER FREUNDE · EIN WASSERPARK', day: 'EIN TAG IM WASSERPARK', relax: 'RUHIGER DAUERBETRIEB' }[cfg.mode] || '';
+    // Everything visible in a video is English (channel rule); the simulator's controls stay German.
+    const sub = { short: 'FOUR FRIENDS · ONE WATERPARK', day: 'A DAY AT THE WATERPARK', relax: 'SLIDE. SPLASH. REPEAT.' }[cfg.mode] || '';
     g.save();
     const sh = land ? 240 : 400, scrim = g.createLinearGradient(0, 0, 0, sh);
     scrim.addColorStop(0, `rgba(5,30,90,${land ? 0.1 : 0.2})`); scrim.addColorStop(0.65, `rgba(5,30,90,${land ? 0.05 : 0.09})`); scrim.addColorStop(1, 'rgba(5,20,62,0)');
@@ -952,19 +953,19 @@ class WaterparkRenderer extends EBS.CanvasScene {
       g.letterSpacing = '4px'; g.textAlign = 'left'; g.font = font(700, 48); g.fillText('ENDLESS WATERPARK', 60, 76);
       g.letterSpacing = '3px'; g.font = font(600, 20); g.fillStyle = '#d7ecff'; g.fillText(sub, 62, 124);
       if (cfg.mode !== 'short') {
-        g.textAlign = 'right'; g.fillText('FAHRTEN', L.W - 60, 64);
+        g.textAlign = 'right'; g.fillText('RIDES', L.W - 60, 64);
         g.letterSpacing = '1px'; g.font = font(700, 48); g.fillStyle = '#ffd25a'; g.fillText(rides, L.W - 60, 108);
       }
     } else {
       g.letterSpacing = '5px'; g.textAlign = 'center'; g.font = font(700, 62); g.fillText('ENDLESS WATERPARK', L.W / 2, 108);
       g.letterSpacing = '3px'; g.font = font(600, 25); g.fillStyle = '#d7ecff'; if (!banner) g.fillText(sub, L.W / 2, 172);
       if (cfg.mode !== 'short') {   // left of the tower roof, which now stands on the centre axis
-        g.textAlign = 'left'; g.letterSpacing = '2px'; g.font = font(600, 22); g.fillText('FAHRTEN', 60, 214);
+        g.textAlign = 'left'; g.letterSpacing = '2px'; g.font = font(600, 22); g.fillText('RIDES', 60, 214);
         g.letterSpacing = '1px'; g.font = font(700, 40); g.fillStyle = '#ffd25a'; g.fillText(rides, 60, 256);
       }
     }
     if (banner) {   // landscape: centred in the gap between title and moon; portrait: replaces the subtitle line, clear of the tower roof
-      const text = st.finished ? (cfg.ending === 'show' ? 'EIN SCHÖNER TAG!' : 'GUTE NACHT, KLEINE FREUNDE') : 'DIE LETZTE RUNDE';
+      const text = st.finished ? (cfg.ending === 'show' ? 'WHAT A DAY!' : 'GOOD NIGHT, LITTLE FRIENDS') : 'LAST RIDES OF THE DAY';
       g.textAlign = 'center'; g.letterSpacing = '4px'; g.font = font(700, land ? 32 : 36); g.fillStyle = '#fff3c4';
       g.shadowColor = 'rgba(255,170,40,.85)'; g.shadowBlur = 20; g.fillText(text, land ? L.W * .545 : L.W / 2, land ? 66 : 172);
     }

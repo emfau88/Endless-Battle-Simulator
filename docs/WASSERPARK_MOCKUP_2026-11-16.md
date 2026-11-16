@@ -31,6 +31,7 @@ Vollbilder liegen unter `output/waterpark-mockup/final/` (nicht im Repository).
 | P7 | Tiere in Lagune, auf dem Deck und im Becher | `23f28b7` |
 | P8 | Hochformat mit Turm als Mittelachse | `8182eee` |
 | P9 | Abend, Dämmerung und Nacht für die helle Palette | `8490f14` |
+| Nachtrag | Anzeige im Video englisch | Folgecommit |
 
 ## P7 · Tiere
 
@@ -94,6 +95,14 @@ Die Panoramabucht bleibt wie im Querformat die letzte im Wasserlauf, weil dort b
 - **Lagune nachts tiefes Türkis** statt Marineblau.
 - Morgen und Tag sind unverändert.
 
+## Nachtrag · Anzeige englisch
+
+Der Nutzer hat am 16.11.2026 bestätigt, dass alle sichtbaren Texte in Videos und Shorts englisch sind. Die Anzeige
+des Wasserparks ist umgestellt: `RIDES`, `A DAY AT THE WATERPARK`, `FOUR FRIENDS · ONE WATERPARK`,
+`SLIDE. SPLASH. REPEAT.`, `LAST RIDES OF THE DAY`, `GOOD NIGHT, LITTLE FRIENDS`, `WHAT A DAY!`.
+Die Bedienoberfläche bleibt deutsch. Die Vergleichsblätter oben wurden vorher gerendert und zeigen noch die
+deutschen Texte.
+
 ## Messwerte
 
 Zeichenzeit bei 1080p, Mittel über 300 Bilder, nur `paint()`:
@@ -139,18 +148,16 @@ Vorschläge, nach erwarteter Wirkung auf YouTube sortiert:
    oder ein gemeinsamer Schlusssprung, und ein Ende, das nahtlos in den Anfang übergeht.
 2. **Sichtbares Ziel im Langvideo.** Zum Beispiel „Fahrten bis zur Show“ mit Balken oder ein kleines Ereignis alle
    50 Fahrten. Das gibt einen Grund, dranzubleiben.
-3. **Anzeige auf Englisch** wie in der Pyramide. Der Kanal richtet sich nicht nur an deutsche Zuschauer.
-4. **Brunnenshow am Ende: ja.** Sie ist der Lohn für das Zuschauen. Wasserspiele tagsüber: ja, aber kurz und
+3. **Brunnenshow am Ende: ja.** Sie ist der Lohn für das Zuschauen. Wasserspiele tagsüber: ja, aber kurz und
    selten (alle 40–60 Sekunden ein Stoß), als Rhythmus für lange Videos.
-5. **Mehr Ausdruck auf den Rutschen.** Offene Münder im Fall, größerer Platscher bei der Landung, eine Sprechblase
+4. **Mehr Ausdruck auf den Rutschen.** Offene Münder im Fall, größerer Platscher bei der Landung, eine Sprechblase
    nach dem Trichter. Das geht über die Posenwahl im Renderer, ohne die gemeinsame Tiergrafik anzufassen.
-6. **Lagune beleben.** Unten liegt viel ruhige Fläche: Schwimmreifen, Wasserball oder kleine Wellen.
-7. **Auffangrinne der Wippe im Querformat** wirkt als kurzer schräger Stummel fremd. Ein kurzes Becken wie beim
+5. **Lagune beleben.** Unten liegt viel ruhige Fläche: Schwimmreifen, Wasserball oder kleine Wellen.
+6. **Auffangrinne der Wippe im Querformat** wirkt als kurzer schräger Stummel fremd. Ein kurzes Becken wie beim
    Trichter wäre sauberer.
 
 ## Offene Entscheidungen des Nutzers
 
 - Wasserspiele tagsüber
 - Ende mit Brunnenshow
-- Sprache der Anzeige (Deutsch oder Englisch)
 - Zusammenführen nach `main`

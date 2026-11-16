@@ -501,13 +501,13 @@ aufgreifen; R21 spätestens vor Änderungen an Besitz-/Recyclingmechanik schlie�
   Dauerbetrieb, Tag/Nacht, Himmel/UFO, Wasserklang und Abschluss. Technischer Stand, aktuelle Proben
   und Nachweise im [Umsetzungsbericht](WASSERPARK_UMSETZUNG_2026-11-16.md).
   Am selben Tag wurde die Optik nach Mockup und Pyramide neu gestaltet
-  ([Vorher/Nachher](WASSERPARK_OPTIK_2026-11-16.md)). Offen ist dabei nur die Frage, ob die
-  Anzeige deutsch bleiben oder wie die Pyramide englisch werden soll.
+  ([Vorher/Nachher](WASSERPARK_OPTIK_2026-11-16.md)).
   Der [Optik-Plan „so gut wie das Mockup“](WASSERPARK_MOCKUP_PLAN_2026-11-16.md) mit den Paketen P1–P9 ist am
   16.11.2026 umgesetzt, einschließlich neuem Hochformat-Grundriss
   ([Abschlussbericht](WASSERPARK_MOCKUP_2026-11-16.md)). Der Branch `codex/waterpark-mockup` ist gepusht,
   aber nicht in `main`.
-  **Offene Entscheidungen des Nutzers:** Wasserspiele tagsüber, Ende mit Brunnenshow, Sprache der Anzeige,
+  Die Anzeige im Video ist seitdem englisch (Regel für alle Szenarien, vom Nutzer am 16.11.2026 bestätigt).
+  **Offene Entscheidungen des Nutzers:** Wasserspiele tagsüber, Ende mit Brunnenshow,
   Zusammenführen nach `main`. Der Bericht enthält dazu Empfehlungen und weitere Vorschläge (Short straffen,
   sichtbares Ziel im Langvideo).
   **Restabnahme:** die kurzen laufenden Proben persönlich auf PC/Kopfhörer und echtem Handy ansehen
