@@ -20,7 +20,8 @@ node export.mjs --scenario naval --param mode=calm --duration 20 --aspect 16:9 -
 ```
 
 Seit dem zweiten Paket enthalten: Runden mit Versenkung, Punktestand und neuem Schiff (Abschnitt 3a).
-Noch **nicht** enthalten: Finale am Videoende, Wetter, eigene Tonabstimmung, die Rakete vom Heck.
+Als Vorschau in einem eigenen Branch: die Rakete vom Heck (Abschnitt 3b).
+Noch **nicht** enthalten: Finale am Videoende, Wetter, eigene Tonabstimmung.
 
 ## 2 · Werte des Modus
 
@@ -77,6 +78,25 @@ leitet alles Sichtbare daraus ab; das Schwingen von Streifen und Rah ist eine re
 
 Warum die Reparatur: Ohne sie waren beide Schiffe am Rundenende fast gleich beschädigt, und der Sieger sank im
 Schnitt rund 40 Sekunden später selbst. Mit ihr dauert jede Runde etwa gleich lang.
+
+## 3b · Rakete vom Heck (Vorschau, wartet auf Freigabe)
+
+Idee des Nutzers vom 16.11.: eine seltene zweite Attacke neben den Kanonen.
+
+- **Takt:** Jedes Schiff startet etwa alle 20 Sekunden eine Rakete; die Schiffe wechseln sich ab, im Duell fliegt also
+  etwa alle 10 Sekunden eine.
+- **Vorbereitung:** Sechs Sekunden vorher gleitet die Rakete auf die Startschiene am Heck, in den letzten zwei
+  Sekunden sprüht die Lunte Funken.
+- **Flug:** In 2,6 Sekunden auf fester Bahn mit Rauchfahne bis knapp über die Mastspitzen des Gegners.
+- **Splitter:** Dort zerplatzt sie in sieben Splitter. Sie durchschlagen Segel (mit Loch und Stofffetzen) und nehmen
+  bei einem Treffer auf Rumpf oder Kastell je 0,5 %; wer daneben fällt, verlischt im Wasser.
+- **Nicht Teil des Kugelkreislaufs:** Rakete und Splitter werden nicht recycelt.
+- **Feuerpause:** In der Pause wird keine Rakete vorbereitet; Nachzügler richten keinen Schaden an.
+
+Messwerte (reine Simulation, Querformat, fünf Seeds zu je 20 Minuten, 30 Runden): Runden 144 bis 202 s, Median
+182 s. Die Rakete verkürzt eine Runde also um rund eine halbe Minute.
+
+Die Klänge für Start und Knall sind vorläufig aus dem Kanonenklang abgeleitet.
 
 ## 4 · Aufbau im Code
 
