@@ -48,6 +48,9 @@ test('Scrap: Canvas-Upload, beide Formate/Quadrat und 30/60 fps erhalten Simulat
 test('Scrap: UI-Regler, Neuladen und JSON bewahren Runde, Pause, Tempo, Bild und Ton', async () => {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, acceptDownloads: true });
   try {
+    // Software-Grafik im Prüflauf: das Neuladen mit den vorgezeichneten Karten- und Robotertexturen braucht dort
+    // länger als die üblichen 30 s (gleiches Vorgehen wie im Marble-Works-UI-Test). Keine Wiederholungen, keine festen Wartezeiten.
+    page.setDefaultNavigationTimeout(90000);
     await page.goto(pathToFileURL(INDEX).href + '?scenario=scrap&seed=314&tempo=0.8');
     await page.waitForFunction(() => window.EBS?.app?.cfg.scenario === 'scrap');
     await page.uncheck('#p-repeatRounds');
