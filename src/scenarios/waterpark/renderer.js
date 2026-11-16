@@ -135,7 +135,7 @@ class WaterparkRenderer extends EBS.CanvasScene {
     g.drawImage(this.skyL, 0, 0, L.W, L.H);
     this.drawSkyTint(g, day);
     this.drawSun(g, day, sun);
-    this.drawRays(g, vt, (cfg.rays ?? 0.7) * day.rays * (1 - day.night), sun);
+    this.drawRays(g, vt, 0.5 * (cfg.rays ?? 0.7) * day.rays * (1 - day.night), sun);
     this.drawClouds(g, vt, cfg.clouds ?? 0.7);
     if (cfg.birds && day.night < 0.95) { g.globalAlpha = 1 - day.night; this.drawBirds(g, vt); g.globalAlpha = 1; }
     this.drawGuests(g, vt, day, false);
@@ -183,7 +183,7 @@ class WaterparkRenderer extends EBS.CanvasScene {
     const ev = clamp((day.p - 0.6) / 0.2, 0, 1), col = mix([255, 246, 214], [255, 150, 70], ev), r = L.land ? 40 : 38;
     g.save(); g.globalAlpha = k;
     const rr = Math.max(L.W, L.H) * 0.55, hz = g.createRadialGradient(x, y, 0, x, y, rr);
-    hz.addColorStop(0, 'rgba(255,255,250,.55)'); hz.addColorStop(0.18, 'rgba(225,240,255,.22)'); hz.addColorStop(1, 'rgba(200,230,255,0)');
+    hz.addColorStop(0, 'rgba(255,255,250,.4)'); hz.addColorStop(0.18, 'rgba(225,240,255,.1)'); hz.addColorStop(1, 'rgba(200,230,255,0)');
     g.fillStyle = hz; g.fillRect(0, 0, L.W, this.skyBottom + 4);
     const gr = g.createRadialGradient(x, y, 0, x, y, r * 5);
     gr.addColorStop(0, rgba(col, 0.8)); gr.addColorStop(0.2, rgba(col, 0.35)); gr.addColorStop(1, rgba(col, 0));
@@ -252,19 +252,20 @@ class WaterparkRenderer extends EBS.CanvasScene {
   drawWater(g, t) {
     const L = this.L, R = L.R, cfg = this.sim.cfg, W = L.W, H = L.H, y0 = L.waterY, ls = this.scale, hW = H - y0, wv = cfg.waves ?? 0.7;
     let gr = g.createLinearGradient(0, y0, 0, H);
-    gr.addColorStop(0, '#52d8e6'); gr.addColorStop(0.3, '#25aed6'); gr.addColorStop(1, '#0b4f94');
+    gr.addColorStop(0, '#58e0e5'); gr.addColorStop(0.35, '#33d4de'); gr.addColorStop(1, '#16c6d8');
     g.fillStyle = gr; g.fillRect(0, y0, W, hW);
     if (cfg.reflection > 0.01) {
+      // Mirror image at most 25 % strong, fading out before the front third of the lagoon
       for (let y = y0; y < H; y += 3) {
-        const d = y - y0, sy = y0 - d - 3; if (sy < 0) break;
-        g.globalAlpha = (0.6 - 0.32 * (d / hW)) * cfg.reflection;
+        const d = y - y0, sy = y0 - d - 3, fade = 1 - d / (hW * 0.7); if (sy < 0 || fade <= 0) break;
+        g.globalAlpha = 0.25 * fade * Math.min(1, cfg.reflection / 0.6);
         const wob = (Math.sin(y * 0.13 + t * 2.2) * (1.2 + d * 0.02) + Math.sin(y * 0.041 - t * 1.4) * 2) * wv;
         g.drawImage(this.refl, 0, sy * ls, W * ls, 3 * ls, wob, y, W, 3.3);
       }
       g.globalAlpha = 1;
     }
     gr = g.createLinearGradient(0, y0, 0, H);
-    gr.addColorStop(0, 'rgba(70,220,232,.3)'); gr.addColorStop(0.5, 'rgba(20,140,195,.3)'); gr.addColorStop(1, 'rgba(3,45,105,.5)');
+    gr.addColorStop(0, 'rgba(90,228,234,.22)'); gr.addColorStop(0.5, 'rgba(36,206,220,.16)'); gr.addColorStop(1, 'rgba(16,184,208,.24)');
     g.fillStyle = gr; g.fillRect(0, y0, W, hW);
     g.globalCompositeOperation = 'lighter';
     const nSpark = Math.round(90 * Math.min(2, cfg.sparkle ?? 0.55));
@@ -364,7 +365,7 @@ class WaterparkRenderer extends EBS.CanvasScene {
     }
     // Lower shaft stands in the lagoon
     const y0 = L.waterY, y1 = T.bottom + 22;
-    const gr = g.createLinearGradient(0, y0, 0, y1); gr.addColorStop(0, 'rgba(30,160,200,.5)'); gr.addColorStop(1, 'rgba(10,70,130,.72)');
+    const gr = g.createLinearGradient(0, y0, 0, y1); gr.addColorStop(0, 'rgba(40,200,218,.5)'); gr.addColorStop(1, 'rgba(18,150,190,.66)');
     g.fillStyle = gr; g.fillRect(T.x - T.hw - 12, y0, 2 * T.hw + 24, y1 - y0);
     g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.beginPath(); g.ellipse(x, y0 + 4, T.hw + 16, 6, 0, 0, TAU); g.stroke();
     WP.paintTowerFront(g, this.A);
@@ -486,7 +487,7 @@ class WaterparkRenderer extends EBS.CanvasScene {
       g.beginPath(); g.ellipse(x, y + R * 0.45, R * 1.7 + Math.sin(t * 3 + b.id) * 1.5 * wv, R * 0.5, 0, 0, TAU); g.stroke();
       this.drawCritterAt(g, b, d);
       g.save(); g.beginPath(); g.rect(x - R * 2, y + R * 0.35, R * 4, R * 1.2); g.clip();
-      g.beginPath(); g.arc(x, y, R + 0.5, 0, TAU); g.fillStyle = 'rgba(20,130,185,.55)'; g.fill(); g.restore();
+      g.beginPath(); g.arc(x, y, R + 0.5, 0, TAU); g.fillStyle = 'rgba(28,186,206,.55)'; g.fill(); g.restore();
       const m = this.mood(b);
       if (m && m.sleep) {
         g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle';
@@ -807,7 +808,7 @@ class WaterparkRenderer extends EBS.CanvasScene {
     const sub = { short: 'VIER FREUNDE · EIN WASSERPARK', day: 'EIN TAG IM WASSERPARK', relax: 'RUHIGER DAUERBETRIEB' }[cfg.mode] || '';
     g.save();
     const sh = land ? 240 : 400, scrim = g.createLinearGradient(0, 0, 0, sh);
-    scrim.addColorStop(0, `rgba(5,20,62,${land ? 0.32 : 0.46})`); scrim.addColorStop(0.65, `rgba(5,20,62,${land ? 0.12 : 0.2})`); scrim.addColorStop(1, 'rgba(5,20,62,0)');
+    scrim.addColorStop(0, `rgba(5,30,90,${land ? 0.1 : 0.2})`); scrim.addColorStop(0.65, `rgba(5,30,90,${land ? 0.05 : 0.09})`); scrim.addColorStop(1, 'rgba(5,20,62,0)');
     g.fillStyle = scrim; g.fillRect(0, 0, L.W, sh);
     g.shadowColor = 'rgba(0,25,70,.45)'; g.shadowBlur = 14; g.textBaseline = 'middle'; g.fillStyle = '#ffffff';
     const rides = fmtInt(this.sim.rides || 0), banner = (st.closing && cfg.mode !== 'short') || st.finished;

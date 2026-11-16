@@ -8,13 +8,15 @@ const WP = EBS.Waterpark = EBS.Waterpark || {};
 const TAU = Math.PI * 2;
 const xy = p => Array.isArray(p) ? p : [p.x, p.y];
 
+// Palette measured from the 2026-11-16 mockup (see docs/WASSERPARK_MOCKUP_PLAN_2026-11-16.md, Stilbibel)
 const C = {
-  outline: '#6f5638', rimLight: '#fff5df', rim: '#efd9b2', rimShade: '#c9a87c', seam: '#b8996d', innerWall: '#e8d5b0',
-  waterDeep: '#169fbe', water: '#33d0de', waterCore: '#7cecef',
-  woodDark: '#5a3c22', wood: '#946a3e', woodLight: '#bd8e57', plank: '#e4c38f', plankShade: '#b98c58',
-  glassFrame: '#2b6571', glassLight: '#e4fbf6',
-  stone: '#dcc6a3', stoneJoint: '#b59b77', stoneCap: '#f2e3c6', stoneDark: '#a88f6c',
-  rock: '#a9a693', rockLight: '#cfcab4', rockDark: '#7a7564',
+  outline: '#86674a', rimLight: '#fffaf1', rim: '#efe4d3', rimShade: '#d7bea0', seam: '#c9ad89', innerWall: '#f4ecdf',
+  waterDeep: '#1abacb', water: '#30e3ec', waterCore: '#9af3f3',
+  woodDark: '#a65f28', wood: '#e3944a', woodLight: '#f1a353', plank: '#f6d6a6', plankShade: '#e0a865',
+  glassFrame: '#2f86a2', glassLight: '#e8fcfb',
+  stone: '#e6d4bb', stoneJoint: '#cbb393', stoneCap: '#f4eadb', stoneDark: '#c4a987',
+  rock: '#b9b6a2', rockLight: '#ddd8c4', rockDark: '#8a8573',
+  glaze: 'rgba(140,210,30,.3)',
 };
 WP.ART_COLORS = C;
 
@@ -29,6 +31,14 @@ function line(g, pts, width, color, dx = 0, dy = 0) {
 }
 function roundRect(g, x, y, w, h, r, color) { g.fillStyle = color; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill(); }
 WP.artUtil = { poly, dot, ellipse, line, roundRect };
+/** Paints into an offscreen copy and lays a glaze over exactly what was painted, then composites it onto g. */
+function glazed(g, tint, paint) {
+  const c = document.createElement('canvas'); c.width = g.canvas.width; c.height = g.canvas.height;
+  const cg = c.getContext('2d'); cg.setTransform(g.getTransform()); paint(cg);
+  cg.setTransform(1, 0, 0, 1, 0, 0); cg.globalCompositeOperation = 'source-atop'; cg.fillStyle = tint; cg.fillRect(0, 0, c.width, c.height);
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(c, 0, 0); g.restore();
+  c.width = c.height = 1;
+}
 
 const TROUGH = R => ({ out: 2 * R + 30, inner: 2 * R + 8 });
 WP.troughSize = TROUGH;
@@ -42,7 +52,7 @@ function trough(g, pts, R) {
   const { out, inner } = TROUGH(R), wf = inner - 14, D = Math.round(R * .42);
   // Side wall below the rim: stacked strokes give the slab its thickness (light from the upper left)
   line(g, pts, out + 5, C.outline, 0, D + 1.5);
-  for (let k = D; k > 0; k -= 2) line(g, pts, out, k > D * .55 ? '#b48d5e' : '#d1b083', .5, k);
+  for (let k = D; k > 0; k -= 2) line(g, pts, out, k > D * .55 ? '#c9aa84' : C.rimShade, .5, k);
   line(g, pts, out + 5, C.outline, 0, 1.5);
   line(g, pts, out, C.rimShade, 1.5, 6);
   line(g, pts, out, C.rimLight, -1, -2);
@@ -93,13 +103,13 @@ function post(g, x, y0, y1, w = 12) {
   line(g, [[x - w * .28, y0 + 2], [x - w * .28, y1 - 2]], w * .3, C.woodLight);
 }
 function beam(g, a, b, w = 8) {
-  line(g, [a, b], w + 3, C.woodDark); line(g, [a, b], w, '#8a6038'); line(g, [a, b], w * .35, 'rgba(206,160,104,.6)', 0, -w * .2);
+  line(g, [a, b], w + 3, C.woodDark); line(g, [a, b], w, C.wood); line(g, [a, b], w * .35, 'rgba(250,196,128,.75)', 0, -w * .2);
 }
 
 // ---------------------------------------------------------------- sky
 WP.paintSky = function (g, L) {
   const gr = g.createLinearGradient(0, 0, 0, L.waterY);
-  gr.addColorStop(0, '#1c6fd8'); gr.addColorStop(.4, '#2e98f5'); gr.addColorStop(.78, '#7cc9fb'); gr.addColorStop(1, '#d2efff');
+  gr.addColorStop(0, '#26a0ff'); gr.addColorStop(.42, '#36acfe'); gr.addColorStop(.8, '#6ac9fd'); gr.addColorStop(1, '#c4ecfe');
   g.fillStyle = gr; g.fillRect(0, 0, L.W, L.H);
 };
 
@@ -111,7 +121,7 @@ WP.paintBack = function (g, L, rng, art) {
   const farTop = waterY - H * (land ? .33 : .25), midTop = waterY - H * (land ? .2 : .145);
   const ridge = (y0, amp, freq, ph) => { const pts = []; for (let x = -20; x <= W + 20; x += 8) pts.push([x, y0 + Math.sin(x * freq + ph) * amp + Math.sin(x * freq * 2.7 + ph * 2) * amp * .35]); return pts; };
   let gr = g.createLinearGradient(0, farTop - 40, 0, wallTop);
-  gr.addColorStop(0, '#a8d6cf'); gr.addColorStop(1, '#7fb59c');
+  gr.addColorStop(0, '#b4e2d2'); gr.addColorStop(1, '#88c59a');
   g.fillStyle = gr; poly(g, [...ridge(farTop, 26, .004, rng.range(0, 6)), [W + 20, wallTop], [-20, wallTop]]); g.fill();
   g.save(); g.globalAlpha = .38;
   for (let i = 0; i < (land ? 9 : 6); i++) art.palm(g, rng, rng.range(0, W), farTop + rng.range(30, 90), rng.range(80, 140), rng.range(-.2, .2));
@@ -121,9 +131,11 @@ WP.paintBack = function (g, L, rng, art) {
   g.fillStyle = gr; g.fillRect(0, farTop - 60, W, wallTop - farTop + 60);
   // Jungle band (Pyramid island technique: dark base plus layered foliage blobs)
   const canopy = ridge(midTop, 18, .011, rng.range(0, 6));
-  g.fillStyle = '#1f5a28'; poly(g, [...canopy, [W + 20, wallTop + 4], [-20, wallTop + 4]]); g.fill();
-  for (let i = 0; i < (land ? 14 : 9); i++) art.palm(g, rng, rng.range(-20, W + 20), midTop + rng.range(20, 60), rng.range(110, 200), rng.range(-.2, .2));
-  art.foliage(g, rng, canopy, 6, (wallTop - midTop) * .75, (nx, ny) => ny > 0, { dens: 3, rMin: 4, rMax: 11, flowers: .02 });
+  glazed(g, C.glaze, g => {
+    g.fillStyle = '#1f5a28'; poly(g, [...canopy, [W + 20, wallTop + 4], [-20, wallTop + 4]]); g.fill();
+    for (let i = 0; i < (land ? 14 : 9); i++) art.palm(g, rng, rng.range(-20, W + 20), midTop + rng.range(20, 60), rng.range(110, 200), rng.range(-.2, .2));
+    art.foliage(g, rng, canopy, 6, (wallTop - midTop) * .75, (nx, ny) => ny > 0, { dens: 3, rMin: 4, rMax: 11, flowers: .02 });
+  });
   // Rocks with a side waterfall (animated water is drawn per frame)
   const fall = land ? { x: W * .925, top: H * .34, w: 58 } : { x: W * .9, top: H * .47, w: 50 };
   L.waterfall = { ...fall, bottom: wallTop + 6 };
@@ -139,10 +151,10 @@ WP.paintBack = function (g, L, rng, art) {
     const rg = g.createLinearGradient(cx - r, cy - r, cx + r, cy + r); rg.addColorStop(0, C.rockLight); rg.addColorStop(.6, C.rock); rg.addColorStop(1, C.rockDark);
     g.fillStyle = rg; poly(g, pts); g.fill(); g.stroke();
   }
-  art.foliage(g, rng, [[fall.x - 140, fall.top - 30], [fall.x - 40, fall.top - 50], [fall.x + 40, fall.top - 45], [fall.x + 150, fall.top - 20]], 6, 26, (nx, ny) => ny > 0, { dens: 3, rMin: 3, rMax: 9, flowers: .05 });
+  glazed(g, C.glaze, g => art.foliage(g, rng, [[fall.x - 140, fall.top - 30], [fall.x - 40, fall.top - 50], [fall.x + 40, fall.top - 45], [fall.x + 150, fall.top - 20]], 6, 26, (nx, ny) => ny > 0, { dens: 3, rMin: 3, rMax: 9, flowers: .05 }));
   // Big frame palms at the edges
   const big = land ? [[30, 520, .14], [140, 330, .08], [W - 20, 430, -.18]] : [[20, 430, .12], [W - 22, 360, -.16]];
-  for (const [x, h, lean] of big) art.palm(g, rng, x, wallTop + 6, h, lean);
+  glazed(g, C.glaze, g => { for (const [x, h, lean] of big) art.palm(g, rng, x, wallTop + 6, h, lean); });
   // Retaining wall of sandstone blocks behind the lagoon
   g.fillStyle = C.stone; g.fillRect(0, wallTop, W, wallH);
   g.strokeStyle = C.stoneJoint; g.lineWidth = 2;
@@ -156,7 +168,7 @@ WP.paintBack = function (g, L, rng, art) {
   roundRect(g, -10, wallTop - 9, W + 20, 13, 4, C.stoneCap);
   line(g, [[0, wallTop + 4], [W, wallTop + 4]], 2, 'rgba(120,90,50,.35)');
   // Planted wall top with hibiscus
-  art.foliage(g, rng, [[-10, wallTop - 10], [W + 10, wallTop - 10]], 2, 20, (nx, ny) => ny < 0, { dens: 2, rMin: 3, rMax: 9, flowers: .05 });
+  glazed(g, C.glaze, g => art.foliage(g, rng, [[-10, wallTop - 10], [W + 10, wallTop - 10]], 2, 20, (nx, ny) => ny < 0, { dens: 2, rMin: 3, rMax: 9, flowers: .05 }));
   for (let i = 0; i < (land ? 16 : 10); i++) hibiscus(g, rng.range(0, W), wallTop - rng.range(14, 30), rng.range(5, 8), rng);
   // Terraces with parasols and loungers, lamps, waterwheel stand and bridge
   const deco = land ? { parasols: [[W * .055, wallTop, 70], [W * .965, wallTop, 64]], lamps: [W * .025, W * .985] }
@@ -165,8 +177,8 @@ WP.paintBack = function (g, L, rng, art) {
   L.lamps = deco.lamps.map(x => [x, wallTop - 120]);
   for (const x of deco.lamps) lamp(g, x, wallTop);
   // Pool coping at the waterline
-  roundRect(g, -10, waterY - 9, W + 20, 12, 3, '#efe3cb');
-  line(g, [[0, waterY + 3], [W, waterY + 3]], 3, 'rgba(10,70,85,.28)');
+  roundRect(g, -10, waterY - 9, W + 20, 12, 3, C.stoneCap);
+  line(g, [[0, waterY + 3], [W, waterY + 3]], 3, 'rgba(20,110,120,.25)');
 };
 function hibiscus(g, x, y, r, rng) {
   const col = ['#ff6f9f', '#ff8db3', '#ff9a5a', '#ffd1e2'][Math.floor(rng.next() * 4)];
@@ -243,28 +255,28 @@ WP.paintDeck = function (g, L, rng, art) {
   const { deck, lift, R } = L, y = deck.y, x0 = deck.x0, x1 = deck.x1;
   // Back railing (behind the animals)
   const railTop = y - R * 1.45;
-  for (let x = x0 + 8; x <= x1 - 4; x += 58) line(g, [[x, y], [x, railTop]], 6, '#7c532c');
-  line(g, [[x0 + 4, railTop], [x1 - 4, railTop]], 7, C.woodDark); line(g, [[x0 + 4, railTop], [x1 - 4, railTop]], 4.5, '#b9864c');
-  line(g, [[x0 + 4, railTop + R * .55], [x1 - 4, railTop + R * .55]], 3.5, '#9a6a3c');
-  for (let x = x0 + 30; x < x1 - 30; x += 116) { ellipse(g, x, railTop - 4, 5, 5, '#e2bb7a'); }
+  for (let x = x0 + 8; x <= x1 - 4; x += 58) line(g, [[x, y], [x, railTop]], 6, C.wood);
+  line(g, [[x0 + 4, railTop], [x1 - 4, railTop]], 7, C.woodDark); line(g, [[x0 + 4, railTop], [x1 - 4, railTop]], 4.5, C.woodLight);
+  line(g, [[x0 + 4, railTop + R * .55], [x1 - 4, railTop + R * .55]], 3.5, C.wood);
+  for (let x = x0 + 30; x < x1 - 30; x += 116) { ellipse(g, x, railTop - 4, 5, 5, '#f8cf8e'); }
   // Plank top and fascia
   roundRect(g, x0, y - 4, x1 - x0, 10, 3, C.plank);
   line(g, [[x0 + 2, y - 3], [x1 - 2, y - 3]], 2, 'rgba(255,248,226,.8)');
   g.fillStyle = C.plankShade; g.fillRect(x0, y + 6, x1 - x0, 20);
-  g.strokeStyle = 'rgba(92,60,30,.45)'; g.lineWidth = 1.5;
+  g.strokeStyle = 'rgba(150,90,40,.4)'; g.lineWidth = 1.5;
   for (let x = x0 + 22; x < x1; x += 44) { g.beginPath(); g.moveTo(x, y + 7); g.lineTo(x, y + 25); g.stroke(); }
   line(g, [[x0, y + 26], [x1, y + 26]], 3, C.woodDark);
   // Flower boxes with trailing ivy, kept clear of slide launches
   const launches = L.routes.map(r => r.launch[0]);
   for (let x = x0 + 70; x < x1 - 60; x += 175) {
     if (launches.some(lx => Math.abs(lx - x) < 70) || Math.abs(x - lift.x) < R + 60) continue;
-    roundRect(g, x - 34, y + 10, 68, 14, 3, '#8a5a2f');
-    art.foliage(g, rng, [[x - 32, y + 8], [x + 32, y + 8]], 4, 8, (nx, ny) => ny < 0, { dens: 3, rMin: 2.5, rMax: 6, flowers: .12 });
+    roundRect(g, x - 34, y + 10, 68, 14, 3, '#c47a3a');
+    glazed(g, C.glaze, g => art.foliage(g, rng, [[x - 32, y + 8], [x + 32, y + 8]], 4, 8, (nx, ny) => ny < 0, { dens: 3, rMin: 2.5, rMax: 6, flowers: .12 }));
     for (let k = 0; k < 4; k++) {
       const vx = x - 26 + k * 17, len = rng.range(30, 80), pts = [];
       for (let j = 0; j <= 8; j++) pts.push([vx + Math.sin(j * .9 + k) * 4, y + 22 + len * j / 8]);
-      line(g, pts, 2, '#2c7a30');
-      g.fillStyle = '#43993e'; for (let j = 2; j <= 8; j += 2) { const [px, py] = pts[j]; g.beginPath(); g.ellipse(px + (j % 4 ? 3 : -3), py, 4, 2.6, (j % 4 ? .6 : -.6), 0, TAU); g.fill(); }
+      line(g, pts, 2, '#3f8f2a');
+      g.fillStyle = '#7cbf2e'; for (let j = 2; j <= 8; j += 2) { const [px, py] = pts[j]; g.beginPath(); g.ellipse(px + (j % 4 ? 3 : -3), py, 4, 2.6, (j % 4 ? .6 : -.6), 0, TAU); g.fill(); }
     }
   }
 };
@@ -279,14 +291,14 @@ WP.paintTower = function (g, L) {
   g.fillStyle = gl; g.fillRect(x - hw, top, hw * 2, bottom - top);
   g.fillStyle = 'rgba(8,52,80,.14)'; g.fillRect(x - R * 1.1, top, R * 2.2, bottom - top);
   // Base pier in the water
-  roundRect(g, x - hw - 10, bottom - 8, hw * 2 + 20, 26, 6, '#d8c7a6'); roundRect(g, x - hw - 10, bottom - 8, hw * 2 + 20, 7, 4, '#f0e4cb');
+  roundRect(g, x - hw - 10, bottom - 8, hw * 2 + 20, 26, 6, '#ddc6aa'); roundRect(g, x - hw - 10, bottom - 8, hw * 2 + 20, 7, 4, C.stoneCap);
   // Frame: corner posts, mullions and rings
   for (const sx of [-1, 1]) { line(g, [[x + sx * hw, top - 6], [x + sx * hw, bottom]], 8, C.glassFrame); line(g, [[x + sx * hw - 2, top - 6], [x + sx * hw - 2, bottom]], 2.2, C.glassLight); }
   for (const sx of [-.42, .42]) line(g, [[x + sx * hw, top], [x + sx * hw, bottom]], 2.5, 'rgba(43,101,113,.55)');
   for (let y = top + 70; y < bottom - 20; y += 120) { line(g, [[x - hw, y], [x + hw, y]], 3.5, C.glassFrame); line(g, [[x - hw, y - 2], [x + hw, y - 2]], 1.2, 'rgba(228,251,246,.7)'); }
   // Roof cabin ring and faceted glass pyramid
   const ry = top - 4, rw = hw + 18, apex = ry - (L.land ? 50 : 64);
-  roundRect(g, x - rw, ry - 10, rw * 2, 16, 4, '#f3e6c9'); line(g, [[x - rw, ry + 6], [x + rw, ry + 6]], 2.5, C.seam);
+  roundRect(g, x - rw, ry - 10, rw * 2, 16, 4, C.rim); line(g, [[x - rw, ry + 6], [x + rw, ry + 6]], 2.5, C.seam);
   g.lineJoin = 'round';
   g.fillStyle = '#b6f1f6'; poly(g, [[x - rw, ry - 10], [x - rw * .18, ry - 16], [x, apex]]); g.fill();
   g.fillStyle = '#6fd2e6'; poly(g, [[x - rw * .18, ry - 16], [x + rw * .3, ry - 16], [x, apex]]); g.fill();
@@ -314,7 +326,7 @@ WP.paintFunnel = function (g, L) {
   const f = L.funnel, { x, y, rx, ry } = f, depth = ry * 1.9, neck = rx * .14;
   g.save(); g.filter = 'blur(6px)'; ellipse(g, x + 10, y + depth + 14, rx * .7, ry * .5, 'rgba(16,58,66,.22)'); g.restore();
   const cone = g.createLinearGradient(x - rx, 0, x + rx, 0);
-  cone.addColorStop(0, '#fbf0d6'); cone.addColorStop(.45, '#ead3a8'); cone.addColorStop(1, '#b69467');
+  cone.addColorStop(0, '#fcf7ee'); cone.addColorStop(.45, '#efe4d3'); cone.addColorStop(1, '#cdb08c');
   g.fillStyle = cone; g.strokeStyle = C.outline; g.lineWidth = 3;
   g.beginPath(); g.moveTo(x - rx, y); g.bezierCurveTo(x - rx * .9, y + depth * .7, x - neck * 1.6, y + depth * .85, x - neck, y + depth);
   g.lineTo(x + neck, y + depth); g.bezierCurveTo(x + neck * 1.6, y + depth * .85, x + rx * .9, y + depth * .7, x + rx, y); g.closePath(); g.fill(); g.stroke();
@@ -323,12 +335,12 @@ WP.paintFunnel = function (g, L) {
   ellipse(g, x, y + 3, rx + 6, ry + 6, C.outline); ellipse(g, x, y + 2, rx + 4, ry + 4, C.rimShade); ellipse(g, x, y, rx + 3, ry + 3, C.rimLight); ellipse(g, x, y + 1, rx - 3, ry - 2, C.rim);
   // Water surface
   const wr = rx - 12, wry = ry - 7, wg = g.createRadialGradient(x, y + wry * .2, wr * .08, x, y, wr);
-  wg.addColorStop(0, '#0b5c86'); wg.addColorStop(.18, '#1792b8'); wg.addColorStop(.55, '#2fc6dc'); wg.addColorStop(1, '#63e3ea');
+  wg.addColorStop(0, '#11789a'); wg.addColorStop(.18, '#1aaec4'); wg.addColorStop(.55, '#30dbe6'); wg.addColorStop(1, '#8ff1f2');
   g.save(); g.beginPath(); g.ellipse(x, y + 1, wr, wry, 0, 0, TAU); g.clip();
   g.fillStyle = C.innerWall; g.fillRect(x - wr, y - wry, wr * 2, wry * 2.2);
   g.fillStyle = wg; g.beginPath(); g.ellipse(x, y + 4, wr, wry - 2, 0, 0, TAU); g.fill();
   g.restore();
-  ellipse(g, x, y + wry * .22, wr * .14, wry * .16, '#073f60');
+  ellipse(g, x, y + wry * .22, wr * .14, wry * .16, '#0d5a74');
   g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 3; g.beginPath(); g.ellipse(x, y + 1, wr - 4, wry - 3, 0, Math.PI * 1.05, Math.PI * 1.5); g.stroke();
 };
 WP.paintTube = tube;
@@ -351,23 +363,23 @@ WP.paintFunnelFront = function (g, L) {
 /** Seesaw stand: stone footing, A-frame legs and the large bearing wheel (the board itself moves). */
 WP.paintSeesawStand = function (g, L) {
   const s = L.seesaw, { x, y } = s, h = L.wallTop - y + 4, foot = y + h;
-  roundRect(g, x - 70, foot - 6, 140, 20, 6, '#d2bd99'); roundRect(g, x - 70, foot - 6, 140, 6, 4, '#efe2c6');
+  roundRect(g, x - 70, foot - 6, 140, 20, 6, '#ddc6aa'); roundRect(g, x - 70, foot - 6, 140, 6, 4, C.stoneCap);
   for (const sx of [-1, 1]) { line(g, [[x, y + 6], [x + sx * 52, foot - 4]], 19, C.woodDark); line(g, [[x, y + 6], [x + sx * 52, foot - 4]], 15, C.wood); line(g, [[x - 3, y + 8], [x + sx * 52 - 3, foot - 6]], 4, C.woodLight); }
   beam(g, [x - 30, y + h * .55], [x + 30, y + h * .55], 8);
 };
 WP.paintSeesawWheel = function (g, L, angle) {
   const { x, y } = L.seesaw, r = L.R * .85;
-  ellipse(g, x, y + 4, r + 4, r + 4, C.woodDark); ellipse(g, x, y + 4, r, r, '#e4be79');
+  ellipse(g, x, y + 4, r + 4, r + 4, C.woodDark); ellipse(g, x, y + 4, r, r, '#f6c27e');
   g.save(); g.translate(x, y + 4); g.rotate(angle * 3);
-  for (let k = 0; k < 6; k++) { g.rotate(TAU / 6); line(g, [[0, 0], [r - 4, 0]], 4, '#9c7440'); }
-  g.restore(); ellipse(g, x, y + 4, r * .32, r * .32, '#7a5332'); ellipse(g, x - 2, y + 2, r * .12, r * .12, '#f4d79a');
+  for (let k = 0; k < 6; k++) { g.rotate(TAU / 6); line(g, [[0, 0], [r - 4, 0]], 4, '#c07a3a'); }
+  g.restore(); ellipse(g, x, y + 4, r * .32, r * .32, C.woodDark); ellipse(g, x - 2, y + 2, r * .12, r * .12, '#fbe3b0');
 };
 
 /** Springboard pedestal rising from the lagoon. */
 WP.paintSpringStand = function (g, L) {
   const j = L.jump, x = j.x + 6, y = j.y + L.R + 14, ground = L.wallTop;
   post(g, x, y + 30, ground + 4, 14);
-  roundRect(g, x - 36, y + 22, 72, 14, 6, '#d9c8a6'); roundRect(g, x - 36, y + 22, 72, 5, 3, '#f0e4cb');
+  roundRect(g, x - 36, y + 22, 72, 14, 6, '#ddc6aa'); roundRect(g, x - 36, y + 22, 72, 5, 3, C.stoneCap);
 };
 
 /** Foreground corners: reeds, cattails and hibiscus in front of the lagoon edge. */
@@ -377,11 +389,11 @@ WP.paintFore = function (g, L, rng, art) {
     for (let i = 0; i < 16; i++) {
       const bx = x0 + dir * rng.range(0, L.land ? 120 : 90), h = rng.range(110, 210), lean = dir * rng.range(.05, .3), by = H + 6;
       const tip = [bx + lean * h, by - h];
-      g.strokeStyle = i % 3 ? '#2f7a33' : '#3f9440'; g.lineWidth = rng.range(4, 7); g.lineCap = 'round';
+      g.strokeStyle = i % 3 ? '#3c8a2a' : '#64aa26'; g.lineWidth = rng.range(4, 7); g.lineCap = 'round';
       g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(bx, by - h * .6, tip[0], tip[1]); g.stroke();
       if (i % 4 === 0) { line(g, [[bx + lean * h * .55, by - h * .72], [bx + lean * h * .62, by - h * .95]], 9, '#7a4a26'); }
     }
-    art.foliage(g, rng, [[x0, H - 30], [x0 + dir * (L.land ? 150 : 110), H + 10]], 26, 26, () => true, { dens: 3, rMin: 6, rMax: 14 });
+    glazed(g, C.glaze, g => art.foliage(g, rng, [[x0, H - 30], [x0 + dir * (L.land ? 150 : 110), H + 10]], 26, 26, () => true, { dens: 3, rMin: 6, rMax: 14 }));
     for (let i = 0; i < 4; i++) hibiscus(g, x0 + dir * rng.range(15, L.land ? 130 : 95), H - rng.range(10, 70), rng.range(8, 13), rng);
   }
 };
