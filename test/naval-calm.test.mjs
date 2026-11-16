@@ -17,7 +17,8 @@ const config = (page) => page.evaluate(() => window.exportAPI.config());
 const CALM = { params: { mode: 'calm' }, video: { aspect: '16:9' } };
 // Zustandsreferenz des Modus: Seed 42, Querformat, nach 1 200 und 7 200 Schritten. Nur nach einer gewollten
 // Verhaltensänderung des Modus neu eintragen und im Pull Request begründen.
-const REFERENCE = ['30430187', '36607512'];
+// Stand 2: Runden mit festem Schaden je Treffer, Segel am Schiffsschaden (vorher '30430187', '36607512').
+const REFERENCE = ['ccf6c083', '6096ac27'];
 
 test('Standardmodus bleibt unberührt: Modus endless, bekannte Klangliste, kein Segelzustand', async () => {
   const page = await open();
@@ -70,6 +71,37 @@ test('Ruhiges Duell: gleicher Seed = gleicher Ablauf, Zustandsreferenz, Kreislau
   }
   assert.deepEqual(hashes[0], hashes[1], 'zwei Läufe mit gleichem Seed weichen ab');
   assert.deepEqual(hashes[0], REFERENCE, 'Zustandsreferenz des Modus hat sich geändert');
+});
+
+test('Ruhiges Duell: Runde endet mit Versenkung, Punkt, Feuerpause mit Reparatur und neuem Schiff', async () => {
+  const page = await open(CALM);
+  let s = await run(page, 170), sinkAt = 0, shotsAtSink = 0;
+  assert.deepEqual([s.sunk, s.round, s.score], [0, 1, [0, 0]]);
+  // jeder Treffer nimmt denselben Betrag: Schaden = Treffer × 2 % (bis zur ersten Versenkung)
+  for (const ship of s.ships) assert.ok(Math.abs(ship.damage - ship.hitsTaken * 0.02) < 1e-9, `${ship.name}: Schaden ${ship.damage} bei ${ship.hitsTaken} Treffern`);
+  for (let t = 171; t <= 260 && !sinkAt; t++) { s = await run(page, 1); if (s.sunk) { sinkAt = t; shotsAtSink = s.shots; } }
+  assert.ok(sinkAt, 'in 260 s ist kein Schiff gesunken');
+  const loser = s.ships.findIndex((x) => x.phase === 'sinking'), winner = 1 - loser;
+  assert.ok(loser >= 0, 'kein Schiff im Zustand sinking');
+  assert.equal(s.score[winner], 1); assert.equal(s.score[loser], 0);
+  assert.equal(s.round, 1, 'die Rundennummer springt erst mit der neuen Runde');
+  s = await run(page, 10);                                   // mitten in der Feuerpause
+  assert.equal(s.shots, shotsAtSink, 'in der Feuerpause ist geschossen worden');
+  assert.equal(s.sunk, 1, 'ein Nachzügler hat auch den Sieger versenkt');
+  s = await run(page, 14);                                   // neue Runde läuft
+  const c = await check(page);
+  assert.ok(c.ok, c.errors.join('; '));
+  assert.deepEqual(s.ships.map((x) => x.phase), ['afloat', 'afloat']);
+  assert.equal(s.round, 2);
+  assert.equal(s.ships[loser].gen, 1, 'das neue Schiff trägt die nächste Nummer');
+  assert.equal(s.ships[winner].gen, 0);
+  for (const ship of s.ships) assert.ok(ship.damage < 0.15, `${ship.name} startet nicht frisch: ${ship.damage}`);
+  assert.ok(s.ships[loser].sails.every((x) => x.holes === 0 || x.hits > 0), 'neues Schiff hat alte Segellöcher');
+  assert.ok(s.shots > shotsAtSink, 'nach der Feuerpause wird nicht wieder geschossen');
+  assert.equal(s.ballsTotal, s.ballsExpected);
+  assert.equal(s.shots - s.recycled, s.inFlight + s.inRecycle, 'Bilanz Schüsse/Recycling stimmt nicht');
+  assert.equal(s.splashes, s.shots - s.inFlight, 'Kugel hat die Flugphase ohne Wasserkontakt verlassen');
+  await page.close();
 });
 
 test('Ruhiges Duell: Zeichnen verändert den Zustand nicht (Segel mit Löchern im Bild)', async () => {
