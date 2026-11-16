@@ -2,7 +2,7 @@
 
 Stand: 16.11.2026. Entstanden im Branch `marble-xl/stufe-1`, seit dem 16.11. als Szenario „in Arbeit“ auf `main`. Gehört zu R35 und zum
 [Gesamtplan, Abschnitt 9](GESAMTPLAN_2026-11-16.md). **Status: bewegter Entwurf; Rückmeldung zum ersten Testclip
-eingearbeitet; sechste Fassung (größere Kugeln, abschaltbare Schilder, Glühen nur zwischen Ofen und Farbstation, Trockenstrecke mit deutlich nasser Farbe, kleine Deko-Animationen) liegt als Testclip vor; Rückmeldung dazu
+eingearbeitet; siebte Fassung (dazu: Ablauf ohne Neubeginn, die Röhren leeren sich nach jeder Charge) liegt vor; Rückmeldung dazu
 steht aus.**
 
 ## Was es ist
@@ -127,7 +127,7 @@ Polierer und die Farbstation sind immer genau passend belegt.
 | Ton | **Vorläufig**: Klänge der klassischen Fabrik an neun Stellen |
 | Warteschlangen, echte Physik in Behälter und Trommel, Ausschuss | **Offen** |
 | Kapitel und Ausbauten, zweite Linie, Finale | **Offen** |
-| Neubeginn in der Vorschau nach 76,8 s | sichtbarer Sprung, bis der Auftrag ein echtes Ende hat |
+| Neubeginn in der Vorschau nach 76,8 s | behoben in der siebten Fassung (Chargen, siehe unten) |
 
 **Testclips** (lokal, `output/marblexl-vorschau/testclip-2026-11-16/`): Querformat und Hochformat, je 20 s,
 1080p30 mit Ton. Renderzeit je 56 s (10,7 Bilder pro Sekunde).
@@ -263,9 +263,31 @@ Bildvergleich Sprung gegen durchgehende Wiedergabe), Bildfolgen aus dem Clip (Tr
 
 **Sechster Testclip** (lokal, `output/marblexl-vorschau/testclip-2026-11-16-v6/`): Querformat, 20 s, 1080p30.
 
+## Ablauf ohne Neubeginn: Chargen und Leeren der Röhren (16.11.2026, siebte Fassung)
+
+Anlass: Der Nutzer will ein durchlaufendes 10-Minuten-Video in 1440p mit 60 Bildern pro Sekunde. Bisher begann die
+Szene alle 76,8 s neu (Röhren schlagartig leer, Zähler zurück); das hätte man auch im voll gerenderten Video gesehen.
+
+| Teil | Umsetzung | Stand |
+|---|---|---|
+| Chargen | Je 48 Kugeln (acht je Farbe) bilden eine Charge. Jede Röhre fasst genau diese acht. | **Erledigt** |
+| Leeren | Kurz nach der letzten Kugel einer Charge öffnen sich die Röhren unten nacheinander (0,1 s Abstand), der Stapel rutscht in 0,8 s heraus, der Sockel leuchtet in der Röhrenfarbe. Zuerst leert sich die Röhre, die als nächste wieder eine Kugel bekommt. | **Erledigt** |
+| Zähler | Zählt alle fertigen Kugeln durch, ohne Obergrenze. Rechts steht die Charge („BATCH 03“) mit Füllstand („17 / 48 IN TUBES“), der Balken zeigt den Füllstand der Charge. Die alten Texte „II · COLOUR“ und „NEXT: SECOND LINE“ sind entfallen. | **Erledigt** |
+| Ton | Neuer weicher Klang `xlRelease`, wenn sich eine Röhre öffnet | **Erledigt**, Hörurteil steht aus |
+| Rechenaufwand | Je Bild werden nur die laufenden Kugeln und die letzten beiden Chargen berechnet, unabhängig von der Videolänge | **Erledigt** |
+| Wohin die Kugeln gehen | Sie verschwinden unten aus der Röhre; ein sichtbarer Abtransport (Band, Kiste) fehlt noch | **Offen** |
+
+Gemessen im Simulationsvorlauf über 6 Minuten: Zähler steigt durchgehend bis 231, höchstens acht Kugeln je Röhre,
+fünf Leerungen (alle 76,8 s), rund 33 Kugeln gleichzeitig unterwegs. **Geprüft:** `node --test
+test/marblexl.test.mjs` (4 von 4 bestanden, neu: Lauf ohne Neubeginn über 170 s), Bildfolge vom Moment des Leerens.
+
+Vorschau (lokal, `output/marblexl-vorschau/testclip-2026-11-16-v7/`): 5 Sekunden Bildfolge vom ersten Leeren (ohne
+Ton) und ein 20-Sekunden-Clip vom Anfang.
+
 ## Nächster Schritt
 
-Rückmeldung des Nutzers zum sechsten Testclip abwarten (nasse Farbe, Deko; Ton aus dem zweiten Clip ist ebenfalls
-noch offen). Weitere Vorschläge, noch nicht eingebaut: Muster der Kugel dreht sich beim Rollen mit, Füllstand der
-Farbtanks sinkt beim Sprühen, Anzeigen der Schaltwand. Offen bleiben: mehr Kugeln gleichzeitig (kürzerer Takt),
-eigene Klänge für Trommel, Ofen und Sprühen, Hochformat, danach echte Warteschlangen und Physik.
+10-Minuten-Video in 1440p mit 60 Bildern pro Sekunde rendern (Auftrag des Nutzers). Danach Rückmeldung abwarten.
+Weitere Vorschläge, noch nicht eingebaut: sichtbarer Abtransport unter den Röhren, Muster der Kugel dreht sich beim
+Rollen mit, Füllstand der Farbtanks sinkt beim Sprühen, Anzeigen der Schaltwand. Offen bleiben: mehr Kugeln
+gleichzeitig (kürzerer Takt), eigene Klänge für Trommel, Ofen und Sprühen, Hochformat, danach echte Warteschlangen
+und Physik.

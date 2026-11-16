@@ -629,6 +629,7 @@ function sorterFront(g) {
     glow(g, c.x, vy, COLORS[i].hex, 0.4, 70 * MS);
     band(g, c.x, 2012, 12, TUBE_OUT + 6, HALF_PI);
     rr(g, c.x - TUBE_OUT, 2026, 2 * TUBE_OUT, 12, 6); g.fillStyle = css(COLORS[i].hex, 0.9); g.fill(); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1.2; g.stroke();
+    if (FLOW && FLOW.drains[i] > 0.02) glow(g, c.x, 2030, COLORS[i].hex, 0.9 * FLOW.drains[i], 170);   // Röhre öffnet sich unten
     // Klappe an der Sortierschiene
     g.save(); g.translate(c.x + 30 * MS, c.yRail + 24 * MS); g.rotate(-0.06 - 1.24 * (FLOW ? FLOW.flaps[i] : 0)); rr(g, -4, -3, 56, 6, 3); g.fillStyle = lin(g, 0, -3, 0, 3, BRASS); g.fill(); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1; g.stroke(); g.restore();
   });
@@ -760,10 +761,9 @@ function sparkle(g, x, y, s) {
 // ---------------------------------------------------------------- Ablauf: jede Kugel folgt demselben Zeitplan
 // Bewusst einfach: reine Funktion der Zeit, noch ohne Warteschlangen. Alle PERIOD Sekunden startet eine Kugel;
 // ihr Ort und Zustand hängen nur von ihrem Alter u ab. Damit ist jedes Bild nach einem Sprung sofort richtig.
-const PERIOD = 1.6, LOOP = PERIOD * 48;
+const PERIOD = 1.6, BATCH = 48, LOOP = PERIOD * BATCH;         // Takt, Kugeln je Charge, Dauer einer Charge
 const SEQ = [2, 5, 0, 3, 1, 4, 4, 1, 5, 2, 0, 3];                // Farbfolge der Kugeln
-const BASE = [1, 0, 1, 0, 1, 0];                                  // Füllstand der Röhren zu Beginn (Cyan … Grün)
-const SP = 2 * R + 0.6, SLOT0 = 2006 - R, CAP = 9;                // Röhre: Abstand der Lagen, unterste Lage, Fassungsvermögen
+const SP = 2 * R + 0.6, SLOT0 = 2006 - R;                         // Röhre: Abstand der Lagen, unterste Lage
 const mod = (a, m) => ((a % m) + m) % m;
 const colorOf = (n) => SEQ[mod(n, SEQ.length)];
 const smooth = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
@@ -787,8 +787,23 @@ const railTime = (c) => colS[c] / 230;
 // Glühen: wächst im Ofen von null an und klingt auf dem Weg zur Farbstation wieder ganz ab
 const SCAN_T = ST.cool + (PATHS.cool.len - 40) / 265;                // Zeitpunkt der Prüfung im Takt
 const cooling = (u) => 1 - smooth((u - ST.drop) / (ST.colour - ST.drop));
-const slotIndex = (n) => { const c = colorOf(n), first = Math.ceil(-ST.rail / PERIOD); let k = BASE[c]; for (let m = first; m < n; m++) if (colorOf(m) === c) k++; return k; };
 const fallTime = (c, idx) => Math.sqrt(2 * Math.max(40, SLOT0 - idx * SP - COLS[c].yRail) / 1500);
+// Chargen: Je BATCH Kugeln (acht je Farbe) füllen die Röhren. Kurz nach der letzten Kugel öffnen sich die Röhren
+// nacheinander nach unten, der Stapel rutscht heraus, und die nächste Charge fällt in leere Röhren. So läuft die
+// Linie beliebig lange ohne Neubeginn. N0 = erste Kugel überhaupt (Vielfaches der Farbfolge).
+const N0 = SEQ.length * Math.floor(Math.ceil(-ST.rail / PERIOD) / SEQ.length);
+const batchOf = (n) => Math.floor((n - N0) / BATCH);
+const rankOf = (n) => { const c = colorOf(n); let k = 0; for (let m = N0 + batchOf(n) * BATCH; m < n; m++) if (colorOf(m) === c) k++; return k; };   // Platz in der Röhre
+const landTime = (n) => { const c = colorOf(n); return n * PERIOD + ST.rail + 0.35 + railTime(c) + fallTime(c, rankOf(n)); };
+const DRAIN_T = 0.8, DRAIN_G = 1800;                              // Dauer und Beschleunigung beim Leeren einer Röhre
+const DRAIN_ORDER = (() => { const o = []; for (let j = 0; j < 6; j++) o[colorOf(N0 + j)] = j; return o; })();   // zuerst die Röhre, die als nächste wieder eine Kugel bekommt
+const drainCache = new Map();
+/** Beginn des Leerens der Röhre c nach der Charge b. */
+function drainStart(b, c) {
+  let t = drainCache.get(b);
+  if (t === undefined) { t = landTime(N0 + (b + 1) * BATCH - 1) + 0.25; if (drainCache.size > 64) drainCache.clear(); drainCache.set(b, t); }
+  return t + 0.1 * DRAIN_ORDER[c];
+}
 
 /** Ort und Zustand der Kugel n zur Zeit t (null = noch im Behälter). */
 function poseOf(n, t) {
@@ -824,23 +839,27 @@ function poseOf(n, t) {
   o.heat = 0;
   if (u < ST.ride) { const f = seg('toWheel', 'ride'), q = pathAt(PATHS.toWheel, PATHS.toWheel.len * f, P), e = smooth((f - 0.75) / 0.25); o.x = lerp(q.x, BIG.x + Math.cos(A_PICK) * BIG.rp, e); o.y = lerp(q.y, BIG.y + Math.sin(A_PICK) * BIG.rp, e); return o; }
   if (u < ST.rail) { const a = A_PICK - BIG_W * (u - ST.ride); o.x = BIG.x + Math.cos(a) * BIG.rp; o.y = BIG.y + Math.sin(a) * BIG.rp; return o; }
-  const ur = u - ST.rail, rt = railTime(c), idx = slotIndex(n);
+  const ur = u - ST.rail, rt = railTime(c), idx = rankOf(n);
   o.rel = ur - 0.35 - rt;                                          // Zeit bis (negativ) oder seit dem Abwurf in die Röhre
   if (ur < 0.35) { const f = smooth(ur / 0.35), q = pathAt(PATHS.sortRail, 0, P); o.x = lerp(BIG.x + Math.cos(A_REL) * BIG.rp, q.x, f); o.y = lerp(BIG.y + Math.sin(A_REL) * BIG.rp, q.y, f); return o; }
   if (ur < 0.35 + rt) { const q = pathAt(PATHS.sortRail, colS[c] * ((ur - 0.35) / rt), P); o.x = q.x; o.y = q.y; return o; }
-  if (idx >= CAP) return null;                                     // Röhre voll (in der Vorschau, vor dem Neubeginn)
   const ft = fallTime(c, idx), f = Math.min(1, (ur - 0.35 - rt) / ft);
   o.x = COLS[c].x; o.y = lerp(COLS[c].yRail + 6, SLOT0 - idx * SP, f * f); o.landed = f >= 1; if (o.landed) o.since = o.rel - ft;
+  const td = t - drainStart(batchOf(n), c);                        // Röhre leert sich: der Stapel rutscht nach unten heraus
+  if (o.landed && td > 0) { o.y += 0.5 * DRAIN_G * td * td; o.drain = Math.min(1, td / DRAIN_T); if (o.y > 2016 + R) return null; }
   return o;
 }
 /** Alle sichtbaren Kugeln zur Zeit t und die Zahl der fertigen. */
 function flowAt(t) {
-  const list = [], first = Math.ceil(-ST.rail / PERIOD), last = Math.floor(t / PERIOD + 2);
-  let done = BASE.reduce((a, b) => a + b, 0), scan = false, kilnIn = 0, kilnOut = 0, colour = null, since = 9;
-  const flaps = [0, 0, 0, 0, 0, 0];
+  const list = [], last = Math.floor(t / PERIOD + 2), first = Math.max(N0, last - 150);
+  // fertig = alle Kugeln, die schon gelandet sind (auch die längst abtransportierten)
+  const sure = Math.max(N0 - 1, Math.floor((t - ST.rail - 6) / PERIOD));
+  let done = sure - N0 + 1, scan = false, kilnIn = 0, kilnOut = 0, colour = null, since = 9;
+  for (let n = sure + 1; n <= last; n++) if (landTime(n) <= t) done++;
+  const flaps = [0, 0, 0, 0, 0, 0], drains = [0, 0, 0, 0, 0, 0], tubes = [0, 0, 0, 0, 0, 0];
   for (let n = first; n <= last; n++) {
     const p = poseOf(n, t); if (!p) continue;
-    if (p.landed) done++;
+    if (p.drain !== undefined) drains[p.color] = Math.max(drains[p.color], Math.sin(Math.PI * p.drain)); else if (p.landed) tubes[p.color]++;
     if (p.scan) scan = true;
     if (p.kf !== undefined) { kilnIn = Math.max(kilnIn, 1 - p.kf / 0.07); kilnOut = Math.max(kilnOut, 1 - (1 - p.kf) / 0.07); }
     if (p.cf !== undefined) colour = { color: p.color, f: p.cf };
@@ -848,7 +867,7 @@ function flowAt(t) {
     if (p.since !== undefined && p.since < since) since = p.since;
     list.push(p);
   }
-  return { list, done, scan, kilnIn, kilnOut, colour, flaps, since };
+  return { list, done, scan, kilnIn, kilnOut, colour, flaps, since, drains, tubes, batch: Math.floor(done / BATCH), fill: done % BATCH };
 }
 /** Tonereignisse im Zeitraum (t0, t1]: gleiche Zeitpunkte wie im Bild. */
 function eventsBetween(t0, t1, emit) {
@@ -858,9 +877,13 @@ function eventsBetween(t0, t1, emit) {
     ['xlScan', ST.cool + (PATHS.cool.len - 40) / 265, 2040, 1803], ['xlLift', ST.ride, 1812, 1722], ['xlRail', ST.rail + 0.3, 1470, 1350],
     ['xlHopper', -2 * PERIOD - 0.2, 470, 380]];
   for (const [type, e, x, y] of fixed) for (let n = Math.floor((t0 - e) / PERIOD) + 1; n * PERIOD + e <= t1; n++) emit(type, n * PERIOD + e, x, y, 1, colorOf(n));
-  for (let n = Math.floor((t0 - ST.rail - 6) / PERIOD); n * PERIOD + ST.rail <= t1; n++) {
-    const c = colorOf(n), idx = Math.min(CAP - 1, slotIndex(n)), land = n * PERIOD + ST.rail + 0.35 + railTime(c) + fallTime(c, idx);
-    if (land > t0 && land <= t1) emit('xlLand', land, COLS[c].x, SLOT0 - idx * SP, 1, c);
+  for (let n = Math.max(N0, Math.floor((t0 - ST.rail - 6) / PERIOD)); n * PERIOD + ST.rail <= t1; n++) {
+    const c = colorOf(n), land = landTime(n);
+    if (land > t0 && land <= t1) emit('xlLand', land, COLS[c].x, SLOT0 - rankOf(n) * SP, 1, c);
+  }
+  const bNow = batchOf(Math.floor((t1 - ST.rail) / PERIOD));
+  for (let b = Math.max(0, bNow - 1); b <= bNow; b++) for (let c = 0; c < 6; c++) {
+    const td = drainStart(b, c); if (td > t0 && td <= t1) emit('xlRelease', td, COLS[c].x, 2012, 1, c);
   }
 }
 
@@ -873,7 +896,7 @@ function cameraAt(t, world, auto) {
 
 // ---------------------------------------------------------------- Kugeln entlang der Linie
 function placeMarbles(g) {
-  const lf = LIFT, tf = mod(T, LOOP), fl = FLOW;
+  const lf = LIFT, tf = T, fl = FLOW;
   // Aufzug: beladene Träger fahren rechts hoch
   for (let k = 0; k < 9; k++) { const y = lf.bot - 30 - mod(k * 185 + T * LIFT_V, 1665); if (y > 344) marble(g, lf.ballX, y - R - 8, 'raw'); }
   { const q = pathAt(PATHS.top, PATHS.top.len * mod(T / PERIOD, 1), P); marble(g, q.x, q.y, 'raw'); }
@@ -881,9 +904,8 @@ function placeMarbles(g) {
   for (const [x, y] of [[350, 1976], [411, 1976], [472, 1976], [380, 1925], [441, 1925], [350, 1874], [411, 1874], [472, 1874]]) marble(g, x, y, 'raw');
   for (const [x, y] of [[652, 486], [600, 452], [545, 428], [490, 404], [662, 427], [593, 393], [538, 369], [648, 369]]) marble(g, x, y, 'raw');
   marble(g, 1930, 2008, 'washed'); marble(g, 1989, 2009, 'raw');
-  // ruhende Kugeln in den Röhren, darüber die laufenden
-  COLS.forEach((c, i) => { for (let k = 0; k < BASE[i]; k++) marble(g, c.x, SLOT0 - k * SP, 'color', i); });
   for (const p of fl.list) {
+    if (p.drain !== undefined) { g.save(); g.beginPath(); g.rect(p.x - R - 6, 0, 2 * R + 12, 2013); g.clip(); marble(g, p.x, p.y, 'color', p.color); g.restore(); continue; }   // rutscht unten aus der Röhre
     if (p.trail) for (let j = 3; j >= 1; j--) { const q = poseOf(p.n, tf - 0.05 * j); if (q) glow(g, q.x, q.y, 0xff8a2a, 0.2 * p.heat * (1 - j / 4), R * 2.3); }   // Nachglühen
     if (p.wet > 0.02 && p.tint >= 1) for (let j = 3; j >= 1; j--) { const q = poseOf(p.n, tf - 0.06 * j); if (q) glow(g, q.x, q.y, COLORS[p.color].hex, 0.36 * p.wet * (1 - j / 4), R * 2.2); }   // Farbschleier
     if (p.wet > 0.02 && p.tint >= 1) for (let j = 7; j >= 1; j--) { const q = poseOf(p.n, tf - 0.08 * j); if (q) { circ(g, q.x, q.y + R * 0.95, (4.6 - 0.45 * j) * MS); g.fillStyle = css(COLORS[p.color].hex, 0.8 * p.wet * (1 - j / 8)); g.fill(); } }   // Farbspur am Rohrboden
@@ -910,7 +932,7 @@ function background(scale) {
  */
 function drawScene(g, t, px, bgScale = 1, opts = null) {
   T = t; g.lineJoin = 'round'; SIGNS = !!(opts && opts.signs);
-  FLOW = flowAt(mod(T, LOOP));
+  FLOW = flowAt(T);
   const bg = background(bgScale);
   g.drawImage(bg, 0, 0, W, H);
   K.setPX(px);
@@ -933,7 +955,7 @@ function drawScene(g, t, px, bgScale = 1, opts = null) {
   colourFront(g); coolFront(g); inspectFront(g); bigWheelFront(g); sorterFront(g); rawBin(g, true);
   quietDetails(g);
   if (SIGNS) neon(g, 1790, 150, 'MARBLE FACTORY ', 'XL', 78);
-  board(g, 1790, SIGNS ? 318 : 132, FLOW ? FLOW.done : 35, FLOW ? Math.exp(-4 * FLOW.since) : 0);
+  board(g, 1790, SIGNS ? 318 : 132, FLOW ? FLOW.done : 35, FLOW ? Math.exp(-4 * FLOW.since) : 0, FLOW ? FLOW.batch : 0, FLOW ? FLOW.fill : 0);
   if (SIGNS) for (const [x, y, a, b] of [[560, 232, '01 ', 'RAW'], [1110, 440, '02 ', 'WASH'], [1970, 520, '03 ', 'POLISH'], [2800, 610, '04 ', 'KILN'],
     [3300, 1650, '05 ', 'COLOUR'], [2580, 1910, '06 ', 'DRY'], [2040, 1490, '07 ', 'INSPECT'], [1640, 1180, '08 ', 'LIFT'], [960, 1230, '09 ', 'SORT']]) neon(g, x, y, a, b, 40);
 }
@@ -945,16 +967,16 @@ function render(t = 30, signs = false) {
   drawScene(g, t, 1, 1, { signs }); vignette(g, W, H);
   return cv;
 }
-function board(g, x, y, done, pulse = 0) {
-  const w = 900, h = 104, total = 96, n = Math.min(total, done);
+function board(g, x, y, done, pulse = 0, batch = 0, fill = 0) {
+  const w = 900, h = 104;
   rr(g, x - w / 2, y - h / 2, w, h, 14); g.fillStyle = 'rgba(10,14,21,.82)'; g.fill(); g.strokeStyle = 'rgba(58,69,84,.9)'; g.lineWidth = 2; g.stroke();
   g.save(); g.textBaseline = 'middle';
-  g.font = `800 44px ${FONT}`; g.fillStyle = '#ffffff'; g.textAlign = 'left'; g.shadowColor = pulse > 0.03 ? `rgba(34,211,238,${pulse.toFixed(3)})` : 'rgba(0,0,0,.8)'; g.shadowBlur = 6 + 24 * pulse; g.fillText(`${n} / ${total}`, x - w / 2 + 30, y - 10); g.shadowColor = 'rgba(0,0,0,.8)'; g.shadowBlur = 6;
+  g.font = `800 44px ${FONT}`; g.fillStyle = '#ffffff'; g.textAlign = 'left'; g.shadowColor = pulse > 0.03 ? `rgba(34,211,238,${pulse.toFixed(3)})` : 'rgba(0,0,0,.8)'; g.shadowBlur = 6 + 24 * pulse; g.fillText(`${done}`, x - w / 2 + 30, y - 10); g.shadowColor = 'rgba(0,0,0,.8)'; g.shadowBlur = 6;
   g.font = `600 16px ${FONT}`; g.fillStyle = '#8fa0b8'; g.fillText('M A R B L E S   F I N I S H E D', x - w / 2 + 30, y + 30);
-  g.textAlign = 'right'; g.font = `800 32px ${FONT}`; g.fillStyle = '#ffe1f1'; g.shadowColor = 'rgba(255,63,158,.9)'; g.shadowBlur = 12; g.fillText('II · COLOUR', x + w / 2 - 30, y - 12);
-  g.font = `600 16px ${FONT}`; g.fillStyle = '#8fa0b8'; g.shadowColor = 'rgba(0,0,0,.8)'; g.shadowBlur = 6; g.fillText('N E X T :   S E C O N D   L I N E', x + w / 2 - 30, y + 30);
+  g.textAlign = 'right'; g.font = `800 32px ${FONT}`; g.fillStyle = '#ffe1f1'; g.shadowColor = 'rgba(255,63,158,.9)'; g.shadowBlur = 12; g.fillText(`BATCH ${String(batch + 1).padStart(2, '0')}`, x + w / 2 - 30, y - 12);
+  g.font = `600 16px ${FONT}`; g.fillStyle = '#8fa0b8'; g.shadowColor = 'rgba(0,0,0,.8)'; g.shadowBlur = 6; g.fillText(`${fill}  /  ${BATCH}   I N   T U B E S`, x + w / 2 - 30, y + 30);
   rr(g, x - 130, y - 20, 260, 14, 7); g.fillStyle = '#0d1219'; g.fill(); g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 1.2; g.stroke();
-  g.shadowColor = 'rgba(34,211,238,.9)'; g.shadowBlur = 10; rr(g, x - 128, y - 18, 256 * (n / total), 10, 5); g.fillStyle = '#22d3ee'; g.fill();
+  g.shadowColor = 'rgba(34,211,238,.9)'; g.shadowBlur = 10; rr(g, x - 128, y - 18, 256 * (fill / BATCH), 10, 5); g.fillStyle = '#22d3ee'; g.fill();
   g.restore();
 }
 /** Liefert Übersicht und Ausschnitte als PNG-Daten (Base64 ohne Präfix). crops: [{ x, y, w, h }] */
@@ -964,5 +986,5 @@ function exportImages(crops = [], t = 30, signs = false) {
   return { overview: scaled(0, 0, W, H, 1920, 1080), crops: crops.map((c) => scaled(c.x, c.y, c.w, c.h, c.w, c.h)) };
 }
 
-EBS.MarbleXLConcept = { render, exportImages, drawScene, vignette, cameraAt, flowAt, eventsBetween, W, H, PERIOD, LOOP };
+EBS.MarbleXLConcept = { render, exportImages, drawScene, vignette, cameraAt, flowAt, eventsBetween, W, H, PERIOD, LOOP, BATCH };
 })();

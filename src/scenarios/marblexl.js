@@ -18,6 +18,7 @@ const X = EBS.MarbleXLConcept;
 // Klänge: Reihenfolge = Vorrang, wenn zu viel gleichzeitig geschieht (oben wichtig, unten Beiwerk)
 const AUDIO_EVENTS = {
   xlLand: { label: 'Kugel landet in der Röhre', samples: ['mw-soft-glass-0', 'mw-soft-glass-1', 'mw-soft-glass-2'], gain: 0.46, semis: -2, detune: 0.25, minGap: 0.3, scale: [0, 0, 0.25, 0.25, 0.5, 0.5] },
+  xlRelease: { label: 'Röhre leert sich', samples: ['mw-soft-body-0', 'mw-soft-body-1'], gain: 0.3, semis: -3, detune: 0.3, minGap: 0.15 },
   xlColourDone: { label: 'Farbstation · Kugel fertig', samples: ['mw-soft-glass-1'], gain: 0.26, semis: -4, detune: 0.15, minGap: 0.8 },
   xlColour: { label: 'Farbstation · Sprühen', samples: ['mw-soft-switch-0', 'mw-soft-switch-1'], gain: 0.2, semis: -1, detune: 0.2, minGap: 0.8 },
   xlPolish: { label: 'Polierer', samples: ['mw-soft-wood-1', 'mw-soft-wood-2'], gain: 0.34, semis: -1, detune: 0.25, minGap: 0.8 },
@@ -30,7 +31,7 @@ const AUDIO_EVENTS = {
   xlBelt: { label: 'Förderband', samples: ['mw-soft-glass-0', 'mw-soft-wood-0'], gain: 0.14, semis: -1, detune: 0.3, minGap: 1.4 },
   xlHopper: { label: 'Behälter', samples: ['mw-soft-body-0', 'mw-soft-body-1'], gain: 0.18, semis: 2, detune: 0.3, minGap: 1.4 },
 };
-const ORDER = Object.keys(AUDIO_EVENTS), KEY_SOUNDS = 5;        // die ersten fünf haben Vorrang
+const ORDER = Object.keys(AUDIO_EVENTS), KEY_SOUNDS = 6;        // die ersten sechs haben Vorrang
 const OVERVIEW_GAIN = 0.7;                                     // Anteil je Klang in der Übersicht
 /** Fester Mischplan: begrenzt die Dichte (höchstens zwei Klänge je 0,6 s) und verteilt nach Ort im Bild. */
 function createAudioMixPlan(events, { cfg }) {
@@ -65,15 +66,14 @@ class LineSim {
   }
   setParam(k, v) { this.cfg[k] = v; }
   stepOnce() {
-    const a = this.t % X.LOOP;
+    const a = this.t;
     this.step++; this.t = this.step * this.dt;
-    const b = this.t % X.LOOP;
-    if (b > a) X.eventsBetween(a, b, (type, _time, x, y, p, c) => {
+    X.eventsBetween(a, this.t, (type, _time, x, y, p, c) => {
       this.events[this.eventSeq % this.events.length] = { seq: this.eventSeq, step: this.step, t: this.t, type, x, y, p, c };
       this.eventSeq++;
     });
   }
-  flow() { return X.flowAt(this.t % X.LOOP); }
+  flow() { return X.flowAt(this.t); }
   checkInvariants() {
     const errors = [];
     for (const m of this.flow().list) if (!(Number.isFinite(m.x) && Number.isFinite(m.y))) errors.push(`Kugel ${m.n}: kein gültiger Ort`);
@@ -83,8 +83,8 @@ class LineSim {
     const f = this.flow(), kinds = { raw: 0, washed: 0, clear: 0, color: 0 };
     for (const m of f.list) if (!m.landed) kinds[m.kind]++;
     return {
-      summary: `${f.done} von 96 fertig · ${f.list.filter((m) => !m.landed).length} Kugeln unterwegs`,
-      t: this.t, step: this.step, done: f.done, moving: f.list.filter((m) => !m.landed).length, ...kinds,
+      summary: `${f.done} fertig · Charge ${f.batch + 1} · ${f.list.filter((m) => !m.landed).length} Kugeln unterwegs`,
+      t: this.t, step: this.step, done: f.done, batch: f.batch, fill: f.fill, tubes: f.tubes, moving: f.list.filter((m) => !m.landed).length, ...kinds,
     };
   }
   stateHash() { const f = this.flow(); return fnv1a(this.step + '|' + f.done + '|' + f.list.map((m) => m.x.toFixed(3) + ',' + m.y.toFixed(3) + m.kind[0]).join(';')).toString(16).padStart(8, '0'); }
@@ -121,7 +121,7 @@ EBS.registerScenario({
   panelStats(sim) {
     const s = sim.snapshot();
     return [
-      { key: 'done', label: 'Fertig', value: `${s.done} / 96` },
+      { key: 'done', label: 'Fertig', value: fmtInt(s.done) }, { key: 'batch', label: 'Charge', value: `${s.batch + 1} · ${s.fill} / 48` },
       { key: 'moving', label: 'Unterwegs', value: fmtInt(s.moving) },
       { key: 'raw', label: 'Roh', value: s.raw }, { key: 'washed', label: 'Gewaschen', value: s.washed },
       { key: 'clear', label: 'Poliert', value: s.clear }, { key: 'color', label: 'Gefärbt', value: s.color },

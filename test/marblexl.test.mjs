@@ -45,3 +45,24 @@ test('Seek-Regel: Bild nach Sprung gleich Bild nach durchgehender Wiedergabe', a
   assert.ok(a === b, 'Bild nach Sprung weicht vom Bild nach durchgehender Wiedergabe ab');
   await Promise.all([jump.close(), cont.close()]);
 });
+
+test('Läuft ohne Neubeginn: Zähler steigt durchgehend, Röhren fassen höchstens acht Kugeln und leeren sich nach jeder Charge', async () => {
+  const page = await open();
+  const sum = (s) => s.tubes.reduce((a, b) => a + b, 0);
+  let prev = await run(page, 1), most = 0, emptied = 0;
+  for (let t = 1; t < 170; t += 3) {                                             // reiner Simulationsvorlauf, keine Bilder
+    const s = await run(page, 3);
+    assert.ok(s.done >= prev.done, `Zähler läuft rückwärts: ${prev.done} -> ${s.done}`);
+    most = Math.max(most, ...s.tubes);
+    if (sum(s) < sum(prev) - 20) emptied++;
+    prev = s;
+  }
+  assert.ok(prev.done > 95, `nach 170 s erst ${prev.done} Kugeln fertig`);
+  assert.equal(most, 8, 'eine Röhre fasst je Charge genau acht Kugeln');
+  assert.equal(emptied, 2, 'die Röhren leeren sich nach jeder Charge (zweimal in 170 s)');
+  const c = await check(page);
+  assert.ok(c.ok, c.errors.join('; '));
+  const types = new Set((await page.evaluate(() => window.exportAPI.events(0))).map((e) => e.type));
+  assert.ok(types.has('xlRelease'), 'Klang für das Leeren der Röhren fehlt');
+  await page.close();
+});
