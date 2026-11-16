@@ -33,10 +33,10 @@ test('Einstellungsdatei bewahrt Qualitätswerte und Namen; der PC-Exportbefehl �
   assert.deepEqual(await loaded.evaluate(() => EBS.app.cfg), expected);
 });
 
-test('Zwölf Produktionsdateien entsprechen den UI-Vorlagen und definierten Videoeinstellungen', async t => {
+test('Bestehende Produktionsdateien entsprechen den UI-Vorlagen und definierten Videoeinstellungen', async t => {
   const ctx = await browser.newContext(); t.after(() => ctx.close());
   const page = await ctx.newPage(); await page.goto(base + '?paused=1'); await ready(page);
-  assert.deepEqual(await page.locator('#scenario option').evaluateAll(options => options.map(o => o.value)), [...ids, 'marbleworks']);
+  assert.deepEqual(await page.locator('#scenario option').evaluateAll(options => options.map(o => o.value)), [...ids, 'marbleworks', 'waterpark']);
   for (const id of ids) for (const kind of ['short', 'long']) {
     const file = JSON.parse(readFileSync(join(ROOT, 'presets', 'production', `${id}-${kind}.json`), 'utf8'));
     const fromUi = await page.evaluate(([id, kind]) => EBS.productionPreset(id, kind), [id, kind]);
@@ -46,7 +46,11 @@ test('Zwölf Produktionsdateien entsprechen den UI-Vorlagen und definierten Vide
       normalized.video.fps, normalized.video.audio, normalized.video.tempo],
     [id, kind === 'short' ? '9:16' : '16:9', kind === 'short' ? 60 : 600, 1080, 30, true, id === 'territory' ? .75 : 1]);
     assert.deepEqual(normalized.video.quality, { crf: 20, preset: 'medium', bitrate: null });
-    assert.ok(Object.values(normalized.video.volume).every(v => v === 100));
+    if (id === 'pyramid') {
+      assert.deepEqual(normalized.video.volume, { master: 70, scoop: 110, pulse: 55.25, tip: 110, cap: 100,
+        splash: 110, boing: 100, wheee: 55, squeak: 110, full: 100, launch: 100, firework: 100,
+        emote: 110, fish: 110, ufo: 110, twinkle: 110, chirp: 110, water: 100 });
+    } else assert.ok(Object.values(normalized.video.volume).every(v => v === 100));
     if (id === 'pyramid') assert.equal(normalized.params.dayMinutes, kind === 'short' ? 1 : 0);
     if (id === 'scrap') assert.deepEqual([normalized.params.arena, normalized.params.episodeMode, normalized.view.camera], ['sunshine', 'endless', false]);
   }

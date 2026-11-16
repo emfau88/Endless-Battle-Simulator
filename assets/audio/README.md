@@ -1,5 +1,19 @@
 # Sounds
 
+## Pyramid · ruhiger Wasserhintergrund
+
+`pyramid-water-loop.wav` enthält die freigegebene, bereits bearbeitete Stereo-Aufnahme
+**Waves Lapping Shore.** von **Tom_Kaszuba**, [Freesound](https://freesound.org/people/Tom_Kaszuba/sounds/659002/), **CC0**.
+Quelle, Verarbeitung und Prüfsummen stehen in `PYRAMID_WATER.json`.
+Die Datei gehört zum Projekt; Exporte benötigen weder den Downloads-Ordner noch alte Exportdateien.
+
+Die ersten 4 Sekunden laufen einmal, danach wiederholt sich der Bereich 4–67,2 Sekunden.
+Er enthält bereits den 4-Sekunden-Übergang zum nächsten Durchlauf. Der Hintergrund bleibt Stereo
+und wird vor einem eventuellen Videoausschnitt über die vollständige Episode gemischt.
+Das Pyramiden-Profil verwendet die freigegebenen festen Pegel ohne anschließende Lautheitsanhebung.
+Gesamtlautstärke wirkt auf Aktionen und Wasser; der zusätzliche Wasserregler nur auf den Hintergrund.
+„Ton aus“ exportiert weiterhin ohne Tonspur. Andere Szenarien verwenden dieses Profil nicht.
+
 Die ursprünglichen `impact*.ogg`-Dateien stammen unverändert aus **Kenney – Impact Sounds (1.0)**, www.kenney.nl, Lizenz **Creative Commons Zero
 (CC0)**. Der Lizenztext des Pakets liegt als `KENNEY_LICENSE.txt` bei. Quelle lokal:
 `Dokumente/kenney/kenney_impact-sounds/Audio/`.
@@ -111,11 +125,13 @@ keine M/S-/Intensitätsstereo-Kodierung und kein Rauschersatz, PCM-Grenze −3 d
 
 ## Endless Pyramid
 
-Bekannter Folgepunkt R27: Beim vollständigen 60-Sekunden-Tierchenablauf wurden bei
+Historischer Befund R27: Beim vollständigen 60-Sekunden-Tierchenablauf wurden bei
 Standardlautstärke −14,1 LUFS einzelne AAC-Spitzen von +0,5 dBTP gemessen (PCM: −1,7 dBTP).
-Die Prüfung kann solche Exporte abbrechen. Es wurde kein neues Pyramid-Audioprofil übernommen;
-der Nutzer hat die Einschränkung für die Integration akzeptiert und weitere Zusatzdiagnosen
-beendet. [Nachweis](../../docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
+Für die damalige Integration wurde die Einschränkung akzeptiert;
+[historischer Nachweis](../../docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md).
+Inzwischen verwendet Pyramid das oben beschriebene Profil `pyramid-water-v1` mit festem Pegel,
+ruhigem Wasserhintergrund und Nachmessung des fertigen AAC. Der aktuelle R27-Stand steht in der
+[Roadmap](../../docs/ROADMAP.md).
 
 Die Klangtabelle in `src/scenarios/pyramid.js` verwendet dieselben unveränderten CC0-Dateien:
 `impactSoft_medium_000` (Becher schöpft, höher gestimmt), `impactMetal_light_000` (Becher kippt aus) und
@@ -130,3 +146,12 @@ wenn ein Becher ein Tierchen aufnimmt). Die drei Tierchen-Klänge erklingen nur 
 Für Licht-Füllung und Finale, ebenfalls im Code erzeugt: `synth:fanfare` (aufsteigender Dur-Akkord aus vier
 Glockentönen, wenn die Pyramide voll ist), `synth:launch` (leises Pfeifen der aufsteigenden Rakete) und
 `synth:firework` (Knall mit Knistern; die große Schlussrakete klingt lauter).
+
+## Endless Waterpark
+
+Das eigene Profil `waterpark-water-v1` verwendet den vorhandenen `pyramid-water-loop.wav`
+als ruhigen Hintergrund und dieselben vorhandenen CC0-/Syntheseklänge für Lift, Rutschen,
+Wippe, Sprung, Landung und Dekoration. Wasser und einzelne Ereignisse sind getrennt regelbar;
+es kommt keine Musik hinzu. Die 20-s-Proben beider Formate erreichen im fertigen AAC −24,3 LUFS
+und höchstens −7,0 dBTP. Konfiguration, Messwerte und Grenzen stehen im
+[Wasserpark-Bericht](../../docs/WASSERPARK_UMSETZUNG_2026-11-16.md).

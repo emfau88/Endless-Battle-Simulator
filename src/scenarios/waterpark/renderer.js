@@ -1,0 +1,980 @@
+/* Endless Waterpark renderer: the Endless Pyramid look (sky, light, water, critters, guests, HUD) on the mockup layout.
+ * Static artwork is painted once from art.js. The renderer only reads the simulation; display poses are derived per frame.
+ */
+(function () {
+'use strict';
+const WP = EBS.Waterpark = EBS.Waterpark || {};
+const { clamp, hashSeed, fmtInt } = EBS.util;
+const TAU = Math.PI * 2;
+const { dot, ellipse, line, roundRect } = WP.artUtil;
+const mix = (a, b, k) => a.map((v, i) => Math.round(v + (b[i] - v) * clamp(k, 0, 1)));
+const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+const smooth = u => u * u * (3 - 2 * u);
+
+// Daylight keys after Endless Pyramid: p, multiply tint, warm light, its strength, night 0..1, sun rays 0..1.
+// Day and morning are identical; sunset and dusk are cooler and weaker, because the bright cream palette of the
+// mockup turned bubblegum pink under the magenta tint, and the night light is blue so that foam stays white.
+const DAY_KEYS = [
+  [0.00, [255, 226, 214], [255, 160, 150], 0.30, 0.00, 0.45],
+  [0.10, [255, 246, 238], [255, 190, 160], 0.10, 0.00, 0.85],
+  [0.22, [255, 255, 255], [255, 220, 180], 0.00, 0.00, 1.00],
+  [0.50, [255, 255, 255], [255, 220, 180], 0.00, 0.00, 1.00],
+  [0.62, [255, 228, 188], [255, 170, 80], 0.45, 0.00, 0.75],
+  [0.72, [255, 208, 172], [255, 132, 60], 0.60, 0.05, 0.30],
+  [0.80, [172, 162, 206], [255, 146, 112], 0.30, 0.35, 0.05],
+  [0.88, null, [96, 128, 214], 0.10, 0.90, 0.00],
+  [1.00, null, [96, 128, 214], 0.00, 1.00, 0.00],
+];
+function dayState(p, nightDark) {
+  const night = mix([255, 255, 255], [34, 46, 110], nightDark);
+  let i = 0; while (i < DAY_KEYS.length - 2 && p > DAY_KEYS[i + 1][0]) i++;
+  const a = DAY_KEYS[i], b = DAY_KEYS[i + 1], f = clamp((p - a[0]) / (b[0] - a[0] || 1), 0, 1);
+  const k = j => a[j] + (b[j] - a[j]) * f;
+  return { p, mult: mix(a[1] || night, b[1] || night, f), warm: mix(a[2], b[2], f), warmK: k(3), night: k(4), rays: k(5) };
+}
+/** Short film, as in the Pyramid short: long readable daylight, then one soft transition into bright evening light. */
+function shortDay(phase, nightDark) {
+  const k = smooth(clamp((phase - 0.35) / 0.39, 0, 1));
+  return { p: 0.42 + 0.42 * k, mult: mix([255, 255, 255], [70, 100, 158], nightDark * 0.7 * k),
+    warm: [255, 200, 150], warmK: 0.12 * k, night: 0.55 * k, rays: 1 - 0.7 * k, short: true };
+}
+// Sun rays fan out mostly downwards over the park (angle, half width, alpha)
+const RAYS = [[0.42, 0.06, 0.07], [0.78, 0.05, 0.05], [1.12, 0.08, 0.06], [1.5, 0.05, 0.07], [1.86, 0.07, 0.05], [2.25, 0.05, 0.06], [2.68, 0.06, 0.05], [-0.25, 0.05, 0.04], [3.32, 0.05, 0.04]];
+const COLORS = [[255, 208, 60], [47, 154, 214], [255, 142, 199], [127, 220, 72]];
+const FLAGS = ['#2fc4b2', '#3f8fe0', '#ffb400', '#ff6f8f'];
+const EMOTES = ['♥', '♪', '!', '?', '★', '☺'], EMOTE_COLORS = ['#ff4f7d', '#3f8fe0', '#ff9a1e', '#7a5cf0', '#ffb400', '#43b05a'];
+const CLOUDS = {
+  land: [[-60, 250, 340], [430, 150, 250], [860, 330, 300], [1240, 110, 270], [1590, 270, 360], [150, 70, 210], [1040, 50, 190]],
+  port: [[-80, 470, 320], [560, 560, 300], [720, 380, 250], [-40, 760, 280], [400, 820, 240], [860, 700, 220]],
+};
+const CIRRUS = { land: [[400, 120, 420], [1260, 200, 520]], port: [[300, 420, 380], [-60, 640, 420]] };
+
+class WaterparkRenderer extends EBS.CanvasScene {
+  constructor(ctx) {
+    super(ctx);
+    this.sim = ctx.sim; this.view = ctx.view; this.video = ctx.video; this.L = ctx.sim.L;
+    const L = this.L, A = (this.A = Object.create(L)), sc = this.scale, R = L.R;   // A: render-only additions to the layout
+    this.art = EBS.PyramidArt; this.critters = EBS.CritterArt;
+    this.sprites = this.critters.SPECIES.map((_, i) => this.critters.critterSprite(i, Math.min(2, sc), R));
+    const crng = new EBS.RNG(hashSeed('waterpark-clouds', 3)), fmt = L.land ? 'land' : 'port';
+    this.clouds = CLOUDS[fmt].map(([x, y, w]) => ({ ...this.art.cloudSprite(crng, w, sc), x0: x, y, speed: crng.range(3, 7) }))
+      .concat(CIRRUS[fmt].map(([x, y, w]) => ({ ...this.art.cloudSprite(crng, w, sc), x0: x, y, speed: crng.range(8, 13), thin: true })));
+    // Scenery is independent of the seed, like the Pyramid island.
+    this.skyL = this.layer(g => WP.paintSky(g, A));
+    this.back = this.layer(g => WP.paintBack(g, A, new EBS.RNG(hashSeed('waterpark-back', 7)), this.art));
+    this.struct = this.layer(g => this.paintStruct(g));
+    this.funnelL = this.layer(g => WP.paintFunnel(g, A));
+    const tubes = L.routes.flatMap(r => r.drawSegments.filter(s => s.kind === 'tube'));
+    this.front = this.layer(g => {
+      g.save(); g.beginPath(); g.rect(0, 0, L.W, A.wallTop + 2); g.clip(); for (const s of tubes) WP.paintTubeFront(g, s, R); g.restore();
+      g.globalCompositeOperation = 'destination-out'; WP.funnelCut(g, A); g.globalCompositeOperation = 'source-over';
+      WP.paintFunnelFront(g, A);
+    });
+    this.fore = this.layer(g => WP.paintFore(g, A, new EBS.RNG(hashSeed('waterpark-fore', 7)), this.art));
+    this.refl = this.layer(g => {
+      for (const c of [this.skyL]) g.drawImage(c, 0, 0, L.W, L.H);
+      this.drawClouds(g, 0, 1);
+      for (const c of [this.back, this.struct, this.funnelL]) g.drawImage(c, 0, 0, L.W, L.H);
+    });
+    const f = L.funnel, box = pts => { const xs = pts.map(p => p.x), ys = pts.map(p => p.y), m = R + 22; return { x: Math.min(...xs) - m, y: Math.min(...ys) - m, w: Math.max(...xs) - Math.min(...xs) + 2 * m, h: Math.max(...ys) - Math.min(...ys) + 2 * m }; };
+    this.funnelBox = { x: f.x - f.rx - 20, y: f.y - f.ry - 16, w: f.rx * 2 + 52, h: f.ry * 3.1 + 60 };
+    this.frontBoxes = [{ x: f.x - f.rx - 14, y: f.y, w: f.rx * 2 + 28, h: f.ry + 16 }, ...tubes.map(box)];
+    // Route geometry for the moving water film, the belt loop and the return lane
+    this.routePaths = L.routes.map(r => { const p = new Path2D(); for (const s of r.drawSegments) if (s.kind !== 'deck') s.forEach((q, i) => (i ? p.lineTo(q.x, q.y) : p.moveTo(q.x, q.y))); return p; });
+    // Steep stretches (more than about 30 degrees down) get brighter and faster streaks
+    this.steepPaths = L.routes.map(r => {
+      const p = new Path2D();
+      for (const s of r.drawSegments) {
+        if (s.kind === 'deck') continue;
+        let on = false;
+        for (let i = 1; i < s.length; i++) {
+          const a = s[i - 1], b = s[i], dy = b.y - a.y, len = Math.hypot(b.x - a.x, dy) || 1;
+          if (dy / len > 0.5) { if (!on) p.moveTo(a.x, a.y); p.lineTo(b.x, b.y); on = true; } else on = false;
+        }
+      }
+      return p;
+    });
+    this.caustic = this.causticTile();
+    const E = L.lift, rp = (this.rp = Math.round(R * .7)), bx = (this.bx = E.x - rp);
+    this.belt = new Path2D(); this.belt.moveTo(bx, E.bottom); this.belt.lineTo(bx, E.top); this.belt.arc(bx + rp, E.top, rp, Math.PI, 0);
+    this.belt.lineTo(bx + 2 * rp, E.bottom); this.belt.arc(bx + rp, E.bottom, rp, 0, Math.PI); this.belt.closePath();
+    this.lane = new Path2D(); L.pool.path.points.forEach((q, i) => { if (i % 3 === 0) i ? this.lane.lineTo(q.x, q.y) : this.lane.moveTo(q.x, q.y); });
+    // Night sky: fixed stars where no scenery covers the sky, moon away from HUD and attractions
+    const srng = new EBS.RNG(hashSeed('waterpark-stars', 3)), skyBottom = L.waterY - L.H * (L.land ? 0.33 : 0.25);
+    this.skyBottom = skyBottom;
+    this.stars = this.visibleStars(Array.from({ length: L.land ? 190 : 170 }, () => [srng.range(0, L.W), Math.pow(srng.next(), 1.4) * (skyBottom - 20), srng.range(1.1, 2.8), srng.range(0, TAU)]));
+    this.moon = L.land ? [L.W * 0.765, L.H * 0.09, 44] : [L.W * 0.87, L.H * 0.118, 40];
+    this.moonImg = this.art.moonSprite(sc, this.moon[2]);
+    this.beltPos = 0; this.beltT = null; this.ufoCanvas = null;
+  }
+  /** Seamless tile of light lines (cell edges of a wrapped Voronoi net), flattened for the view onto the lagoon. */
+  causticTile() {
+    const w = 256, h = 128, c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d'), img = g.createImageData(w, h), rng = new EBS.RNG(hashSeed('waterpark-caustic', 5)), pts = [];
+    for (let i = 0; i < 24; i++) pts.push([rng.range(0, w), rng.range(0, h)]);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      let d1 = 1e9, d2 = 1e9;
+      for (const [px, py] of pts) {
+        let dx = Math.abs(x - px), dy = Math.abs(y - py); dx = Math.min(dx, w - dx); dy = Math.min(dy, h - dy) * 2;
+        const d = Math.hypot(dx, dy); if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) d2 = d;
+      }
+      const e = d2 - d1; if (e >= 2.4) continue;
+      const i = (y * w + x) * 4; img.data[i] = img.data[i + 1] = img.data[i + 2] = 255; img.data[i + 3] = Math.round(255 * (1 - e / 2.4));
+    }
+    g.putImageData(img, 0, 0); return c;
+  }
+  /** White foam cap where water lands: bubbling crest, two growing rings and a few drops (a function of t). */
+  foam(g, t, x, y, w, k = 0, amp = 1) {
+    for (let i = 0; i < 2; i++) {
+      const ph = (t * 0.9 + i / 2 + k * 0.29) % 1;
+      g.strokeStyle = `rgba(255,255,255,${(0.75 * (1 - ph) * amp).toFixed(3)})`; g.lineWidth = 2.4;
+      g.beginPath(); g.ellipse(x, y + 5, w * (0.9 + ph * 1.5), 4 + ph * 10, 0, 0, TAU); g.stroke();
+    }
+    ellipse(g, x, y + 3, w * 1.05, 6.5, `rgba(255,255,255,${(0.85 * amp).toFixed(3)})`);
+    g.fillStyle = `rgba(255,255,255,${(0.95 * amp).toFixed(3)})`;
+    for (let j = 0; j < 9; j++) {
+      const bx = x + (j - 4) * w * 0.22 + Math.sin(t * 5 + j + k) * 2, by = y - Math.abs(Math.sin(t * 6 + j * 1.7 + k)) * 5 - (j % 2) * 4;
+      dot(g, bx, by, w * 0.2 * (1 - Math.abs(j - 4) * 0.1));
+    }
+    for (let j = 0; j < 4; j++) dot(g, x + (j - 1.5) * w * 0.3 + Math.sin(t * 4 + j * 2 + k) * 3, y - w * 0.32 - Math.abs(Math.sin(t * 5 + j + k)) * 4, w * 0.15);
+    g.fillStyle = `rgba(240,253,255,${(0.9 * amp).toFixed(3)})`;
+    for (let j = 0; j < 5; j++) {
+      const ph = (t * 1.7 + j / 5 + k * 0.23) % 1, dx = (j - 2) * w * 0.42 * (0.4 + ph);
+      dot(g, x + dx, y - Math.sin(ph * Math.PI) * w * 0.85, 2.6 * (1 - ph * 0.5));
+    }
+  }
+  layer(draw) {
+    const c = document.createElement('canvas'); c.width = Math.round(this.L.W * this.scale); c.height = Math.round(this.L.H * this.scale);
+    const g = c.getContext('2d'); g.scale(this.scale, this.scale); draw(g); return c;
+  }
+  /** Draws a part of a cached full-size layer (much cheaper than the whole canvas). */
+  blit(g, c, b) {
+    const s = this.scale, x = Math.max(0, b.x), y = Math.max(0, b.y), x1 = Math.min(this.L.W, b.x + b.w), y1 = Math.min(this.L.H, b.y + b.h);
+    if (x1 > x && y1 > y) g.drawImage(c, x * s, y * s, (x1 - x) * s, (y1 - y) * s, x, y, x1 - x, y1 - y);
+  }
+  visibleStars(stars) {
+    const s = this.scale, w = this.back.width, h = Math.min(this.back.height, Math.ceil(this.skyBottom * s) + 2);
+    const masks = [this.back, this.struct, this.funnelL].map(c => c.getContext('2d').getImageData(0, 0, w, h).data);
+    return stars.filter(([x, y]) => {
+      const i = (Math.min(h - 1, Math.round(y * s)) * w + Math.min(w - 1, Math.round(x * s))) * 4 + 3;
+      return masks.every(m => m[i] < 8);
+    });
+  }
+  paintStruct(g) {
+    const A = this.A, L = this.L, R = L.R, segs = L.routes.flatMap(r => r.drawSegments.filter(s => s.kind !== 'deck'));
+    WP.paintFrame(g, A);
+    WP.paintTower(g, A);
+    WP.paintDeck(g, A, new EBS.RNG(hashSeed('waterpark-deck', 7)), this.art);
+    for (const s of segs) if (s.kind !== 'tube') WP.paintPathShadow(g, s, WP.troughSize(R).out);
+    for (const s of segs) if (s.kind !== 'tube') WP.paintTrough(g, s, R);
+    g.save(); g.beginPath(); g.rect(0, 0, L.W, A.wallTop + 2); g.clip(); for (const s of segs) if (s.kind === 'tube') WP.paintTube(g, s, R); g.restore();
+    WP.paintBasins(g, A);
+    WP.paintSeesawStand(g, A);
+    WP.paintSpringStand(g, A);
+  }
+  day() {
+    const st = this.sim.story || {}, cfg = this.sim.cfg, p = st.dayPhase ?? 0.35, nd = cfg.nightDark ?? 0.7;
+    return cfg.mode === 'short' ? shortDay(p, nd) : dayState(p, nd);
+  }
+  /** Midday sun high above the deck; in the evening it sinks behind the jungle. */
+  sunAt(day) {
+    const L = this.L, [x0, y0] = L.land ? [L.W * 0.585, L.H * 0.075] : [L.W * 0.80, L.H * 0.125];
+    const f = clamp((day.p - 0.6) / 0.22, 0, 1);
+    return [x0 - (L.land ? L.W * 0.12 : L.W * 0.2) * f, y0 + (L.waterY - L.H * 0.14 - y0) * f * f];
+  }
+
+  paint(g) {
+    const L = this.L, s = this.sim, cfg = s.cfg, t = s.t, vt = s.videoTime ?? s.step / 60;
+    const day = (this.dayState = this.day()), sun = (this.sunPos = this.sunAt(day));
+    g.drawImage(this.skyL, 0, 0, L.W, L.H);
+    this.drawSkyTint(g, day);
+    this.drawSun(g, day, sun);
+    this.drawRays(g, vt, 0.5 * (cfg.rays ?? 0.7) * day.rays * (1 - day.night), sun);
+    this.drawClouds(g, vt, cfg.clouds ?? 0.7);
+    if (cfg.birds && day.night < 0.95) { g.globalAlpha = 1 - day.night; this.drawBirds(g, vt); g.globalAlpha = 1; }
+    this.drawGuests(g, vt, day, false);
+    g.drawImage(this.back, 0, 0, L.W, L.H);
+    this.drawWaterfall(g, vt);
+    if (this.A.wheel) {
+      const w = this.A.wheel, [fx, fy] = this.A.flume;
+      WP.paintWaterwheel(g, this.A, vt * 0.7);
+      this.pour(g, vt, [fx + 4, fy + 2], [w.x + w.r * 0.6, w.y - w.r * 0.35], L.R * 0.75, 7);
+    }
+    this.drawWater(g, vt);
+    g.drawImage(this.struct, 0, 0, L.W, L.H);
+    this.drawFlow(g, vt);
+    this.drawLift(g);
+    this.drawSeesaw(g, vt);
+    this.drawSpring(g, vt);
+    const riders = this.riders();
+    for (const d of riders) if (d.behindFunnel) this.drawRider(g, d);
+    this.blit(g, this.funnelL, this.funnelBox);
+    this.drawSwirl(g, vt);
+    for (const d of riders) if (!d.behindFunnel) this.drawRider(g, d);
+    for (const b of this.frontBoxes) this.blit(g, this.front, b);
+    const swimmers = this.swimmers();
+    this.drawPool(g, swimmers);
+    this.drawSplashes(g, vt);
+    this.drawFish(g, vt);
+    g.drawImage(this.fore, 0, 0, L.W, L.H);
+    // Time of day: tint the whole scene, then everything that keeps its own light
+    this.grade(g, day);
+    this.drawSelfLit(g, day, riders, swimmers);
+    this.drawNight(g, vt, day);
+    this.drawGuests(g, vt, day, true);
+    this.drawEmotes(g, vt);
+    this.drawFinale(g, vt);
+    if (this.view.hud) this.drawHud(g);
+  }
+
+  // ------------------------------------------------------------- sky
+  drawSkyTint(g, day) {
+    const L = this.L, H = this.skyBottom + 2, n = day.night, k = day.warmK * (1 - n);
+    const band = stops => { const gr = g.createLinearGradient(0, 0, 0, H); for (const [q, c, a] of stops) gr.addColorStop(q, rgba(c, Math.min(1, a))); g.fillStyle = gr; g.fillRect(0, 0, L.W, H); };
+    if (k > 0.02) band(day.p < 0.3
+      ? [[0, [120, 150, 230], 0], [0.6, [255, 210, 190], 0.22 * k], [1, [255, 214, 170], 0.7 * k]]
+      : [[0, [58, 26, 120], 0.6 * k], [0.45, [150, 60, 130], 0.3 * k], [0.8, [255, 150, 70], 0.36 * k], [1, [255, 214, 110], 0.6 * k]]);
+    if (n > 0.02) band([[0, [1, 4, 26], 0.72 * n], [0.6, [8, 24, 80], 0.3 * n], [1, [74, 120, 200], 0.42 * n]]);
+  }
+  /** Soft haze, glow, disc and the four-pointed sparkle of the Pyramid apex. */
+  drawSun(g, day, [x, y]) {
+    const L = this.L, k = 1 - day.night; if (k < 0.03) return;
+    const ev = clamp((day.p - 0.6) / 0.2, 0, 1), col = mix([255, 246, 214], [255, 150, 70], ev), r = L.land ? 40 : 38;
+    g.save(); g.globalAlpha = k;
+    const rr = Math.max(L.W, L.H) * 0.55, hz = g.createRadialGradient(x, y, 0, x, y, rr);
+    hz.addColorStop(0, 'rgba(255,255,250,.4)'); hz.addColorStop(0.18, 'rgba(225,240,255,.1)'); hz.addColorStop(1, 'rgba(200,230,255,0)');
+    g.fillStyle = hz; g.fillRect(0, 0, L.W, this.skyBottom + 4);
+    const gr = g.createRadialGradient(x, y, 0, x, y, r * 5);
+    gr.addColorStop(0, rgba(col, 0.8)); gr.addColorStop(0.2, rgba(col, 0.35)); gr.addColorStop(1, rgba(col, 0));
+    g.fillStyle = gr; g.fillRect(x - r * 5, y - r * 5, r * 10, r * 10);
+    g.fillStyle = rgba(mix(col, [255, 255, 255], 0.55), 1); dot(g, x, y, r);
+    g.globalCompositeOperation = 'lighter';
+    for (const [ang, kk] of [[0, 1], [Math.PI / 2, 1], [Math.PI / 4, 0.45], [-Math.PI / 4, 0.45]]) {
+      // Portrait: spikes pointing up stop below the title
+      const len = 230 * kk, back = !L.land && ang ? Math.max(20, Math.min(len, (y - 205) / Math.sin(ang))) : len;
+      g.save(); g.translate(x, y); g.rotate(ang);
+      const sg = g.createLinearGradient(-back, 0, len, 0);
+      sg.addColorStop(0, rgba(col, 0)); sg.addColorStop(back / (back + len), 'rgba(255,255,255,.8)'); sg.addColorStop(1, rgba(col, 0));
+      g.fillStyle = sg; g.beginPath(); g.moveTo(-back, 0); g.lineTo(0, -2.6 * kk); g.lineTo(len, 0); g.lineTo(0, 2.6 * kk); g.closePath(); g.fill(); g.restore();
+    }
+    g.restore();
+  }
+  drawRays(g, t, k, [ax, ay]) {
+    if (k <= 0.01) return;
+    const len = Math.max(this.L.W, this.L.H) * 1.1;
+    RAYS.forEach(([ang, wd, a], i) => {
+      const al = a * k * (0.85 + 0.15 * Math.sin(t * 0.45 + i * 1.7)), gr = g.createRadialGradient(ax, ay, 0, ax, ay, len);
+      gr.addColorStop(0, `rgba(255,255,245,${Math.min(1, al * 2)})`); gr.addColorStop(0.5, `rgba(255,255,245,${al})`); gr.addColorStop(1, 'rgba(255,255,245,0)');
+      g.fillStyle = gr; g.beginPath(); g.moveTo(ax, ay); g.arc(ax, ay, len, ang - wd, ang + wd); g.closePath(); g.fill();
+    });
+  }
+  drawClouds(g, t, k) {
+    const W = this.L.W;
+    for (const c of this.clouds) {
+      const span = W + c.w + 200, x = ((c.x0 + t * c.speed * k + 100 + c.w) % span + span) % span - c.w - 100;
+      if (c.thin) { const a = g.globalAlpha; g.globalAlpha = a * 0.5; g.drawImage(c.c, x, c.y - c.h * 0.16, c.w, c.h * 0.32); g.globalAlpha = a; }
+      else g.drawImage(c.c, x, c.y - c.h / 2, c.w, c.h);
+    }
+  }
+  drawBirds(g, t) {
+    const L = this.L, W = L.W, rows = L.land ? [118, 170, 140, 300, 250] : [420, 520, 690, 600, 780];
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    rows.forEach((y0, i) => {
+      const sp = 34 + i * 6, x = ((t * sp + i * 397) % (W + 200) + W + 200) % (W + 200) - 100, y = y0 + Math.sin(t * 0.6 + i) * 12;
+      const f = Math.sin(t * (7 + i * 0.6) + i * 2), w = 9 + i % 2 * 2, wy = -f * 5;
+      for (const [col, lw] of [['rgba(20,50,100,.35)', 3.4], ['rgba(255,255,255,.95)', 2]]) {
+        g.strokeStyle = col; g.lineWidth = lw;
+        g.beginPath(); g.moveTo(x - w, y + wy); g.quadraticCurveTo(x - w * 0.4, y - 3, x, y + 1); g.quadraticCurveTo(x + w * 0.4, y - 3, x + w, y + wy); g.stroke();
+      }
+    });
+  }
+
+  // ------------------------------------------------------------- water
+  drawWaterfall(g, t) {
+    const f = this.A.waterfall; if (!f) return;
+    const L = this.L, x0 = f.x - f.w / 2, y0 = f.top, y1 = L.waterY, wv = this.sim.cfg.waves ?? 0.7;
+    const gr = g.createLinearGradient(x0, 0, x0 + f.w, 0);
+    gr.addColorStop(0, 'rgba(206,250,248,.92)'); gr.addColorStop(0.35, 'rgba(84,206,222,.9)'); gr.addColorStop(0.7, 'rgba(60,186,212,.9)'); gr.addColorStop(1, 'rgba(232,255,255,.92)');
+    g.fillStyle = gr; g.beginPath(); g.moveTo(x0 + 4, y0); g.lineTo(x0 + f.w - 4, y0); g.lineTo(x0 + f.w + 6, y1); g.lineTo(x0 - 6, y1); g.closePath(); g.fill();
+    g.save(); g.clip(); g.lineCap = 'round';
+    for (let i = 0; i < 7; i++) {
+      g.strokeStyle = `rgba(255,255,255,${0.35 + (i % 3) * 0.12})`; g.lineWidth = 2 + (i % 2);
+      g.setLineDash([26 + i * 5, 34 + i * 3]); g.lineDashOffset = -t * (230 + i * 25);
+      const xx = x0 + 5 + i * (f.w - 10) / 6; g.beginPath(); g.moveTo(xx, y0); g.lineTo(xx + (i - 3) * 1.6, y1); g.stroke();
+    }
+    g.restore(); g.setLineDash([]);
+    for (let k = 0; k < 5; k++) {
+      const ph = (t * 0.8 + k / 5) % 1;
+      ellipse(g, f.x + (k - 2) * f.w * 0.22, y1 + 4 - ph * 6, f.w * (0.24 + 0.1 * Math.sin(t * 3 + k)) * (1 - ph * 0.4), 7 + Math.sin(t * 4 + k) * 2 * wv, `rgba(255,255,255,${0.75 - ph * 0.5})`);
+    }
+    this.foam(g, t, f.x, y1, f.w * 0.62, 4);
+  }
+  drawWater(g, t) {
+    const L = this.L, R = L.R, cfg = this.sim.cfg, W = L.W, H = L.H, y0 = L.waterY, ls = this.scale, hW = H - y0, wv = cfg.waves ?? 0.7;
+    let gr = g.createLinearGradient(0, y0, 0, H);
+    gr.addColorStop(0, '#58e0e5'); gr.addColorStop(0.35, '#33d4de'); gr.addColorStop(1, '#16c6d8');
+    g.fillStyle = gr; g.fillRect(0, y0, W, hW);
+    if (cfg.reflection > 0.01) {
+      // Mirror image at most 25 % strong, fading out before the front third of the lagoon
+      for (let y = y0; y < H; y += 3) {
+        const d = y - y0, sy = y0 - d - 3, fade = 1 - d / (hW * 0.7); if (sy < 0 || fade <= 0) break;
+        g.globalAlpha = 0.25 * fade * Math.min(1, cfg.reflection / 0.6);
+        const wob = (Math.sin(y * 0.13 + t * 2.2) * (1.2 + d * 0.02) + Math.sin(y * 0.041 - t * 1.4) * 2) * wv;
+        g.drawImage(this.refl, 0, sy * ls, W * ls, 3 * ls, wob, y, W, 3.3);
+      }
+      g.globalAlpha = 1;
+    }
+    gr = g.createLinearGradient(0, y0, 0, H);
+    gr.addColorStop(0, 'rgba(90,228,234,.22)'); gr.addColorStop(0.5, 'rgba(36,206,220,.16)'); gr.addColorStop(1, 'rgba(16,184,208,.24)');
+    g.fillStyle = gr; g.fillRect(0, y0, W, hW);
+    // Light net on the lagoon floor: two drifting layers, the larger one only in the front part
+    if (this.patCtx !== g) { this.patCtx = g; this.causticPat = g.createPattern(this.caustic, 'repeat'); }
+    const net = 1 - 0.6 * (this.dayState?.night ?? 0), pat = this.causticPat;
+    g.save(); g.fillStyle = pat;
+    pat.setTransform(new DOMMatrix([1, 0, 0, 1, (t * 9) % 256, y0 + (t * 4) % 128]));
+    g.globalAlpha = 0.11 * net; g.fillRect(0, y0 + 4, W, hW);
+    pat.setTransform(new DOMMatrix([1.4, 0, 0, 1.4, -(t * 7) % 358, y0 + (t * 3) % 179]));
+    [[0.4, 0.03], [0.55, 0.05], [0.72, 0.08]].forEach(([u, a], i, arr) => {
+      const ya = y0 + hW * u, yb = i + 1 < arr.length ? y0 + hW * arr[i + 1][0] : H;
+      g.globalAlpha = a * net; g.fillRect(0, ya, W, yb - ya);
+    });
+    g.restore();
+    g.globalCompositeOperation = 'lighter';
+    // Twinkling four-point stars
+    const nStar = L.land ? 12 : 9;
+    for (let i = 0; i < nStar; i++) {
+      const hx = Math.abs((Math.sin(i * 91.17 + 3.1) * 43758.5453) % 1), hy = Math.abs((Math.sin(i * 17.31 + 1.7) * 24634.634) % 1);
+      const tw = Math.pow(Math.max(0, Math.sin(t * 1.7 + i * 2.39)), 6); if (tw < 0.05) continue;
+      const x = hx * W, y = y0 + 14 + hy * (hW - 30), u = (y - y0) / hW, s = (5 + (i % 3) * 3) * (0.6 + 0.5 * u) * tw;
+      g.globalAlpha = Math.min(1, tw * 0.95 * Math.min(1.2, (cfg.sparkle ?? 0.55) * 1.6)); g.fillStyle = '#ffffff';
+      g.beginPath(); g.moveTo(x - s * 2.2, y); g.lineTo(x, y - s * 0.28); g.lineTo(x + s * 2.2, y); g.lineTo(x, y + s * 0.28); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(x, y - s * 1.6); g.lineTo(x + s * 0.24, y); g.lineTo(x, y + s * 1.6); g.lineTo(x - s * 0.24, y); g.closePath(); g.fill();
+      dot(g, x, y, s * 0.3);
+    }
+    const nSpark = Math.round(90 * Math.min(2, cfg.sparkle ?? 0.55));
+    for (let i = 0; i < nSpark; i++) {
+      const hx = (Math.sin(i * 12.9898) * 43758.5453) % 1, hy = (Math.sin(i * 78.233) * 12543.123) % 1;
+      const x = Math.abs(hx) * W + Math.sin(t * 0.4 + i) * 6, y = y0 + 6 + Math.pow(Math.abs(hy), 1.6) * (hW - 10);
+      const a = Math.pow(Math.max(0, Math.sin(t * 2.6 + i * 1.93)), 14); if (a < 0.05) continue;
+      g.globalAlpha = Math.min(1, a * 0.9 * Math.min(1, cfg.sparkle ?? 0.55)); g.fillStyle = '#ffffff';
+      const sz = 1 + (i % 3); g.fillRect(x - sz * 2, y - 0.5, sz * 4, 1); g.fillRect(x - 0.5, y - sz, 1, sz * 2);
+    }
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2;
+    g.beginPath(); for (let x = 0; x <= W; x += 8) { const y = y0 + 4 + Math.sin(x * 0.05 + t * 2) * 1.3 * wv; x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+    // Fine ripples in the front part of the lagoon, larger towards the viewer
+    g.lineCap = 'round';
+    for (let i = 0; i < (L.land ? 56 : 44); i++) {
+      const hx = Math.abs((Math.sin(i * 45.13 + 0.7) * 31718.927) % 1), hy = Math.abs((Math.sin(i * 7.77 + 2.3) * 15731.743) % 1);
+      const u = 0.08 + 0.9 * hy, y = y0 + hW * u, len = 6 + 30 * u * (0.6 + 0.4 * ((i * 7) % 5) / 4), x = hx * W + Math.sin(t * 0.5 + i) * 10 * wv;
+      g.lineWidth = 1.5 + 1.2 * u; g.strokeStyle = `rgba(255,255,255,${((0.32 + 0.38 * u) * (0.6 + 0.4 * Math.sin(t * 1.3 + i))).toFixed(3)})`;
+      g.beginPath(); g.moveTo(x - len, y); g.quadraticCurveTo(x, y - 1.5 - 2 * u, x + len, y); g.stroke();
+    }
+    // Return current: a faint lane with drifting dashes
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    g.strokeStyle = 'rgba(190,250,255,.08)'; g.lineWidth = 2 * R + 14; g.stroke(this.lane);
+    g.setLineDash([10, 26]); g.lineDashOffset = -t * 80 * (cfg.current || 1); g.strokeStyle = 'rgba(255,255,255,.22)'; g.lineWidth = 2; g.stroke(this.lane); g.setLineDash([]);
+  }
+
+  // ------------------------------------------------------------- attractions
+  /** Water film on open slides, dry closed slides with a barrier, foam at the outlets. */
+  drawFlow(g, t) {
+    const L = this.L, R = L.R, cfg = this.sim.cfg, open = this.sim.story?.openRoutes || [true, true, true, true];
+    const { wf, wo } = WP.troughWater(R), rs = cfg.rollSpeed || 1;
+    g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
+    L.routes.forEach((r, i) => {
+      const P = this.routePaths[i];
+      if (!open[i]) {
+        g.save(); g.translate(0.5, wo); g.strokeStyle = WP.ART_COLORS.innerWall; g.lineWidth = wf + 5; g.stroke(P); g.restore();
+        const [x] = r.launch, y = L.deck.y;
+        for (const sx of [-1, 1]) { line(g, [[x + sx * R * 0.9, y], [x + sx * R * 0.9, y - 36]], 5, '#7a5332'); ellipse(g, x + sx * R * 0.9, y - 37, 4, 4, '#f4d79a'); }
+        g.setLineDash([9, 9]); line(g, [[x - R * 0.9, y - 30], [x + R * 0.9, y - 30]], 5, '#ffffff'); g.lineDashOffset = 9; line(g, [[x - R * 0.9, y - 30], [x + R * 0.9, y - 30]], 5, '#e8484f'); g.setLineDash([]); g.lineDashOffset = 0;
+        return;
+      }
+      g.save(); g.translate(0, wo);
+      g.setLineDash([18, 46, 6, 70]); g.lineDashOffset = -t * 95 * rs - i * 37; g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 2.4; g.stroke(P);
+      g.translate(0, -wf * 0.3); g.setLineDash([10, 64, 4, 50]); g.lineDashOffset = -t * 125 * rs - i * 53; g.strokeStyle = 'rgba(235,255,255,.55)'; g.lineWidth = 1.8; g.stroke(P);
+      g.restore();
+      g.save(); g.translate(0, wo - wf * 0.12);                       // steep stretches: brighter and faster
+      g.setLineDash([30, 40]); g.lineDashOffset = -t * 210 * rs - i * 29; g.strokeStyle = 'rgba(255,255,255,.72)'; g.lineWidth = 3; g.stroke(this.steepPaths[i]);
+      g.translate(0, wf * 0.3); g.setLineDash([14, 52]); g.lineDashOffset = -t * 250 * rs - i * 41; g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.stroke(this.steepPaths[i]);
+      g.restore(); g.setLineDash([]);
+      if (i < 3) { const [ex, ey] = r.end; this.foam(g, t, ex, ey + 2, R * 1.2, i); }   // outlet into the lagoon
+    });
+    for (const b of this.A.basins || []) {
+      g.save(); g.beginPath(); g.rect(b.i0 + 2, b.lip - 4, b.iw - 4, b.face - b.lip + 6); g.clip();
+      g.setLineDash([12, 16]); g.lineDashOffset = -t * 160;
+      for (let k = 1; k < 5; k++) { const x = b.i0 + b.iw * k / 5; line(g, [[x, b.lip - 4], [x + (k - 2.5) * 1.5, b.face + 2]], 2.2, 'rgba(255,255,255,.7)'); }
+      g.restore(); g.setLineDash([]);
+    }
+    g.restore();
+    this.drawFlags(g, t, open);
+  }
+  /** A pennant on a pole marks every slide start on the deck; grey while the attraction is still closed. */
+  drawFlags(g, t, open) {
+    const L = this.L, R = L.R, y = L.deck.y;
+    L.routes.forEach((r, i) => {
+      const side = r.launch[0] < L.origin[0] ? -1 : 1, x = r.launch[0] + side * R * 1.55, top = y - 92, w = 34, wav = Math.sin(t * 4 + i * 1.3);
+      line(g, [[x, y], [x, top]], 6, WP.ART_COLORS.woodDark); line(g, [[x - 1, y], [x - 1, top]], 2.5, WP.ART_COLORS.woodLight); ellipse(g, x, top - 2, 4, 4, '#f2cf5b');
+      g.fillStyle = open[i] ? FLAGS[i] : '#b9b3a6'; g.strokeStyle = 'rgba(60,40,30,.6)'; g.lineWidth = 1.5; g.lineJoin = 'round';
+      g.beginPath(); g.moveTo(x, top + 1); g.quadraticCurveTo(x + side * w * 0.5, top + 4 + wav * 3, x + side * w, top + 12 + wav * 4);
+      g.quadraticCurveTo(x + side * w * 0.5, top + 17 + wav * 2, x, top + 24); g.closePath(); g.fill(); g.stroke();
+    });
+  }
+  drawSwirl(g, t) {
+    if (this.sim.story?.openRoutes?.[1] === false) return;
+    const f = this.L.funnel, wr = f.rx - 12, wry = f.ry - 7;
+    g.save(); g.beginPath(); g.ellipse(f.x, f.y + 1, wr, wry, 0, 0, TAU); g.clip(); g.lineCap = 'round';
+    for (let j = 0; j < 5; j++) {
+      const k = 0.24 + j * 0.17, a = t * 1.7 * (1.5 - k) + j * 1.9;
+      g.strokeStyle = `rgba(255,255,255,${0.6 - j * 0.07})`; g.lineWidth = 2.6 - j * 0.25;
+      g.beginPath(); g.ellipse(f.x, f.y + wry * 0.22 * (1 - k), wr * k, wry * k, 0, a, a + 1.2); g.stroke();
+    }
+    g.restore();
+  }
+  drawLift(g) {
+    const L = this.L, R = L.R, E = L.lift, x = E.x, cfg = this.sim.cfg, T = this.A.tower, st = this.sim.t, rp = this.rp, bx = this.bx;
+    // The belt runs while a passenger moves (render-side only; the simulation is untouched)
+    if (this.beltT == null || st < this.beltT) { this.beltT = st; this.beltPos = 0; }
+    if (this.sim.animals.some(b => b.state === 'lift' && b.v > 1)) this.beltPos += (st - this.beltT) * 180 * (cfg.beltSpeed || 1);
+    this.beltT = st;
+    g.fillStyle = 'rgba(6,40,70,.14)'; g.fillRect(x - rp - 16, E.top - rp - 10, 2 * rp + 32, E.bottom - E.top + 2 * rp + 20);
+    // Chain loop with two gears; the metal cups hang on it and carry the animals
+    g.lineJoin = 'round'; g.lineCap = 'round';
+    g.strokeStyle = '#33434b'; g.lineWidth = 7; g.stroke(this.belt);
+    g.setLineDash([5, 6]); g.lineDashOffset = -this.beltPos; g.strokeStyle = '#b8c6cc'; g.lineWidth = 3; g.stroke(this.belt); g.setLineDash([]);
+    for (const yc of [E.top, E.bottom]) {
+      const gr0 = rp + 7, a0 = -this.beltPos / rp;
+      g.fillStyle = '#7f9099'; g.beginPath();
+      for (let k = 0; k < 24; k++) { const a = a0 + k * TAU / 24, rr = k % 2 ? gr0 : gr0 - 5; k ? g.lineTo(x + Math.cos(a) * rr, yc + Math.sin(a) * rr) : g.moveTo(x + Math.cos(a) * rr, yc + Math.sin(a) * rr); }
+      g.closePath(); g.fill(); g.strokeStyle = '#3d4f58'; g.lineWidth = 2.2; g.stroke();
+      ellipse(g, x, yc, gr0 - 8, gr0 - 8, '#c3cfd5'); g.strokeStyle = '#5d6f78'; g.lineWidth = 3;
+      for (let i = 0; i < 5; i++) { const a = a0 + i * TAU / 5; g.beginPath(); g.moveTo(x, yc); g.lineTo(x + Math.cos(a) * (gr0 - 9), yc + Math.sin(a) * (gr0 - 9)); g.stroke(); }
+      ellipse(g, x, yc, 6, 6, '#3d4f58'); ellipse(g, x - 1.5, yc - 1.5, 2, 2, '#e8f0f6');
+    }
+    const riders = this.sim.animals.filter(b => b.state === 'lift');
+    for (const b of riders) { const q = this.sim.pose(b); this.drawCup(g, q.x, q.y, false); }
+    for (const b of riders) { const q = this.sim.pose(b); this.drawCritterAt(g, b, { x: q.x, y: q.y, ang: 0, mode: 'lift', speed: 0, look: [0, -1] }); }
+    for (const b of riders) { const q = this.sim.pose(b); this.drawCup(g, q.x, q.y, true); }
+    // Lower shaft stands in the lagoon
+    const y0 = L.waterY, y1 = T.bottom + 22;
+    const gr = g.createLinearGradient(0, y0, 0, y1); gr.addColorStop(0, 'rgba(40,200,218,.5)'); gr.addColorStop(1, 'rgba(18,150,190,.66)');
+    g.fillStyle = gr; g.fillRect(T.x - T.hw - 12, y0, 2 * T.hw + 24, y1 - y0);
+    g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.beginPath(); g.ellipse(x, y0 + 4, T.hw + 16, 6, 0, 0, TAU); g.stroke();
+    WP.paintTowerFront(g, this.A);
+  }
+  /** Metal cup of the lift: back rim before the animal, front shell after it (its edge covers the belly). */
+  drawCup(g, x, y, front) {
+    const R = this.L.R, y0 = y + R * 0.52, y1 = y + R * 1.32, tw = R * 1.18, bw = R * 0.84, rr = R * 0.26;
+    if (!front) { ellipse(g, x, y0, tw + 2.5, rr + 2.5, '#3d4f58'); ellipse(g, x, y0, tw, rr, '#6c7f8a'); return; }
+    g.lineJoin = 'round';
+    const gr = g.createLinearGradient(x - tw, 0, x + tw, 0); gr.addColorStop(0, '#dfe8ef'); gr.addColorStop(.45, '#a5bacb'); gr.addColorStop(1, '#7d93a4');
+    g.fillStyle = gr; g.beginPath(); g.moveTo(x - tw, y0); g.ellipse(x, y0, tw, rr, 0, Math.PI, 0, true); g.lineTo(x + bw, y1); g.quadraticCurveTo(x, y1 + rr * 0.7, x - bw, y1); g.closePath(); g.fill();
+    g.strokeStyle = '#3d4f58'; g.lineWidth = 2.5; g.stroke();
+    g.strokeStyle = '#e8f0f6'; g.lineWidth = 3; g.beginPath(); g.ellipse(x, y0 + 1, tw - 2, rr - 1, 0, 0.15, Math.PI - 0.15); g.stroke();
+    g.strokeStyle = 'rgba(61,79,88,.45)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x - (tw + bw) / 2, (y0 + y1) / 2 + 4); g.quadraticCurveTo(x, (y0 + y1) / 2 + rr + 4, x + (tw + bw) / 2, (y0 + y1) / 2 + 4); g.stroke();
+  }
+  /** Tilting board. The feed slide pours onto its entry end, the exit end pours into the catch chute (mockup hand-overs). */
+  drawSeesaw(g, t) {
+    const L = this.L, R = L.R, f = L.seesaw, d = f.dir || 1, phi = (this.sim.seesawAngle || 0) * d, half = f.length / 2;
+    const open = this.sim.story?.openRoutes?.[2] !== false, at = lx => [f.x + Math.cos(phi) * lx, f.y + Math.sin(phi) * lx];
+    g.save(); g.translate(f.x, f.y); g.rotate(phi); WP.paintBoard(g, half, R, open);
+    if (open) {                                                               // water running towards the lower end
+      const k = clamp((this.sim.seesawAngle || 0) / f.maxAngle, -1, 1), wo = WP.boardSize(R).wm, hl = half - 12;
+      g.lineCap = 'round'; g.setLineDash([16, 42, 6, 54]);
+      g.lineDashOffset = -t * 110; line(g, [[-d * hl, wo], [d * hl, wo]], 2.4, `rgba(255,255,255,${(.5 * clamp(.55 + .45 * k, 0, 1)).toFixed(3)})`);
+      g.lineDashOffset = -t * 110; line(g, [[d * hl, wo], [-d * hl, wo]], 2.4, `rgba(255,255,255,${(.5 * clamp(-k, 0, 1)).toFixed(3)})`);
+      g.setLineDash([]);
+    }
+    g.restore();
+    WP.paintSeesawWheel(g, this.A, phi);
+    if (!open) return;
+    const [sx, sy] = f.spout, entry = at(-d * half), exit = at(d * half);
+    this.pour(g, t, [sx, sy + R * 0.85], entry, R, 0);
+    g.save(); g.globalAlpha = clamp(.55 + .45 * (this.sim.seesawAngle || 0) / f.maxAngle, .2, 1);
+    this.pour(g, t, [exit[0] + d * R * 0.6, exit[1] + 4], f.catchTop, R, 1); g.restore();
+  }
+  /** Short water curtain from a slide end down into the next trough, with a foam ring where it lands. */
+  pour(g, t, [ax, ay], [bx, by], R, k) {
+    const w = R * 0.62;
+    g.save(); g.lineCap = 'round';
+    const gr = g.createLinearGradient(0, ay, 0, by); gr.addColorStop(0, 'rgba(232,252,255,.8)'); gr.addColorStop(1, 'rgba(150,228,246,.5)');
+    g.fillStyle = gr; g.beginPath(); g.moveTo(ax - w * 0.75, ay); g.lineTo(ax + w * 0.75, ay); g.lineTo(bx + w, by); g.lineTo(bx - w, by); g.closePath(); g.fill();
+    g.setLineDash([9, 15]); g.lineDashOffset = -t * 170 - k * 11; g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 2;
+    for (const u of [-0.55, 0, 0.55]) { g.beginPath(); g.moveTo(ax + u * w * 0.75, ay); g.lineTo(bx + u * w, by); g.stroke(); }
+    g.setLineDash([]);
+    this.foam(g, t, bx, by - 2, w * 0.95, k + 5, 0.9);
+    g.restore();
+  }
+  drawSpring(g, t) {
+    const L = this.L, R = L.R, j = L.jump;
+    const launch = [...(this.sim.recent || [])].reverse().find(e => e.type === 'spring'), age = launch ? t - launch.t : 99;
+    const rebound = age >= 0 && age < 1.1 ? -Math.sin(age * 14) * Math.exp(-age * 3.8) * 8 : 0;
+    const loaded = this.sim.animals.some(b => b.state === 'route' && b.route === 3 && b.s < j.entryS && j.entryS - b.s < 40);
+    const by = j.y + R + (loaded ? 6 : rebound), base = j.y + R + 36, coil = [];
+    const side = j.landing[0] < j.x ? -1 : 1, cx = j.x + 8 * side;        // the board reaches out towards the landing
+    for (let i = 0; i <= 10; i++) coil.push([cx - 2 * side + (i % 2 ? 15 : -15), by + 10 + i * (base - by - 10) / 10]);
+    line(g, coil, 7, '#3d4f58'); line(g, coil, 4, '#b3c0c8'); line(g, coil, 1.5, '#eef3f6', -1, -1);
+    roundRect(g, cx - 61, by - 4, 122, 18, 8, '#6f5638'); roundRect(g, cx - 58, by - 2, 116, 13, 6, '#f7e332');
+    line(g, [[cx - 50, by + 1], [cx + 50, by + 1]], 3, '#fffbc0'); line(g, [[cx - 52, by + 9], [cx + 52, by + 9]], 2.5, 'rgba(170,130,20,.55)');
+  }
+
+  // ------------------------------------------------------------- animals
+  /** Display pose: walking on the deck, sitting on flat slides, arms up on steep ones, dizzy in the funnel. */
+  display(b) {
+    const L = this.L, q = this.sim.pose(b);
+    const d = { b, x: q.x, y: q.y, ang: q.angle || 0, mode: q.mode, speed: q.speed || 0, look: q.look || [1, 0], part: null, tilt: 0, behindFunnel: false, spray: 0 };
+    if (b.state !== 'route' || q.mode === 'pool') return d;
+    const r = L.routes[b.route], p = WP.samplePath(r.path, b.s); d.part = p.kind;
+    if (p.kind === 'deck') { d.mode = 'roll'; d.ang = 0; d.y -= Math.abs(Math.sin(b.s / L.R * 1.2)) * 3; d.speed = Math.min(d.speed, 200); }
+    else if (p.kind === 'funnel') { d.mode = 'roll'; d.speed = 420; }
+    else if (p.kind === 'seesaw') { d.mode = 'lift'; d.tilt = q.angle; d.ang = q.angle; }
+    else if (p.kind === 'drop') { d.mode = 'fall'; d.tilt = 0; d.ang = 0; }       // short plop onto / off the seesaw
+    else if (p.kind !== 'flight') {
+      const incl = p.tx >= 0 ? Math.atan2(p.ty, p.tx) : Math.atan2(-p.ty, -p.tx);
+      d.tilt = incl; d.ang = clamp(incl * 0.55, -0.55, 0.55); d.mode = Math.abs(p.ty) > 0.62 ? 'fall' : 'lift';
+      const n = WP.samplePath(r.path, Math.min(r.path.length, b.s + L.R * 2)), turn = Math.abs(Math.atan2(p.tx * n.ty - p.ty * n.tx, p.tx * n.tx + p.ty * n.ty));
+      d.spray = clamp(Math.max((p.ty - 0.35) / 0.5, turn / 0.5), 0, 1);
+    }
+    return d;
+  }
+  riders() {
+    const out = [];
+    for (const b of this.sim.animals) if (b.state === 'platform' || b.state === 'route') { const d = this.display(b); if (d.mode !== 'pool') out.push(d); }
+    return out.sort((a, b) => a.y - b.y);
+  }
+  swimmers() {
+    const out = [], t = this.sim.t, wv = this.sim.cfg.waves ?? 0.7, L = this.L, edge = L.waterY + L.R, span = L.H - edge;
+    for (const b of this.sim.animals) {
+      if (b.state !== 'pool' && b.state !== 'gather' && b.state !== 'route') continue;
+      const d = this.display(b); if (d.mode !== 'pool') continue;
+      d.y += Math.sin(t * 2.4 + b.id * 1.7) * 2.2 * wv; d.ang = 0;
+      d.k = 1 + 0.2 * clamp((d.y - edge) / span, 0, 1);   // slight perspective only: at ×1.45 the front swimmers read as giants
+      out.push(d);
+    }
+    return out.sort((a, b) => a.y - b.y);
+  }
+  mood(b) {
+    const d = this.dayState, cfg = this.sim.cfg, st = this.sim.story || {};
+    if (st.show && b.state === 'gather') return { cheer: true, cap: !!(cfg.sleepy && d.p > 0.8) };
+    const t = this.sim.t, share = b.state === 'pool' ? 0.3 : b.state === 'platform' ? 0.2 : 0, waves = share > 0 && (t * 0.21 + b.id * 0.618) % 1 < share;
+    if (!cfg.sleepy || !d) return waves ? { cheer: true } : null;
+    const p = d.p, per = 6 + (b.id % 4) * 1.3, ph = (t + b.id * 1.37) % per;
+    const yawn = p > 0.66 && p < 0.9 && ph < 1.4 ? Math.sin(Math.PI * ph / 1.4) : 0;
+    const m = { yawn, cap: p > 0.8 || p < 0.03, sleep: (p > 0.84 || p < 0.02) && b.state === 'gather' };
+    if (waves && !m.cap && !m.sleep && yawn === 0) m.cheer = true;
+    return m;
+  }
+  drawCritterAt(g, b, d) {
+    this.critters.drawCritter(g, this.sprites[b.kind], b.kind, b.id, d.x, d.y, d.ang, d.mode, this.sim.t, d.speed, d.look, this.sim.cfg.wiggle ?? 1, this.L.R, this.mood(b));
+  }
+  drawRider(g, d) {
+    this.drawCritterAt(g, d.b, d);
+    if (!d.part || d.part === 'deck' || d.part === 'flight') return;
+    // Sits in the water film: lower body under water, foam crest and a little spray behind
+    const R = this.L.R, t = this.sim.t, back = d.look[0] < 0 ? 1 : -1;
+    g.save(); g.translate(d.x, d.y); g.rotate(d.tilt);
+    g.save(); g.beginPath(); g.rect(-R * 1.8, R * 0.4, R * 3.6, R * 1.4); g.clip();
+    g.fillStyle = 'rgba(38,182,214,.55)'; g.beginPath(); g.arc(0, 0, R + 1, 0, TAU); g.fill(); g.restore();
+    g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 2.4; g.lineCap = 'round';
+    g.beginPath(); for (let k = 0; k <= 10; k++) { const u = -1.1 + k * 0.22, y = R * 0.42 + Math.sin(t * 9 + k * 1.3) * 1.4; k ? g.lineTo(u * R, y) : g.moveTo(u * R, y); } g.stroke();
+    if (d.part !== 'funnel') {
+      g.fillStyle = 'rgba(240,253,255,.9)';
+      for (let k = 0; k < 5; k++) { const ph = (t * 3.2 + k / 5) % 1; dot(g, back * R * (0.9 + ph * 0.9), R * 0.35 - Math.sin(ph * Math.PI) * R * 0.55 - k % 2 * 3, 2.6 * (1 - ph * 0.5)); }
+      if (d.spray > 0.05) {                                          // spray fans out to both sides on steep parts and in bends
+        const n = 4 + Math.round(4 * d.spray), id = d.b.id;
+        g.fillStyle = `rgba(255,255,255,${(0.55 + 0.4 * d.spray).toFixed(3)})`;
+        for (let k = 0; k < n; k++) {
+          const ph = (t * 2.6 + k / n + id * 0.13) % 1, side = k % 2 ? 1 : -1, h = R * (0.55 + 0.25 * (k % 3)) * (0.6 + 0.4 * d.spray);
+          dot(g, side * R * (0.7 + ph * 1.2), R * 0.3 - Math.sin(ph * Math.PI) * h, 3 * (1 - ph * 0.6));
+        }
+      }
+    }
+    g.restore();
+  }
+  drawPool(g, swimmers) {
+    const L = this.L, R = L.R, t = this.sim.t, wv = this.sim.cfg.waves ?? 0.7;
+    for (const d of swimmers) {
+      const { b } = d, x = 0, y = 0;
+      g.save(); g.translate(d.x, d.y); g.scale(d.k, d.k);
+      g.lineWidth = 2.6; g.strokeStyle = 'rgba(255,255,255,.85)';
+      g.beginPath(); g.ellipse(x, y + R * 0.62, R * 0.92, R * 0.2, 0, 0, TAU); g.stroke();   // bright collar at the waterline
+      g.lineWidth = 3;
+      for (let k = 0; k < 2; k++) {
+        const ph = (t * 0.55 + b.id * 0.37 + k / 2) % 1;
+        g.strokeStyle = `rgba(255,255,255,${(0.8 * (1 - ph) ** 1.3).toFixed(3)})`;
+        g.beginPath(); g.ellipse(x, y + R * 0.62, R * (1.05 + ph * 1.0) + Math.sin(t * 3 + b.id) * wv, R * (0.26 + ph * 0.28), 0, 0, TAU); g.stroke();
+      }
+      this.drawCritterAt(g, b, { ...d, x, y });
+      this.waterBand(g, b, t);
+      const m = this.mood(b);
+      if (m && m.sleep) {
+        g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+        for (let i = 0; i < 3; i++) {
+          const f = (t * 0.5 + b.id * 0.31 + i / 3) % 1;
+          g.globalAlpha = Math.sin(Math.PI * f) * 0.9; g.font = `700 ${Math.round(R * (0.55 + f * 0.5))}px Bahnschrift, "Segoe UI", Arial`;
+          g.fillText('z', x + R * 0.7 + f * R * 0.9 + Math.sin(f * 6 + b.id) * 3, y - R * 1.1 - f * R * 1.8);
+        }
+        g.globalAlpha = 1;
+      }
+      g.restore();
+    }
+  }
+  /** Half-submerged look in the swimmer's own frame: water over the lower third with a moving wavy edge and a bright line on it. */
+  waterBand(g, b, t) {
+    const R = this.L.R, top = u => R * 0.54 + Math.sin(u * 4.5 + t * 3.2 + b.id) * R * 0.05;
+    g.save(); g.beginPath(); g.moveTo(-R * 2, R * 1.6);
+    for (let i = 0; i <= 16; i++) { const u = -2 + i * 0.25; g.lineTo(u * R, top(u)); }
+    g.lineTo(R * 2, R * 1.6); g.closePath(); g.clip();
+    g.beginPath(); g.arc(0, 0, R + 0.5, 0, TAU); g.fillStyle = 'rgba(28,186,206,.58)'; g.fill(); g.restore();
+    g.strokeStyle = 'rgba(255,255,255,.88)'; g.lineWidth = 2.2; g.lineCap = 'round';
+    g.beginPath(); for (let i = 0; i <= 12; i++) { const u = -0.82 + i * 0.1367; i ? g.lineTo(u * R, top(u)) : g.moveTo(u * R, top(u)); } g.stroke();
+  }
+  drawSplashes(g, t) {
+    for (const e of this.sim.recent || []) {
+      if (e.type !== 'splash') continue;
+      const a = t - e.t; if (a < 0 || a > 1.6) continue;
+      const st = clamp((e.p || 1) * 0.85, 0.45, 1.3);
+      for (let i = 0; i < 3; i++) {
+        const aa = a - i * 0.18; if (aa <= 0) continue;
+        g.strokeStyle = `rgba(255,255,255,${0.7 * Math.max(0, 1 - aa / 1.2)})`; g.lineWidth = 2;
+        g.beginPath(); g.ellipse(e.x, e.y + 8, 10 + aa * 90, 3 + aa * 26, 0, 0, TAU); g.stroke();
+      }
+      if (a < 0.9) this.foam(g, t, e.x, e.y + 4, 22 * st, e.seq, 1 - a / 0.9);
+      const rng = new EBS.RNG(e.seq * 7919 + 13);
+      g.fillStyle = 'rgba(235,252,255,.95)';
+      for (let i = 0; i < 16; i++) {
+        const vx = rng.range(-130, 130) * st, vy = -rng.range(160, 330) * st, x = e.x + vx * a, y = e.y + vy * a + 450 * a * a, r = rng.range(1.4, 3.4);
+        if (y <= e.y + 6) dot(g, x, y, r);
+      }
+    }
+  }
+  drawSelfLit(g, day, riders, swimmers) {
+    const a = clamp(day.warmK * 0.7 + day.night * 0.85, 0, 0.9) * 0.7; if (a < 0.03) return;
+    const L = this.L, R = L.R;
+    g.globalAlpha = a * 0.6;
+    for (const b of this.sim.animals) if (b.state === 'lift') {
+      const q = this.sim.pose(b); if (q.y > L.waterY) continue;
+      g.save(); g.beginPath(); g.rect(q.x - R * 2, q.y - R * 3, R * 4, R * 3.52); g.clip();
+      this.drawCritterAt(g, b, { x: q.x, y: q.y, ang: 0, mode: 'lift', speed: 0, look: [0, -1] }); g.restore();
+    }
+    g.globalAlpha = a;
+    for (const d of riders) this.drawCritterAt(g, d.b, d);
+    for (const d of swimmers) { g.save(); g.translate(d.x, d.y); g.scale(d.k, d.k); g.beginPath(); g.rect(-R * 2, -R * 3, R * 4, R * 3.33); g.clip(); this.drawCritterAt(g, d.b, { ...d, x: 0, y: 0 }); g.restore(); }
+    g.globalAlpha = 1;
+  }
+
+  // ------------------------------------------------------------- light
+  grade(g, day) {
+    const L = this.L, m = day.mult, shore = L.waterY;
+    if (m[0] + m[1] + m[2] < 762) { g.globalCompositeOperation = 'multiply'; g.fillStyle = `rgb(${m[0]},${m[1]},${m[2]})`; g.fillRect(-20, -20, L.W + 40, L.H + 40); }
+    if (day.night > 0.02) {   // the lagoon stays a deep turquoise at night instead of sinking into navy
+      const tg = g.createLinearGradient(0, shore, 0, L.H); tg.addColorStop(0, `rgba(0,170,176,${(0.3 * day.night).toFixed(3)})`); tg.addColorStop(1, `rgba(0,132,150,${(0.2 * day.night).toFixed(3)})`);
+      g.globalCompositeOperation = 'screen'; g.fillStyle = tg; g.fillRect(-20, shore, L.W + 40, L.H - shore + 20);
+    }
+    if (day.warmK > 0.01) {
+      const sp = day.short ? [L.W / 2, L.horizon] : this.sunPos;
+      g.globalCompositeOperation = 'screen';
+      let gr = g.createLinearGradient(0, 0, 0, L.horizon);
+      gr.addColorStop(0, rgba(day.warm, 0)); gr.addColorStop(0.55, rgba(day.warm, Math.min(1, 0.18 * day.warmK))); gr.addColorStop(1, rgba(day.warm, Math.min(1, 0.55 * day.warmK)));
+      g.fillStyle = gr; g.fillRect(-20, -20, L.W + 40, L.horizon + 20);
+      gr = g.createLinearGradient(0, L.horizon, 0, shore);
+      gr.addColorStop(0, rgba(day.warm, Math.min(1, 0.55 * day.warmK))); gr.addColorStop(1, rgba(day.warm, Math.min(1, 0.4 * day.warmK)));
+      g.fillStyle = gr; g.fillRect(-20, L.horizon, L.W + 40, shore - L.horizon);
+      gr = g.createLinearGradient(0, shore, 0, L.H);
+      gr.addColorStop(0, rgba(day.warm, Math.min(1, 0.4 * day.warmK))); gr.addColorStop(1, rgba(day.warm, 0));
+      g.fillStyle = gr; g.fillRect(-20, shore, L.W + 40, L.H - shore + 20);
+      for (const [x, y, a] of [[sp[0], sp[1], 1], [sp[0], 2 * shore - sp[1], 0.6]]) {
+        const rr = Math.max(L.W, L.H) * 0.85, rg = g.createRadialGradient(x, y, 0, x, y, rr);
+        rg.addColorStop(0, rgba(day.warm, Math.min(1, 0.6 * day.warmK * a))); rg.addColorStop(0.5, rgba(day.warm, Math.min(1, 0.2 * day.warmK * a))); rg.addColorStop(1, rgba(day.warm, 0));
+        g.fillStyle = rg; g.fillRect(-20, -20, L.W + 40, L.H + 40);
+      }
+    }
+    g.globalCompositeOperation = 'source-over';
+  }
+  glow(g, x, y, r, col, a) {
+    if (a <= 0.005) return;
+    const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, rgba(col, Math.min(1, a))); gr.addColorStop(0.35, rgba(col, Math.min(1, a * 0.35))); gr.addColorStop(1, rgba(col, 0));
+    g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  /** Stars and moon, moon glitter, lamps, festoon lights on the deck, tower light, pool lights and fireflies. */
+  drawNight(g, t, day) {
+    const L = this.L, n = day.night, cfg = this.sim.cfg, A = this.A, lit = clamp(n * 1.3 + day.warmK * 0.2, 0, 1);
+    if (lit < 0.02) return;
+    g.globalCompositeOperation = 'lighter';
+    if (cfg.stars && n > 0.02) {
+      for (const [x, y, r, ph] of this.stars) { g.globalAlpha = n * (0.55 + 0.45 * Math.sin(t * 1.7 + ph)); g.fillStyle = '#fffbe8'; g.fillRect(x - r / 2, y - r / 2, r, r); }
+      const [mx, my0, mr] = this.moon, my = my0 + (1 - n) * mr * 1.5;
+      const halo = g.createRadialGradient(mx, my, mr * 0.6, mx, my, mr * 5);
+      halo.addColorStop(0, `rgba(190,212,255,${0.4 * n})`); halo.addColorStop(0.35, `rgba(150,180,255,${0.13 * n})`); halo.addColorStop(1, 'rgba(150,180,255,0)');
+      g.globalAlpha = 1; g.fillStyle = halo; g.fillRect(mx - mr * 5, my - mr * 5, mr * 10, mr * 10);
+      g.globalAlpha = Math.min(1, n * 1.15); g.globalCompositeOperation = 'source-over';
+      g.drawImage(this.moonImg.c, mx - this.moonImg.r, my - this.moonImg.r, this.moonImg.r * 2, this.moonImg.r * 2);
+      g.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 26; i++) {
+        const y = L.waterY + 8 + i * (L.H - L.waterY - 8) / 26, w = 6 + i * 1.6, a = Math.max(0, Math.sin(t * 2.3 + i * 1.9));
+        g.globalAlpha = n * 0.5 * a; g.fillStyle = '#fff2c8'; g.fillRect(mx - w / 2 + Math.sin(t + i) * 6 * (cfg.waves ?? 0.7), y, w, 1.6);
+      }
+    }
+    g.globalAlpha = 1;
+    for (const [x, ground] of A.lamps || []) { const [lx, ly] = WP.lampPos(x, ground); this.glow(g, lx, ly, 90, [255, 214, 140], lit * 0.55); this.glow(g, lx, ly, 18, [255, 246, 214], lit * 0.9); }
+    const dk = A.deck, railY = dk.y - L.R * 1.45 - 6;
+    for (let x = dk.x0 + 20, k = 0; x < dk.x1 - 10; x += 46, k++) {
+      const c = COLORS[k % 4], a = lit * (0.7 + 0.3 * Math.sin(t * 2 + k * 1.3));
+      this.glow(g, x, railY + Math.sin(k * 1.7) * 3, 16, c, a * 0.55); g.fillStyle = rgba(mix(c, [255, 255, 255], 0.5), Math.min(1, a)); dot(g, x, railY + Math.sin(k * 1.7) * 3, 2.6);
+    }
+    const T = A.tower;
+    if (T) {
+      const cy = (T.top + A.deck.y) / 2; this.glow(g, T.x, cy, T.hw * 2.6, [140, 225, 245], lit * 0.35);
+      this.glow(g, T.apex[0], T.apex[1] - 4, 70, [255, 220, 140], lit * 0.6);
+    }
+    for (let i = 0; i < 6; i++) { const x = L.W * (0.08 + i * 0.168), y = L.waterY + 34; this.glow(g, x, y, 80, [110, 240, 225], lit * 0.3); g.fillStyle = `rgba(200,255,245,${lit * 0.8})`; dot(g, x, y, 2.5); }
+    if (cfg.fireflies && n > 0.2) for (let i = 0; i < 16; i++) {
+      const x = ((i * 0.754) % 1) * L.W + Math.sin(t * 0.7 + i) * 14, y = (A.wallTop || L.waterY) - 40 - Math.abs(Math.sin(t * 0.35 + i * 1.9)) * 70, a = n * (0.25 + 0.65 * Math.sin(t + i * 3) ** 2);
+      this.glow(g, x, y, 12, [211, 249, 135], a * 0.6); g.fillStyle = `rgba(230,255,160,${a})`; dot(g, x, y, 1.6);
+    }
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  }
+
+  // ------------------------------------------------------------- guests
+  drawGuests(g, t, day, lit) {
+    const cfg = this.sim.cfg;
+    for (const e of this.sim.decorations || []) {
+      const tau = t - e.start, D = e.duration || 8; if (tau < 0 || tau > D || cfg[e.type] === false) continue;
+      if (!lit) { if (e.type === 'balloon') this.drawBalloon(g, e, tau / D, tau); else if (e.type === 'birds') this.drawFlock(g, e, tau / D, t); }
+      else if (e.type === 'ufo') this.drawUfoBehind(g, e, tau, t);
+      else if (e.type === 'shootingStars') this.drawShooting(g, e, tau);
+    }
+  }
+  guestY() { return this.L.land ? this.L.H * 0.12 : this.L.H * 0.27; }
+  drawBalloon(g, e, u, tau) {
+    const L = this.L, side = (e.seed & 1) ? 1 : -1, x = side < 0 ? -90 + (L.W + 180) * u : L.W + 90 - (L.W + 180) * u, y = this.guestY() + Math.sin(tau * 0.8) * 6, col = COLORS[e.seed % 4];
+    g.save(); g.translate(x, y); if (!L.land) g.scale(1.15, 1.15);
+    g.strokeStyle = '#6b4a2a'; g.lineWidth = 1.5; for (const dx of [-9, 9]) { g.beginPath(); g.moveTo(dx * 1.4, 38); g.lineTo(dx, 58); g.stroke(); }
+    g.fillStyle = '#8a5a2b'; g.beginPath(); g.roundRect(-11, 57, 22, 15, 3); g.fill(); g.fillStyle = '#6b4520'; g.fillRect(-11, 57, 22, 3);
+    const hull = () => { g.beginPath(); g.moveTo(0, 46); g.bezierCurveTo(-54, 12, -46, -54, 0, -54); g.bezierCurveTo(46, -54, 54, 12, 0, 46); g.closePath(); };
+    g.save(); hull(); g.clip();
+    for (let k = -4; k < 4; k++) { g.fillStyle = rgba(k % 2 ? col : [255, 252, 240], 1); g.fillRect(k * 14, -58, 14, 108); }
+    const sh = g.createRadialGradient(-16, -24, 4, 0, -6, 62);
+    sh.addColorStop(0, 'rgba(255,255,255,.4)'); sh.addColorStop(0.5, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(40,20,60,.3)');
+    g.fillStyle = sh; g.fillRect(-60, -60, 120, 112); g.restore();
+    g.strokeStyle = 'rgba(60,40,40,.45)'; g.lineWidth = 1.5; hull(); g.stroke();
+    g.restore();
+  }
+  drawFlock(g, e, u, t) {
+    const L = this.L, dir = (e.seed & 2) ? 1 : -1, x0 = dir > 0 ? -160 + (L.W + 320) * u : L.W + 160 - (L.W + 320) * u, y0 = this.guestY() + (L.land ? 40 : 60);
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    for (let k = 0; k < 7; k++) {
+      const row = Math.ceil(k / 2), sg = k % 2 ? 1 : -1, x = x0 - dir * row * 26, y = y0 + sg * row * 13 + Math.sin(t * 0.9 + k) * 4;
+      const f = Math.sin(t * 8.5 + k * 1.7), w = 10, wy = -f * 5.5;
+      for (const [col, lw] of [['rgba(20,50,100,.35)', 3.4], ['rgba(255,255,255,.95)', 2]]) {
+        g.strokeStyle = col; g.lineWidth = lw;
+        g.beginPath(); g.moveTo(x - w, y + wy); g.quadraticCurveTo(x - w * 0.4, y - 3, x, y + 1); g.quadraticCurveTo(x + w * 0.4, y - 3, x + w, y + wy); g.stroke();
+      }
+    }
+  }
+  /** UFO visit: glides in, hovers with a light cone, leaves upwards on the other side. */
+  ufoPose(e, tau) {
+    const L = this.L, rng = new EBS.RNG(e.seed), side = rng.next() < 0.5 ? -1 : 1, D = e.duration || 9;
+    const a = [side < 0 ? -150 : L.W + 150, this.guestY() + rng.range(-30, 40)], h = [L.W * rng.range(0.42, 0.62), this.guestY() + rng.range(-10, 30)], z = [side < 0 ? L.W + 170 : -170, this.guestY() - 160];
+    const u = tau / D;
+    if (u < 0.3) { const f = smooth(u / 0.3); return { x: a[0] + (h[0] - a[0]) * f, y: a[1] + (h[1] - a[1]) * f, tilt: (h[0] - a[0]) / 900 * Math.sin(Math.PI * f) * 0.35, beam: 0 }; }
+    if (u < 0.65) { const q = (u - 0.3) * D; return { x: h[0] + Math.sin(q * 5) * 4, y: h[1] + Math.cos(q * 3.3) * 5, tilt: Math.sin(q * 3) * 0.06, beam: clamp(Math.min((u - 0.34) / 0.05, (0.62 - u) / 0.05), 0, 1) }; }
+    const f = smooth((u - 0.65) / 0.35);
+    return { x: h[0] + (z[0] - h[0]) * f, y: h[1] + (z[1] - h[1]) * f, tilt: clamp((z[0] - h[0]) / 900, -0.35, 0.35) * Math.sin(Math.PI * f), beam: 0 };
+  }
+  /** Drawn after grading so it stays bright at night, but cut out behind the jungle, the deck, the tower and the slides. */
+  drawUfoBehind(g, e, tau, t) {
+    const L = this.L, s = this.scale, P = this.ufoPose(e, tau), bw = 300, bh = 520, bx = P.x - bw / 2, by = P.y - 100;
+    if (!this.ufoCanvas) { this.ufoCanvas = document.createElement('canvas'); this.ufoCanvas.width = Math.ceil(bw * s); this.ufoCanvas.height = Math.ceil(bh * s); }
+    const C = this.ufoCanvas, cg = C.getContext('2d');
+    cg.setTransform(1, 0, 0, 1, 0, 0); cg.globalCompositeOperation = 'source-over'; cg.globalAlpha = 1; cg.clearRect(0, 0, C.width, C.height);
+    cg.setTransform(s, 0, 0, s, -bx * s, -by * s);
+    this.drawUfo(cg, P, t);
+    cg.globalCompositeOperation = 'destination-out';
+    for (const c of [this.back, this.struct]) this.blit(cg, c, { x: bx, y: by, w: bw, h: bh });
+    this.blit(cg, this.funnelL, this.funnelBox);
+    g.drawImage(C, bx, by, bw, bh);
+  }
+  drawUfo(g, P, t) {
+    g.save(); g.translate(P.x, P.y); { const k = this.L.land ? 1.3 : 1.45; g.scale(k, k); }
+    if (P.beam > 0) {
+      const cone = g.createLinearGradient(0, 10, 0, 340);
+      cone.addColorStop(0, `rgba(190,255,225,${0.3 * P.beam})`); cone.addColorStop(1, 'rgba(190,255,225,0)');
+      g.globalCompositeOperation = 'lighter'; g.fillStyle = cone;
+      g.beginPath(); g.moveTo(-15, 12); g.lineTo(15, 12); g.lineTo(95, 340); g.lineTo(-95, 340); g.closePath(); g.fill();
+      g.globalCompositeOperation = 'source-over';
+    }
+    g.rotate(P.tilt);
+    g.globalCompositeOperation = 'lighter';
+    const gl = g.createRadialGradient(0, 8, 2, 0, 8, 70); gl.addColorStop(0, 'rgba(150,255,225,.2)'); gl.addColorStop(1, 'rgba(150,255,225,0)');
+    g.fillStyle = gl; g.beginPath(); g.arc(0, 8, 70, 0, TAU); g.fill();
+    g.globalCompositeOperation = 'source-over';
+    const dome = g.createLinearGradient(0, -30, 0, 0); dome.addColorStop(0, 'rgba(215,250,255,.95)'); dome.addColorStop(1, 'rgba(120,205,235,.9)');
+    g.fillStyle = dome; g.beginPath(); g.arc(0, -4, 22, Math.PI, 0); g.closePath(); g.fill();
+    g.fillStyle = '#6fe06a'; g.beginPath(); g.ellipse(0, -10, 8, 9, 0, 0, TAU); g.fill();
+    g.fillStyle = '#16301a'; for (const dx of [-3.4, 3.4]) { g.beginPath(); g.ellipse(dx, -11, 2.3, 3.2, dx * 0.08, 0, TAU); g.fill(); }
+    g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 1.6; g.beginPath(); g.arc(0, -4, 19, Math.PI * 1.12, Math.PI * 1.45); g.stroke();
+    const body = g.createLinearGradient(0, -12, 0, 14); body.addColorStop(0, '#f4f7fa'); body.addColorStop(0.55, '#aab6c1'); body.addColorStop(1, '#68767f');
+    g.fillStyle = '#56636d'; g.beginPath(); g.ellipse(0, 7, 34, 9, 0, 0, TAU); g.fill();
+    g.fillStyle = body; g.beginPath(); g.ellipse(0, 0, 48, 13, 0, 0, TAU); g.fill();
+    g.strokeStyle = 'rgba(40,52,64,.55)'; g.lineWidth = 1.4; g.stroke();
+    for (let k = 0; k < 6; k++) {
+      const lx = -35 + k * 14, ly = 3 + (1 - Math.pow((k - 2.5) / 2.5, 2)) * 5, c = COLORS[(k + Math.floor(t * 6)) % 4];
+      g.globalCompositeOperation = 'lighter'; g.fillStyle = rgba(c, 0.22); dot(g, lx, ly, 6.5);
+      g.globalCompositeOperation = 'source-over'; g.fillStyle = rgba(mix(c, [255, 255, 255], 0.35), 1); dot(g, lx, ly, 3);
+    }
+    g.restore();
+  }
+  drawShooting(g, e, tau) {
+    const L = this.L, rng = new EBS.RNG(e.seed);
+    g.save(); g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
+    for (let k = 0; k < 2; k++) {
+      const at = k * rng.range(0.6, 1.1), x0 = rng.range(L.W * 0.1, L.W * 0.9), y0 = rng.range(L.H * 0.04, this.skyBottom * 0.6), ang = rng.range(0.45, 1.0), len = rng.range(170, 300), dir = rng.next() < 0.5 ? -1 : 1;
+      const a = tau - at; if (a < 0 || a > 0.8) continue;
+      const f = a / 0.8, dx = Math.cos(ang) * dir, dy = Math.sin(ang), hx = x0 + dx * len * f, hy = y0 + dy * len * f, kk = Math.sin(Math.PI * f);
+      const gr = g.createLinearGradient(hx, hy, hx - dx * 130, hy - dy * 130);
+      gr.addColorStop(0, `rgba(255,255,240,${0.95 * kk})`); gr.addColorStop(1, 'rgba(200,220,255,0)');
+      g.strokeStyle = gr; g.lineWidth = 2.6; g.beginPath(); g.moveTo(hx, hy); g.lineTo(hx - dx * 130, hy - dy * 130); g.stroke();
+      this.glow(g, hx, hy, 9, [255, 250, 235], kk);
+    }
+    g.restore();
+  }
+  /** A fish leaps out of the lagoon: arc with rings where it leaves and where it dives back in. */
+  drawFish(g, t) {
+    const L = this.L, D = 0.85;
+    for (const e of this.sim.decorations || []) {
+      if (e.type !== 'fish' || this.sim.cfg.fish === false) continue;
+      const a = t - e.start; if (a < 0 || a > D + 0.65) continue;
+      const rng = new EBS.RNG(e.seed), dir = rng.next() < 0.5 ? -1 : 1, h = rng.range(46, 84), w = rng.range(60, 110), big = rng.range(0.85, 1.2), c = rng.int(0, 2);
+      const fx = e.x ?? L.W * 0.2, fy = e.y ?? L.H * 0.89;
+      g.save(); g.strokeStyle = 'rgba(255,255,255,.65)'; g.lineWidth = 1.6;
+      for (const [ux, t0] of [[-0.5, 0], [0.5, D]]) {
+        const r = a - t0; if (r < 0 || r > 0.65) continue;
+        g.globalAlpha = 1 - r / 0.65; g.beginPath(); g.ellipse(fx + dir * w * ux, fy + 3, 8 + r * 46, 2.5 + r * 12, 0, 0, TAU); g.stroke();
+      }
+      const u = a / D;
+      if (u <= 1) {
+        const sc = big * (L.land ? 1 : 1.15), col = [['#ff9a3c', '#ffd9a0'], ['#ff6f8f', '#ffd0dc'], ['#8fd0e6', '#eafaff']][c];
+        g.globalAlpha = 1; g.translate(fx + dir * w * (u - 0.5), fy - h * 4 * u * (1 - u)); g.scale(dir * sc, sc); g.rotate(Math.atan2(-h * 4 * (1 - 2 * u), w));
+        g.fillStyle = col[0]; g.strokeStyle = 'rgba(60,30,10,.6)'; g.lineWidth = 1.2; g.lineJoin = 'round';
+        g.beginPath(); g.moveTo(-9, 0); g.lineTo(-19, -7); g.lineTo(-19, 7); g.closePath(); g.fill(); g.stroke();
+        g.beginPath(); g.ellipse(0, 0, 13, 6.5, 0, 0, TAU); g.fill(); g.stroke();
+        g.fillStyle = col[1]; g.beginPath(); g.ellipse(1, 2.2, 9, 3, 0, 0, TAU); g.fill();
+        g.fillStyle = '#1d1424'; dot(g, 7, -1.5, 1.5);
+      }
+      g.restore();
+    }
+  }
+  /** Speech bubble above a critter; drawn after grading so it stays bright at night. */
+  drawEmotes(g, t) {
+    if (this.sim.cfg.emotes === false) return;
+    const R = this.L.R;
+    for (const e of this.sim.decorations || []) {
+      if (e.type !== 'emote') continue;
+      const a = t - e.start, D = e.duration || 2, b = this.sim.animals[e.id]; if (a < 0 || a > D || !b) continue;
+      const q = this.display(b), sym = e.seed % EMOTES.length, k = Math.min(1, a / 0.12) * (a < 0.25 ? 1 + 0.25 * Math.sin(Math.PI * a / 0.25) : 1) * R / 15;
+      g.save(); g.globalAlpha = Math.min(1, (D - a) / 0.3); g.translate(q.x + R * 1.45, q.y - R * 2.4 - Math.sin(a * 3) * 2); g.scale(k, k);
+      g.fillStyle = '#ffffff'; g.strokeStyle = 'rgba(42,31,51,.85)'; g.lineJoin = 'round'; g.lineWidth = 4.4;
+      g.beginPath(); g.roundRect(-17, -19, 34, 30, 10); g.moveTo(-10, 9); g.lineTo(-16, 22); g.lineTo(0, 9); g.closePath(); g.stroke(); g.fill();
+      g.fillStyle = EMOTE_COLORS[sym]; g.font = '700 21px "Segoe UI Symbol", "Segoe UI Emoji", Bahnschrift, Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(EMOTES[sym], 0, -3);
+      g.restore();
+    }
+  }
+  /** Small fountain show and optional fireworks at the end of a park day. */
+  drawFinale(g, t) {
+    const st = this.sim.story || {}, cfg = this.sim.cfg, L = this.L;
+    if (st.show && cfg.mode !== 'relax') {
+      const age = t - st.finaleAt;
+      if (age >= 0 && age < 8) {
+        const alpha = Math.min(1, age) * Math.min(1, 8 - age);
+        g.save(); g.globalAlpha = alpha; g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
+        for (let j = 0; j < 5; j++) {
+          // Light colour changes every two seconds, neighbours offset; height pulses
+          const x = L.W * (0.18 + j * 0.16), y = L.waterY + 40 + (j % 2) * 30, h = (L.land ? 120 : 190) * (0.75 + 0.25 * Math.sin(age * 1.6 + j));
+          const col = COLORS[(j + Math.floor(age / 2)) % 4], lit = c => rgba(c.map(v => Math.round(v * .55 + 255 * .45)), 1);
+          this.glow(g, x, y + 6, 90, col, 0.42);                       // lit water around the nozzle
+          this.glow(g, x, y + 70, 60, col, 0.18);                      // its reflection
+          // Centre jet with a spray crown
+          const top = y - h * 1.5, jg = g.createLinearGradient(0, y, 0, top);
+          jg.addColorStop(0, rgba(col, 0.75)); jg.addColorStop(0.6, 'rgba(225,250,255,.7)'); jg.addColorStop(1, 'rgba(255,255,255,.15)');
+          g.fillStyle = jg; g.beginPath(); g.moveTo(x - 7, y); g.lineTo(x - 2.5, top); g.lineTo(x + 2.5, top); g.lineTo(x + 7, y); g.closePath(); g.fill();
+          // Three arcs per side: wide coloured glow, white core
+          for (const d of [-1, 1]) for (let k = 0; k < 3; k++) {
+            const hk = h * (2 - k * 0.32), wk = 30 + k * 20;
+            g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + d * wk * 0.35, y - hk, x + d * wk, y);
+            g.strokeStyle = rgba(col, 0.3); g.lineWidth = 9 - k * 2; g.stroke();
+            g.strokeStyle = lit(col); g.globalAlpha = alpha * 0.55; g.lineWidth = 2.2; g.stroke(); g.globalAlpha = alpha;
+          }
+          // Falling droplets along the arcs and from the crown
+          g.fillStyle = 'rgba(240,253,255,.9)';
+          for (let i = 0; i < 12; i++) {
+            const f = (age * 0.8 + i / 12) % 1, k = i % 3, d = (i >> 1) % 2 ? 1 : -1, wk = 30 + k * 20, hk = h * (2 - k * 0.32);
+            const bx = x + d * wk * (2 * f * (1 - f) * 0.35 + f * f), by = y - hk * 2 * f * (1 - f);   // point on the quadratic arc
+            dot(g, bx, by, 2.2 - f);
+          }
+          for (let i = 0; i < 6; i++) { const f = (age * 1.1 + i / 6) % 1; dot(g, x + (i - 2.5) * 6 * f, top + f * f * h * 0.9, 1.8); }
+        }
+        g.restore();
+      }
+    }
+    if (cfg.fireworks) for (const e of this.sim.decorations || []) {
+      if (e.type !== 'firework') continue;
+      const a = t - e.start; if (a < 0 || a > 2.5) continue;
+      const x = e.x ?? L.W * 0.5, y = e.y ?? L.H * 0.16, c = COLORS[(e.seed >>> 3) % 4], k = Math.max(0, 1 - a / 2.5);
+      g.save(); g.globalCompositeOperation = 'lighter';
+      this.glow(g, x, y + a * a * 10, 140 * Math.min(1, a * 3), c, 0.4 * k);
+      // Outer shell in the burst colour, inner shell warm white; tapered trails with bright heads, sagging with gravity
+      for (const [n, rr, sc, tw] of [[30, 150, c, 1], [16, 82, [255, 240, 200], 0.8]]) for (let i = 0; i < n; i++) {
+        const ang = (i + (n === 16 ? 0.5 : 0)) / n * TAU, r = (1 - Math.exp(-a * 2.4)) * rr, trail = 10 + 30 * Math.exp(-a * 1.5);
+        const px = x + Math.cos(ang) * r, py = y + Math.sin(ang) * r + a * a * 16, qx = px - Math.cos(ang) * trail, qy = py - Math.sin(ang) * trail - a * 6;
+        const tg = g.createLinearGradient(qx, qy, px, py); tg.addColorStop(0, rgba(sc, 0)); tg.addColorStop(1, rgba(sc, k * tw));
+        g.strokeStyle = tg; g.lineWidth = 2.6; g.beginPath(); g.moveTo(qx, qy); g.lineTo(px, py); g.stroke();
+        g.fillStyle = rgba([255, 252, 236], k * (0.6 + 0.4 * Math.sin(a * 20 + i))); dot(g, px, py, 2.4);
+      }
+      g.restore();
+    }
+  }
+
+  // ------------------------------------------------------------- HUD (Endless Pyramid style)
+  drawHud(g) {
+    const L = this.L, st = this.sim.story || {}, cfg = this.sim.cfg, land = L.land;
+    const font = (w, s) => `${w} ${s}px Bahnschrift, "Segoe UI", Arial, sans-serif`;
+    // Everything visible in a video is English (channel rule); the simulator's controls stay German.
+    const sub = { short: 'FOUR FRIENDS · ONE WATERPARK', day: 'A DAY AT THE WATERPARK', relax: 'SLIDE. SPLASH. REPEAT.' }[cfg.mode] || '';
+    g.save();
+    const sh = land ? 240 : 400, scrim = g.createLinearGradient(0, 0, 0, sh);
+    scrim.addColorStop(0, `rgba(5,30,90,${land ? 0.1 : 0.2})`); scrim.addColorStop(0.65, `rgba(5,30,90,${land ? 0.05 : 0.09})`); scrim.addColorStop(1, 'rgba(5,20,62,0)');
+    g.fillStyle = scrim; g.fillRect(0, 0, L.W, sh);
+    g.shadowColor = 'rgba(0,25,70,.45)'; g.shadowBlur = 14; g.textBaseline = 'middle'; g.fillStyle = '#ffffff';
+    const rides = fmtInt(this.sim.rides || 0), banner = (st.closing && cfg.mode !== 'short') || st.finished;
+    if (land) {
+      g.letterSpacing = '4px'; g.textAlign = 'left'; g.font = font(700, 48); g.fillText('ENDLESS WATERPARK', 60, 76);
+      g.letterSpacing = '3px'; g.font = font(600, 20); g.fillStyle = '#d7ecff'; g.fillText(sub, 62, 124);
+      if (cfg.mode !== 'short') {
+        g.textAlign = 'right'; g.fillText('RIDES', L.W - 60, 64);
+        g.letterSpacing = '1px'; g.font = font(700, 48); g.fillStyle = '#ffd25a'; g.fillText(rides, L.W - 60, 108);
+      }
+    } else {
+      g.letterSpacing = '5px'; g.textAlign = 'center'; g.font = font(700, 62); g.fillText('ENDLESS WATERPARK', L.W / 2, 108);
+      g.letterSpacing = '3px'; g.font = font(600, 25); g.fillStyle = '#d7ecff'; if (!banner) g.fillText(sub, L.W / 2, 172);
+      if (cfg.mode !== 'short') {   // left of the tower roof, which now stands on the centre axis
+        g.textAlign = 'left'; g.letterSpacing = '2px'; g.font = font(600, 22); g.fillText('RIDES', 60, 214);
+        g.letterSpacing = '1px'; g.font = font(700, 40); g.fillStyle = '#ffd25a'; g.fillText(rides, 60, 256);
+      }
+    }
+    if (banner) {   // landscape: centred in the gap between title and moon; portrait: replaces the subtitle line, clear of the tower roof
+      const text = st.finished ? (cfg.ending === 'show' ? 'WHAT A DAY!' : 'GOOD NIGHT, LITTLE FRIENDS') : 'LAST RIDES OF THE DAY';
+      g.textAlign = 'center'; g.letterSpacing = '4px'; g.font = font(700, land ? 32 : 36); g.fillStyle = '#fff3c4';
+      g.shadowColor = 'rgba(255,170,40,.85)'; g.shadowBlur = 20; g.fillText(text, land ? L.W * .545 : L.W / 2, land ? 66 : 172);
+    }
+    g.restore();
+  }
+  destroy() {
+    for (const c of [this.skyL, this.back, this.struct, this.funnelL, this.front, this.fore, this.refl, this.moonImg.c, ...(this.ufoCanvas ? [this.ufoCanvas] : []), ...this.clouds.map(c => c.c), ...this.sprites.map(s => s.c)]) c.width = c.height = 1;
+    super.destroy();
+  }
+}
+WP.Renderer = WaterparkRenderer;
+})();

@@ -49,6 +49,52 @@ test('Kurzer Standard: ohne gespeicherte Einstellungen 45 Sekunden', async (t) =
   assert.deepEqual(errors, []);
 });
 
+test('Pyramiden-Mischung: genaue Vorgaben, eigene Pegel, Wasserregler, Rücksetzen und CLI bleiben konsistent', async t => {
+  const { page, errors } = await live(t, '?paused=1');
+  const expected = { master: 70, scoop: 110, pulse: 55.25, tip: 110, cap: 100, splash: 110,
+    boing: 100, wheee: 55, squeak: 110, full: 100, launch: 100, firework: 100,
+    emote: 110, fish: 110, ufo: 110, twinkle: 110, chirp: 110, water: 100 };
+  const volume = () => page.evaluate(() => EBS.app.cfg.video.volume);
+  assert.deepEqual(await page.evaluate(() => EBS.normalizeConfig({ scenario: 'pyramid' }).video.volume), expected);
+  const overrides = await page.evaluate(() => EBS.normalizeConfig({ scenario: 'pyramid',
+    video: { volume: { master: 0, pulse: 55.25, water: 250, wheee: -1, unknown: 30 } } }).video.volume);
+  assert.deepEqual(overrides, { ...expected, master: 0, water: 200, wheee: 0 });
+  assert.equal(await page.evaluate(() => EBS.normalizeConfig({ video: { volume: { hit: 155.4 } } }).video.volume.hit), 155,
+    'andere Szenarien behalten ihre bisherige Rundung');
+  await page.selectOption('#scenario', 'pyramid');
+  assert.deepEqual(await volume(), expected, 'Szenariowechsel lädt die Pyramiden-Mischung');
+  assert.equal(await page.inputValue('#vol-pulse'), '55.25', 'Regler darf den freigegebenen Pegel nicht runden');
+  assert.equal(await page.inputValue('#vol-water'), '100');
+  assert.match(await page.textContent('#audioHint'), /durchgehendem Wasserloop/);
+  assert.doesNotMatch(await page.textContent('#audioHint'), /−14 LUFS/);
+  for (const [key, value] of [['pulse', 100], ['water', 45]]) {
+    await page.fill('#vol-' + key, String(value)); await page.dispatchEvent('#vol-' + key, 'input');
+  }
+  const customized = { ...expected, pulse: 100, water: 45 };
+  await page.reload(); await ready(page);
+  assert.deepEqual(await volume(), customized, 'gespeicherte eigene Pegel bleiben erhalten');
+  await page.click('#btnExport');
+  assert.match(await page.textContent('#exportMsg'), /--volume pulse=100/,
+    '100 % darf bei einer abweichenden Vorgabe nicht aus dem CLI-Befehl verschwinden');
+  assert.match(await page.textContent('#exportMsg'), /--volume water=45/);
+  const [download] = await Promise.all([page.waitForEvent('download'), page.click('#btnSaveCfg')]);
+  await page.click('#btnVolumeReset');
+  assert.deepEqual(await volume(), expected, 'Rücksetzen lädt die freigegebene Mischung');
+  await page.setInputFiles('#cfgFile', await download.path());
+  await page.waitForFunction(() => EBS.app.cfg.video.volume.water === 45);
+  assert.deepEqual(await volume(), customized, 'gespeicherte Datei bewahrt explizite Pegel');
+  await page.click('#btnShortPreset');
+  assert.deepEqual(await volume(), expected, 'Produktionsvorlage lädt die freigegebene Mischung');
+  await page.goto(URL0 + '?scenario=pyramid&paused=1&vol.pulse=55.25&vol.water=20'); await ready(page);
+  assert.equal((await volume()).pulse, 55.25); assert.equal((await volume()).water, 20);
+  await page.selectOption('#scenario', 'naval');
+  assert.ok(Object.values(await volume()).every(value => value === 100), 'Pyramiden-Pegel beeinflussen andere Szenarien nicht');
+  assert.equal(await page.locator('#vol-water').count(), 0);
+  await page.goto(URL0 + '?scenario=pyramid&paused=1&vol.pulse=100&vol.water=25'); await ready(page);
+  assert.deepEqual(await volume(), { ...expected, pulse: 100, water: 25 }, 'URL-Pegel haben beim Szenariowechsel Vorrang');
+  assert.deepEqual(errors, []);
+});
+
 test('Eigene Videolänge bleibt bei Neuladen, Szenariowechsel, Neustart und Formatwechsel erhalten', async (t) => {
   const { page, errors } = await live(t);
   await typeDuration(page, '37');
@@ -138,14 +184,14 @@ test('Export mit unbekanntem Szenario bricht mit klarer Meldung ab und erzeugt k
   const out = join(dir, 'unknown.mp4'), logs = [];
   await assert.rejects(
     exportVideo({ scenario: 'gibtsnicht', durationSec: 1 }, { out, log: (m) => logs.push(m) }),
-    (e) => e.code === 'UNKNOWN_SCENARIO' && /^Unbekanntes Szenario "gibtsnicht"\. Verfügbar: naval, marble, scrap, mycelium, pyramid, territory, marbleworks$/.test(e.message),
+    (e) => e.code === 'UNKNOWN_SCENARIO' && /^Unbekanntes Szenario "gibtsnicht"\. Verfügbar: naval, marble, scrap, mycelium, pyramid, territory, marbleworks, waterpark$/.test(e.message),
   );
   assert.ok(!logs.some((m) => /Software-Renderer/.test(m)), 'unnötiger zweiter Startversuch: ' + logs.join(' | '));
   assert.deepEqual(readdirSync(dir).filter((f) => f.startsWith('unknown')), []);
   // nachgeladenes Szenario mit falscher ID: ebenfalls klare Meldung
   await assert.rejects(
     exportVideo({ scenario: 'dumy', durationSec: 1 }, { out, scripts: [join(ROOT, 'test', 'fixtures', 'dummy-scenario.js')] }),
-    (e) => e.code === 'UNKNOWN_SCENARIO' && /Verfügbar: naval, marble, scrap, mycelium, pyramid, territory, marbleworks, dummy/.test(e.message),
+    (e) => e.code === 'UNKNOWN_SCENARIO' && /Verfügbar: naval, marble, scrap, mycelium, pyramid, territory, marbleworks, waterpark, dummy/.test(e.message),
   );
 });
 

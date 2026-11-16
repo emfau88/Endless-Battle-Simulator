@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "name": "Wasserpark – Ruhiger Dauerbetrieb (20 Minuten)",
+  "scenario": "waterpark",
+  "seed": 42,
+  "params": {
+    "mode": "relax",
+    "animals": 12,
+    "size": 36,
+    "ending": "quiet",
+    "fireworks": false,
+    "dayMinutes": 0,
+    "decoDensity": 0.5,
+    "dayCycle": false,
+    "dayStart": 0.35
+  },
+  "video": {
+    "aspect": "16:9",
+    "resolution": 1080,
+    "fps": 60,
+    "durationSec": 1200,
+    "tempo": 1,
+    "audio": true,
+    "volume": {
+      "master": 70,
+      "water": 100,
+      "scoop": 100,
+      "tip": 80,
+      "slide": 65,
+      "funnel": 75,
+      "seesaw": 70,
+      "spring": 80,
+      "splash": 100,
+      "cheer": 55,
+      "open": 60,
+      "gather": 50,
+      "ufo": 65,
+      "balloon": 45,
+      "twinkle": 55,
+      "chirp": 50,
+      "fish": 75,
+      "emote": 55,
+      "launch": 45,
+      "firework": 45
+    },
+    "quality": {
+      "crf": 18,
+      "preset": "medium",
+      "bitrate": null
+    }
+  },
+  "view": {
+    "hud": false,
+    "camera": false
+  }
+}

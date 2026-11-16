@@ -5,13 +5,13 @@ import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
 const root=fileURLToPath(new URL('..',import.meta.url));
-const suites={core:[],audio:[],production:[],marbleworks:[],scrap:[],mycelium:[],pyramid:[],territory:[], 'export-marbleworks-audio':[],
+const suites={core:[],audio:[],production:[],marbleworks:[],scrap:[],mycelium:[],pyramid:[],territory:[],waterpark:[], 'export-marbleworks-audio':[],
   ...Object.fromEntries(['naval','marble','scrap','mycelium','pyramid','territory','marbleworks'].map(id=>['export-'+id,[]]))};
 for(const file of readdirSync(join(root,'test')).filter(f=>f.endsWith('.test.mjs')).sort()) {
   const exportScenario=/^presets-export-(naval|marble|scrap|mycelium|pyramid|territory|marbleworks)\.test\.mjs$/.exec(file)?.[1];
   // Keep the active-factory replay export out of the already long production job.
   const suite=file==='marbleworks-export.test.mjs'?'export-marbleworks-audio':exportScenario?'export-'+exportScenario:file.startsWith('scrap')?'scrap':file.startsWith('audio')?'audio'
-    :file.startsWith('mycelium')?'mycelium':file.startsWith('pyramid')?'pyramid':file.startsWith('territory')?'territory'
+    :file.startsWith('mycelium')?'mycelium':file.startsWith('pyramid')?'pyramid':file.startsWith('territory')?'territory':file.startsWith('waterpark')?'waterpark'
     :['export.test.mjs','live.test.mjs','production.test.mjs'].includes(file)?'production'
     :/^(marble-production-|marbleworks-|production-marble-)/.test(file)?'marbleworks':'core';
   suites[suite].push(join('test',file));

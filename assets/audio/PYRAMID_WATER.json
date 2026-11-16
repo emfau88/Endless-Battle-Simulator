@@ -1,0 +1,27 @@
+{
+  "profile": "pyramid-water-v1",
+  "source": {
+    "title": "Waves Lapping Shore.",
+    "author": "Tom_Kaszuba",
+    "url": "https://freesound.org/people/Tom_Kaszuba/sounds/659002/",
+    "license": "CC0",
+    "originalFilename": "659002__tom_kaszuba__waves-lapping-shore.wav",
+    "originalSha256": "4da15d1379009b4906fcfd7b5d6c978dfcd5c59345af2f05bbd680c92c0c86fd"
+  },
+  "preparedFile": "pyramid-water-loop.wav",
+  "preparedSha256": "84d40e2b47c931b0002263be1b3fdd22b0e698abf2d362851001f52989e1bc07",
+  "sampleRate": 48000,
+  "channels": 2,
+  "format": "32-bit float PCM WAV",
+  "durationSeconds": 67.2,
+  "preparation": "Trim source to 67.2s; highpass 60Hz; lowpass 7500Hz; acompressor threshold=0.1 ratio=2 attack=30 release=400 makeup=1; join two copies using acrossfade=d=4:c1=qsin:c2=qsin; keep first 67.2s as float PCM.",
+  "introSeconds": 4,
+  "repeatRangeSeconds": [4, 67.2],
+  "periodSeconds": 63.2,
+  "crossfadeSeconds": 4,
+  "waterGainDbAtMaster70": -2.245527894223046,
+  "actionNormalizationGainDb": 7.95,
+  "actionAttenuationDb": -12,
+  "finalLoudnessNormalization": false,
+  "approvedReference": "20-minute Pyramid desert video and its v5 20-second review, approved on 2026-11-14"
+}

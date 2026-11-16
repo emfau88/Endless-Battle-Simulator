@@ -97,6 +97,8 @@ class RNG {
 //    createRenderer({ app, sim, view, world, renderScale, video }) -> Renderer
 //    panelStats(sim) -> [{ key, label, value }]
 //    optional: videoDefaults { resolution, fps, quality: { crf, preset } } – eigene Standardwerte des Szenarios
+//    optional: requiresPreflight(cfg), createExportPlan(cfg, world) – prüft einen Ablauf vor dem Export bei frei gewählter Dauer
+//    optional: restartOnDuration – startet eine zeitlich inszenierte Live-Vorschau bei geänderter Videolänge neu
 //  Simulation:  stepOnce(), t, step, snapshot(), checkInvariants(), stateHash(), destroy(),
 //               optional setParam(k, v), events/eventSeq
 //  Renderer:    root (PIXI.Container), draw(), destroy()
@@ -168,15 +170,18 @@ function parseBitrate(v) {
 const DEFAULT_DURATION = 45, MAX_DURATION = 4 * 3600;
 
 /**
- * Lautstärke der Tonspur in Prozent (0–200, Standard 100): Gesamtregler "master" plus je Klang der Klangtabelle.
- * 100 % = Standardmischung, die der Exporter auf die YouTube-Lautheit (−14 LUFS) einmisst; 200 % = +6 dB, 50 % = −6 dB.
- * Fehlende Werte = 100 %, unbekannte Klänge fallen weg. Gilt für jedes Format (Hoch-, Querformat, Quadrat).
+ * Lautstärke der Tonspur in Prozent (0–200): Gesamtregler "master", Klänge und optionaler Hintergrund.
+ * Ohne eigenes Profil gilt 100 % = Standardmischung mit −14 LUFS; 200 % = +6 dB, 50 % = −6 dB.
+ * Szenarien können eigene Standardpegel und Dezimalstellen angeben; sonst gilt fehlend = 100 % / ganze Zahlen.
+ * Unbekannte Klänge fallen weg. Gilt für jedes Format (Hoch-, Querformat, Quadrat).
  */
 const VOLUME_MAX = 200;
 function normalizeVolume(vol, sc, params) {
   const audio = sc.audioForParams ? sc.audioForParams(params || {}) : sc.audio;
   const keys = ['master', ...Object.keys((audio && audio.events) || {})], out = {};
-  for (const k of keys) out[k] = clamp(Math.round(num(vol && vol[k], 100)), 0, VOLUME_MAX);
+  if (audio?.background?.volumeKey && !keys.includes(audio.background.volumeKey)) keys.push(audio.background.volumeKey);
+  const precision = 10 ** clamp(Math.round(num(audio?.volumePrecision, 0)), 0, 2);
+  for (const k of keys) out[k] = clamp(Math.round(num(vol && vol[k], num(audio?.defaultVolume?.[k], 100)) * precision) / precision, 0, VOLUME_MAX);
   return out;
 }
 
@@ -433,6 +438,7 @@ function installExportAPI(session, extra = {}) {
         supportsClips: typeof session.scenario.supportsClips === 'function'
           ? session.scenario.supportsClips(session.cfg) : session.scenario.supportsClips === true,
         naturalDuration: !!session.scenario.hasNaturalDuration?.(session.cfg),
+        requiresPreflight: !!session.scenario.requiresPreflight?.(session.cfg),
         audio: (session.scenario.audioForParams ? session.scenario.audioForParams(session.cfg.params) : session.scenario.audio) || null, world: session.world,
         audioWorldWidth: session.sim.audioWorldWidth || session.world.w,
         hasAudioMixPlan: typeof session.scenario.createAudioMixPlan === 'function',

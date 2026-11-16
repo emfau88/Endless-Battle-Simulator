@@ -1,0 +1,170 @@
+diff --git a/src/scenarios/waterpark.js b/src/scenarios/waterpark.js
+index 184f0e0..b52da05 100644
+--- a/src/scenarios/waterpark.js
++++ b/src/scenarios/waterpark.js
+@@ -34,7 +34,7 @@ const audio = {
+     tip: { label: 'Aufzug: Startklappe', samples: ['impactMetal_light_000'], gain: 0.07, semis: 2, detune: 0.8, minGap: 0.12 },
+     slide: { label: 'Rutsche: Wasser', samples: ['synth:splash'], gain: 0.035, semis: -5, detune: 1, minGap: 0.35 },
+     funnel: { label: 'Trichter: Blubbern', samples: ['synth:myco-pop'], gain: 0.10, semis: -7, detune: 2, minGap: 0.2 },
+-    seesaw: { label: 'Wippe: Kippen', samples: ['synth:boing'], gain: 0.055, semis: -9, detune: 1, minGap: 0.3 },
++    seesaw: { label: 'Wippe: Anschlag', samples: ['impactWood_medium_000', 'impactWood_medium_001'], gain: 0.11, semis: -2, detune: 1, minGap: 0.3 },
+     spring: { label: 'Sprungbrett', samples: ['synth:boing'], gain: 0.12, semis: -2, detune: 1, minGap: 0.15 },
+     splash: { label: 'Landung: Platscher', samples: ['synth:splash'], gain: 0.16, ref: 1, detune: 2, minGap: 0.1 },
+     cheer: { label: 'Tierchen: Jubeln', samples: ['synth:squeak'], gain: 0.055, semis: -2, detune: 2, minGap: 0.3 },
+diff --git a/src/scenarios/waterpark/art.js b/src/scenarios/waterpark/art.js
+index 27c9477..f9c622b 100644
+--- a/src/scenarios/waterpark/art.js
++++ b/src/scenarios/waterpark/art.js
+@@ -39,7 +39,10 @@ function pathShadow(g, pts, width, alpha = .2) {
+ }
+ /** Open cream half-pipe with a turquoise water film (static part). */
+ function trough(g, pts, R) {
+-  const { out, inner } = TROUGH(R), wf = inner - 14;
++  const { out, inner } = TROUGH(R), wf = inner - 14, D = Math.round(R * .42);
++  // Side wall below the rim: stacked strokes give the slab its thickness (light from the upper left)
++  line(g, pts, out + 5, C.outline, 0, D + 1.5);
++  for (let k = D; k > 0; k -= 2) line(g, pts, out, k > D * .55 ? '#b48d5e' : '#d1b083', .5, k);
+   line(g, pts, out + 5, C.outline, 0, 1.5);
+   line(g, pts, out, C.rimShade, 1.5, 6);
+   line(g, pts, out, C.rimLight, -1, -2);
+@@ -347,7 +350,7 @@ WP.paintFunnelFront = function (g, L) {
+ 
+ /** Seesaw stand: stone footing, A-frame legs and the large bearing wheel (the board itself moves). */
+ WP.paintSeesawStand = function (g, L) {
+-  const s = L.seesaw, { x, y } = s, h = Math.min(L.wallTop - y - 6, L.R * 4.2), foot = y + h;
++  const s = L.seesaw, { x, y } = s, h = L.wallTop - y + 4, foot = y + h;
+   roundRect(g, x - 70, foot - 6, 140, 20, 6, '#d2bd99'); roundRect(g, x - 70, foot - 6, 140, 6, 4, '#efe2c6');
+   for (const sx of [-1, 1]) { line(g, [[x, y + 6], [x + sx * 52, foot - 4]], 19, C.woodDark); line(g, [[x, y + 6], [x + sx * 52, foot - 4]], 15, C.wood); line(g, [[x - 3, y + 8], [x + sx * 52 - 3, foot - 6]], 4, C.woodLight); }
+   beam(g, [x - 30, y + h * .55], [x + 30, y + h * .55], 8);
+diff --git a/src/scenarios/waterpark/layout.js b/src/scenarios/waterpark/layout.js
+index 0317d94..0e95d59 100644
+--- a/src/scenarios/waterpark/layout.js
++++ b/src/scenarios/waterpark/layout.js
+@@ -94,9 +94,10 @@ WP.createLayout = function (world, size = 28) {
+   seesaw.dir = dir;
+   // Übergaben wie im Mockup: Die Zulaufrinne endet als Ausguss über dem Einstiegsende, das Ausstiegsende gießt in eine
+   // Auffangrinne. Abstände aus Rinnenbreite (2R+30, siehe art.js) und größter Neigung, damit sich nichts überdeckt.
+-  const tilt = seesaw.length / 2 * Math.sin(seesaw.maxAngle), rim = 2 * (R + 15);
++  const tilt = seesaw.length / 2 * Math.sin(seesaw.maxAngle), rim = 2 * (R + 15) + Math.round(R * .42);
+   const spout = [boardStart[0], boardStart[1] - (rim + tilt + 8)], catchTop = [boardEnd[0] + dir * R * .5, boardEnd[1] + rim + tilt + 12];
+   seesaw.spout = spout; seesaw.catchTop = catchTop;
++  const boardTipped = [seesaw.x + dir * Math.cos(seesaw.maxAngle) * seesaw.length / 2, seesaw.y + Math.sin(seesaw.maxAngle) * seesaw.length / 2];
+   const jump = { x: W * P.jump.x, y: H * P.jump.y, landing: [mouths[3] * W, waterY] };
+   const flight = [];
+   for (let j = 0; j <= 40; j++) { const f = j / 40; flight.push([jump.x + (jump.landing[0] - jump.x) * f, jump.y + (jump.landing[1] - jump.y) * f - Math.sin(Math.PI * f) * H * (land ? .09 : .07)]); }
+@@ -104,7 +105,7 @@ WP.createLayout = function (world, size = 28) {
+   const routes = [];
+   function route(id, name, color, parts, feature) {
+     const path = makePath(parts), r = { id, name, color, path, drawSegments: path.drawSegments, feature, start: origin, end: [mouths[id] * W, waterY] };
+-    if (feature) { const part = parts.find(p => p.hidden && p.kind !== 'drop'); feature.entryS = part.startS; feature.exitS = part.endS; feature.start = part.points[0]; feature.end = part.points[part.points.length - 1]; }
++    if (feature) { const part = parts.find(p => p.hidden && p.kind !== 'drop'); feature.entryS = part.startS; feature.exitS = part.endS; feature.start = part.points[0]; feature.end = part.points[part.points.length - 1]; feature.leadS = parts.find(p => p.hidden).startS; }
+     const first = parts.find(p => p.kind !== 'deck'); r.launch = first.points[0]; r.launchS = first.startS;
+     routes.push(r);
+   }
+@@ -118,8 +119,8 @@ WP.createLayout = function (world, size = 28) {
+   route(2, 'Wippe', '#efc98a', [deckTo(P.seesawIn.deckTo),
+     { points: [[P.seesawIn.deckTo * W, deckY], ...points(P.seesawIn.pts), spout] },
+     { points: [spout, boardStart], smooth: false, kind: 'drop', hidden: true },
+-    { points: [boardStart, boardEnd], smooth: false, kind: 'seesaw', hidden: true },
+-    { points: [boardEnd, catchTop], smooth: false, kind: 'drop', hidden: true },
++    { points: [boardStart, boardTipped], smooth: false, kind: 'seesaw', hidden: true },
++    { points: [boardTipped, catchTop], smooth: false, kind: 'drop', hidden: true },
+     { points: [catchTop, ...points(P.seesawOut), [mouths[2] * W, waterY]] }
+   ], seesaw);
+   route(3, 'Sprung', '#f2a9b5', [deckTo(P.jumpIn.deckTo),
+diff --git a/src/scenarios/waterpark/renderer.js b/src/scenarios/waterpark/renderer.js
+index b0b90a3..2b8a141 100644
+--- a/src/scenarios/waterpark/renderer.js
++++ b/src/scenarios/waterpark/renderer.js
+@@ -375,16 +375,20 @@ class WaterparkRenderer extends EBS.CanvasScene {
+     const open = this.sim.story?.openRoutes?.[2] !== false, at = lx => [f.x + Math.cos(phi) * lx, f.y + Math.sin(phi) * lx];
+     g.save(); g.translate(f.x, f.y); g.rotate(phi); const board = [[-half, 0], [half, 0]]; WP.paintTrough(g, board, R);
+     if (!open) line(g, board, WP.troughSize(R).inner - 9, WP.ART_COLORS.innerWall, 0.5, 3.5);
+-    else {                                                                    // water running towards the exit end
+-      g.lineCap = 'round'; g.setLineDash([16, 42, 6, 54]); g.lineDashOffset = -t * 110 * (this.sim.cfg.rollSpeed || 1);
+-      line(g, [[-d * half, 2.5], [d * half, 2.5]], 2.4, 'rgba(255,255,255,.5)'); g.setLineDash([]);
++    else {                                                                    // water running towards the lower end
++      const k = clamp((this.sim.seesawAngle || 0) / f.maxAngle, -1, 1);
++      g.lineCap = 'round'; g.setLineDash([16, 42, 6, 54]);
++      g.lineDashOffset = -t * 110; line(g, [[-d * half, 2.5], [d * half, 2.5]], 2.4, `rgba(255,255,255,${(.5 * clamp(.55 + .45 * k, 0, 1)).toFixed(3)})`);
++      g.lineDashOffset = -t * 110; line(g, [[d * half, 2.5], [-d * half, 2.5]], 2.4, `rgba(255,255,255,${(.5 * clamp(-k, 0, 1)).toFixed(3)})`);
++      g.setLineDash([]);
+     }
+     g.restore();
+     WP.paintSeesawWheel(g, this.A, phi);
+     if (!open) return;
+     const [sx, sy] = f.spout, entry = at(-d * half), exit = at(d * half);
+     this.pour(g, t, [sx, sy + R * 0.85], entry, R, 0);
+-    this.pour(g, t, [exit[0] + d * R * 0.6, exit[1] + 4], f.catchTop, R, 1);
++    g.save(); g.globalAlpha = clamp(.55 + .45 * (this.sim.seesawAngle || 0) / f.maxAngle, .2, 1);
++    this.pour(g, t, [exit[0] + d * R * 0.6, exit[1] + 4], f.catchTop, R, 1); g.restore();
+   }
+   /** Short water curtain from a slide end down into the next trough, with a foam ring where it lands. */
+   pour(g, t, [ax, ay], [bx, by], R, k) {
+diff --git a/src/scenarios/waterpark/simulation.js b/src/scenarios/waterpark/simulation.js
+index 3fb2c55..b320108 100644
+--- a/src/scenarios/waterpark/simulation.js
++++ b/src/scenarios/waterpark/simulation.js
+@@ -13,7 +13,7 @@ class Simulation {
+     this.step=0; this.t=0; this.videoTime=0; this.events=new Array(1024); this.eventSeq=0; this.recent=[]; this.decorations=[];
+     this.rides=0; this.routeRides=[0,0,0,0]; this.animals=[]; this.lastDispatch=-99; this.lastLift=-99;this.gatherCount=0;
+     this.landingReservations=[null,null,null,null];
+-    this.seesawAngle=0; this.seesawState='ready'; this.seesawResetUntil=0; this.finishedAt=null;
++    this.seesawAngle=0; this.seesawVel=0; this.seesawState='ready'; this.seesawResetUntil=0; this.finishedAt=null;
+     this.preflight=WP.preflight({params:this.cfg,video,world,timeScale}); this.timing={...this.preflight};
+     this.story=WP.storyState(this.cfg,this.video,0,this.timing); this.previousOpen=[...this.story.openRoutes];
+     this._decoSlots={major:-1,fish:-1,emote:-1}; this._pendingGuest=null; this._forcedUfo=false; this._showStarted=false;
+@@ -120,11 +120,11 @@ class Simulation {
+       }
+       ahead=b;
+     }
+-    this.seesawAngle=0;this.seesawState=this.t<this.seesawResetUntil?'returning':'ready';
++    this.seesawState=this.t<this.seesawResetUntil?'returning':'ready';let seesawU=null,seesawKind=-1;
+     for(let id=0;id<4;id++) {
+       ahead=null;const r=L.routes[id];
+       for(const b of this._list('route',id)) {
+-        const q=WP.samplePath(r.path,b.s),profile=q.kind==='seesaw'?.65:q.kind==='flight'?1.15:q.kind==='funnel'?.95:1+.6*Math.max(0,q.ty);
++        const q=WP.samplePath(r.path,b.s),profile=q.kind==='seesaw'?clamp(.6+3*this.seesawAngle,.28,1.3):q.kind==='flight'?1.15:q.kind==='funnel'?.95:1+.6*Math.max(0,q.ty);
+         const target=190*cfg.rollSpeed*profile;
+         const acceleration=240*cfg.rollSpeed*dt;
+         const speed=b.v+clamp(target-b.v,-acceleration,acceleration);
+@@ -132,7 +132,7 @@ class Simulation {
+         // Reserve a real landing gap before the last descent, and before launching a jump.
+         // Water guests upstream wait outside that gap until the arriving guest joins their lane.
+         if(cfg.mode!=='short'){
+-          const gate=id===3?Math.max(0,r.feature.entryS-L.R):Math.max(0,r.path.length-L.GAP*4);
++          const gate=id===3?Math.max(0,r.feature.entryS-L.R):id===2?Math.max(0,r.feature.leadS-L.R):Math.max(0,r.path.length-L.GAP*4);
+           if(b.s+speed*dt>=gate&&this.landingReservations[id]!==b.id){
+             const adjacentBay=this.landingReservations.some((owner,j)=>j!==id&&owner!=null&&Math.abs(L.pool.joinS[j]-L.pool.joinS[id])<L.GAP*2.5);
+             if(!adjacentBay&&this.landingReservations[id]==null&&this._poolHasSpace(L.pool.joinS[id],b,L.GAP*2.5))this.landingReservations[id]=b.id;
+@@ -141,13 +141,19 @@ class Simulation {
+         }
+         b.s=Math.min(cap,b.s+speed*dt);b.v=Math.max(0,(b.s-old)/dt);
+         const f=r.feature;
+-        if(f&&old<f.entryS&&b.s>=f.entryS)this._emit(id===1?'funnel':id===2?'seesaw':'spring',f.x,f.y,b.kind);
+-        if(id===2&&b.s>=f.entryS&&b.s<=f.exitS){const u=(b.s-f.entryS)/(f.exitS-f.entryS);this.seesawAngle=f.maxAngle*Math.sin(Math.PI*u);this.seesawState=u<.2?'loaded':u<.8?'tipping':'returning';}
++        if(f&&id!==2&&old<f.entryS&&b.s>=f.entryS)this._emit(id===1?'funnel':id===2?'seesaw':'spring',f.x,f.y,b.kind);
++        if(id===2&&b.s>=f.entryS&&b.s<=f.exitS){const u=(b.s-f.entryS)/(f.exitS-f.entryS);seesawU=u;seesawKind=b.kind;this.seesawState=u<.2?'loaded':u<.8?'tipping':'returning';}
+         if(id===2&&old<f.exitS&&b.s>=f.exitS)this.seesawResetUntil=this.t+.6;
+         if(b.s>=r.path.length-1e-7&&(cfg.mode==='short'||this._poolHasSpace(L.pool.joinS[id],b))){this._arrive(b);continue;}
+         ahead=b;
+       }
+     }
++    {// Board follows the rider's weight against a counterweight spring and rests on rubber stops at +-maxAngle
++      const f=L.seesaw,m=f.maxAngle,target=seesawU==null?0:1.3*m*Math.tanh(4*(2*seesawU-1));
++      this.seesawVel+=(60*(target-this.seesawAngle)-5.4*this.seesawVel)*dt;this.seesawAngle+=this.seesawVel*dt;
++      if(Math.abs(this.seesawAngle)>=m){const side=Math.sign(this.seesawAngle),hit=Math.abs(this.seesawVel);this.seesawAngle=side*m;this.seesawVel=0;
++        if(hit>.25)this._emit('seesaw',f.x+side*(f.dir||1)*f.length/2,f.y,seesawKind,clamp(.5+hit/2,.5,1));}
++    }
+     ahead=null;
+     for(const b of this._list('gather')) {
+       const old=b.s,cap=cfg.mode==='short'||!ahead?b.gatherTarget:Math.min(b.gatherTarget,ahead.s-L.GAP);
+@@ -165,7 +171,7 @@ class Simulation {
+     else if(b.state==='route'){
+       const r=L.routes[b.route];q=WP.samplePath(r.path,b.s);mode=q.kind==='flight'?'fall':'roll';
+       angle=q.kind==='funnel'?.22*Math.sin(b.s/L.R):b.s/L.R;
+-      if(q.kind==='seesaw'){const f=r.feature,d=f.dir||1,offset=b.s-f.entryS-f.length/2,phi=this.seesawAngle*d;q.x=f.x+Math.cos(phi)*offset*d;q.y=f.y+Math.sin(phi)*offset*d;angle=phi;}
++      if(q.kind==='seesaw'){const f=r.feature,d=f.dir||1,offset=((b.s-f.entryS)/(f.exitS-f.entryS)-.5)*f.length,phi=this.seesawAngle*d;q.x=f.x+Math.cos(phi)*offset*d;q.y=f.y+Math.sin(phi)*offset*d;angle=phi;}
+       if(b.s>=r.path.length-1e-7){mode='pool';angle=0;}
+     } else if(b.state==='gather')q=WP.samplePath(b.gatherPath,b.s);
+     else q=WP.samplePath(L.pool.path,b.s);
