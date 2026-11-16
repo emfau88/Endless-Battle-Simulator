@@ -64,7 +64,7 @@ class WaterparkRenderer extends EBS.CanvasScene {
     this.funnelL = this.layer(g => WP.paintFunnel(g, A));
     const tubes = L.routes.flatMap(r => r.drawSegments.filter(s => s.kind === 'tube'));
     this.front = this.layer(g => {
-      for (const s of tubes) WP.paintTubeFront(g, s, R);
+      g.save(); g.beginPath(); g.rect(0, 0, L.W, A.wallTop + 2); g.clip(); for (const s of tubes) WP.paintTubeFront(g, s, R); g.restore();
       g.globalCompositeOperation = 'destination-out'; WP.funnelCut(g, A); g.globalCompositeOperation = 'source-over';
       WP.paintFunnelFront(g, A);
     });
@@ -79,7 +79,7 @@ class WaterparkRenderer extends EBS.CanvasScene {
     this.frontBoxes = [{ x: f.x - f.rx - 14, y: f.y, w: f.rx * 2 + 28, h: f.ry + 16 }, ...tubes.map(box)];
     // Route geometry for the moving water film, the belt loop and the return lane
     this.routePaths = L.routes.map(r => { const p = new Path2D(); for (const s of r.drawSegments) if (s.kind !== 'deck') s.forEach((q, i) => (i ? p.lineTo(q.x, q.y) : p.moveTo(q.x, q.y))); return p; });
-    const E = L.lift, rp = (this.rp = 13), bx = (this.bx = E.x + R + 8);
+    const E = L.lift, rp = (this.rp = Math.round(R * .7)), bx = (this.bx = E.x - rp);
     this.belt = new Path2D(); this.belt.moveTo(bx, E.bottom); this.belt.lineTo(bx, E.top); this.belt.arc(bx + rp, E.top, rp, Math.PI, 0);
     this.belt.lineTo(bx + 2 * rp, E.bottom); this.belt.arc(bx + rp, E.bottom, rp, 0, Math.PI); this.belt.closePath();
     this.lane = new Path2D(); L.pool.path.points.forEach((q, i) => { if (i % 3 === 0) i ? this.lane.lineTo(q.x, q.y) : this.lane.moveTo(q.x, q.y); });
@@ -114,7 +114,9 @@ class WaterparkRenderer extends EBS.CanvasScene {
     WP.paintTower(g, A);
     WP.paintDeck(g, A, new EBS.RNG(hashSeed('waterpark-deck', 7)), this.art);
     for (const s of segs) if (s.kind !== 'tube') WP.paintPathShadow(g, s, WP.troughSize(R).out);
-    for (const s of segs) (s.kind === 'tube' ? WP.paintTube : WP.paintTrough)(g, s, R);
+    for (const s of segs) if (s.kind !== 'tube') WP.paintTrough(g, s, R);
+    g.save(); g.beginPath(); g.rect(0, 0, L.W, A.wallTop + 2); g.clip(); for (const s of segs) if (s.kind === 'tube') WP.paintTube(g, s, R); g.restore();
+    WP.paintBasins(g, A);
     WP.paintSeesawStand(g, A);
     WP.paintSpringStand(g, A);
   }
@@ -289,18 +291,18 @@ class WaterparkRenderer extends EBS.CanvasScene {
   /** Water film on open slides, dry closed slides with a barrier, foam at the outlets. */
   drawFlow(g, t) {
     const L = this.L, R = L.R, cfg = this.sim.cfg, open = this.sim.story?.openRoutes || [true, true, true, true];
-    const wf = WP.troughSize(R).inner - 14, rs = cfg.rollSpeed || 1;
+    const { wf, wo } = WP.troughWater(R), rs = cfg.rollSpeed || 1;
     g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
     L.routes.forEach((r, i) => {
       const P = this.routePaths[i];
       if (!open[i]) {
-        g.save(); g.translate(0.5, 3.5); g.strokeStyle = WP.ART_COLORS.innerWall; g.lineWidth = wf + 5; g.stroke(P); g.restore();
+        g.save(); g.translate(0.5, wo); g.strokeStyle = WP.ART_COLORS.innerWall; g.lineWidth = wf + 5; g.stroke(P); g.restore();
         const [x] = r.launch, y = L.deck.y;
         for (const sx of [-1, 1]) { line(g, [[x + sx * R * 0.9, y], [x + sx * R * 0.9, y - 36]], 5, '#7a5332'); ellipse(g, x + sx * R * 0.9, y - 37, 4, 4, '#f4d79a'); }
         g.setLineDash([9, 9]); line(g, [[x - R * 0.9, y - 30], [x + R * 0.9, y - 30]], 5, '#ffffff'); g.lineDashOffset = 9; line(g, [[x - R * 0.9, y - 30], [x + R * 0.9, y - 30]], 5, '#e8484f'); g.setLineDash([]); g.lineDashOffset = 0;
         return;
       }
-      g.save(); g.translate(0, 2.5);
+      g.save(); g.translate(0, wo);
       g.setLineDash([18, 46, 6, 70]); g.lineDashOffset = -t * 95 * rs - i * 37; g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 2.4; g.stroke(P);
       g.translate(0, -wf * 0.3); g.setLineDash([10, 64, 4, 50]); g.lineDashOffset = -t * 125 * rs - i * 53; g.strokeStyle = 'rgba(235,255,255,.55)'; g.lineWidth = 1.8; g.stroke(P);
       g.restore(); g.setLineDash([]);
@@ -322,7 +324,7 @@ class WaterparkRenderer extends EBS.CanvasScene {
     const L = this.L, R = L.R, y = L.deck.y;
     L.routes.forEach((r, i) => {
       const side = r.launch[0] < L.origin[0] ? -1 : 1, x = r.launch[0] + side * R * 1.55, top = y - 92, w = 34, wav = Math.sin(t * 4 + i * 1.3);
-      line(g, [[x, y], [x, top]], 5, '#5a3c22'); line(g, [[x - 1, y], [x - 1, top]], 2, '#b9864c'); ellipse(g, x, top - 2, 4, 4, '#f2cf5b');
+      line(g, [[x, y], [x, top]], 6, WP.ART_COLORS.woodDark); line(g, [[x - 1, y], [x - 1, top]], 2.5, WP.ART_COLORS.woodLight); ellipse(g, x, top - 2, 4, 4, '#f2cf5b');
       g.fillStyle = open[i] ? FLAGS[i] : '#b9b3a6'; g.strokeStyle = 'rgba(60,40,30,.6)'; g.lineWidth = 1.5; g.lineJoin = 'round';
       g.beginPath(); g.moveTo(x, top + 1); g.quadraticCurveTo(x + side * w * 0.5, top + 4 + wav * 3, x + side * w, top + 12 + wav * 4);
       g.quadraticCurveTo(x + side * w * 0.5, top + 17 + wav * 2, x, top + 24); g.closePath(); g.fill(); g.stroke();
@@ -345,24 +347,24 @@ class WaterparkRenderer extends EBS.CanvasScene {
     if (this.beltT == null || st < this.beltT) { this.beltT = st; this.beltPos = 0; }
     if (this.sim.animals.some(b => b.state === 'lift' && b.v > 1)) this.beltPos += (st - this.beltT) * 180 * (cfg.beltSpeed || 1);
     this.beltT = st;
-    g.fillStyle = 'rgba(6,26,60,.22)'; g.fillRect(x - R - 10, E.top - R - 6, bx + 2 * rp + 6 - (x - R - 10), E.bottom - E.top + 2 * R);
+    g.fillStyle = 'rgba(6,40,70,.14)'; g.fillRect(x - rp - 16, E.top - rp - 10, 2 * rp + 32, E.bottom - E.top + 2 * rp + 20);
+    // Chain loop with two gears; the metal cups hang on it and carry the animals
     g.lineJoin = 'round'; g.lineCap = 'round';
-    g.strokeStyle = '#26343b'; g.lineWidth = 7; g.stroke(this.belt);
-    g.setLineDash([6, 8]); g.lineDashOffset = -this.beltPos; g.strokeStyle = '#a9bcc4'; g.lineWidth = 2.2; g.stroke(this.belt); g.setLineDash([]);
+    g.strokeStyle = '#33434b'; g.lineWidth = 7; g.stroke(this.belt);
+    g.setLineDash([5, 6]); g.lineDashOffset = -this.beltPos; g.strokeStyle = '#b8c6cc'; g.lineWidth = 3; g.stroke(this.belt); g.setLineDash([]);
     for (const yc of [E.top, E.bottom]) {
-      g.fillStyle = '#dfe8ec'; g.strokeStyle = '#43545c'; g.lineWidth = 3; g.beginPath(); g.arc(bx + rp, yc, rp + 1, 0, TAU); g.fill(); g.stroke();
-      const a0 = -this.beltPos / rp; g.strokeStyle = '#6d818a'; g.lineWidth = 2.5;
-      for (let i = 0; i < 3; i++) { const a = a0 + i * TAU / 3; g.beginPath(); g.moveTo(bx + rp, yc); g.lineTo(bx + rp + Math.cos(a) * (rp - 4), yc + Math.sin(a) * (rp - 4)); g.stroke(); }
-      g.fillStyle = '#3b4b53'; dot(g, bx + rp, yc, 3.5);
+      const gr0 = rp + 7, a0 = -this.beltPos / rp;
+      g.fillStyle = '#7f9099'; g.beginPath();
+      for (let k = 0; k < 24; k++) { const a = a0 + k * TAU / 24, rr = k % 2 ? gr0 : gr0 - 5; k ? g.lineTo(x + Math.cos(a) * rr, yc + Math.sin(a) * rr) : g.moveTo(x + Math.cos(a) * rr, yc + Math.sin(a) * rr); }
+      g.closePath(); g.fill(); g.strokeStyle = '#3d4f58'; g.lineWidth = 2.2; g.stroke();
+      ellipse(g, x, yc, gr0 - 8, gr0 - 8, '#c3cfd5'); g.strokeStyle = '#5d6f78'; g.lineWidth = 3;
+      for (let i = 0; i < 5; i++) { const a = a0 + i * TAU / 5; g.beginPath(); g.moveTo(x, yc); g.lineTo(x + Math.cos(a) * (gr0 - 9), yc + Math.sin(a) * (gr0 - 9)); g.stroke(); }
+      ellipse(g, x, yc, 6, 6, '#3d4f58'); ellipse(g, x - 1.5, yc - 1.5, 2, 2, '#e8f0f6');
     }
     const riders = this.sim.animals.filter(b => b.state === 'lift');
+    for (const b of riders) { const q = this.sim.pose(b); this.drawCup(g, q.x, q.y, false); }
     for (const b of riders) { const q = this.sim.pose(b); this.drawCritterAt(g, b, { x: q.x, y: q.y, ang: 0, mode: 'lift', speed: 0, look: [0, -1] }); }
-    for (const b of riders) {
-      const q = this.sim.pose(b), rr = R + 4;
-      line(g, [[bx, q.y - 6], [q.x + rr * 0.75, q.y + rr * 0.45]], 4, '#3d4f58');
-      g.beginPath(); g.arc(q.x, q.y, rr, 0, Math.PI); g.closePath();
-      g.fillStyle = 'rgba(214,228,235,.88)'; g.fill(); g.strokeStyle = '#3d4f58'; g.lineWidth = 2.5; g.stroke();
-    }
+    for (const b of riders) { const q = this.sim.pose(b); this.drawCup(g, q.x, q.y, true); }
     // Lower shaft stands in the lagoon
     const y0 = L.waterY, y1 = T.bottom + 22;
     const gr = g.createLinearGradient(0, y0, 0, y1); gr.addColorStop(0, 'rgba(40,200,218,.5)'); gr.addColorStop(1, 'rgba(18,150,190,.66)');
@@ -370,17 +372,27 @@ class WaterparkRenderer extends EBS.CanvasScene {
     g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.beginPath(); g.ellipse(x, y0 + 4, T.hw + 16, 6, 0, 0, TAU); g.stroke();
     WP.paintTowerFront(g, this.A);
   }
+  /** Metal cup of the lift: back rim before the animal, front shell after it (its edge covers the belly). */
+  drawCup(g, x, y, front) {
+    const R = this.L.R, y0 = y + R * 0.12, y1 = y + R * 1.02, tw = R * 1.18, bw = R * 0.82, rr = R * 0.26;
+    if (!front) { ellipse(g, x, y0, tw + 2.5, rr + 2.5, '#3d4f58'); ellipse(g, x, y0, tw, rr, '#6c7f8a'); return; }
+    g.lineJoin = 'round';
+    const gr = g.createLinearGradient(x - tw, 0, x + tw, 0); gr.addColorStop(0, '#dfe8ef'); gr.addColorStop(.45, '#a5bacb'); gr.addColorStop(1, '#7d93a4');
+    g.fillStyle = gr; g.beginPath(); g.moveTo(x - tw, y0); g.ellipse(x, y0, tw, rr, 0, Math.PI, 0, true); g.lineTo(x + bw, y1); g.quadraticCurveTo(x, y1 + rr * 0.7, x - bw, y1); g.closePath(); g.fill();
+    g.strokeStyle = '#3d4f58'; g.lineWidth = 2.5; g.stroke();
+    g.strokeStyle = '#e8f0f6'; g.lineWidth = 3; g.beginPath(); g.ellipse(x, y0 + 1, tw - 2, rr - 1, 0, 0.15, Math.PI - 0.15); g.stroke();
+    g.strokeStyle = 'rgba(61,79,88,.45)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x - (tw + bw) / 2, (y0 + y1) / 2 + 4); g.quadraticCurveTo(x, (y0 + y1) / 2 + rr + 4, x + (tw + bw) / 2, (y0 + y1) / 2 + 4); g.stroke();
+  }
   /** Tilting board. The feed slide pours onto its entry end, the exit end pours into the catch chute (mockup hand-overs). */
   drawSeesaw(g, t) {
     const L = this.L, R = L.R, f = L.seesaw, d = f.dir || 1, phi = (this.sim.seesawAngle || 0) * d, half = f.length / 2;
     const open = this.sim.story?.openRoutes?.[2] !== false, at = lx => [f.x + Math.cos(phi) * lx, f.y + Math.sin(phi) * lx];
-    g.save(); g.translate(f.x, f.y); g.rotate(phi); const board = [[-half, 0], [half, 0]]; WP.paintTrough(g, board, R);
-    if (!open) line(g, board, WP.troughSize(R).inner - 9, WP.ART_COLORS.innerWall, 0.5, 3.5);
-    else {                                                                    // water running towards the lower end
-      const k = clamp((this.sim.seesawAngle || 0) / f.maxAngle, -1, 1);
+    g.save(); g.translate(f.x, f.y); g.rotate(phi); WP.paintBoard(g, half, R, open);
+    if (open) {                                                               // water running towards the lower end
+      const k = clamp((this.sim.seesawAngle || 0) / f.maxAngle, -1, 1), wo = WP.boardSize(R).wm, hl = half - 12;
       g.lineCap = 'round'; g.setLineDash([16, 42, 6, 54]);
-      g.lineDashOffset = -t * 110; line(g, [[-d * half, 2.5], [d * half, 2.5]], 2.4, `rgba(255,255,255,${(.5 * clamp(.55 + .45 * k, 0, 1)).toFixed(3)})`);
-      g.lineDashOffset = -t * 110; line(g, [[d * half, 2.5], [-d * half, 2.5]], 2.4, `rgba(255,255,255,${(.5 * clamp(-k, 0, 1)).toFixed(3)})`);
+      g.lineDashOffset = -t * 110; line(g, [[-d * hl, wo], [d * hl, wo]], 2.4, `rgba(255,255,255,${(.5 * clamp(.55 + .45 * k, 0, 1)).toFixed(3)})`);
+      g.lineDashOffset = -t * 110; line(g, [[d * hl, wo], [-d * hl, wo]], 2.4, `rgba(255,255,255,${(.5 * clamp(-k, 0, 1)).toFixed(3)})`);
       g.setLineDash([]);
     }
     g.restore();
@@ -415,9 +427,9 @@ class WaterparkRenderer extends EBS.CanvasScene {
     const loaded = this.sim.animals.some(b => b.state === 'route' && b.route === 3 && b.s < j.entryS && j.entryS - b.s < 40);
     const by = j.y + R + (loaded ? 6 : rebound), base = j.y + R + 36, coil = [];
     for (let i = 0; i <= 10; i++) coil.push([j.x + 6 + (i % 2 ? 15 : -15), by + 10 + i * (base - by - 10) / 10]);
-    line(g, coil, 6, '#2d4a52'); line(g, coil, 3.5, '#9cc4cc');
-    roundRect(g, j.x - 52, by - 3, 120, 16, 7, '#6f5638'); roundRect(g, j.x - 50, by - 2, 116, 12, 6, '#f2c94c');
-    line(g, [[j.x - 42, by + 1], [j.x + 58, by + 1]], 3, '#fff1b0'); line(g, [[j.x - 44, by + 8], [j.x + 60, by + 8]], 2, 'rgba(160,110,20,.5)');
+    line(g, coil, 7, '#3d4f58'); line(g, coil, 4, '#b3c0c8'); line(g, coil, 1.5, '#eef3f6', -1, -1);
+    roundRect(g, j.x - 53, by - 4, 122, 18, 8, '#6f5638'); roundRect(g, j.x - 50, by - 2, 116, 13, 6, '#f7e332');
+    line(g, [[j.x - 42, by + 1], [j.x + 58, by + 1]], 3, '#fffbc0'); line(g, [[j.x - 44, by + 9], [j.x + 60, by + 9]], 2.5, 'rgba(170,130,20,.55)');
   }
 
   // ------------------------------------------------------------- animals
@@ -524,7 +536,8 @@ class WaterparkRenderer extends EBS.CanvasScene {
     g.globalAlpha = a * 0.6;
     for (const b of this.sim.animals) if (b.state === 'lift') {
       const q = this.sim.pose(b); if (q.y > L.waterY) continue;
-      this.drawCritterAt(g, b, { x: q.x, y: q.y, ang: 0, mode: 'lift', speed: 0, look: [0, -1] });
+      g.save(); g.beginPath(); g.rect(q.x - R * 2, q.y - R * 3, R * 4, R * 3.12); g.clip();
+      this.drawCritterAt(g, b, { x: q.x, y: q.y, ang: 0, mode: 'lift', speed: 0, look: [0, -1] }); g.restore();
     }
     g.globalAlpha = a;
     for (const d of riders) this.drawCritterAt(g, d.b, d);

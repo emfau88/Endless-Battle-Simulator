@@ -12,9 +12,11 @@ const xy = p => Array.isArray(p) ? p : [p.x, p.y];
 const C = {
   outline: '#86674a', rimLight: '#fffaf1', rim: '#efe4d3', rimShade: '#d7bea0', seam: '#c9ad89', innerWall: '#f4ecdf',
   waterDeep: '#1abacb', water: '#30e3ec', waterCore: '#9af3f3',
-  woodDark: '#a65f28', wood: '#e3944a', woodLight: '#f1a353', plank: '#f6d6a6', plankShade: '#e0a865',
+  woodDark: '#8f5628', wood: '#b9763f', woodLight: '#de9a52', plank: '#f6d6a6', plankShade: '#e0a865',
   glassFrame: '#2f86a2', glassLight: '#e8fcfb',
-  stone: '#e6d4bb', stoneJoint: '#cbb393', stoneCap: '#f4eadb', stoneDark: '#c4a987',
+  stone: '#ddc6aa', stoneJoint: '#c4ab8a', stoneCap: '#e6d4bb', stoneDark: '#c4a987', stoneLight: '#f4eadb',
+  face: '#d7bea0', faceDark: '#c8ae85', deckTop: '#efe4d3',
+  metal: '#a5bacb', metalLight: '#e8f0f6', metalDark: '#3d4f58', board: '#f7e332',
   rock: '#b9b6a2', rockLight: '#ddd8c4', rockDark: '#8a8573',
   glaze: 'rgba(140,210,30,.3)',
 };
@@ -46,22 +48,26 @@ const TROUGH = WP.troughSize;
 function pathShadow(g, pts, width, alpha = .2) {
   g.save(); g.filter = 'blur(5px)'; line(g, pts, width, `rgba(16,58,66,${alpha})`, 7, 13); g.restore();
 }
+/** Water channel of a trough: width and downward shift, so the far inner wall shows as a cream band above it. */
+WP.troughWater = R => ({ wf: TROUGH(R).inner - 18, wo: Math.round(R * .18) });
 /** Open cream half-pipe with a turquoise water film (static part). */
 function trough(g, pts, R) {
-  const { out, inner } = TROUGH(R), wf = inner - 14, D = Math.round(R * .42);
+  const { out, inner } = TROUGH(R), { wf, wo } = WP.troughWater(R), D = Math.round(R * .42);
   // Side wall below the rim: stacked strokes give the slab its thickness (light from the upper left)
   line(g, pts, out + 5, C.outline, 0, D + 1.5);
-  for (let k = D; k > 0; k -= 2) line(g, pts, out, k > D * .55 ? '#c9aa84' : C.rimShade, .5, k);
+  for (let k = D; k > 0; k -= 2) line(g, pts, out, k > D * .55 ? C.faceDark : C.rimShade, .5, k);
   line(g, pts, out + 5, C.outline, 0, 1.5);
   line(g, pts, out, C.rimShade, 1.5, 6);
   line(g, pts, out, C.rimLight, -1, -2);
   line(g, pts, out - 5, C.rim, .5, 1);
+  // Channel: far inner wall in light cream, water lower in the channel and brighter in its middle
   line(g, pts, inner + 4, C.seam, 0, .5);
-  line(g, pts, inner, C.innerWall, 0, 0);
-  line(g, pts, wf + 4, C.waterDeep, .5, 4);
-  line(g, pts, wf, C.water, .5, 3.5);
-  line(g, pts, wf * .38, C.waterCore, 0, 2);
-  line(g, pts, 2.2, 'rgba(255,255,255,.75)', -.5, -wf / 2 + 6);
+  line(g, pts, inner, '#e3d3ba', 0, 0);
+  line(g, pts, inner - 6, C.innerWall, 0, -2);
+  line(g, pts, wf + 4, C.waterDeep, .5, wo + 1.5);
+  line(g, pts, wf, C.water, .5, wo);
+  line(g, pts, wf * .5, C.waterCore, 0, wo - 1);
+  line(g, pts, 2.2, 'rgba(255,255,255,.8)', -.5, wo - wf / 2 + 5);
 }
 WP.paintTrough = trough;
 WP.paintPathShadow = pathShadow;
@@ -95,14 +101,16 @@ WP.paintTubeFront = function (g, pts, R) {
   line(g, offset(pts, -(w / 2 - 9)), 2, 'rgba(255,255,255,.45)');
 };
 
-/** Wooden post with light left edge and dark outline. */
-function post(g, x, y0, y1, w = 12) {
-  line(g, [[x, y0], [x, y1]], w + 3, C.woodDark);
-  line(g, [[x, y0], [x, y1]], w, C.wood);
-  line(g, [[x - w * .28, y0 + 2], [x - w * .28, y1 - 2]], w * .3, C.woodLight);
+/** Honey-coloured timber post: dark outline, shade side on the right, light edge on the left. */
+function post(g, x, y0, y1, w = 20) {
+  line(g, [[x, y0], [x, y1]], w + 4, C.woodDark);
+  line(g, [[x, y0], [x, y1]], w, C.woodLight);
+  line(g, [[x + w * .3, y0 + 2], [x + w * .3, y1 - 2]], w * .38, C.wood);
+  line(g, [[x - w * .3, y0 + 3], [x - w * .3, y1 - 3]], Math.max(1.5, w * .14), 'rgba(250,190,110,.9)');
 }
 function beam(g, a, b, w = 8) {
-  line(g, [a, b], w + 3, C.woodDark); line(g, [a, b], w, C.wood); line(g, [a, b], w * .35, 'rgba(250,196,128,.75)', 0, -w * .2);
+  line(g, [a, b], w + 4, C.woodDark); line(g, [a, b], w, C.woodLight);
+  line(g, [a, b], w * .38, C.wood, 0, w * .26); line(g, [a, b], Math.max(1.2, w * .18), 'rgba(250,190,110,.9)', 0, -w * .28);
 }
 
 // ---------------------------------------------------------------- sky
@@ -154,18 +162,20 @@ WP.paintBack = function (g, L, rng, art) {
   // Big frame palms at the edges
   const big = land ? [[30, 520, .14], [140, 330, .08], [W - 20, 430, -.18]] : [[20, 430, .12], [W - 22, 360, -.16]];
   glazed(g, C.glaze, g => { for (const [x, h, lean] of big) art.palm(g, rng, x, wallTop + 6, h, lean); });
-  // Retaining wall of sandstone blocks behind the lagoon
+  // Pool edge: two sandstone courses under a light coping (everything stands on it)
   g.fillStyle = C.stone; g.fillRect(0, wallTop, W, wallH);
   g.strokeStyle = C.stoneJoint; g.lineWidth = 2;
   const rows = 2, bh = wallH / rows;
   for (let r = 0; r < rows; r++) {
     const y = wallTop + r * bh; g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
-    for (let x = (r % 2) * 40; x < W; x += 80) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + bh); g.stroke(); }
+    for (let x = (r % 2) * 44; x < W; x += 88) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + bh); g.stroke(); }
   }
-  const shade = g.createLinearGradient(0, wallTop, 0, waterY); shade.addColorStop(0, 'rgba(255,255,255,0)'); shade.addColorStop(1, 'rgba(90,60,30,.22)');
+  const shade = g.createLinearGradient(0, wallTop, 0, waterY); shade.addColorStop(0, 'rgba(255,255,255,0)'); shade.addColorStop(1, 'rgba(90,60,30,.18)');
   g.fillStyle = shade; g.fillRect(0, wallTop, W, wallH);
-  roundRect(g, -10, wallTop - 9, W + 20, 13, 4, C.stoneCap);
-  line(g, [[0, wallTop + 4], [W, wallTop + 4]], 2, 'rgba(120,90,50,.35)');
+  roundRect(g, -10, wallTop - 11, W + 20, 16, 4, C.outline);
+  roundRect(g, -10, wallTop - 10, W + 20, 13, 4, C.stoneCap);
+  line(g, [[0, wallTop - 8], [W, wallTop - 8]], 2, C.stoneLight);
+  line(g, [[0, wallTop + 5], [W, wallTop + 5]], 2, 'rgba(120,90,50,.3)');
   // Planted wall top with hibiscus
   glazed(g, C.glaze, g => art.foliage(g, rng, [[-10, wallTop - 10], [W + 10, wallTop - 10]], 2, 20, (nx, ny) => ny < 0, { dens: 2, rMin: 3, rMax: 9, flowers: .05 }));
   for (let i = 0; i < (land ? 16 : 10); i++) hibiscus(g, rng.range(0, W), wallTop - rng.range(14, 30), rng.range(5, 8), rng);
@@ -176,7 +186,7 @@ WP.paintBack = function (g, L, rng, art) {
   L.lamps = deco.lamps.map(x => [x, wallTop - 120]);
   for (const x of deco.lamps) lamp(g, x, wallTop);
   // Pool coping at the waterline
-  roundRect(g, -10, waterY - 9, W + 20, 12, 3, C.stoneCap);
+  roundRect(g, -10, waterY - 9, W + 20, 12, 3, C.stoneLight);
   line(g, [[0, waterY + 3], [W, waterY + 3]], 3, 'rgba(20,110,120,.25)');
 };
 function hibiscus(g, x, y, r, rng) {
@@ -215,98 +225,121 @@ WP.lampPos = (x, ground) => [x + 17, ground - 109];
 // ---------------------------------------------------------------- structures
 /** Posts and braces: a timber scaffold under the deck and single supports with knee braces under high slides. */
 WP.paintFrame = function (g, L) {
-  const { R, deck, lift } = L, ground = L.wallTop, towerHalf = L.towerHW + 6;
-  const clearOfTower = x => Math.abs(x - lift.x) > towerHalf + 10;
-  // Deck scaffold
-  const deckBottom = deck.y + 28, cols = [];
-  for (let x = deck.x0 + 26; x <= deck.x1 - 20; x += 180) if (clearOfTower(x)) cols.push(x);
-  if (clearOfTower(deck.x1 - 20)) cols.push(deck.x1 - 20);
+  const { R, deck, lift, W } = L, ground = L.wallTop, pw = L.land ? 20 : 18, towerHalf = L.towerHW + 6;
+  const clearOfTower = x => Math.abs(x - lift.x) > towerHalf + pw;
+  // Deck scaffold: main posts about a tenth of the width apart, a girder under the deck and one at mid height
+  const deckBottom = deck.y + 24, cols = [], step = Math.max(150, W * .1);
+  for (let x = deck.x0 + 26; x <= deck.x1 - 20; x += step) if (clearOfTower(x)) cols.push(x);
+  if (clearOfTower(deck.x1 - 20) && deck.x1 - 20 - cols[cols.length - 1] > 70) cols.push(deck.x1 - 20);
+  const midY = deckBottom + (ground - deckBottom) * .46;
   for (let i = 0; i < cols.length - 1; i++) {
-    const a = cols[i], b = cols[i + 1]; if (b - a > 260 || !clearOfTower((a + b) / 2)) continue;
-    for (let y = deckBottom + 20, k = 0; y < ground - 60; y += 190, k++) {
-      const y2 = Math.min(ground - 10, y + 190);
-      beam(g, [a, y], [b, y], 7);
-      if ((k + i) % 2 === 0) { beam(g, [a, y], [b, y2], 5); beam(g, [b, y], [a, y2], 5); }
-    }
+    const a = cols[i], b = cols[i + 1]; if (b - a > 280 || !clearOfTower((a + b) / 2)) continue;
+    beam(g, [a, deckBottom + 14], [b, deckBottom + 14], 10);
+    beam(g, [a, midY], [b, midY], 9);
+    if (i % 2 === 0) { beam(g, [a + 8, deckBottom + 22], [b - 8, midY - 8], 7); beam(g, [b - 8, deckBottom + 22], [a + 8, midY - 8], 7); }
   }
-  for (const x of cols) post(g, x, deckBottom - 4, ground + 4, 13);
-  // Supports under slides and the funnel
+  for (const x of cols) post(g, x, deckBottom - 6, ground + 4, pw);
+  // Supports under slides only where a slide runs high above the ground
   for (const route of L.routes) for (const seg of route.drawSegments) {
     if (seg.kind === 'deck' || seg.kind === 'tube') continue;
     let last = -1e9;
     for (const p of seg) {
-      if (p.s - last < 210) continue;
-      if (p.y > ground - 110 || !clearOfTower(p.x) || Math.abs(p.y - deck.y) < 50) continue;
+      if (p.s - last < 300) continue;
+      if (p.y > ground - 150 || !clearOfTower(p.x) || Math.abs(p.y - deck.y) < 60 || cols.some(c => Math.abs(c - p.x) < 60)) continue;
       last = p.s;
-      const top = p.y + R + 14;
-      post(g, p.x, top, ground + 4, 11);
-      for (const sgn of [-1, 1]) if ((Math.round(p.s / 210) + (sgn > 0 ? 1 : 0)) % 2) beam(g, [p.x, top + 55], [p.x + sgn * 34, top + 6], 5);
-      if (top < ground - 260) beam(g, [p.x - 18, top + 120], [p.x + 18, top + 120], 5);
+      const top = p.y + R + 16;
+      post(g, p.x, top, ground + 4, pw - 4);
+      for (const sgn of [-1, 1]) if ((Math.round(p.s / 300) + (sgn > 0 ? 1 : 0)) % 2) beam(g, [p.x, top + 60], [p.x + sgn * 38, top + 8], 6);
     }
   }
+  // Funnel: two thick posts and a cross girder
   const f = L.funnel;
-  for (const dx of [-.62, -.22, .22, .62]) post(g, f.x + dx * f.rx, f.y + f.ry * 1.2, ground + 4, 11);
-  beam(g, [f.x - f.rx * .62, f.y + f.ry * 2.6], [f.x + f.rx * .62, f.y + f.ry * 2.6], 6);
+  for (const dx of [-.55, .55]) post(g, f.x + dx * f.rx, f.y + f.ry * 1.2, ground + 4, pw);
+  beam(g, [f.x - f.rx * .55, f.y + f.ry * 2.5], [f.x + f.rx * .55, f.y + f.ry * 2.5], 10);
 };
 
-/** Wooden launch deck with plank top, front fascia, back railing and hanging plants. */
+/** Wooden railing behind the deck: posts every 40 px, mid rail and a handrail with a light top edge. */
+function railing(g, x0, x1, y, h) {
+  const top = y - h;
+  for (let x = x0 + 8; x <= x1 - 4; x += 40) { line(g, [[x, y], [x, top]], 8, C.woodDark); line(g, [[x, y], [x, top]], 5, C.woodLight); }
+  line(g, [[x0 + 4, y - h * .48], [x1 - 4, y - h * .48]], 6, C.woodDark); line(g, [[x0 + 4, y - h * .48], [x1 - 4, y - h * .48]], 3.5, C.wood);
+  line(g, [[x0 + 4, top], [x1 - 4, top]], 9, C.woodDark); line(g, [[x0 + 4, top], [x1 - 4, top]], 6, C.woodLight);
+  line(g, [[x0 + 4, top - 1.5], [x1 - 4, top - 1.5]], 2, 'rgba(255,236,200,.95)');
+}
+/** Deck slab: cream plank top, front face with joints every 28 px and a timber girder below. */
+function slab(g, x0, x1, y) {
+  roundRect(g, x0 - 2.5, y - 6.5, x1 - x0 + 5, 32, 4, C.outline);
+  g.fillStyle = C.deckTop; g.fillRect(x0, y - 4, x1 - x0, 9);
+  line(g, [[x0 + 2, y - 2.5], [x1 - 2, y - 2.5]], 2, C.rimLight);
+  g.fillStyle = C.face; g.fillRect(x0, y + 5, x1 - x0, 11);
+  g.strokeStyle = C.faceDark; g.lineWidth = 1.5;
+  for (let x = x0 + 28; x < x1; x += 28) { g.beginPath(); g.moveTo(x, y + 6); g.lineTo(x, y + 15); g.stroke(); }
+  g.fillStyle = C.woodLight; g.fillRect(x0 + 3, y + 16, x1 - x0 - 6, 7);
+  line(g, [[x0 + 3, y + 21.5], [x1 - 3, y + 21.5]], 3, C.wood);
+}
+/** Flower box on a deck edge with ivy hanging down. */
+function flowerBox(g, rng, art, x, y) {
+  roundRect(g, x - 36, y + 3, 72, 17, 4, C.woodDark); roundRect(g, x - 34, y + 4, 68, 14, 3, C.woodLight);
+  line(g, [[x - 32, y + 6], [x + 32, y + 6]], 2, 'rgba(255,226,176,.9)');
+  glazed(g, C.glaze, g => art.foliage(g, rng, [[x - 32, y + 4], [x + 32, y + 4]], 4, 9, (nx, ny) => ny < 0, { dens: 3, rMin: 2.5, rMax: 6.5, flowers: .14 }));
+  for (let k = 0; k < 4; k++) {
+    const vx = x - 26 + k * 17, len = rng.range(30, 80), pts = [];
+    for (let j = 0; j <= 8; j++) pts.push([vx + Math.sin(j * .9 + k) * 4, y + 18 + len * j / 8]);
+    line(g, pts, 2, '#3f8f2a');
+    g.fillStyle = '#7cbf2e'; for (let j = 2; j <= 8; j += 2) { const [px, py] = pts[j]; g.beginPath(); g.ellipse(px + (j % 4 ? 3 : -3), py, 4, 2.6, (j % 4 ? .6 : -.6), 0, TAU); g.fill(); }
+  }
+}
+/** Launch deck (animals walk on its top edge) and, in landscape, a second decorative level between tower and funnel. */
 WP.paintDeck = function (g, L, rng, art) {
   const { deck, lift, R } = L, y = deck.y, x0 = deck.x0, x1 = deck.x1;
-  // Back railing (behind the animals)
-  const railTop = y - R * 1.45;
-  for (let x = x0 + 8; x <= x1 - 4; x += 58) line(g, [[x, y], [x, railTop]], 6, C.wood);
-  line(g, [[x0 + 4, railTop], [x1 - 4, railTop]], 7, C.woodDark); line(g, [[x0 + 4, railTop], [x1 - 4, railTop]], 4.5, C.woodLight);
-  line(g, [[x0 + 4, railTop + R * .55], [x1 - 4, railTop + R * .55]], 3.5, C.wood);
-  for (let x = x0 + 30; x < x1 - 30; x += 116) { ellipse(g, x, railTop - 4, 5, 5, '#f8cf8e'); }
-  // Plank top and fascia
-  roundRect(g, x0, y - 4, x1 - x0, 10, 3, C.plank);
-  line(g, [[x0 + 2, y - 3], [x1 - 2, y - 3]], 2, 'rgba(255,248,226,.8)');
-  g.fillStyle = C.plankShade; g.fillRect(x0, y + 6, x1 - x0, 20);
-  g.strokeStyle = 'rgba(150,90,40,.4)'; g.lineWidth = 1.5;
-  for (let x = x0 + 22; x < x1; x += 44) { g.beginPath(); g.moveTo(x, y + 7); g.lineTo(x, y + 25); g.stroke(); }
-  line(g, [[x0, y + 26], [x1, y + 26]], 3, C.woodDark);
-  // Flower boxes with trailing ivy, kept clear of slide launches
+  railing(g, x0, x1, y, R * 1.45);
+  slab(g, x0, x1, y);
   const launches = L.routes.map(r => r.launch[0]);
   for (let x = x0 + 70; x < x1 - 60; x += 175) {
-    if (launches.some(lx => Math.abs(lx - x) < 70) || Math.abs(x - lift.x) < R + 60) continue;
-    roundRect(g, x - 34, y + 10, 68, 14, 3, '#c47a3a');
-    glazed(g, C.glaze, g => art.foliage(g, rng, [[x - 32, y + 8], [x + 32, y + 8]], 4, 8, (nx, ny) => ny < 0, { dens: 3, rMin: 2.5, rMax: 6, flowers: .12 }));
-    for (let k = 0; k < 4; k++) {
-      const vx = x - 26 + k * 17, len = rng.range(30, 80), pts = [];
-      for (let j = 0; j <= 8; j++) pts.push([vx + Math.sin(j * .9 + k) * 4, y + 22 + len * j / 8]);
-      line(g, pts, 2, '#3f8f2a');
-      g.fillStyle = '#7cbf2e'; for (let j = 2; j <= 8; j += 2) { const [px, py] = pts[j]; g.beginPath(); g.ellipse(px + (j % 4 ? 3 : -3), py, 4, 2.6, (j % 4 ? .6 : -.6), 0, TAU); g.fill(); }
-    }
+    if (launches.some(lx => Math.abs(lx - x) < 76) || Math.abs(x - lift.x) < L.towerHW + 40) continue;
+    flowerBox(g, rng, art, x, y + 2);
   }
+  if (!L.land) return;
+  const d2 = { x0: L.W * .468, x1: L.W * .545, y: L.H * .375 };
+  L.deck2 = d2;
+  for (const x of [d2.x0 + 14, d2.x1 - 14]) post(g, x, d2.y + 20, L.wallTop + 4, 16);
+  beam(g, [d2.x0 + 14, d2.y + 70], [d2.x1 - 14, d2.y + 70], 8);
+  railing(g, d2.x0, d2.x1, d2.y, R * 1.05);
+  slab(g, d2.x0, d2.x1, d2.y);
+  flowerBox(g, rng, art, (d2.x0 + d2.x1) / 2, d2.y + 2);
 };
 
-/** Glass tower: back panes, frame, base pier and faceted pyramid roof (lift mechanics are drawn per frame). */
+/** Glass tower: tinted panes with struts, cream ring bands, base pier and a faceted pyramid roof (lift drawn per frame). */
 WP.paintTower = function (g, L) {
   const { lift, R, deck } = L, x = lift.x, hw = L.towerHW, top = deck.y - R * 2.9, bottom = lift.bottom + R * .6;
   L.tower = { x, hw, top, bottom };
-  // Back panes
   const gl = g.createLinearGradient(x - hw, 0, x + hw, 0);
-  gl.addColorStop(0, 'rgba(140,226,244,.55)'); gl.addColorStop(.35, 'rgba(176,240,250,.36)'); gl.addColorStop(.7, 'rgba(90,190,220,.42)'); gl.addColorStop(1, 'rgba(36,128,168,.6)');
+  gl.addColorStop(0, 'rgba(160,232,244,.55)'); gl.addColorStop(.3, 'rgba(122,214,234,.38)'); gl.addColorStop(.75, 'rgba(57,159,187,.42)'); gl.addColorStop(1, 'rgba(40,118,150,.58)');
   g.fillStyle = gl; g.fillRect(x - hw, top, hw * 2, bottom - top);
-  g.fillStyle = 'rgba(8,52,80,.14)'; g.fillRect(x - R * 1.1, top, R * 2.2, bottom - top);
+  // Vertical struts about 30 px apart, a light stripe on the left pane
+  const n = Math.max(3, Math.round(hw * 2 / 30));
+  for (let i = 1; i < n; i++) { const sx = x - hw + i * hw * 2 / n; line(g, [[sx, top], [sx, bottom]], 2.2, 'rgba(43,101,113,.42)'); line(g, [[sx - 1.6, top], [sx - 1.6, bottom]], 1, 'rgba(228,251,246,.4)'); }
+  g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(x - hw + 7, top, hw * .2, bottom - top);
   // Base pier in the water
-  roundRect(g, x - hw - 10, bottom - 8, hw * 2 + 20, 26, 6, '#ddc6aa'); roundRect(g, x - hw - 10, bottom - 8, hw * 2 + 20, 7, 4, C.stoneCap);
-  // Frame: corner posts, mullions and rings
-  for (const sx of [-1, 1]) { line(g, [[x + sx * hw, top - 6], [x + sx * hw, bottom]], 8, C.glassFrame); line(g, [[x + sx * hw - 2, top - 6], [x + sx * hw - 2, bottom]], 2.2, C.glassLight); }
-  for (const sx of [-.42, .42]) line(g, [[x + sx * hw, top], [x + sx * hw, bottom]], 2.5, 'rgba(43,101,113,.55)');
-  for (let y = top + 70; y < bottom - 20; y += 120) { line(g, [[x - hw, y], [x + hw, y]], 3.5, C.glassFrame); line(g, [[x - hw, y - 2], [x + hw, y - 2]], 1.2, 'rgba(228,251,246,.7)'); }
-  // Roof cabin ring and faceted glass pyramid
-  const ry = top - 4, rw = hw + 18, apex = ry - (L.land ? 50 : 64);
-  roundRect(g, x - rw, ry - 10, rw * 2, 16, 4, C.rim); line(g, [[x - rw, ry + 6], [x + rw, ry + 6]], 2.5, C.seam);
+  roundRect(g, x - hw - 12, bottom - 9, hw * 2 + 24, 28, 6, C.outline);
+  roundRect(g, x - hw - 10, bottom - 8, hw * 2 + 20, 26, 6, C.stone); roundRect(g, x - hw - 10, bottom - 8, hw * 2 + 20, 8, 4, C.stoneCap);
+  // Corner posts and horizontal rings
+  for (const sx of [-1, 1]) { line(g, [[x + sx * hw, top - 6], [x + sx * hw, bottom]], 9, C.glassFrame); line(g, [[x + sx * hw - 2, top - 6], [x + sx * hw - 2, bottom]], 2.4, C.glassLight); }
+  for (let y = top + 90; y < bottom - 30; y += 140) { line(g, [[x - hw, y], [x + hw, y]], 4, C.glassFrame); line(g, [[x - hw, y - 2], [x + hw, y - 2]], 1.3, 'rgba(228,251,246,.75)'); }
+  // Cream ring band just above the lagoon
+  const band = (y, h) => { roundRect(g, x - hw - 8, y - 1.5, hw * 2 + 16, h + 3, 4, C.outline); roundRect(g, x - hw - 6, y, hw * 2 + 12, h, 3, C.rim); line(g, [[x - hw - 4, y + 2], [x + hw + 4, y + 2]], 2, C.rimLight); line(g, [[x - hw - 4, y + h - 2], [x + hw + 4, y + h - 2]], 2.5, C.rimShade); };
+  band(L.waterY - 26, 15);
+  // Roof: cream eave ring and a pyramid with five glass facets, light on the left
+  const ry = top - 4, rw = hw + 18, apex = ry - (L.land ? 74 : 64);
+  band(ry - 12, 18);
+  const xs = [-1, -.58, -.16, .26, .66, 1], base = k => ry - 12 + (1 - k * k) * 3, cols = ['#bff3f8', '#9fe6f0', '#7fd8e7', '#6acfe2', '#5cc8de'];
   g.lineJoin = 'round';
-  g.fillStyle = '#b6f1f6'; poly(g, [[x - rw, ry - 10], [x - rw * .18, ry - 16], [x, apex]]); g.fill();
-  g.fillStyle = '#6fd2e6'; poly(g, [[x - rw * .18, ry - 16], [x + rw * .3, ry - 16], [x, apex]]); g.fill();
-  g.fillStyle = '#2f9cc2'; poly(g, [[x + rw * .3, ry - 16], [x + rw, ry - 10], [x, apex]]); g.fill();
-  g.strokeStyle = C.glassFrame; g.lineWidth = 3; poly(g, [[x - rw, ry - 10], [x, apex], [x + rw, ry - 10]], false); g.stroke();
-  g.lineWidth = 2; for (const fx of [-rw * .18, rw * .3]) { g.beginPath(); g.moveTo(x + fx, ry - 16); g.lineTo(x, apex); g.stroke(); }
-  for (let k = 1; k < 4; k++) { const f = k / 4, yy = ry - 12 + (apex - ry + 12) * f, w = rw * (1 - f); line(g, [[x - w, yy], [x + w, yy]], 1.6, 'rgba(43,101,113,.6)'); }
-  line(g, [[x - rw + 8, ry - 14], [x - 4, apex + 10]], 2.5, 'rgba(255,255,255,.75)');
-  ellipse(g, x, apex - 4, 7, 7, '#f2cf5b'); ellipse(g, x - 2, apex - 6, 2.5, 2.5, '#fff6c4');
+  for (let i = 0; i < 5; i++) { g.fillStyle = cols[i]; poly(g, [[x + xs[i] * rw, base(xs[i])], [x + xs[i + 1] * rw, base(xs[i + 1])], [x, apex]]); g.fill(); }
+  g.strokeStyle = C.glassFrame; g.lineWidth = 3; poly(g, [[x - rw, base(-1)], [x, apex], [x + rw, base(1)]], false); g.stroke();
+  g.lineWidth = 1.8; for (let i = 1; i < 5; i++) { g.beginPath(); g.moveTo(x + xs[i] * rw, base(xs[i])); g.lineTo(x, apex); g.stroke(); }
+  for (let k = 1; k < 4; k++) { const f = k / 4, yy = base(0) + (apex - base(0)) * f, w = rw * (1 - f); line(g, [[x - w, yy], [x + w, yy]], 1.4, 'rgba(43,101,113,.5)'); }
+  line(g, [[x - rw + 10, base(-1) - 4], [x - 6, apex + 12]], 2.6, 'rgba(255,255,255,.8)');
+  ellipse(g, x, apex - 4, 8, 8, C.glassFrame); ellipse(g, x, apex - 4, 6, 6, '#f2cf5b'); ellipse(g, x - 2, apex - 6, 2.5, 2.5, '#fff6c4');
   L.tower.apex = [x, apex];
 };
 /** Front glints of the tower, drawn over the lift each frame. */
@@ -320,6 +353,11 @@ WP.paintTowerFront = function (g, L) {
   g.restore();
 };
 
+/** Thick white lip of the funnel bowl (8 px), shaded on its outer edge. */
+function funnelLip(g, x, y, rx, ry) {
+  ellipse(g, x, y + 4, rx + 9, ry + 8, C.outline); ellipse(g, x, y + 3, rx + 7, ry + 6, C.rimShade);
+  ellipse(g, x, y, rx + 6, ry + 5, '#fefdfc'); ellipse(g, x, y + 2, rx - 2, ry - 2, C.rim); ellipse(g, x, y + 1.5, rx - 3, ry - 3, C.rimLight);
+}
 /** The open funnel bowl: cone shell, cream rim, water surface with dark drain. */
 WP.paintFunnel = function (g, L) {
   const f = L.funnel, { x, y, rx, ry } = f, depth = ry * 1.9, neck = rx * .14;
@@ -329,9 +367,12 @@ WP.paintFunnel = function (g, L) {
   g.fillStyle = cone; g.strokeStyle = C.outline; g.lineWidth = 3;
   g.beginPath(); g.moveTo(x - rx, y); g.bezierCurveTo(x - rx * .9, y + depth * .7, x - neck * 1.6, y + depth * .85, x - neck, y + depth);
   g.lineTo(x + neck, y + depth); g.bezierCurveTo(x + neck * 1.6, y + depth * .85, x + rx * .9, y + depth * .7, x + rx, y); g.closePath(); g.fill(); g.stroke();
+  // Shell panels: joints run from the rim down to the neck
+  g.save(); g.clip(); g.strokeStyle = C.faceDark; g.lineWidth = 2;
+  for (const k of [-.78, -.5, -.22, .06, .34, .62, .86]) { g.beginPath(); g.moveTo(x + rx * k, y + ry * .6); g.quadraticCurveTo(x + rx * k * .78, y + depth * .62, x + neck * k, y + depth); g.stroke(); }
+  g.restore();
   line(g, [[x - rx * .55, y + depth * .45], [x - neck * 1.4, y + depth * .9]], 3, 'rgba(255,255,255,.45)');
-  // Rim
-  ellipse(g, x, y + 3, rx + 6, ry + 6, C.outline); ellipse(g, x, y + 2, rx + 4, ry + 4, C.rimShade); ellipse(g, x, y, rx + 3, ry + 3, C.rimLight); ellipse(g, x, y + 1, rx - 3, ry - 2, C.rim);
+  funnelLip(g, x, y, rx, ry);
   // Water surface
   const wr = rx - 12, wry = ry - 7, wg = g.createRadialGradient(x, y + wry * .2, wr * .08, x, y, wr);
   wg.addColorStop(0, '#11789a'); wg.addColorStop(.18, '#1aaec4'); wg.addColorStop(.55, '#30dbe6'); wg.addColorStop(1, '#8ff1f2');
@@ -355,32 +396,94 @@ WP.paintFunnelFront = function (g, L) {
   const { x, y, rx, ry } = L.funnel;
   g.save(); g.beginPath(); g.rect(x - rx - 12, y + 1, 2 * rx + 24, ry + 14); g.clip();
   g.beginPath(); g.ellipse(x, y + 3, rx + 6, ry + 6, 0, 0, TAU); g.ellipse(x, y + 1, rx - 12, ry - 7, 0, 0, TAU); g.clip('evenodd');
-  ellipse(g, x, y + 3, rx + 6, ry + 6, C.outline); ellipse(g, x, y + 2, rx + 4, ry + 4, C.rimShade); ellipse(g, x, y, rx + 3, ry + 3, C.rimLight); ellipse(g, x, y + 1, rx - 3, ry - 2, C.rim);
+  funnelLip(g, x, y, rx, ry);
   g.restore();
 };
 
-/** Seesaw stand: stone footing, A-frame legs and the large bearing wheel (the board itself moves). */
+/** Seesaw board cross-section: half-height of the top (h), depth of the front face (F), middle of the water (wm). */
+WP.boardSize = R => { const h = Math.round(TROUGH(R).out * .27); return { h, F: Math.round(R * .7), wm: 1 }; };
+/** Seesaw stand: a big timber A-frame from the hub down to a two-course stone plinth on the pool edge. */
 WP.paintSeesawStand = function (g, L) {
-  const s = L.seesaw, { x, y } = s, h = L.wallTop - y + 4, foot = y + h;
-  roundRect(g, x - 70, foot - 6, 140, 20, 6, '#ddc6aa'); roundRect(g, x - 70, foot - 6, 140, 6, 4, C.stoneCap);
-  for (const sx of [-1, 1]) { line(g, [[x, y + 6], [x + sx * 52, foot - 4]], 19, C.woodDark); line(g, [[x, y + 6], [x + sx * 52, foot - 4]], 15, C.wood); line(g, [[x - 3, y + 8], [x + sx * 52 - 3, foot - 6]], 4, C.woodLight); }
-  beam(g, [x - 30, y + h * .55], [x + 30, y + h * .55], 8);
+  const s = L.seesaw, R = L.R, { h, F } = WP.boardSize(R), x = s.x, cy = s.y + h + F * .3, foot = L.wallTop - 6;
+  const spread = Math.min(s.length * .36, Math.max(64, (foot - cy) * .82)), pw = spread + 34;
+  roundRect(g, x - pw - 2.5, foot - 14.5, 2 * pw + 5, 27, 6, C.outline);
+  roundRect(g, x - pw, foot - 12, 2 * pw, 22, 5, C.stone); roundRect(g, x - pw, foot - 12, 2 * pw, 8, 4, C.stoneLight);
+  g.strokeStyle = C.stoneJoint; g.lineWidth = 1.5;
+  for (let k = -2; k <= 2; k++) { const jx = x + k * pw * .4 + 12; g.beginPath(); g.moveTo(jx, foot - 4); g.lineTo(jx, foot + 10); g.stroke(); }
+  for (const sx of [-1, 1]) {
+    const a = [x + sx * 6, cy], b = [x + sx * spread, foot - 12];
+    line(g, [a, b], 25, C.woodDark); line(g, [a, b], 20, C.woodLight); line(g, [a, b], 7, C.wood, 4, 2);
+    line(g, [a, b], 2.5, 'rgba(250,190,110,.9)', -5, -1);
+    roundRect(g, b[0] - 17, foot - 18, 34, 10, 3, C.woodDark); roundRect(g, b[0] - 15, foot - 17, 30, 6, 2, C.wood);
+  }
+  const by = cy + (foot - cy) * .62; beam(g, [x - spread * .66, by], [x + spread * .66, by], 12);
 };
+/** Seesaw board as a box beam: cream top with a water channel, a deep front face and end caps (rotated frame, pivot at 0,0). */
+WP.paintBoard = function (g, half, R, open) {
+  const { h, F } = WP.boardSize(R), e = half + 4, cx = e - 12, ch0 = -h + 6, ch1 = h - 9;
+  g.fillStyle = C.outline; g.beginPath(); g.roundRect(-e - 2.5, -h - 2.5, 2 * e + 5, 2 * h + F + 5, 8); g.fill();
+  g.fillStyle = C.face; g.fillRect(-e, h, 2 * e, F);
+  g.fillStyle = C.faceDark; g.fillRect(-e, h + F * .6, 2 * e, F * .4);
+  g.fillStyle = 'rgba(120,90,50,.22)'; g.fillRect(-e, h, 10, F); g.fillRect(e - 10, h, 10, F);
+  g.fillStyle = C.rim; g.beginPath(); g.roundRect(-e, -h, 2 * e, 2 * h + 1, 7); g.fill();
+  line(g, [[-e + 5, -h + 2.5], [e - 5, -h + 2.5]], 2.5, C.rimLight);
+  line(g, [[-e + 4, h - 3], [e - 4, h - 3]], 3, C.rimLight);
+  line(g, [[-e + 3, h + 1], [e - 3, h + 1]], 1.5, C.rimShade);
+  g.fillStyle = C.seam; g.fillRect(-cx - 1, ch0 - 1, 2 * cx + 2, ch1 - ch0 + 2);
+  g.fillStyle = '#e3d3ba'; g.fillRect(-cx, ch0, 2 * cx, ch1 - ch0);
+  g.fillStyle = C.innerWall; g.fillRect(-cx, ch0, 2 * cx, (ch1 - ch0) * .35);
+  if (!open) return;
+  const w0 = ch0 + 5, w1 = ch1;
+  g.fillStyle = C.waterDeep; g.fillRect(-cx + 2, w0 - 1, 2 * cx - 4, w1 - w0 + 1);
+  g.fillStyle = C.water; g.fillRect(-cx + 2, w0, 2 * cx - 4, w1 - w0 - 2);
+  g.fillStyle = C.waterCore; g.fillRect(-cx + 2, (w0 + w1) / 2 - 3, 2 * cx - 4, 6);
+  line(g, [[-cx + 5, w0 + 2], [cx - 5, w0 + 2]], 2, 'rgba(255,255,255,.8)');
+};
+/** Big timber hub with spokes at the pivot, on the board's front face. */
 WP.paintSeesawWheel = function (g, L, angle) {
-  const { x, y } = L.seesaw, r = L.R * .85;
-  ellipse(g, x, y + 4, r + 4, r + 4, C.woodDark); ellipse(g, x, y + 4, r, r, '#f6c27e');
-  g.save(); g.translate(x, y + 4); g.rotate(angle * 3);
-  for (let k = 0; k < 6; k++) { g.rotate(TAU / 6); line(g, [[0, 0], [r - 4, 0]], 4, '#c07a3a'); }
-  g.restore(); ellipse(g, x, y + 4, r * .32, r * .32, C.woodDark); ellipse(g, x - 2, y + 2, r * .12, r * .12, '#fbe3b0');
+  const { x, y } = L.seesaw, R = L.R, { h, F } = WP.boardSize(R), cy = y + h + F * .3, r = R * .62;
+  ellipse(g, x, cy, r + 3, r + 3, C.outline); ellipse(g, x, cy, r, r, C.woodLight);
+  ellipse(g, x + 2, cy + 2, r * .8, r * .8, C.wood); ellipse(g, x, cy, r * .78, r * .78, '#f2c27e');
+  g.save(); g.translate(x, cy); g.rotate(angle * 3);
+  for (let k = 0; k < 6; k++) { g.rotate(TAU / 6); line(g, [[r * .3, 0], [r * .72, 0]], 4, C.wood); }
+  g.restore();
+  ellipse(g, x, cy, r * .32, r * .32, C.woodDark); ellipse(g, x, cy, r * .22, r * .22, '#f2cf5b'); ellipse(g, x - 2, cy - 2, r * .08, r * .08, '#fff6c4');
 };
 
-/** Springboard pedestal rising from the lagoon. */
+/** Springboard pedestal: a round stone plinth with a front face on the pool edge (spring and board drawn per frame). */
 WP.paintSpringStand = function (g, L) {
-  const j = L.jump, x = j.x + 6, y = j.y + L.R + 14, ground = L.wallTop;
-  post(g, x, y + 30, ground + 4, 14);
-  roundRect(g, x - 36, y + 22, 72, 14, 6, '#ddc6aa'); roundRect(g, x - 36, y + 22, 72, 5, 3, C.stoneCap);
+  const j = L.jump, R = L.R, x = j.x + 6, top = j.y + R + 36, rx = R * 1.9, ry = R * .42, foot = L.waterY + 4;
+  g.fillStyle = C.outline; g.beginPath(); g.ellipse(x, foot, rx + 2.5, ry + 2.5, 0, 0, Math.PI); g.lineTo(x - rx - 2.5, top); g.ellipse(x, top, rx + 2.5, ry + 2.5, 0, Math.PI, TAU); g.closePath(); g.fill();
+  const fg = g.createLinearGradient(x - rx, 0, x + rx, 0); fg.addColorStop(0, C.stoneCap); fg.addColorStop(.55, C.stone); fg.addColorStop(1, C.faceDark);
+  g.fillStyle = fg; g.beginPath(); g.ellipse(x, foot, rx, ry, 0, 0, Math.PI); g.lineTo(x - rx, top); g.ellipse(x, top, rx, ry, 0, Math.PI, TAU); g.closePath(); g.fill();
+  g.strokeStyle = C.stoneJoint; g.lineWidth = 1.6; g.beginPath(); g.ellipse(x, (top + foot) / 2, rx, ry, 0, 0, Math.PI); g.stroke();
+  ellipse(g, x, top, rx, ry, C.stoneLight); g.strokeStyle = C.stoneJoint; g.beginPath(); g.ellipse(x, top, rx - 7, ry - 3, 0, 0, TAU); g.stroke();
 };
-
+/** Short cream catch basin on the pool edge where the funnel tube ends: high back wall, two side walls,
+ *  the water spills over the low front lip into the lagoon (open slides pour straight into the lagoon). */
+WP.paintBasins = function (g, L) {
+  const R = L.R, { out } = TROUGH(R), top = L.wallTop - 12, face = L.waterY - 1;
+  for (const r of L.routes) {
+    const segs = r.drawSegments; if (segs[segs.length - 1].kind !== 'tube') continue;
+    const x = r.end[0], w = Math.round(out * 1.2), sw = Math.round(w * .2), lip = top + 30, i0 = x - w / 2 + sw, iw = w - 2 * sw;
+    roundRect(g, x - w / 2 - 2.5, top - 18.5, w + 5, 30, 10, C.outline);
+    roundRect(g, x - w / 2, top - 16, w, 25, 9, C.rim); line(g, [[x - w / 2 + 8, top - 13], [x + w / 2 - 8, top - 13]], 2.5, C.rimLight);
+    roundRect(g, i0 - 4.5, lip - 2.5, iw + 9, face - lip + 5, 4, C.outline);
+    g.fillStyle = C.face; g.fillRect(i0 - 2, lip, iw + 4, face - lip);
+    g.fillStyle = C.water; g.fillRect(i0 - 2, top + 2, iw + 4, lip - top);
+    const sg = g.createLinearGradient(0, lip, 0, face); sg.addColorStop(0, 'rgba(70,232,240,.95)'); sg.addColorStop(1, 'rgba(170,246,250,.92)');
+    g.fillStyle = sg; g.beginPath(); g.roundRect(i0 + 2, lip - 4, iw - 4, face - lip + 6, 4); g.fill();
+    line(g, [[i0 + 6, lip - 1], [i0 + iw - 6, lip - 1]], 2.5, 'rgba(255,255,255,.85)');
+    for (const s of [-1, 1]) {
+      const cx = x + s * (w / 2 - sw / 2);
+      roundRect(g, cx - sw / 2 - 2.5, top - 8.5, sw + 5, face - top + 11, 8, C.outline);
+      roundRect(g, cx - sw / 2, top - 6, sw, face - top + 6, 7, C.rim);
+      g.fillStyle = s < 0 ? C.rimShade : C.innerWall; g.fillRect(s < 0 ? cx + sw * .2 : cx - sw / 2, top + 4, sw * .3, face - top - 6);
+      g.fillStyle = C.faceDark; g.fillRect(cx - sw / 2, face - 8, sw, 7);
+      line(g, [[cx - sw / 2 + 4, top - 3], [cx + sw / 2 - 4, top - 3]], 2.5, C.rimLight);
+    }
+  }
+};
 /** Foreground corners: reeds, cattails and hibiscus in front of the lagoon edge. */
 WP.paintFore = function (g, L, rng, art) {
   const { W, H } = L, corners = L.land ? [[-10, 1], [W + 10, -1]] : [[-10, 1], [W + 10, -1]];
