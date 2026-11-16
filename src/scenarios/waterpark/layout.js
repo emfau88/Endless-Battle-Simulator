@@ -39,6 +39,18 @@ WP.makePath = makePath;
 /** Open slide trough: outer rim width and water channel width (wide shell as in the mockup). */
 WP.troughSize = R => ({ out: 3.2 * R, inner: 2.5 * R });
 
+/** Serpentine in Bildanteilen: n Bögen zwischen x0 und x1 von y0 hinab nach y1 (ohne den Startpunkt). An den Kehren
+ *  läuft sie senkrecht, in der Mitte jedes Bogens waagerecht. Dort werden die Tiere langsam und halten Abstand. */
+function serpentine(x0, x1, y0, y1, n, steps = 5) {
+  const out = [], cx = (x0 + x1) / 2, rx = (x0 - x1) / 2, h = (y1 - y0) / n;
+  for (let k = 0; k < n; k++) {
+    const side = k % 2 ? -1 : 1, y = y0 + k * h;
+    for (let j = 1; j <= steps; j++) { const a = j / steps * Math.PI / 2; out.push([cx + side * rx * Math.cos(a), y + h / 2 * Math.sin(a)]); }
+    for (let j = 1; j <= steps; j++) { const a = j / steps * Math.PI / 2; out.push([cx - side * rx * Math.sin(a), y + h - h / 2 * Math.cos(a)]); }
+  }
+  return out;
+}
+
 /*
  * Grundriss nach dem Designmockup: gläserner Aufzugturm links der Mitte, ein Startdeck auf Turmhöhe,
  * von dem alle vier Attraktionen abgehen. Die Tiere steigen oben aus dem Becher, laufen über das Deck
@@ -62,19 +74,26 @@ const PLANS = {
     jumpIn: { deckTo: .79, pts: [[.806,.232],[.826,.33],[.852,.48]] },
     pool: [[.09,.80],[.12,.89],[.40,.94],[.76,.93],[.92,.87],[.74,.84],[.55,.87],[.44,.86]],
   },
+  // Hochformat (Plan P8): Turm als Mittelachse, jede Attraktion in eigener Spur ohne Kreuzung. Der Turm wird von zwei
+  // steilen Rinnen flankiert (links Sprungrutsche, rechts Zulauf zum Trichter); außen links die Panoramarutsche in Bögen.
+  // Rechts hängt die Wippe unter dem Deck, ihr Auslauf läuft außen um den Trichter herum, der eine Etage tiefer sitzt.
+  // Buchten, Sprung und Wippe liegen außerhalb der Bedienleiste von Shorts (rechts unten). Reihenfolge der Buchten im
+  // Wasserlauf (von rechts nach links): Wippe, Trichter, Sprung, Panorama. Die Panoramabucht bleibt wie im Querformat die
+  // letzte, weil dort bis zu drei Tiere im Verbund landen.
   port: {
-    waterY: .70, horizon: .25, lift: { x: .36, deck: .165, bottom: .77 },
-    mouths: [.16, .485, .62, .77],
-    funnel: { x: .68, y: .285, rx: .19, ry: .034 },
-    seesaw: { x: .715, y: .47, length: .26, leftward: true },
-    jump: { x: .875, y: .60 },
-    panorama: { deckTo: .24, pts: [[.215,.198],[.13,.222],[.075,.268],[.10,.318],[.19,.35],[.228,.40],[.165,.44],[.088,.48],[.085,.54],[.17,.572],[.228,.612],[.21,.66]] },
-    funnelIn: { deckTo: .48, pts: [[.495,.20],[.505,.245]] },
-    tube: [[.685,.34],[.665,.39],[.60,.418],[.515,.435],[.477,.48],[.468,.57],[.475,.645]],
-    seesawIn: { deckTo: .74, pts: [[.765,.21],[.80,.29],[.835,.35]] },
-    seesawOut: [[.58,.60],[.607,.655]],
-    jumpIn: { deckTo: .93, pts: [[.95,.22],[.957,.33],[.952,.45],[.932,.53],[.90,.578]] },
-    pool: [[.09,.80],[.12,.89],[.40,.94],[.76,.93],[.92,.87],[.74,.84],[.55,.87],[.44,.86]],
+    waterY: .70, horizon: .25, lift: { x: .482, deck: .186, bottom: .77 }, deckX1: .975, poolDip: .058,
+    mouths: [.085, .648, .778, .222],
+    funnel: { x: .708, y: .388, rx: .134, ry: .032 },
+    seesaw: { x: .829, y: .297, length: .157, hang: true },
+    jump: { x: .322, y: .643 },
+    panorama: { deckTo: .2157, pts: serpentine(.2157, .073, .186, .672, 5) },
+    funnelIn: { deckTo: .623, pts: [[.623,.24],[.623,.30],[.623,.345]] },
+    tube: [[.708,.45],[.70,.485],[.662,.515],[.648,.56],[.648,.64]],
+    seesawIn: { deckTo: .75, pts: [] },
+    seesawOut: [[.925,.43],[.925,.50],[.912,.57],[.862,.63],[.80,.675]],
+    jumpIn: { deckTo: .341, pts: [[.341,.24],[.341,.34],[.341,.45],[.34,.54],[.335,.60]] },
+    pool: [[.06,.79],[.10,.875],[.36,.925],[.72,.92],[.90,.87],[.80,.81],[.64,.815],[.53,.81]],
+    parkingRows: [.80, .85, .90, .95],
   },
 };
 
@@ -94,7 +113,7 @@ WP.createLayout = function (world, size = 36) {
   const spiralRx = Math.max(R * 2, funnel.rx - R * 1.4), spiralRy = Math.max(R, funnel.ry - R * .7), spiral = [];
   // Einfahrt links am Rand, gegen den Uhrzeigersinn nach unten weiter, zweieinhalb Runden bis zum Abfluss.
   for (let j = 0; j <= 160; j++) { const f = j / 160, a = Math.PI - f * Math.PI * 5, r = 1 - .94 * f; spiral.push([funnel.x + Math.cos(a) * spiralRx * r, funnel.y + Math.sin(a) * spiralRy * r]); }
-  const seesaw = { x: W * P.seesaw.x, y: H * P.seesaw.y, length: W * P.seesaw.length, maxAngle: .16 };
+  const seesaw = { x: W * P.seesaw.x, y: H * P.seesaw.y, length: W * P.seesaw.length, maxAngle: .16, hang: !!P.seesaw.hang };
   const dir = P.seesaw.leftward ? -1 : 1;
   const boardStart = [seesaw.x - dir * seesaw.length / 2, seesaw.y], boardEnd = [seesaw.x + dir * seesaw.length / 2, seesaw.y];
   seesaw.dir = dir;
@@ -135,7 +154,14 @@ WP.createLayout = function (world, size = 36) {
   ], jump);
   // Die vier Buchten münden in einen gemeinsamen Wasserlauf. Abschnitte einzeln glätten, damit die Einmündungen exakt bleiben.
   const topXs = [...new Set(mouths)].sort((a,b) => b-a), poolParts = [];
-  for (let i = 0; i < topXs.length - 1; i++) poolParts.push({ points: [[topXs[i]*W,waterY],[topXs[i+1]*W,waterY]], smooth: false, kind: 'pool' });
+  // Hochformat: Die Buchten liegen eng nebeneinander. Der Wasserlauf taucht deshalb zwischen zwei Buchten in die Lagune ab,
+  // damit der Weg von Bucht zu Bucht lang genug für eine eigene Landereservierung bleibt (2,5 Abstände, siehe simulation.js).
+  const dip = H * (P.poolDip || 0);
+  for (let i = 0; i < topXs.length - 1; i++) {
+    const a = topXs[i] * W, b = topXs[i + 1] * W;
+    const pts = dip ? Array.from({ length: 25 }, (_, j) => [a + (b - a) * j / 24, waterY + Math.sin(Math.PI * j / 24) ** 2 * dip]) : [[a, waterY], [b, waterY]];   // waagerecht durch jede Bucht
+    poolParts.push({ points: pts, smooth: false, kind: 'pool' });
+  }
   poolParts.push({ points: [[topXs[topXs.length-1]*W,waterY], ...points(P.pool), [xLift,bottom]], kind:'pool' });
   const poolPath = makePath(poolParts), joinS = mouths.map(x => {
     const p = poolPath.points.find(p => Math.abs(p.x-x*W)<1e-5 && Math.abs(p.y-waterY)<1e-5); return p.s;
@@ -146,9 +172,12 @@ WP.createLayout = function (world, size = 36) {
     parkingPoints.push(pt(.15,.80));parkingTurn(W*.15,H*.84,H*.04,true);
     parkingPoints.push(pt(.85,.88));parkingTurn(W*.85,H*.92,H*.04,false);parkingPoints.push(pt(.15,.96));
   } else {
-    parkingPoints.push(pt(.15,.77));parkingTurn(W*.15,H*.80,H*.03,true);
-    parkingPoints.push(pt(.85,.83));parkingTurn(W*.85,H*.86,H*.03,false);
-    parkingPoints.push(pt(.15,.89));parkingTurn(W*.15,H*.92,H*.03,true);parkingPoints.push(pt(.85,.95));
+    // Vier Reihen unterhalb der Bögen des Wasserlaufs: abwechselnd nach links und rechts, mit Halbkreis am Reihenende.
+    const rows=P.parkingRows;
+    rows.forEach((y,i)=>{
+      const out=i%2?.85:.15; parkingPoints.push(pt(out,y));
+      if(i<rows.length-1){const r=H*(rows[i+1]-y)/2; parkingTurn(W*out,H*y+r,r,i%2===0);}
+    });
   }
   const parkingPath=makePath([{points:parkingPoints,smooth:false,kind:'pool'}]);
   const gather = { spots: [], paths: [],path:parkingPath };
@@ -158,7 +187,7 @@ WP.createLayout = function (world, size = 36) {
   }
   // Deckflächen für die Darstellung: Lauffläche (Füße) liegt R unter der Tiermitte.
   const deckXs = routes.map(r => r.launch[0]);
-  const deck = { y: deckY + R, x0: Math.min(...deckXs) - R * 1.6, x1: Math.max(...deckXs) + R * 1.6, centerY: deckY };
+  const deck = { y: deckY + R, x0: Math.min(...deckXs) - R * 1.6, x1: Math.max(Math.max(...deckXs) + R * 1.6, W * (P.deckX1 || 0)), centerY: deckY };
   return { W,H,R,GAP,poolGap,towerHW,land,horizon:H*P.horizon,waterY,origin,start:origin,deck,
     lift:{x:xLift,top,bottom,deckY,path:liftPath},platformPath,routes,
     pool:{path:poolPath,joinS,pickup:{x:xLift,y:bottom}},gather,funnel,seesaw,jump };

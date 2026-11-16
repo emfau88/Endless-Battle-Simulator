@@ -101,7 +101,7 @@ class WaterparkRenderer extends EBS.CanvasScene {
     const srng = new EBS.RNG(hashSeed('waterpark-stars', 3)), skyBottom = L.waterY - L.H * (L.land ? 0.33 : 0.25);
     this.skyBottom = skyBottom;
     this.stars = this.visibleStars(Array.from({ length: L.land ? 190 : 170 }, () => [srng.range(0, L.W), Math.pow(srng.next(), 1.4) * (skyBottom - 20), srng.range(1.1, 2.8), srng.range(0, TAU)]));
-    this.moon = L.land ? [L.W * 0.765, L.H * 0.09, 44] : [L.W * 0.085, L.H * 0.13, 40];
+    this.moon = L.land ? [L.W * 0.765, L.H * 0.09, 44] : [L.W * 0.87, L.H * 0.118, 40];
     this.moonImg = this.art.moonSprite(sc, this.moon[2]);
     this.beltPos = 0; this.beltT = null; this.ufoCanvas = null;
   }
@@ -510,10 +510,11 @@ class WaterparkRenderer extends EBS.CanvasScene {
     const rebound = age >= 0 && age < 1.1 ? -Math.sin(age * 14) * Math.exp(-age * 3.8) * 8 : 0;
     const loaded = this.sim.animals.some(b => b.state === 'route' && b.route === 3 && b.s < j.entryS && j.entryS - b.s < 40);
     const by = j.y + R + (loaded ? 6 : rebound), base = j.y + R + 36, coil = [];
-    for (let i = 0; i <= 10; i++) coil.push([j.x + 6 + (i % 2 ? 15 : -15), by + 10 + i * (base - by - 10) / 10]);
+    const side = j.landing[0] < j.x ? -1 : 1, cx = j.x + 8 * side;        // the board reaches out towards the landing
+    for (let i = 0; i <= 10; i++) coil.push([cx - 2 * side + (i % 2 ? 15 : -15), by + 10 + i * (base - by - 10) / 10]);
     line(g, coil, 7, '#3d4f58'); line(g, coil, 4, '#b3c0c8'); line(g, coil, 1.5, '#eef3f6', -1, -1);
-    roundRect(g, j.x - 53, by - 4, 122, 18, 8, '#6f5638'); roundRect(g, j.x - 50, by - 2, 116, 13, 6, '#f7e332');
-    line(g, [[j.x - 42, by + 1], [j.x + 58, by + 1]], 3, '#fffbc0'); line(g, [[j.x - 44, by + 9], [j.x + 60, by + 9]], 2.5, 'rgba(170,130,20,.55)');
+    roundRect(g, cx - 61, by - 4, 122, 18, 8, '#6f5638'); roundRect(g, cx - 58, by - 2, 116, 13, 6, '#f7e332');
+    line(g, [[cx - 50, by + 1], [cx + 50, by + 1]], 3, '#fffbc0'); line(g, [[cx - 52, by + 9], [cx + 52, by + 9]], 2.5, 'rgba(170,130,20,.55)');
   }
 
   // ------------------------------------------------------------- animals
@@ -533,7 +534,6 @@ class WaterparkRenderer extends EBS.CanvasScene {
       const n = WP.samplePath(r.path, Math.min(r.path.length, b.s + L.R * 2)), turn = Math.abs(Math.atan2(p.tx * n.ty - p.ty * n.tx, p.tx * n.tx + p.ty * n.ty));
       d.spray = clamp(Math.max((p.ty - 0.35) / 0.5, turn / 0.5), 0, 1);
     }
-    d.behindFunnel = !L.land && b.route === 2 && p.kind !== 'deck' && b.s < r.feature.entryS;
     return d;
   }
   riders() {
@@ -952,9 +952,9 @@ class WaterparkRenderer extends EBS.CanvasScene {
     } else {
       g.letterSpacing = '5px'; g.textAlign = 'center'; g.font = font(700, 62); g.fillText('ENDLESS WATERPARK', L.W / 2, 108);
       g.letterSpacing = '3px'; g.font = font(600, 25); g.fillStyle = '#d7ecff'; if (!banner) g.fillText(sub, L.W / 2, 172);
-      if (cfg.mode !== 'short') {
-        g.letterSpacing = '2px'; g.font = font(600, 22); g.fillText('FAHRTEN', L.W / 2, 222);
-        g.letterSpacing = '1px'; g.font = font(700, 40); g.fillStyle = '#ffd25a'; g.fillText(rides, L.W / 2, 262);
+      if (cfg.mode !== 'short') {   // left of the tower roof, which now stands on the centre axis
+        g.textAlign = 'left'; g.letterSpacing = '2px'; g.font = font(600, 22); g.fillText('FAHRTEN', 60, 214);
+        g.letterSpacing = '1px'; g.font = font(700, 40); g.fillStyle = '#ffd25a'; g.fillText(rides, 60, 256);
       }
     }
     if (banner) {   // landscape: centred in the gap between title and moon; portrait: replaces the subtitle line, clear of the tower roof

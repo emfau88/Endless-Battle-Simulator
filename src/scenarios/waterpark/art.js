@@ -137,7 +137,7 @@ WP.paintBack = function (g, L, rng, art) {
   L.terraceY = rwTop;
   const farTop = waterY - H * (land ? .40 : .30), midTop = waterY - H * (land ? .29 : .21);
   const ridge = (y0, amp, freq, ph) => { const pts = []; for (let x = -20; x <= W + 20; x += 8) pts.push([x, y0 + Math.sin(x * freq + ph) * amp + Math.sin(x * freq * 2.7 + ph * 2) * amp * .35]); return pts; };
-  const fall = land ? { x: W * .925, top: H * .34, w: 58 } : { x: W * .9, top: H * .47, w: 50 };
+  const fall = land ? { x: W * .925, top: H * .34, w: 58 } : { x: W * .79, top: H * .52, w: 50 };
   L.waterfall = { ...fall, bottom: wallTop + 6 };
   // Layers 2-4 in aerial perspective: far jungle silhouette, palm row, rock face with the waterfall
   hazed(g, g => {
@@ -326,9 +326,9 @@ WP.paintFrame = function (g, L) {
     }
   }
   // Funnel: two thick posts and a cross girder
-  const f = L.funnel;
-  for (const dx of [-.55, .55]) post(g, f.x + dx * f.rx, f.y + f.ry * 1.2, ground + 4, pw);
-  beam(g, [f.x - f.rx * .55, f.y + f.ry * 2.5], [f.x + f.rx * .55, f.y + f.ry * 2.5], 10);
+  const f = L.funnel, fp = L.land ? .55 : .8;   // portrait: wider apart, the outlet tube bends between them
+  for (const dx of [-fp, fp]) post(g, f.x + dx * f.rx, f.y + f.ry * 1.2, ground + 4, pw);
+  beam(g, [f.x - f.rx * fp, f.y + f.ry * 2.5], [f.x + f.rx * fp, f.y + f.ry * 2.5], 10);
 };
 
 /** Wooden railing behind the deck: posts every 40 px, mid rail and a handrail with a light top edge. */
@@ -478,6 +478,14 @@ WP.boardSize = R => { const h = Math.round(TROUGH(R).out * .27); return { h, F: 
 /** Seesaw stand: a big timber A-frame from the hub down to a two-course stone plinth on the pool edge. */
 WP.paintSeesawStand = function (g, L) {
   const s = L.seesaw, R = L.R, { h, F } = WP.boardSize(R), x = s.x, cy = s.y + h + F * .3, foot = L.wallTop - 6;
+  if (s.hang) {   // portrait: the seesaw hangs under the deck on a thick timber hanger with knee braces
+    const top = L.deck.y + 30;
+    roundRect(g, x - 46, top - 4, 92, 17, 4, C.woodDark); roundRect(g, x - 44, top - 2, 88, 13, 3, C.woodLight);
+    line(g, [[x - 42, top], [x + 42, top]], 2, 'rgba(255,226,176,.9)');
+    for (const sx of [-1, 1]) beam(g, [x + sx * 42, top + 14], [x + sx * 6, top + 64], 9);
+    post(g, x, top + 10, cy, 22);
+    return;
+  }
   const spread = Math.min(s.length * .36, Math.max(64, (foot - cy) * .82)), pw = spread + 34;
   roundRect(g, x - pw - 2.5, foot - 14.5, 2 * pw + 5, 27, 6, C.outline);
   roundRect(g, x - pw, foot - 12, 2 * pw, 22, 5, C.stone); roundRect(g, x - pw, foot - 12, 2 * pw, 8, 4, C.stoneLight);
@@ -525,7 +533,7 @@ WP.paintSeesawWheel = function (g, L, angle) {
 
 /** Springboard pedestal: a round stone plinth with a front face on the pool edge (spring and board drawn per frame). */
 WP.paintSpringStand = function (g, L) {
-  const j = L.jump, R = L.R, x = j.x + 6, top = j.y + R + 36, rx = R * 1.9, ry = R * .42, foot = L.waterY + 4;
+  const j = L.jump, R = L.R, x = j.x + (j.landing[0] < j.x ? -6 : 6), top = j.y + R + 36, rx = R * 1.9, ry = R * .42, foot = L.waterY + 4;
   g.fillStyle = C.outline; g.beginPath(); g.ellipse(x, foot, rx + 2.5, ry + 2.5, 0, 0, Math.PI); g.lineTo(x - rx - 2.5, top); g.ellipse(x, top, rx + 2.5, ry + 2.5, 0, Math.PI, TAU); g.closePath(); g.fill();
   const fg = g.createLinearGradient(x - rx, 0, x + rx, 0); fg.addColorStop(0, C.stoneCap); fg.addColorStop(.55, C.stone); fg.addColorStop(1, C.faceDark);
   g.fillStyle = fg; g.beginPath(); g.ellipse(x, foot, rx, ry, 0, 0, Math.PI); g.lineTo(x - rx, top); g.ellipse(x, top, rx, ry, 0, Math.PI, TAU); g.closePath(); g.fill();

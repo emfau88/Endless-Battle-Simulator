@@ -149,6 +149,18 @@ test('Halbtotale: höchstens drei Tiere auf der Panoramarutsche, Wartepunkte nur
   }
 });
 
+test('Hochformat: Buchten liegen im Wasserlauf weit genug auseinander und jede Attraktion wird regelmäßig gefahren',()=>{
+  const world=worlds[1];
+  for(const size of [24,36,38]){
+    const L=WP.createLayout(world,size),joins=[...L.pool.joinS].sort((a,b)=>a-b);
+    for(let i=1;i<joins.length;i++)assert.ok(joins[i]-joins[i-1]>=L.GAP*2.5,`Größe ${size}: Buchten nur ${Math.round(joins[i]-joins[i-1])} auseinander`);
+    assert.equal(Math.max(...L.pool.joinS),L.pool.joinS[0],'Die Panoramabucht mit ihren Verbundlandungen ist die letzte im Wasserlauf');
+  }
+  // Jeder Schritt wird geprüft: Im Verbund landende Tiere dürfen die Bucht nicht mit dem Vorgänger teilen.
+  const sim=create({mode:'day',animals:16,size:36},world,600);simulate(sim,600,1);
+  assert.ok(sim.routeRides.every(n=>n>=15),`Fahrten je Attraktion: ${Array.from(sim.routeRides).join(' / ')}`);
+});
+
 test('Dekoration ist begrenzt; Ton und sichtbare Ereignisse teilen den Auslösezeitpunkt',()=>{
   const sim=create({mode:'relax',decoDensity:2},worlds[0],600);
   for(let i=0;i<600*60;i++){
