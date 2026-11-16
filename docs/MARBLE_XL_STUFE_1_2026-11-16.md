@@ -1,6 +1,6 @@
 # Marble Factory XL: Stufe 1 (Vorschau)
 
-Stand: 16.11.2026. Branch `marble-xl/stufe-1`. Gehört zu R35 und zum
+Stand: 16.11.2026. Entstanden im Branch `marble-xl/stufe-1`, seit dem 16.11. als Szenario „in Arbeit“ auf `main`. Gehört zu R35 und zum
 [Gesamtplan, Abschnitt 9](GESAMTPLAN_2026-11-16.md). **Status: bewegter Entwurf; Rückmeldung zum ersten Testclip
 eingearbeitet; sechste Fassung (größere Kugeln, abschaltbare Schilder, Glühen nur zwischen Ofen und Farbstation, Trockenstrecke mit deutlich nasser Farbe, kleine Deko-Animationen) liegt als Testclip vor; Rückmeldung dazu
 steht aus.**
