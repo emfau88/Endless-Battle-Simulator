@@ -60,6 +60,10 @@ for (const kind of ['short', 'long']) {
       assert.equal(await page.isDisabled('#durationText'), true, 'production presets plan a complete order');
       await page.selectOption('#p-exportLength', 'duration');
       assert.equal(await page.isDisabled('#durationText'), false);
+    } else if (scenario === 'territory' && kind === 'short') {
+      assert.equal(await page.isDisabled('#durationText'), true, 'the Short preset ends with the victory');
+      await page.selectOption('#p-videoEnd', 'free');
+      assert.equal(await page.isDisabled('#durationText'), false);
     } else assert.equal(await page.evaluate(() => EBS.app.cfg.video.durationSec), kind === 'short' ? 60 : 600);
     await page.fill('#durationText', '3s'); await page.dispatchEvent('#durationText', 'change');
     const config = await page.evaluate(() => EBS.app.cfg);

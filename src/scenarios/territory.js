@@ -11,11 +11,18 @@
     g.textAlign = align; g.textBaseline = 'middle'; g.fillStyle = color; g.fillText(String(value), x, y);
   }
   const box = (g, x, y, w, h, r) => { g.beginPath(); g.roundRect(x, y, w, h, r); };
+  // 'auto': slim Shorts frame in 9:16, full panels in 16:9 (nothing covers them there).
+  const displayMode = (params, world) => params.display === 'auto' ? (world.h > world.w ? 'slim' : 'full') : params.display;
   function frameLayout(world, params) {
-    const portrait = world.h > world.w, cards = params.showFactions;
+    const portrait = world.h > world.w, cards = params.showFactions, mode = displayMode(params, world);
+    // Slim and off: no bands, the map fills the picture.
+    // The slim portrait frame renders a slightly taller view and shows its upper part: the map sits a
+    // little lower, clear of the caption line, while its lowest rows end under the Shorts interface.
+    if (mode !== 'full') return { portrait, mode, x: 0, y: 0, w: world.w, h: world.h + (mode === 'slim' && portrait ? Math.round(world.h * .09) : 0),
+      cardsX: 0, cardsY: 0, cardsW: 0 };
     const top = 105, bottom = portrait && cards ? 244 : 0;
     const side = !portrait && cards ? 332 : 0;
-    return { portrait, x: 0, y: top, w: world.w - side, h: world.h - top - bottom,
+    return { portrait, mode, x: 0, y: top, w: world.w - side, h: world.h - top - bottom,
       cardsX: portrait ? 24 : world.w - side + 12, cardsY: portrait ? world.h - bottom + 18 : 120,
       cardsW: portrait ? world.w - 48 : side - 36 };
   }
@@ -42,7 +49,7 @@
       const p = this.sim.cfg, l = frameLayout(this.world, p);
       // The source quality switch changes pixel density, not geometry or rules.
       const dpr = Math.min(this.scale, p.highQuality ? 1.7 : 1);
-      const key = [l.w, l.h, dpr, this.video.aspect].join('|');
+      const key = [l.w, l.h, dpr, this.video.aspect, l.mode].join('|');
       this.layout = l;
       if (force || key !== this.viewportKey) {
         this.viewportKey = key;
@@ -58,14 +65,21 @@
       this.updateViewport();
       const s = this.sim, r = s.roundSim, p = s.cfg, l = this.layout;
       const remainder = r.phase === 'running' ? s.accumulator : 0;
+      // The round clock stops with the result, the picture does not: colour changes of the
+      // last conquest, flags and effects finish in video time (generator steps since the result).
+      const after = r.phase === 'finished' ? Math.max(0, s.step - s.resultStep) / 60 * s.timeScale : 0;
       this.overlay.observe(r);
-      this.hexView.render(r, r.time + remainder, { selected: null, hover: null, showUnits: true, quality: p.highQuality ? 'high' : 'low' });
-      this.overlay.draw(remainder, p);
+      this.hexView.render(r, r.time + remainder + after, { selected: null, hover: null, showUnits: true, quality: p.highQuality ? 'high' : 'low' });
       g.fillStyle = '#09171f'; g.fillRect(0, 0, this.world.w, this.world.h);
       g.drawImage(this.worldCanvas, l.x, l.y, l.w, l.h);
-      g.drawImage(this.labelCanvas, l.x, l.y, l.w, l.h);
-      if (this.view.hud) this.hud(g);
-      if (p.showWinner && r.phase === 'finished') this.winner(g);
+      // The slim frame draws its own, larger name plates; numbers and routes stay with the full view.
+      if (l.mode !== 'slim') { this.overlay.draw(remainder, p); g.drawImage(this.labelCanvas, l.x, l.y, l.w, l.h); }
+      if (l.mode === 'full') {
+        if (this.view.hud) this.hud(g);
+        if (p.showWinner && r.phase === 'finished') this.winner(g);
+      } else if (l.mode === 'slim' && this.view.hud) {
+        EBS.Territory.drawSlim(g, { sim: s, world: this.world, layout: l, view: this.hexView, remainder });
+      }
     }
     hud(g) {
       const r = this.sim.roundSim, p = this.sim.cfg, l = this.layout;
@@ -136,6 +150,76 @@
       super.destroy();
     }
   }
+  // Fast rules for the short map. Not part of the archived source profiles.
+  const BLITZ = { label: 'Blitz (Short)', filmTempo: 2, incomeMultiplier: 2, aggression: 1, offensiveInterval: 2, marchDuration: 1.5 };
+  const PROFILES = { ...HexSim.PROFILES, blitz: BLITZ };
+  const CLASSIC_AUDIO = { ceilingDb: -3, events: {
+    dispatch: { label: 'Marsch', samples: ['synth:chime'], gain: .09, semis: -12, detune: .3 },
+    battle: { label: 'Gefecht', samples: ['impactMetal_light_000','impactMetal_light_001'], gain: .15, semis: -3, detune: .5 },
+    capture: { label: 'Eroberung', samples: ['synth:scrap-pickup'], gain: .15, semis: -7 },
+    build: { label: 'Bunkerbau', samples: ['impactWood_medium_000'], gain: .16, semis: -3 },
+    hq: { label: 'Hauptquartier gefallen', samples: ['synth:scrap-stone-break'], gain: .26, semis: -4 },
+    victory: { label: 'Sieg', samples: ['synth:myco-pling'], gain: .24, semis: -5 },
+  } };
+  /* Short map: soft sounds at a fixed, quiet level (no loudness boost) and a
+   * plan that lets only the important events sound. `gap` is the shortest
+   * pause between two sounds of one kind in video seconds. */
+  const SOFT_AUDIO = { ceilingDb: -6, mixProfile: 'marbleworks-soft-v1', fixedGainDb: -3, events: {
+    dispatch: { label: 'Marsch', samples: ['mw-soft-wood-0', 'mw-soft-wood-1'], gain: .10, semis: -5, detune: .4, gap: .40 },
+    battle: { label: 'Gefecht', samples: ['mw-soft-body-0', 'mw-soft-body-1'], gain: .20, semis: -4, detune: .5, gap: .24 },
+    capture: { label: 'Eroberung', samples: ['mw-soft-switch-0', 'mw-soft-switch-1'], gain: .15, semis: -2, detune: .6, gap: .22 },
+    build: { label: 'Bunkerbau', samples: ['mw-soft-wood-2'], gain: .16, semis: -3, gap: .5 },
+    story: { label: 'Wendepunkt', samples: ['synth:myco-breeze'], gain: .30 },
+    hq: { label: 'Krone gefallen', samples: ['synth:myco-pop'], gain: .50, semis: -9 },
+    victory: { label: 'Sieg', samples: ['synth:myco-pling'], gain: .32, semis: -5 },
+  } };
+  const audioFor = params => params && params.layout === 'short' ? SOFT_AUDIO : CLASSIC_AUDIO;
+  const RANK = { victory: 0, hq: 1, story: 2, battle: 3, capture: 4, build: 5, dispatch: 6 };
+  // Complete, chronological decisions: nothing later can change an earlier one.
+  function shortMixPlan(events, { cfg, world }) {
+    if (cfg.params.layout !== 'short') return null;
+    const clamp = EBS.util.clamp, volume = cfg.video.volume || {}, decisions = new Map(), candidates = [];
+    const stats = { total: events.length, audible: 0, unmapped: 0, minor: 0, densitySuppressed: 0, muted: 0 };
+    for (const e of events) {
+      if (!Number.isInteger(e.seq) || !Number.isFinite(e.step) || decisions.has(e.seq)) throw new Error('Territory: ungültiges Tonereignis.');
+      const decision = { seq: e.seq, gain: 0, pan: clamp(((Number.isFinite(e.x) ? e.x : world.w / 2) / world.w - .5) * .5, -.35, .35) };
+      decisions.set(e.seq, decision);
+      const def = SOFT_AUDIO.events[e.type];
+      if (!def) { stats.unmapped++; continue; }
+      if (volume[e.type] === 0 || volume.master === 0) { stats.muted++; continue; }
+      let weight = 1;
+      if (e.type === 'dispatch') {
+        // Only larger assault columns are heard; supply traffic stays silent.
+        if (!e.move || e.move.kind !== 'attack' || e.move.amount < 12) { stats.minor++; continue; }
+        weight = clamp(e.move.amount / 24, .45, 1);
+      } else if (e.type === 'capture') weight = e.previous >= 0 ? 1 : .5;
+      else if (e.type === 'battle') weight = clamp((e.p || 8) / 20, .5, 1);
+      candidates.push({ e, decision, weight, gap: def.gap || 0 });
+    }
+    candidates.sort((a, b) => a.e.step - b.e.step || RANK[a.e.type] - RANK[b.e.type] || a.e.seq - b.e.seq);
+    const last = new Map(), active = [];
+    for (const { e, decision, weight, gap } of candidates) {
+      while (active.length && e.step - active[0] >= 30) active.shift();        // half a video second
+      const previous = last.get(e.type), major = RANK[e.type] <= 2;
+      if (!major && ((previous !== undefined && e.step - previous < gap * 60) || active.length >= 2)) { stats.densitySuppressed++; continue; }
+      decision.gain = weight; last.set(e.type, e.step); active.push(e.step); stats.audible++;
+    }
+    return { version: 1, profile: SOFT_AUDIO.mixProfile, events: events.map(e => decisions.get(e.seq)), stats };
+  }
+  // Plans a video that ends with the first result plus the chosen result hold.
+  function victoryPlan(cfg, world) {
+    if (cfg.params.videoEnd !== 'victory') return null;
+    const sim = new Episode({ seed: cfg.seed, params: cfg.params, world, timeScale: cfg.video.tempo });
+    return { advance() {
+      for (let i = 0; i < 3600 && sim.completedRounds < 1; i++) sim.stepOnce();
+      if (sim.step / 60 > EBS.MAX_DURATION - 20) throw new Error('Territory: Die Runde endet nicht innerhalb der maximalen Videolänge.');
+      if (sim.completedRounds < 1) return { done: false };
+      const durationSec = Math.ceil((sim.resultStep / 60 + sim.cfg.endPauseSec) * cfg.video.fps) / cfg.video.fps;
+      sim.destroy();
+      return { done: true, durationSec };
+    } };
+  }
+
   EBS.registerScenario({
     id: 'territory', title: 'Territory Wars · Hex Dominion',
     supportsClips: false, supportsCamera: false,
@@ -143,12 +227,16 @@
     defaults: normalizeParams({}), normalizeParams,
     controls: [
       { key: 'profile', label: 'Spielprofil', type: 'select',
-        options: [...Object.entries(HexSim.PROFILES).map(([key,p]) => [key,p.label]), ['custom','Eigene Einstellungen']],
-        presets: Object.fromEntries(Object.entries(HexSim.PROFILES).map(([key,p]) => [key, {
+        options: [...Object.entries(PROFILES).map(([key,p]) => [key,p.label]), ['custom','Eigene Einstellungen']],
+        presets: Object.fromEntries(Object.entries(PROFILES).map(([key,p]) => [key, {
           params: { profile:key, incomeMultiplier:p.incomeMultiplier, aggression:p.aggression, offensiveInterval:p.offensiveInterval, marchDuration:p.marchDuration },
           video: { tempo:p.filmTempo },
         }])) },
-      { key: 'layout', label: 'Kartenform', type: 'select', options: [['landscape','Querformatkarte'],['portrait','Hochformatkarte']], restart: true, applyLabel: 'Karte anwenden' },
+      { key: 'layout', label: 'Kartenform', type: 'select', options: [['landscape','Querformatkarte'],['portrait','Hochformatkarte'],['short','Short-Karte (klein, mit Drehbuch)']], restart: true, rebuildUi: true, applyLabel: 'Karte anwenden' },
+      { key: 'story', label: 'Drehbuch (Short-Karte)', type: 'select', options: [['crown','Die letzte Krone'],['none','Ohne Drehbuch']], restart: true, enabled: p => p.layout === 'short' },
+      { key: 'storySec', label: 'Kriegsdauer (Short-Karte)', type: 'range', min: 40, max: 180, step: 5, restart: true, enabled: p => p.layout === 'short', format: v => `${v} s Spielzeit` },
+      { key: 'videoEnd', label: 'Videoende', type: 'select', options: [['free','Freie Dauer'],['victory','Nach dem Sieg']], affectsDuration: true },
+      { key: 'display', label: 'Anzeige', type: 'select', options: [['auto','Automatisch (hochkant schlank, quer voll)'],['full','Voll: Titel, Uhr, Fraktionskarten'],['slim','Schlank: Farbbalken und Einblendungen'],['off','Aus']] },
       { key: 'incomeMultiplier', label: 'Nachschub', type: 'range', min: .5, max: 2, step: .1, format: v => `${v}×` },
       { key: 'aggression', label: 'Offensivdrang', type: 'range', min: 0, max: 1, step: .05, format: v => `${Math.round(v*100)} %` },
       { key: 'offensiveInterval', label: 'Angriffsrhythmus', type: 'range', min: 2, max: 8, step: .5, format: v => `${v} s` },
@@ -180,13 +268,8 @@
     },
     panelNote: sim => sim.roundSim.phase === 'finished' ? `${TEAMS[sim.roundSim.winner].name} vereint die vier Reiche.`
       : 'Vier Hauptquartiere. Ein Kontinent. Ausgabewechsel erhält die Karte; „Karte anwenden“ startet neu.',
-    audio: { ceilingDb: -3, events: {
-      dispatch: { label: 'Marsch', samples: ['synth:chime'], gain: .09, semis: -12, detune: .3 },
-      battle: { label: 'Gefecht', samples: ['impactMetal_light_000','impactMetal_light_001'], gain: .15, semis: -3, detune: .5 },
-      capture: { label: 'Eroberung', samples: ['synth:scrap-pickup'], gain: .15, semis: -7 },
-      build: { label: 'Bunkerbau', samples: ['impactWood_medium_000'], gain: .16, semis: -3 },
-      hq: { label: 'Hauptquartier gefallen', samples: ['synth:scrap-stone-break'], gain: .26, semis: -4 },
-      victory: { label: 'Sieg', samples: ['synth:myco-pling'], gain: .24, semis: -5 },
-    } },
+    audio: CLASSIC_AUDIO, audioForParams: audioFor, createAudioMixPlan: shortMixPlan,
+    hasNaturalDuration: cfg => cfg.params.videoEnd === 'victory', createExportPlan: victoryPlan,
+    durationLabel: { pending: 'Rundenverlauf wird berechnet …', complete: 'Automatisch: bis zum Sieg plus „Ergebnis zeigen“.' },
   });
 })();
