@@ -10,6 +10,20 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 | R30, Optik nach Mockup und Pyramide: neuer Grundriss je Format (Glaslift mit Dach, Holzdeck, vier Attraktionen mit eigenen Buchten), Pyramiden-Licht, -Himmel, -Nacht, -Spiegelung und -Gäste, Kulisse mit Dschungel, Felsen, Wasserfall und Palmen. Tiere mit passenden Posen (laufen, sitzen, Arme hoch, Spiralaugen, Lift, Schwimmen, Schlafmützen), Größe 28 bzw. 30 im Short. Wippe mit Übergaben wie im Mockup (Ausguss oben, Auffangrinne unten). Geschlossene Rutschen trocken und gesperrt, farbige Fontänen und Feuerwerk mit Funkenschweifen. Neuer Grundriss ändert den Ablauf; Pyramide und gemeinsame Tiergrafik unverändert. | Branch `codex/waterpark-optik` | [Optik vorher/nachher](WASSERPARK_OPTIK_2026-11-16.md) |
 | R30: Endless Waterpark als achtes Szenario. Originale Pyramid-Tierchen, Glaslift und sichtbarer Rücklauf, Panorama, Trichter, Wippe und Sprungbrett; eigene Hoch-/Querformate. Vier-Tiere-Short, Parktag mit Öffnungen und Sammelschluss sowie Dauerbetrieb; Tag/Nacht, Himmel/UFO, Wasserleben, ruhiger Wasserklang, optionale Fontänenshow und Feuerwerk. Acht Vorlagendateien, endliche Exportvorprüfung und kompletter UI-/Exportanschluss. Gemeinsame Tiergrafik gegen die vorhandene Pyramide verglichen. Persönliche Hör-/Handyabnahme bleibt R30, ganze Filmproduktionen sind gesonderte Aufträge. | Arbeitsbranch `codex/waterpark`, Basis `09caa3d` | [Umsetzung und Prüfungen](WASSERPARK_UMSETZUNG_2026-11-16.md) |
 
+## 15.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| Zusätzlich geprüfter Classic-Ergebnisbanner: vorbestehende 43-Pixel-Abweichung beim ersten Bild nach Seek durch gefüllten Farbbalken im Adapter behoben. Archivquellen erhalten; exakte Software-Bildvergleiche und Classic-Clip bestanden. | `01510fb` | [Prüfungen](SCRAP_GEOMETRIE_2026-11-15.md#prüfungen-und-grenzen) |
+| Scrapyard M3/M2: eigener Hochformat-Grundriss mit Nord-/Südstarts und passendem Nachschub; vier zusätzliche gespiegelte Holzkisten im Querformat. Verändert bewusst V3-Scrapyard-Ergebnisse. Foundry, Crossroads, Sunny und Original/V2 erhalten. | `3655ae6`, `b056906` | [Geometrie, Bilder und Prüfungen](SCRAP_GEOMETRIE_2026-11-15.md) |
+| Scrap-Optik P4/P5: gemeinsame Schilder, ruhigere Stationen/Trümmer, Waffenschatten, englisches HUD und neue Runden-/Turnierbanner auf den dunklen V3-Karten. Umgesetzt und geprüft; Push auf den Branch freigegeben, kein Merge. | `0d431f3`, `41db9a8` | [Vorher/Nachher und Prüfungen](SCRAP_OPTIK_P4_P5_2026-11-15.md) |
+
+## 14.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| Scrap-Optik P1–P3: Ereigniseffekte und Brandflecken, konstante Kartenböden mit eigener Identität, 4×-Robotertexturen, Doppelrohr, Schadensstufen und Wracks. Simulation und Kamera unverändert. Umgesetzt und visuell abgenommen. | Branch `codex/scrap-optik` | [Vorher/Nachher und Prüfungen](SCRAP_OPTIK_2026-11-14.md) |
+
 ## 13.11.2026
 
 | Was | Commit | Bericht |

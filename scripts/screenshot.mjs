@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 // Einzelbild der laufenden Simulation als PNG (gleiche Seite und gleicher Renderer wie der Videoexport).
 //   node scripts/screenshot.mjs --scenario marble --aspect 16:9 --at 12 --out output/marble_16x9.png
+//   node scripts/screenshot.mjs --scenario scrap --params '{"rulesVersion":"v3","arena":"foundry"}' --at 1
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { launchAuto, openExportPage } from '../lib/browser.mjs';
 
 const arg = (name, def) => { const i = process.argv.indexOf('--' + name); return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : def; };
+const params = JSON.parse(arg('params', '{}'));
+if (!params || typeof params !== 'object' || Array.isArray(params)) throw new Error('--params erwartet ein JSON-Objekt.');
 const cfg = {
   scenario: arg('scenario', 'naval'), seed: Number(arg('seed', 42)),
+  params,
   video: { aspect: arg('aspect', '9:16'), resolution: Number(arg('resolution', 1080)), fps: 30 },
   view: { hud: arg('hud', 'true') !== 'false', camera: arg('camera', 'true') !== 'false' },
 };

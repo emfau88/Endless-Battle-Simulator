@@ -13,7 +13,9 @@
   // Each quadrant mirrors the same cover budget. The central cross and outer
   // circuit stay passable at full robot radius, before anything is destroyed.
   const quadrants = {
-    yard: [[250,112,82,64,'stone'],[342,112,64,64,'wood'],[250,186,82,42,'concrete'],[424,186,64,42,'wood']],
+    // Each outer crate leaves 96 units to the wall and the existing stone
+    // island. Starts and supplies keep their original landscape positions.
+    yard: [[250,112,82,64,'stone'],[342,112,64,64,'wood'],[250,186,82,42,'concrete'],[424,186,64,42,'wood'],[114,150,40,40,'wood']],
     foundry: [[234,108,58,104,'concrete'],[304,108,64,64,'wood'],[390,108,72,64,'stone'],[390,182,72,42,'wood']],
     crossroads: [[232,100,86,60,'stone'],[328,100,64,60,'wood'],[328,170,64,56,'concrete'],[418,184,64,42,'wood']],
     sunshine: [[314,114,124,44,'concrete'],[232,148,64,76,'stone'],[316,176,56,48,'wood'],[382,176,56,48,'wood']],
@@ -27,16 +29,26 @@
     [204,312,132,48,'stone'],[396,326,66,60,'stone'],
     [80,418,96,40,'concrete'],[376,422,56,48,'wood'],[242,452,56,44,'wood'],
   ];
-  function portraitCover() {
+  // Scrapyard uses the full portrait height while retaining its 8 wood /
+  // 4 stone / 4 concrete budget. Touching pieces form one cover island;
+  // separate islands and the outer walls leave at least 96-unit passages.
+  const yardPortraitHalf = [
+    [250,114,40,52,'concrete'],
+    [114,240,68,48,'stone'],[114,288,68,40,'wood'],
+    [358,240,68,48,'stone'],[358,288,68,40,'wood'],
+    [170,432,56,40,'wood'],[226,432,88,40,'concrete'],[314,432,56,40,'wood'],
+  ];
+  function portraitCover(arena='sunshine') {
     const blocks=[];
-    for(const mirror of [false,true])for(const [xx,yy,w,h,material] of portraitHalf) {
+    const half=arena==='yard'?yardPortraitHalf:portraitHalf;
+    for(const mirror of [false,true])for(const [xx,yy,w,h,material] of half) {
       const x=mirror?HEIGHT-xx-w:xx,y=mirror?WIDTH-yy-h:yy,hp=materials[material].hp;
       blocks.push({id:blocks.length,x:y,y:HEIGHT-x-w,w:h,h:w,material,hp,maxHp:hp,alive:true});
     }
     return blocks;
   }
   function cover(arena,portrait) {
-    if(arena==='sunshine'&&portrait)return portraitCover();
+    if((arena==='sunshine'||arena==='yard')&&portrait)return portraitCover(arena);
     const blocks = [];
     for (const [mx,my] of [[false,false],[true,false],[true,true],[false,true]]) {
       for (const [x,y,w,h,material] of quadrants[arena] || quadrants.yard) {
@@ -46,6 +58,25 @@
       }
     }
     return blocks;
+  }
+  // Shared authored placements, in the fixed engine coordinate system. The art
+  // reads fresh arrays from here; it never has to inspect moving pickups or
+  // duplicate their start positions. No random numbers or simulation state.
+  function placements(arena='yard',portrait=false) {
+    const sunny=arena==='sunshine',northSouth=(sunny||arena==='yard')&&portrait,startX=sunny?190:106;
+    const fromPortrait=([x,y])=>[y,HEIGHT-x];
+    const portraitStarts=sunny?[[176,106],[364,106],[364,934],[176,934]]:[[160,106],[380,106],[380,934],[160,934]];
+    const starts=northSouth?portraitStarts.map(fromPortrait)
+      :[[startX,84],[WIDTH-startX,84],[WIDTH-startX,HEIGHT-84],[startX,HEIGHT-84]];
+    const padY=sunny?118:96;
+    const portraitPads=sunny?[[180,520],[360,520]]:[[130,520],[410,520]];
+    const pads=northSouth?portraitPads.map(fromPortrait)
+      :[[WIDTH/2,padY],[WIDTH/2,HEIGHT-padY]];
+    const portraitWeapons=sunny?[[270,260],[270,780],[130,354],[410,686]]:[[270,350],[270,690],[130,412],[410,628]];
+    const weapons=northSouth?portraitWeapons.map(fromPortrait)
+      :sunny?[[360,270],[680,270],[520,178],[520,362]]
+      :[[140,HEIGHT/2],[WIDTH-140,HEIGHT/2],[420,HEIGHT/2],[WIDTH-420,HEIGHT/2]];
+    return {starts,pads,weapons};
   }
   const distanceToBox = (x,y,b) => Math.hypot(x-clamp(x,b.x,b.x+b.w),y-clamp(y,b.y,b.y+b.h));
   // Swept intersections match the source equations; wider bounds cannot turn
@@ -68,27 +99,19 @@
     constructor(options) {
       super({ ...options, rulesVersion:'v2' });
       this.rulesVersion='v3'; this.bounds={w:WIDTH,h:HEIGHT,edge:EDGE};
-      const portrait=this.arena==='sunshine'&&!!options.portrait;
+      const portrait=(this.arena==='sunshine'||this.arena==='yard')&&!!options.portrait;
       if(portrait)this.arenaVariant='north-south';
       this.blocks=cover(this.arena,portrait);
-      // Sunny Yard brings entry points and floor weapons into the fighting
-      // area. The other three maps retain their existing starts and supplies.
-      const sunny=this.arena==='sunshine',startX=sunny?190:106;
-      const fromPortrait=([x,y])=>[y,HEIGHT-x];
-      const starts=portrait?[[176,106],[364,106],[364,934],[176,934]].map(fromPortrait)
-        :[[startX,84],[WIDTH-startX,84],[WIDTH-startX,HEIGHT-84],[startX,HEIGHT-84]];
+      // Portrait Scrapyard and Sunny Yard have authored entry and supply
+      // positions. The remaining map/orientation combinations stay unchanged.
+      const {starts,pads,weapons}=placements(this.arena,portrait);
       for(const r of this.robots) {
         [r.x,r.y]=starts[r.id];r.lastX=r.x;r.lastY=r.y;
         r.goalX=WIDTH/2;r.goalY=HEIGHT/2;
         r.angle=Math.atan2(r.goalY-r.y,r.goalX-r.x);
         r.vx=Math.cos(r.angle)*r.speed;r.vy=Math.sin(r.angle)*r.speed;
       }
-      this.pads[0].x=this.pads[1].x=WIDTH/2;
-      this.pads[0].y=sunny?118:96;this.pads[1].y=HEIGHT-this.pads[0].y;
-      if(portrait) [[180,520],[360,520]].map(fromPortrait).forEach(([x,y],i)=>{this.pads[i].x=x;this.pads[i].y=y;});
-      const weapons=portrait?[[270,260],[270,780],[130,354],[410,686]].map(fromPortrait)
-        :sunny?[[360,270],[680,270],[520,178],[520,362]]
-        :[[140,HEIGHT/2],[WIDTH-140,HEIGHT/2],[420,HEIGHT/2],[WIDTH-420,HEIGHT/2]];
+      pads.forEach(([x,y],i)=>{this.pads[i].x=x;this.pads[i].y=y;});
       weapons.forEach(([x,y],i)=>{
         this.pickups[i].x=x;this.pickups[i].y=y;
       });
@@ -189,5 +212,5 @@
       result.ok=!result.errors.length;return result;
     }
   }
-  EBS.ScrapMaterials={Round:MaterialRound,materials,width:WIDTH,height:HEIGHT,edge:EDGE};
+  EBS.ScrapMaterials={Round:MaterialRound,materials,placements,width:WIDTH,height:HEIGHT,edge:EDGE};
 })();
