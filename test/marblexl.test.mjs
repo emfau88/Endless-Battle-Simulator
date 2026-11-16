@@ -23,7 +23,7 @@ test('Linie läuft eine Minute: Kugeln in allen Zuständen, Zähler steigt, Tone
   for (const kind of ['raw', 'washed', 'clear', 'color']) assert.ok(s[kind] > 0, `keine Kugel im Zustand ${kind}`);
   const events = await page.evaluate(() => window.exportAPI.events(0));
   const types = new Set(events.map((e) => e.type));
-  for (const type of ['pick', 'tick', 'belt', 'valve', 'lift', 'rail', 'clink']) assert.ok(types.has(type), `Klang ${type} fehlt`);
+  for (const type of ['xlFeed', 'xlDrum', 'xlPolish', 'xlKiln', 'xlColour', 'xlColourDone', 'xlLift', 'xlRail', 'xlLand']) assert.ok(types.has(type), `Klang ${type} fehlt`);
   assert.ok(events.every((e, i) => e.seq === events[0].seq + i), 'Lücke in der Ereignisfolge');
   await page.close();
 });
@@ -36,7 +36,7 @@ test('Gleiche Zeit ergibt denselben Zustand; Zeichnen und Kamera verändern ihn 
   await Promise.all([drawn.close(), plain.close()]);
 });
 
-test('Seek-Regel: Bild nach Sprung gleich Bild nach durchgehender Wiedergabe (während der Kamerafahrt)', async () => {
+test('Seek-Regel: Bild nach Sprung gleich Bild nach durchgehender Wiedergabe', async () => {
   const jump = await open(), cont = await open();
   await run(jump, 6 - 1 / 30);                                                    // Sprung bis kurz vor Sekunde 6
   await cont.evaluate(() => { window.exportAPI.renderFrames(179, 0.1); });       // 179 gezeichnete Bilder bei 30 fps

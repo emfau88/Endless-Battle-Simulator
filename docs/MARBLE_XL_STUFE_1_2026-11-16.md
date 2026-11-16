@@ -1,8 +1,8 @@
 # Marble Factory XL: Stufe 1 (Vorschau)
 
 Stand: 16.11.2026. Branch `marble-xl/stufe-1`. Gehört zu R35 und zum
-[Gesamtplan, Abschnitt 9](GESAMTPLAN_2026-11-16.md). **Status: Entwurfsbild in zweiter Fassung vom Nutzer
-bestätigt; bewegter Entwurf mit 20-Sekunden-Testclips liegt vor; Rückmeldung zu den Clips steht aus.**
+[Gesamtplan, Abschnitt 9](GESAMTPLAN_2026-11-16.md). **Status: bewegter Entwurf; Rückmeldung zum ersten Testclip
+eingearbeitet, zweiter Testclip liegt vor; Rückmeldung dazu steht aus.**
 
 ## Was es ist
 
@@ -156,7 +156,30 @@ Kugeln. Vorschlag: Nummer hell, Wort gedämpft, insgesamt kleiner; nur das Schil
 gerade ist, leuchtet voll. Die kleinen Messingschilder sind am Handy nicht lesbar und bleiben reine Zierde.
 Schreibweise vereinheitlichen: derzeit „COLOUR“ (Schild) neben „COLOR SORTER“ (Messingschild).
 
+## Rückmeldung zum ersten Testclip und zweite Fassung (16.11.2026)
+
+| Rückmeldung des Nutzers | Umsetzung | Stand |
+|---|---|---|
+| Im Querformat keine Kamerafahrt | Feste Übersicht der ganzen Halle; der Kamera-Regler entfällt | **Erledigt** |
+| Klänge „sehr klirrend und störend“, an Marble Works orientieren | Die weichen Marble-Works-Klänge (`mw-soft-*`) mit fester Mischung statt Einmessung; höchstens zwei Klänge je 0,6 s, wichtige Klänge haben Vorrang | **Erledigt**, Hörurteil steht aus |
+| Insgesamt etwas leiser | Rund −24,8 LUFS statt −14,1 LUFS; Spitze −6 dBFS, Begrenzer greift nur noch bis −4 dB ein (vorher −36 dB) | **Erledigt**, Hörurteil steht aus |
+| Bei 04 KILN fehlen passende Effekte | Brennerflammen in drei Schichten, aufsteigende Funken, pulsierende Glut, Aufflammen am Ein- und Auslauf, Hitzeflimmern, aufsteigende Hitze in den Abzügen, Nachglühen der heißen Kugeln im Fallrohr | **Erledigt** |
+| Bei 05 COLOUR soll jede Kugel kurz stoppen und einen Sprühstoß in ihrer Farbe bekommen | Jede Kugel hält 0,9 s allein in der Kammer: Sprühstrahl, Tropfen und Nebel in ihrer Farbe, danach ein Farbring. Der passende Tank leuchtet, nur seine Leitung fließt, nur seine Lampe brennt. Dazwischen ist die Kammer dunkel. | **Erledigt** |
+| Hochformat wirkt sehr dunkel | Ursache gefunden und behoben (Randabdunklung war für das Hochformat falsch berechnet). Das Hochformat bleibt sonst auf Wunsch des Nutzers vorerst liegen. | Ursache behoben, nicht neu abgenommen |
+
+Zweiter Testclip (lokal, `output/marblexl-vorschau/testclip-2026-11-16-v2/`): Querformat, 20 s, 1080p30.
+
+| Tonwert | Erster Clip | Zweiter Clip |
+|---|---|---|
+| Lautheit | −14,1 LUFS | −24,8 LUFS |
+| Spitze | −2 dBFS | −6 dBFS |
+| Stärkster Eingriff des Begrenzers | −36,4 dB | −4,1 dB |
+| Tonereignisse / hörbare Klänge | 125 / 125 | 164 / 75 |
+
+Noch ohne eigenen Klang: Wasser und Purzeln in der Trommel, Feuer im Ofen, Sprühen, Lüfter. Für Ofen und Sprühen
+gibt es nur weiche Platzhalter.
+
 ## Nächster Schritt
 
-Rückmeldung des Nutzers zu den Testclips abwarten (Bewegung, Kamera, Ton, Beschriftung, Hochformat als Fahrt).
-Danach: Ton nach der Empfehlung oben, Beschriftungen beruhigen, dann echte Warteschlangen und Physik.
+Rückmeldung des Nutzers zum zweiten Testclip abwarten (Ton, Ofen, Farbstation). Offen bleiben: eigene Klänge
+für Trommel, Ofen und Sprühen, Beschriftungen beruhigen, Hochformat, danach echte Warteschlangen und Physik.

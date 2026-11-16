@@ -7,6 +7,7 @@ import { ROOT, launchAuto, openExportPage } from '../lib/browser.mjs';
 
 const i = process.argv.indexOf('--out');
 const out = resolve(i > 0 ? process.argv[i + 1] : 'output/marblexl-konzept');
+const j = process.argv.indexOf('--at'), at = j > 0 ? Number(process.argv[j + 1]) : 30;       // Zeitpunkt des Standbilds in Sekunden
 const crops = [
   { name: 'ausschnitt_aufzug_rohkugeln_waschen', x: 0, y: 60, w: 1920, h: 1080 },
   { name: 'ausschnitt_waschen_polieren_ofen', x: 860, y: 380, w: 1920, h: 1080 },
@@ -16,7 +17,7 @@ const crops = [
 const browser = await launchAuto();
 try {
   const { page, errors } = await openExportPage(browser, { scenario: 'marble', seed: 42, video: { aspect: '16:9' } });
-  const res = await page.evaluate((c) => window.EBS.MarbleXLConcept.exportImages(c), crops);
+  const res = await page.evaluate(([c, t]) => window.EBS.MarbleXLConcept.exportImages(c, t), [crops, at]);
   if (errors.length) throw errors[0];
   await mkdir(out, { recursive: true });
   await writeFile(join(out, 'uebersicht.png'), Buffer.from(res.overview, 'base64'));
