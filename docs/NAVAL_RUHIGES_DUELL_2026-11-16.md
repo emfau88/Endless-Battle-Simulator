@@ -1,7 +1,7 @@
 # Naval: Modus „Ruhiges Duell“ (in Arbeit)
 
-Stand: 17.11.2026. Erste fünf Pakete des Naval-Ausbaus (R34, im [Gesamtplan](GESAMTPLAN_2026-11-16.md) Abschnitt 8.4
-als N1a, N2a, N2b, N2c und N2d geführt). Der Nutzer hat die Richtung anhand von Standbildern und Testclips freigegeben, den Einbau als
+Stand: 17.11.2026. Erste sechs Pakete des Naval-Ausbaus (R34, im [Gesamtplan](GESAMTPLAN_2026-11-16.md) Abschnitt 8.4
+als N1a und N2a bis N2e geführt). Der Nutzer hat die Richtung anhand von Standbildern und Testclips freigegeben, den Einbau als
 neuen Modus beauftragt und danach die Vorschläge zu Lebensanzeige, Runden und Segeln zur Umsetzung freigegeben.
 
 ## 1 · Umfang
@@ -22,7 +22,7 @@ node export.mjs --scenario naval --param mode=calm --duration 20 --aspect 16:9 -
 Seit dem zweiten Paket enthalten: Runden mit Versenkung, Punktestand und neuem Schiff (Abschnitt 3a).
 Seit dem dritten Paket enthalten: die Rakete vom Heck (Abschnitt 3b). Seit dem vierten: der Auftritt der goldenen Kugel
 (Abschnitt 3c).
-Noch **nicht** enthalten: Finale am Videoende, Wetter, eigene Tonabstimmung.
+Noch **nicht** enthalten: Finale am Videoende, Wetter.
 
 ## 2 · Werte des Modus
 
@@ -37,7 +37,7 @@ Noch **nicht** enthalten: Finale am Videoende, Wetter, eigene Tonabstimmung.
 | Schaden je Treffer | rund 0,09 Prozentpunkte, gedämpft, mit Reparatur | fest 2 Prozentpunkte, ohne Dämpfung |
 | Ausgang | keiner, Schaden pendelt bei etwa 70 % | bei 100 % Schaden sinkt das Schiff; Punkt, Feuerpause, neues Schiff |
 | Segelschäden | keine | vier Stufen, an den Schiffsschaden gekoppelt |
-| Ton | Einmessung auf −14 LUFS | feste Mischung mit leisem Meeresrauschen (Abschnitt 3e, Vorschau) |
+| Ton | Einmessung auf −14 LUFS | feste Mischung mit leisem Meeresrauschen (Abschnitt 3e) |
 
 **Halbes Flugtempo:** Eine nur langsamere Kugel würde das Ziel nicht erreichen. Deshalb sinkt die Schwerkraft mit dem
 Quadrat des Tempos und die Mündungsgeschwindigkeit mit dem Tempo; die Bahn bleibt gleich, sie dauert doppelt so
@@ -141,9 +141,9 @@ pro Minute per Notfall verschwinden. Das sieht schlechter aus als wenige Abprall
 
 Rundenlänge mit größeren Kanonen (fünf Seeds zu je 20 Minuten, 34 Runden): 134 bis 196 s, Median 168 s.
 
-## 3e · Ton (Vorschau, wartet auf das Hörurteil)
+## 3e · Ton
 
-Vierter der freigegebenen Vorschläge.
+Vierter der freigegebenen Vorschläge. Als Vorschau gebaut und vom Nutzer anhand von zwei Hörproben freigegeben.
 
 **Das Problem:** Der Exporter misst jede Tonspur auf −14 LUFS ein. Im ruhigen Duell fallen nur rund 40 Schüsse pro
 Minute; die Einmessung hob die Pegel deshalb so weit an, dass der Begrenzer bis zu 20 dB abfangen musste. Als
@@ -166,8 +166,7 @@ Notlösung stand die Gesamtlautstärke auf 65 %.
 | stärkster Eingriff des Begrenzers | bis −20 dB | −6,7 dB, sonst rund −2 dB |
 | 20-Sekunden-Probe | −17,8 LUFS (Mischung vor dem Kodieren) | −20,7 LUFS im fertigen AAC, höchstens −2,9 dBTP |
 
-Die Mischung ist damit etwas leiser, aber die Schüsse behalten ihren Anschlag. Ob die Balance stimmt, entscheidet
-das Hörurteil des Nutzers.
+Die Mischung ist damit etwas leiser, aber die Schüsse behalten ihren Anschlag.
 
 ## 4 · Aufbau im Code
 
@@ -243,8 +242,8 @@ Modus. Der Standardmodus ist davon nicht betroffen.
   Bei drei und vier Schiffen tauchen neue Schiffe in der Mitte aus dem Dunst auf, statt hereinzusegeln.
 - **Wenig Abpraller.** Das Deck ist zum Bug hin offen; etwa jeder zweite Treffer springt einmal nach. Eine erhöhte
   Bugkante wurde gemessen und verworfen (Abschnitt 3d).
-- **Der Ton wartet auf das Hörurteil.** Rakete, Knall und Goldtreffer nutzen vorhandene Klänge; die feste Mischung
-  ist mit −20,6 LUFS leiser als die −14 LUFS des Standardmodus.
+- **Der Ton ist leiser als im Standardmodus.** Die feste Mischung liegt bei −20,6 LUFS statt −14 LUFS. Rakete, Knall
+  und Goldtreffer nutzen vorhandene Klänge.
 - **Kein Ausschnittsexport.** Die Seek-Regel ist für die Seeschlacht insgesamt noch nicht nachgewiesen.
 - **Offen aus dem Plan:** die Prüflücke R21 und die vollständige Aufteilung von `naval.js` (N0).
 
