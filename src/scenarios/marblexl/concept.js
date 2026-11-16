@@ -17,7 +17,7 @@ const FONT = 'Bahnschrift, "Segoe UI", Arial, sans-serif';
 const P = { x: 0, y: 0, tx: 1, ty: 0 };
 
 // ---------------------------------------------------------------- Kugeln in ihren Zuständen
-const RAW = 0x565d66, WASHED = 0x7f8d9c, CLEAR = 0x7fa6c4;
+const RAW = 0x5c5145, WASHED = 0x8496aa, CLEAR = 0x93c4e8;
 const texCache = new Map();
 function ballTex(hex, gloss, swirl) {
   const key = hex + '|' + gloss + '|' + swirl;
@@ -46,8 +46,10 @@ function marble(g, x, y, kind, color = 0, heat = 0) {
   if (kind === 'color') glow(g, x, y, hex, 0.30 * (1 - heat * 0.6), R * 2.1);
   if (kind === 'clear' && heat < 0.05) glow(g, x, y, 0xbfe4ff, 0.10, R * 1.7);
   if (heat > 0.02) glow(g, x, y, 0xff8a2a, 0.55 * heat, R * 2.8);
-  const t = ballTex(hex, kind === 'raw' ? 0 : kind === 'washed' ? 0.5 : 1, kind === 'color' ? 0.6 : kind === 'clear' ? 0.35 : 0);
+  const t = ballTex(hex, kind === 'raw' ? 0 : kind === 'washed' ? 0.75 : 1, kind === 'color' ? 0.6 : kind === 'clear' ? 0.4 : 0);
   g.drawImage(t, x - c0, y - c0, 2 * c0, 2 * c0);
+  if (kind === 'washed') for (const [dx, dy, r] of [[-8, -9, 2.6], [7, -2, 1.7], [-2, 9, 2.1], [10, 9, 1.4]]) { circ(g, x + dx, y + dy, r); g.fillStyle = 'rgba(190,242,255,.9)'; g.fill(); }
+  if (kind === 'clear' && heat < 0.05) sparkle(g, x - R * 0.44, y - R * 0.48, 14);
   if (heat > 0.02) {
     g.save(); circ(g, x, y, R); g.clip(); g.globalCompositeOperation = 'lighter';
     g.fillStyle = rad(g, x, y, 0, x, y, R, [[0, `rgba(255,236,190,${0.75 * heat})`], [0.7, `rgba(255,140,40,${0.6 * heat})`], [1, `rgba(255,90,20,${0.35 * heat})`]]);
@@ -102,7 +104,7 @@ function cornerBolts(g, x, y, w, h, r = 3.8, inset = 11) { for (const [bx, by] o
 
 // ---------------------------------------------------------------- Halle mit Zwischendeck
 function hall(g) {
-  g.fillStyle = lin(g, 0, 0, 0, FLOOR, [[0, '#090d14'], [0.45, '#161e2a'], [1, '#0f141c']]); g.fillRect(0, 0, W, FLOOR);
+  g.fillStyle = lin(g, 0, 0, 0, FLOOR, [[0, '#070a10'], [0.45, '#111822'], [1, '#0b0f16']]); g.fillRect(0, 0, W, FLOOR);
   const pw = 240, ph = 260; let k = 0;
   for (let x = -pw; x < W + pw; x += pw) for (let y = -20; y < FLOOR; y += ph) {
     const ox = (Math.round(y / ph) % 2) * (pw / 2);
@@ -125,7 +127,7 @@ function hall(g) {
   }
   const lamps = [[640, 8], [1240, 8], [2240, 8], [3420, 8], [900, DECK + 34], [1900, DECK + 34], [2620, DECK + 34], [3620, DECK + 34]];
   g.save(); g.globalCompositeOperation = 'lighter';
-  for (const [lx, ly] of lamps) { g.fillStyle = rad(g, lx, ly - 40, 20, lx, ly + 150, 880, [[0, 'rgba(255,186,110,.19)'], [0.4, 'rgba(255,160,90,.065)'], [1, 'rgba(255,150,80,0)']]); g.fillRect(lx - 900, ly - 60, 1800, 1100); }
+  for (const [lx, ly] of lamps) { g.fillStyle = rad(g, lx, ly - 40, 20, lx, ly + 150, 880, [[0, 'rgba(255,186,110,.14)'], [0.4, 'rgba(255,160,90,.045)'], [1, 'rgba(255,150,80,0)']]); g.fillRect(lx - 900, ly - 60, 1800, 1100); }
   g.restore();
   // Boden mit Warnstreifen
   g.fillStyle = lin(g, 0, FLOOR, 0, H, [[0, '#232c38'], [0.2, '#161c25'], [1, '#07090d']]); g.fillRect(0, FLOOR, W, H - FLOOR);
@@ -159,8 +161,8 @@ const PATHS = {
   drumOut: buildPath([[1276, 800], [1392, 800]]),
   polIn: buildPath([[1716, 800], [1832, 800]]),
   polOut: buildPath([[2108, 800], [2356, 800]]),
-  drop: buildPath([[3240, 800], [3590, 800], [3680, 890], [3680, 1330], [3590, 1440], [3360, 1440]], 80),
-  colourOut: buildPath([[3240, 1440], [2960, 1440]]),
+  drop: buildPath([[3240, 800], [3590, 800], [3680, 890], [3680, 1330], [3590, 1440], [3450, 1440]], 80),
+  colourOut: buildPath([[3150, 1440], [2960, 1440]]),
   cool: buildPath([[2960, 1440], [2300, 1478], [2300, 1598], [2860, 1636], [2860, 1756], [2120, 1800], [1996, 1806]], 58),
   toWheel: buildPath([[1996, 1806], [1900, 1800], [1812, 1722]], 50),
   sortRail: buildPath([[1470, 1350], [1400, 1356], [560, 1404]], 30),
@@ -343,46 +345,62 @@ function kilnFront(g) {
   for (const x of [k.x, k.x + k.w]) band(g, x, 800, 18, TUBE_OUT + 9, 0, BRASS_CYL);
 }
 
+function domePath(g, c) {
+  g.beginPath(); g.moveTo(c.x - 150, 1506); g.lineTo(c.x - 150, 1424);
+  g.bezierCurveTo(c.x - 150, 1342, c.x - 72, 1338, c.x, 1338); g.bezierCurveTo(c.x + 72, 1338, c.x + 150, 1342, c.x + 150, 1424);
+  g.lineTo(c.x + 150, 1506); g.closePath();
+}
 function colourBack(g) {
+  const c = CRADLE, y0 = DECK + 62, hgt = 204;
   // Pigmenttanks hängen unter dem Deck
   TANKS.forEach((x, i) => {
-    const hex = COLORS[i].hex, y0 = DECK + 62, hgt = 232;
+    const hex = COLORS[i].hex;
     g.save(); shadow(g, 14, 5, 8, 0.5); rr(g, x - 36, y0, 72, hgt, 20); g.fillStyle = 'rgba(8,15,24,.86)'; g.fill(); g.restore();
     g.save(); rr(g, x - 32, y0 + 4, 64, hgt - 8, 17); g.clip();
-    const lvl = y0 + 46 + ((i * 37) % 60);
-    g.fillStyle = lin(g, 0, lvl, 0, y0 + hgt, [[0, css(hex, 0.78)], [1, css(hex, 0.42)]]); g.fillRect(x - 32, lvl, 64, y0 + hgt - lvl);
+    const lvl = y0 + 40 + ((i * 37) % 52);
+    g.fillStyle = lin(g, 0, lvl, 0, y0 + hgt, [[0, css(hex, 0.8)], [1, css(hex, 0.44)]]); g.fillRect(x - 32, lvl, 64, y0 + hgt - lvl);
     g.fillStyle = css(0xffffff, 0.55); g.fillRect(x - 32, lvl, 64, 2.5);
-    for (const [dx, dy, r] of [[-12, 60, 5], [9, 110, 3.5], [-4, 150, 4], [15, 40, 2.5]]) { circ(g, x + dx, lvl + dy, r); g.strokeStyle = css(0xffffff, 0.5); g.lineWidth = 1.2; g.stroke(); }
+    for (const [dx, dy, r] of [[-12, 50, 5], [9, 96, 3.5], [-4, 130, 4], [15, 34, 2.5]]) { circ(g, x + dx, lvl + dy, r); g.strokeStyle = css(0xffffff, 0.5); g.lineWidth = 1.2; g.stroke(); }
     g.fillStyle = 'rgba(255,255,255,.13)'; g.fillRect(x - 22, y0, 9, hgt); g.restore();
     rr(g, x - 36, y0, 72, hgt, 20); g.strokeStyle = 'rgba(176,220,246,.55)'; g.lineWidth = 2.5; g.stroke();
     band(g, x, y0 + 8, 14, 42, HALF_PI, CYL); band(g, x, y0 + hgt - 6, 14, 42, HALF_PI, CYL);
-    glow(g, x, y0 + hgt * 0.62, hex, 0.26, 130);
+    glow(g, x, y0 + hgt * 0.6, hex, 0.3, 140);
     g.fillStyle = lin(g, x - 5, 0, x + 5, 0, CYL); g.fillRect(x - 5, DECK + 28, 10, 40);
     // Leitung zum Injektor
-    g.save(); g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = '#11151a'; g.lineWidth = 9; shadow(g, 6, 3, 4, 0.4);
-    g.beginPath(); g.moveTo(x, y0 + hgt + 2); g.lineTo(x, y0 + hgt + 28); g.lineTo(CRADLE.x + (i - 2.5) * 9, 1352); g.lineTo(CRADLE.x + (i - 2.5) * 9, 1372); g.stroke();
-    noShadow(g); g.strokeStyle = css(hex, 0.85); g.lineWidth = 3.5; g.stroke(); g.restore();
+    g.save(); g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = '#11151a'; g.lineWidth = 10; shadow(g, 6, 3, 4, 0.4);
+    g.beginPath(); g.moveTo(x, y0 + hgt + 2); g.lineTo(x, y0 + hgt + 20); g.lineTo(c.x + (i - 2.5) * 13, 1306); g.lineTo(c.x + (i - 2.5) * 13, 1320); g.stroke();
+    noShadow(g); g.strokeStyle = css(hex, 0.9); g.lineWidth = 4; g.stroke(); g.restore();
   });
-  // Kammer und Sockel
-  post(g, CRADLE.x, 1500, FLOOR + 12, 26);
-  plate(g, CRADLE.x - 130, 1488, 260, 78, 12, { blur: 22 });
-  glassPane(g, CRADLE.x - 92, 1392, 184, 96, 16);
+  // Sockel und Glaskuppel (Rückseite)
+  for (const px of [c.x - 110, c.x + 110]) post(g, px, 1570, FLOOR + 12, 24);
+  plate(g, c.x - 196, 1504, 392, 88, 14, { blur: 24 });
+  g.save(); shadow(g, 14, 4, 6, 0.5); domePath(g, c); g.fillStyle = lin(g, 0, 1338, 0, 1506, [[0, '#06090e'], [1, '#131b26']]); g.fill(); g.restore();
+  domePath(g, c); g.strokeStyle = 'rgba(0,0,0,.8)'; g.lineWidth = 2.5; g.stroke();
 }
 function colourFront(g) {
-  const c = CRADLE;
-  // Injektorkopf
-  plate(g, c.x - 48, 1364, 96, 30, 8, { blur: 10 });
-  g.beginPath(); g.moveTo(c.x - 16, 1394); g.lineTo(c.x + 16, 1394); g.lineTo(c.x + 5, 1414); g.lineTo(c.x - 5, 1414); g.closePath();
-  g.fillStyle = lin(g, c.x - 16, 0, c.x + 16, 0, BRASS_CYL); g.fill(); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1.2; g.stroke();
-  // Farbnebel
+  const c = CRADLE, hex = COLORS[2].hex;
+  // Farbstrahl aus der Düse, Farbnebel und Farbring um die Kugel
   g.save(); g.globalCompositeOperation = 'lighter';
-  for (let k = 0; k < 14; k++) { const a = (k / 14) * TAU, d = 16 + (k * 17) % 26; circ(g, c.x + Math.cos(a) * d, c.y - 6 + Math.sin(a) * d * 0.7, 3 + (k % 3)); g.fillStyle = css(COLORS[2].hex, 0.55); g.fill(); }
+  g.fillStyle = lin(g, 0, 1372, 0, 1424, [[0, css(hex, 0.95)], [1, css(hex, 0.6)]]);
+  g.beginPath(); g.moveTo(c.x - 5, 1372); g.lineTo(c.x + 5, 1372); g.lineTo(c.x + 10, 1424); g.lineTo(c.x - 10, 1424); g.closePath(); g.fill();
+  for (let k = 0; k < 30; k++) { const a = (k / 30) * TAU, d = 34 + (k * 17) % 52; circ(g, c.x + Math.cos(a) * d, c.y + 2 + Math.sin(a) * d * 0.6, 2.5 + (k % 4)); g.fillStyle = css(hex, Math.max(0.12, 0.62 - d / 180)); g.fill(); }
+  g.strokeStyle = css(hex, 0.6); g.lineWidth = 3.5; g.beginPath(); g.ellipse(c.x, c.y + 10, 56, 19, 0, 0, TAU); g.stroke();
+  g.strokeStyle = css(hex, 0.3); g.lineWidth = 2; g.beginPath(); g.ellipse(c.x, c.y + 12, 84, 28, 0, 0, TAU); g.stroke();
   g.restore();
-  glow(g, c.x, c.y, COLORS[2].hex, 0.5, 120);
-  glassShine(g, c.x - 92, 1392, 184, 96, 16);
-  nameplate(g, c.x - 104, 1516, 'CHROMATIC INFUSION', 208);
-  COLORS.forEach((col, i) => led(g, c.x - 50 + i * 20, 1552, col.hex, 4));
-  for (const x of [c.x - 92, c.x + 92]) band(g, x, c.y, 14, TUBE_OUT + 6, 0, BRASS_CYL);
+  glow(g, c.x, c.y, hex, 0.62, 210);
+  // Glas vorn
+  g.save(); domePath(g, c); g.clip(); g.fillStyle = 'rgba(255,255,255,.07)';
+  for (const [o, wd] of [[-118, 28], [-66, 9], [64, 20]]) { g.beginPath(); g.moveTo(c.x + o + 46, 1338); g.lineTo(c.x + o + 46 + wd, 1338); g.lineTo(c.x + o + wd, 1506); g.lineTo(c.x + o, 1506); g.fill(); }
+  g.restore();
+  domePath(g, c); g.strokeStyle = 'rgba(176,220,246,.55)'; g.lineWidth = 2.5; g.stroke();
+  // Injektorkopf über der Kuppel
+  plate(g, c.x - 66, 1312, 132, 32, 9, { blur: 10 });
+  g.beginPath(); g.moveTo(c.x - 16, 1344); g.lineTo(c.x + 16, 1344); g.lineTo(c.x + 6, 1374); g.lineTo(c.x - 6, 1374); g.closePath();
+  g.fillStyle = lin(g, c.x - 16, 0, c.x + 16, 0, BRASS_CYL); g.fill(); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1.2; g.stroke();
+  band(g, c.x, 1507, 304, 8, 0, BRASS_CYL);
+  nameplate(g, c.x - 104, 1530, 'CHROMATIC INFUSION', 208);
+  COLORS.forEach((col, i) => led(g, c.x - 50 + i * 20, 1572, col.hex, 4));
+  for (const x of [c.x - 150, c.x + 150]) band(g, x, c.y, 16, TUBE_OUT + 8, 0, BRASS_CYL);
 }
 
 function coolBack(g) {
@@ -498,6 +516,113 @@ function rawBin(g, front) {
   vents(g, x + 24, y + h - 36, w - 48, 2);
 }
 
+// ---------------------------------------------------------------- Tiefe, Lichtzonen und ruhige Details
+function fan(g, fx, fy, fr, rot = 0) {
+  circ(g, fx, fy, fr + 8); g.fillStyle = '#161d26'; g.fill(); g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 2; g.stroke();
+  circ(g, fx, fy, fr); g.fillStyle = rad(g, fx, fy, 6, fx, fy, fr, [[0, '#0e1a26'], [1, '#060b11']]); g.fill();
+  g.save(); g.translate(fx, fy); g.rotate(rot);
+  for (let k = 0; k < 5; k++) { g.rotate(TAU / 5); g.beginPath(); g.moveTo(fr * 0.09, -fr * 0.07); g.bezierCurveTo(fr * 0.4, -fr * 0.46, fr * 0.8, -fr * 0.35, fr * 0.9, 2); g.bezierCurveTo(fr * 0.7, fr * 0.1, fr * 0.35, fr * 0.12, fr * 0.09, fr * 0.07); g.closePath(); g.fillStyle = lin(g, 0, -fr * 0.35, fr, fr * 0.1, [[0, '#5d6b7a'], [1, '#27313c']]); g.fill(); g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 1; g.stroke(); }
+  g.restore();
+  circ(g, fx, fy, fr * 0.15); g.fillStyle = rad(g, fx - 4, fy - 4, 1, fx, fy, fr * 0.15, [[0, '#e6ecf2'], [0.6, '#8a96a3'], [1, '#3b444f']]); g.fill();
+  g.strokeStyle = 'rgba(140,170,200,.22)'; g.lineWidth = 1.5; for (const r of [0.33, 0.58, 0.84]) { circ(g, fx, fy, fr * r); g.stroke(); }
+}
+function pipeRun(g, pts, w = 18, a = 1) {
+  g.save(); g.globalAlpha = a; g.lineJoin = 'round';
+  const path = () => { g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); };
+  shadow(g, 10, 4, 6, 0.4); path(); g.strokeStyle = '#0b0f15'; g.lineWidth = w + 3; g.stroke(); noShadow(g);
+  path(); g.strokeStyle = '#36414e'; g.lineWidth = w; g.stroke();
+  g.translate(-w * 0.2, -w * 0.2); path(); g.strokeStyle = 'rgba(205,220,235,.24)'; g.lineWidth = w * 0.2; g.stroke();
+  g.restore();
+  pts.forEach(([x, y], i) => { if (i && i < pts.length - 1) { g.save(); g.globalAlpha = a; circ(g, x, y, w * 0.72); g.fillStyle = '#48535f'; g.fill(); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1.2; g.stroke(); g.restore(); } });
+}
+function windowTall(g, x, y, w, h) {
+  const outline = () => { g.beginPath(); g.moveTo(x, y + h); g.lineTo(x, y + w / 2); g.arc(x + w / 2, y + w / 2, w / 2, Math.PI, 0); g.lineTo(x + w, y + h); g.closePath(); };
+  glow(g, x + w / 2, y + h * 0.5, 0x6fa8e0, 0.085, w * 2.1);
+  g.save(); outline(); g.fillStyle = lin(g, 0, y, 0, y + h, [[0, '#1a3857'], [0.6, '#102438'], [1, '#0a1624']]); g.fill(); g.clip();
+  g.fillStyle = rad(g, x + w * 0.68, y + h * 0.22, 4, x + w * 0.68, y + h * 0.22, w * 0.95, [[0, 'rgba(170,212,255,.42)'], [1, 'rgba(170,212,255,0)']]); g.fillRect(x, y, w, h);
+  g.fillStyle = 'rgba(6,10,16,.55)';                      // ferne Dächer und Schlote
+  g.beginPath(); g.moveTo(x, y + h); g.lineTo(x, y + h * 0.78); g.lineTo(x + w * 0.2, y + h * 0.78); g.lineTo(x + w * 0.2, y + h * 0.6); g.lineTo(x + w * 0.3, y + h * 0.6); g.lineTo(x + w * 0.3, y + h * 0.82); g.lineTo(x + w * 0.62, y + h * 0.7); g.lineTo(x + w * 0.62, y + h * 0.86); g.lineTo(x + w, y + h * 0.74); g.lineTo(x + w, y + h); g.fill();
+  g.strokeStyle = 'rgba(7,11,17,.96)'; g.lineWidth = 5;
+  for (let k = 1; k < 3; k++) { g.beginPath(); g.moveTo(x + (w * k) / 3, y); g.lineTo(x + (w * k) / 3, y + h); g.stroke(); }
+  for (let yy = y + w / 2; yy < y + h; yy += 76) { g.beginPath(); g.moveTo(x, yy); g.lineTo(x + w, yy); g.stroke(); }
+  g.restore();
+  outline(); g.strokeStyle = '#090d13'; g.lineWidth = 10; g.stroke(); outline(); g.strokeStyle = 'rgba(120,140,165,.22)'; g.lineWidth = 1.5; g.stroke();
+}
+function crate(g, x, y, s, label) {
+  g.save(); shadow(g, 12, 5, 6, 0.5); rr(g, x, y, s, s, 4); g.fillStyle = lin(g, 0, y, 0, y + s, [[0, '#6b5335'], [1, '#3c2d1c']]); g.fill(); g.restore();
+  g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 2; rr(g, x, y, s, s, 4); g.stroke();
+  g.strokeStyle = 'rgba(20,12,4,.55)'; g.lineWidth = 7; g.beginPath(); g.moveTo(x + 6, y + 6); g.lineTo(x + s - 6, y + s - 6); g.moveTo(x + s - 6, y + 6); g.lineTo(x + 6, y + s - 6); g.stroke();
+  g.strokeStyle = 'rgba(230,200,150,.16)'; g.lineWidth = 1.5; g.strokeRect(x + 5, y + 5, s - 10, s - 10);
+  if (label) { g.save(); g.font = `800 ${Math.round(s * 0.16)}px ${FONT}`; g.fillStyle = 'rgba(240,220,180,.55)'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(label, x + s / 2, y + s / 2); g.restore(); }
+}
+/** Hintergrundebene: kontrastarm, damit die Kugeln die hellsten Dinge im Bild bleiben */
+function depth(g) {
+  for (const [x, y, w, h] of [[836, 66, 150, 318], [1056, 66, 150, 318], [3350, 84, 160, 470], [3600, 84, 160, 470]]) windowTall(g, x, y, w, h);
+  // ferne Rohrbrücken und Steigleitungen
+  pipeRun(g, [[300, 596], [900, 596]], 20, 0.5); pipeRun(g, [[2200, 584], [2330, 584]], 20, 0.5);
+  pipeRun(g, [[330, 1096], [1310, 1096]], 22, 0.6); pipeRun(g, [[330, 1136], [820, 1136], [820, 1262]], 14, 0.6);
+  pipeRun(g, [[2196, 1090], [2980, 1090]], 22, 0.55); pipeRun(g, [[3460, 640], [3460, 992]], 18, 0.5); pipeRun(g, [[3760, 600], [3760, 2000]], 20, 0.5);
+  fan(g, 500, 1196, 74, 0.5); fan(g, 3640, 660, 62, 1.1);
+  // Schaltwand unter dem Ofen
+  plate(g, 2440, 1150, 330, 190, 12, { blur: 22, stops: STEEL_DARK });
+  rr(g, 2454, 1164, 302, 162, 7); g.strokeStyle = 'rgba(255,255,255,.06)'; g.lineWidth = 1; g.stroke();
+  [[2510, 0.55], [2605, 0.72], [2700, 0.38]].forEach(([gx, v]) => gauge(g, gx, 1220, 30, v));
+  vents(g, 2470, 1272, 150, 3); nameplate(g, 2640, 1280, 'MAIN CONTROL', 110);
+  for (const [lx, hex] of [[2476, 0x54ff9a], [2500, 0xffc13a], [2524, 0x35d8ff]]) led(g, lx, 1178, hex, 3.5);
+  pipeRun(g, [[2605, 1150], [2605, 1040]], 12, 0.8);
+  // Reservierter Platz für die zweite Linie
+  g.save(); g.setLineDash([26, 16]); g.strokeStyle = 'rgba(201,154,30,.42)'; g.lineWidth = 5; rr(g, 3010, 1726, 700, 338, 10); g.stroke(); g.restore();
+  g.save(); g.font = `800 96px ${FONT}`; g.fillStyle = 'rgba(201,154,30,.16)'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('BAY 2', 3350, 1900); g.restore();
+  nameplate(g, 3440, 1748, 'RESERVED · LINE 2', 192);
+  crate(g, 3560, 1950, 126, 'PARTS'); crate(g, 3430, 1986, 90); crate(g, 3586, 1838, 96);
+}
+function zoneLights(g) {
+  glow(g, 1110, 700, 0x2fd6e6, 0.11, 560); glow(g, 1970, 790, 0xffe2a8, 0.09, 480);
+  glow(g, 2800, 800, 0xff7a1f, 0.13, 980); glow(g, 3300, 1330, 0xb46bff, 0.09, 600);
+  glow(g, 2580, 1620, 0x4fc3ff, 0.10, 760); glow(g, 2040, 1720, 0x7fe9ff, 0.07, 380);
+  glow(g, 960, 1700, 0x9fb4ff, 0.05, 700); glow(g, 430, 1900, 0xffd9a0, 0.06, 440);
+}
+function waterTank(g) {                              // Wasserversorgung der Waschtrommel
+  for (const x of [390, 560]) post(g, x, 952, DECK + 4, 18);
+  band(g, 474, 892, 250, 62, 0, CYL); band(g, 356, 892, 16, 68, 0, STEEL); band(g, 592, 892, 16, 68, 0, STEEL);
+  rr(g, 440, 846, 16, 92, 8); g.fillStyle = 'rgba(8,15,24,.9)'; g.fill(); g.fillStyle = 'rgba(70,205,240,.8)'; rr(g, 443, 880, 10, 55, 5); g.fill(); g.strokeStyle = 'rgba(176,220,246,.6)'; g.lineWidth = 1.5; rr(g, 440, 846, 16, 92, 8); g.stroke();
+  glow(g, 448, 900, 0x2fd6e6, 0.35, 70); nameplate(g, 490, 880, 'WATER', 72);
+  pipeRun(g, [[600, 904], [900, 904], [958, 854]], 16);
+}
+function ducts(g) { pipeRun(g, [[2100, 594], [2100, 430], [2292, 430], [2292, -10]], 30); }
+function chevrons(g, p, fs) {
+  for (const f of fs) {
+    const q = at(p, f);
+    g.save(); g.translate(q.x, q.y); g.rotate(Math.atan2(q.ty, q.tx)); g.strokeStyle = 'rgba(190,240,255,.55)'; g.lineWidth = 3; g.lineCap = 'round'; g.lineJoin = 'round';
+    for (const o of [-9, 4]) { g.beginPath(); g.moveTo(o - 5, -10); g.lineTo(o + 5, 0); g.lineTo(o - 5, 10); g.stroke(); }
+    g.restore();
+  }
+}
+function quietDetails(g) {
+  // Dampf über der Waschtrommel
+  g.save(); g.globalCompositeOperation = 'lighter';
+  for (const [dx, dy, r, a] of [[-40, -214, 46, 0.10], [10, -262, 62, 0.085], [-18, -330, 78, 0.06], [44, -396, 92, 0.04], [70, -230, 38, 0.07]]) {
+    g.fillStyle = rad(g, DRUM.x + dx, DRUM.y + dy, 2, DRUM.x + dx, DRUM.y + dy, r, [[0, `rgba(205,240,255,${a})`], [1, 'rgba(205,240,255,0)']]); g.fillRect(DRUM.x + dx - r, DRUM.y + dy - r, 2 * r, 2 * r);
+  }
+  // Hitzeflimmern über dem Ofen
+  g.fillStyle = lin(g, 0, KILN.y - 150, 0, KILN.y, [[0, 'rgba(255,140,50,0)'], [1, 'rgba(255,140,50,.10)']]); g.fillRect(KILN.x + 40, KILN.y - 150, KILN.w - 80, 150);
+  g.strokeStyle = 'rgba(255,190,120,.10)'; g.lineWidth = 3; g.lineCap = 'round';
+  for (let x = KILN.x + 90; x < KILN.x + KILN.w - 60; x += 74) { g.beginPath(); g.moveTo(x, KILN.y - 12); g.bezierCurveTo(x - 16, KILN.y - 50, x + 18, KILN.y - 84, x - 6, KILN.y - 128); g.stroke(); }
+  g.restore();
+  chevrons(g, PATHS.top, [0.3]); chevrons(g, PATHS.feed, [0.28]); chevrons(g, PATHS.polOut, [0.52]);
+  chevrons(g, PATHS.drop, [0.25, 0.53, 0.9]); chevrons(g, PATHS.colourOut, [0.72]);
+  chevrons(g, PATHS.cool, [0.075, 0.23, 0.5, 0.68, 0.855]); chevrons(g, PATHS.toWheel, [0.2]); chevrons(g, PATHS.sortRail, [0.26, 0.56, 0.85]);
+  // deutliche Anschlüsse an Trommel und Radaufzug
+  collar(g, PATHS.feed, PATHS.feed.len - 10, 18, 9, BRASS_CYL); collar(g, PATHS.drumOut, 10, 18, 9, BRASS_CYL);
+  collar(g, PATHS.toWheel, PATHS.toWheel.len - 26, 18, 9, BRASS_CYL);
+}
+function sparkle(g, x, y, s) {
+  g.save(); g.globalCompositeOperation = 'lighter'; g.shadowColor = 'rgba(190,230,255,.9)'; g.shadowBlur = 8; g.strokeStyle = 'rgba(255,255,255,.95)'; g.lineCap = 'round';
+  g.lineWidth = 1.8; g.beginPath(); g.moveTo(x - s, y); g.lineTo(x + s, y); g.moveTo(x, y - s); g.lineTo(x, y + s); g.stroke();
+  g.lineWidth = 1.1; g.beginPath(); g.moveTo(x - s * 0.45, y - s * 0.45); g.lineTo(x + s * 0.45, y + s * 0.45); g.moveTo(x + s * 0.45, y - s * 0.45); g.lineTo(x - s * 0.45, y + s * 0.45); g.stroke();
+  g.restore();
+}
+
 // ---------------------------------------------------------------- Kugeln entlang der Linie
 function placeMarbles(g) {
   const lf = LIFT;
@@ -519,7 +644,7 @@ function placeMarbles(g) {
   for (const f of [0.14, 0.4, 0.66]) { const p = at(PATHS.drop, f); marble(g, p.x, p.y, 'clear', 0, 1 - f * 0.25); }
   // Farbstation: die Kugel in der Kammer bekommt gerade ihre Farbe
   marble(g, CRADLE.x, CRADLE.y, 'color', 2, 0.55);
-  marble(g, 3100, 1440, 'color', 4, 0.6);
+  marble(g, 3060, 1440, 'color', 4, 0.6);
   // Kühlstrecke: das Glühen klingt ab
   [[0.04, 0], [0.11, 3], [0.19, 1], [0.27, 5], [0.36, 2], [0.45, 4], [0.54, 0], [0.63, 3], [0.72, 5], [0.81, 1], [0.9, 2]].forEach(([f, c]) => { const p = at(PATHS.cool, f); marble(g, p.x, p.y, 'color', c, Math.max(0, 0.55 - f * 0.75)); });
   marble(g, 2040, 1803, 'color', 4);
@@ -538,6 +663,8 @@ function render() {
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const g = cv.getContext('2d'); g.lineJoin = 'round';
   const lamps = hall(g);
+  depth(g);
+  zoneLights(g);
   deck(g);
   lampBars(g, lamps);
   const tubes = [
@@ -548,7 +675,7 @@ function render() {
     ...COLS.map((c) => ({ p: c.path, s0: 0, s1: c.path.len })),
   ];
   // Rückseiten
-  liftBack(g); rawBin(g, false); hopperBack(g); drumBack(g); beltBack(g); polisherBack(g); kilnBack(g);
+  liftBack(g); rawBin(g, false); waterTank(g); ducts(g); hopperBack(g); drumBack(g); beltBack(g); polisherBack(g); kilnBack(g);
   colourBack(g); coolBack(g); inspectBack(g); bigWheelBack(g); sorterBack(g);
   tubesBack(g, tubes);
   // Kugeln
@@ -559,11 +686,12 @@ function render() {
   band(g, 3680, DECK + 15, 44, TUBE_OUT + 12, HALF_PI, STEEL);            // Durchführung durch das Deck
   hopperFront(g); drumFront(g); beltFront(g); polisherFront(g); kilnFront(g);
   colourFront(g); coolFront(g); inspectFront(g); bigWheelFront(g); sorterFront(g); rawBin(g, true);
+  quietDetails(g);
   // Leuchtschilder
   neon(g, 1790, 150, 'MARBLE FACTORY ', 'XL', 78);
   board(g, 1790, 318);
   for (const [x, y, a, b] of [[560, 250, '01 ', 'RAW'], [1110, 440, '02 ', 'WASH'], [1970, 520, '03 ', 'POLISH'], [2800, 610, '04 ', 'KILN'],
-    [3290, 1640, '05 ', 'COLOUR'], [2580, 1910, '06 ', 'COOL'], [2040, 1490, '07 ', 'INSPECT'], [1640, 1180, '08 ', 'LIFT'], [960, 1230, '09 ', 'SORT']]) neon(g, x, y, a, b, 40);
+    [3300, 1650, '05 ', 'COLOUR'], [2580, 1910, '06 ', 'COOL'], [2040, 1490, '07 ', 'INSPECT'], [1640, 1180, '08 ', 'LIFT'], [960, 1230, '09 ', 'SORT']]) neon(g, x, y, a, b, 40);
   // Vignette
   g.fillStyle = rad(g, W / 2, H * 0.46, H * 0.55, W / 2, H / 2, W * 0.62, [[0, 'rgba(0,0,0,0)'], [0.6, 'rgba(0,0,0,.14)'], [1, 'rgba(0,0,0,.55)']]); g.fillRect(0, 0, W, H);
   return cv;
