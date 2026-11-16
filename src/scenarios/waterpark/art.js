@@ -40,8 +40,7 @@ function glazed(g, tint, paint) {
   c.width = c.height = 1;
 }
 
-const TROUGH = R => ({ out: 2 * R + 30, inner: 2 * R + 8 });
-WP.troughSize = TROUGH;
+const TROUGH = WP.troughSize;
 
 /** Soft drop shadow of a path (cached layers only, uses a blur filter). */
 function pathShadow(g, pts, width, alpha = .2) {
@@ -216,7 +215,7 @@ WP.lampPos = (x, ground) => [x + 17, ground - 109];
 // ---------------------------------------------------------------- structures
 /** Posts and braces: a timber scaffold under the deck and single supports with knee braces under high slides. */
 WP.paintFrame = function (g, L) {
-  const { R, deck, lift } = L, ground = L.wallTop, towerHalf = R + 40;
+  const { R, deck, lift } = L, ground = L.wallTop, towerHalf = L.towerHW + 6;
   const clearOfTower = x => Math.abs(x - lift.x) > towerHalf + 10;
   // Deck scaffold
   const deckBottom = deck.y + 28, cols = [];
@@ -283,7 +282,7 @@ WP.paintDeck = function (g, L, rng, art) {
 
 /** Glass tower: back panes, frame, base pier and faceted pyramid roof (lift mechanics are drawn per frame). */
 WP.paintTower = function (g, L) {
-  const { lift, R, deck } = L, x = lift.x, hw = R + 34, top = deck.y - R * 2.9, bottom = lift.bottom + R * .6;
+  const { lift, R, deck } = L, x = lift.x, hw = L.towerHW, top = deck.y - R * 2.9, bottom = lift.bottom + R * .6;
   L.tower = { x, hw, top, bottom };
   // Back panes
   const gl = g.createLinearGradient(x - hw, 0, x + hw, 0);

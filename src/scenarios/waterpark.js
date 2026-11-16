@@ -8,7 +8,7 @@ const times = value => `${value.toFixed(2).replace('.', ',')}×`;
 const normalMode = params => params.mode !== 'short';
 const finiteMode = params => params.mode !== 'relax';
 const defaults = {
-  mode: 'relax', animals: 16, size: 28, speed: 1, beltSpeed: 1, rollSpeed: 1, current: 1,
+  mode: 'relax', animals: 16, size: 36, speed: 1, beltSpeed: 1, rollSpeed: 1, current: 1,
   route0: true, route1: true, route2: true, route3: true,
   dayCycle: true, dayMinutes: 0, dayStart: 0.12, nightDark: 0.7,
   ending: 'quiet', fireworks: false, decoDensity: 1,
@@ -56,7 +56,7 @@ function normalizeParams(input) {
   const mode = ['short', 'day', 'relax'].includes(p.mode) ? p.mode : defaults.mode;
   const out = {
     mode, animals: mode === 'short' ? 4 : clamp(Math.round(num(p.animals, 16) / 4) * 4, 4, 24),
-    size: r('size', 18, 30), speed: r('speed', 0.5, 1.5), beltSpeed: r('beltSpeed', 0.5, 1.5),
+    size: r('size', 24, 44), speed: r('speed', 0.5, 1.5), beltSpeed: r('beltSpeed', 0.5, 1.5),
     rollSpeed: r('rollSpeed', 0.5, 1.5), current: r('current', 0.5, 1.5),
     dayCycle: bool(p.dayCycle, true), dayMinutes: r('dayMinutes', 0, 120),
     dayStart: r('dayStart', 0, 0.95), nightDark: r('nightDark', 0, 1),
@@ -75,7 +75,7 @@ const controls = [
     sets: { short: { animals: 4, route0: true, route1: true, route2: true, route3: true, decoDensity: 0.5 },
       day: { animals: 16, decoDensity: 1 }, relax: { animals: 12, decoDensity: 0.5, fireworks: false } } },
   { key: 'animals', label: 'Tierchen', type: 'range', min: 4, max: 24, step: 4, restart: true, enabled: normalMode, format: value => String(value) },
-  { key: 'size', label: 'Größe der Tierchen', type: 'range', min: 18, max: 30, step: 1, restart: true, format: value => `${value * 2} px` },
+  { key: 'size', label: 'Größe der Tierchen', type: 'range', min: 24, max: 44, step: 1, restart: true, format: value => `${value * 2} px` },
   ...[['speed', 'Gesamttempo'], ['beltSpeed', 'Tempo des Aufzugs'], ['rollSpeed', 'Tempo der Rutschen'], ['current', 'Strömung im Rücklauf']]
     .map(([key, label]) => ({ key, label, type: 'range', min: 0.5, max: 1.5, step: 0.05, format: times, restart: true })),
   { key: 'ending', label: 'Abschluss', type: 'select', restart: true, enabled: finiteMode, options: [['quiet', 'Abendruhe'], ['show', 'Kleine Fontänenshow']] },

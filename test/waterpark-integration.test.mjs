@@ -25,7 +25,7 @@ test('Waterpark settings keep four species and at least one usable route; short 
     size: 100, speed: 0, decoDensity: 3 }, view: { camera: true } });
   assert.equal(cfg.params.animals, 4);
   assert.deepEqual([0, 1, 2, 3].map(i => cfg.params[`route${i}`]), [true, true, true, true]);
-  assert.equal(cfg.params.size, 30); assert.equal(cfg.params.speed, 0.5); assert.equal(cfg.params.decoDensity, 2);
+  assert.equal(cfg.params.size, 44); assert.equal(cfg.params.speed, 0.5); assert.equal(cfg.params.decoDensity, 2);
   assert.equal(cfg.view.camera, false);
   const custom = normalize({ params: { mode: 'relax', animals: 11, route0: false, route1: false, route2: false, route3: false } });
   assert.equal(custom.params.animals, 12);

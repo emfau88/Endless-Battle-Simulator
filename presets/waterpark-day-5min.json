@@ -6,7 +6,7 @@
   "params": {
     "mode": "day",
     "animals": 16,
-    "size": 28,
+    "size": 36,
     "ending": "quiet",
     "fireworks": false,
     "dayMinutes": 0,

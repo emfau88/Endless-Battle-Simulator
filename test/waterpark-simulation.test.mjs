@@ -130,6 +130,25 @@ test('Wippe folgt dem Gewicht: kippt zur belasteten Seite, schlägt an und das T
   }
 });
 
+test('Halbtotale: höchstens drei Tiere auf der Panoramarutsche, Wartepunkte nur auf Deck, vor dem Ausguss oder am Sprungbrett',()=>{
+  for(const world of worlds)for(const params of [{mode:'day',animals:16},{mode:'relax',animals:24,speed:.5,beltSpeed:.5,rollSpeed:.5,current:.5}]){
+    const sim=create(params,world,600),still=new Map();let maxPanorama=0;
+    for(let step=0;step<300*60;step++){
+      sim.stepOnce();
+      const panorama=sim._list('route',0);maxPanorama=Math.max(maxPanorama,panorama.length);
+      for(const b of sim.animals){
+        if(b.state!=='route'){still.delete(b.id);continue;}
+        const r=sim.L.routes[b.route],kind=WP.samplePath(r.path,b.s).kind;
+        const waiting=kind==='deck'||Math.abs(b.s-sim._gateS(b.route))<2||b.s>=r.path.length-1;
+        if(b.v<5&&!waiting){const t0=still.get(b.id)??sim.t;still.set(b.id,t0);assert.ok(sim.t-t0<.4,`Tier ${b.id} steht auf ${kind} von Route ${b.route}`);}
+        else still.delete(b.id);
+      }
+    }
+    assert.ok(maxPanorama<=3,`höchstens drei Tiere auf der Panoramarutsche (${maxPanorama})`);
+    assert.ok(sim.L.poolGap>=2*sim.L.R+18&&sim.L.pool.path.length/sim.L.poolGap>=(world.w>world.h?24:16),'Lagune hat genug Plätze mit Perspektivabstand');
+  }
+});
+
 test('Dekoration ist begrenzt; Ton und sichtbare Ereignisse teilen den Auslösezeitpunkt',()=>{
   const sim=create({mode:'relax',decoDensity:2},worlds[0],600);
   for(let i=0;i<600*60;i++){

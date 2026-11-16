@@ -23,7 +23,7 @@ WP.storyState = function (cfg, video, step, timing = {}) {
     show: mode!=='relax' && cfg.ending==='show' && time>=finaleAt };
 };
 WP.preflight = function ({params:cfg={},video={},world={w:1920,h:1080},timeScale} = {}) {
-  const mode = cfg.mode || 'day', L = WP.createLayout(world,cfg.size||24), n = mode==='short'?4:(cfg.animals||16);
+  const mode = cfg.mode || 'day', L = WP.createLayout(world,cfg.size||36), n = mode==='short'?4:(cfg.animals||16);
   const tempo = Math.max(.05,(timeScale == null ? video.tempo||1 : timeScale)*(cfg.speed||1));
   const ride = Math.max(...L.routes.map(r => r.path.length/(190*Math.max(.1,cfg.rollSpeed||1))))/tempo;
   const lift = L.lift.path.length/(180*Math.max(.1,cfg.beltSpeed||1))/tempo;

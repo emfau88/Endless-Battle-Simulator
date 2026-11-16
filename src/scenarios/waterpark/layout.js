@@ -36,6 +36,8 @@ WP.samplePath = function (path, s) {
   return { x: p.x + (q.x - p.x) * f, y: p.y + (q.y - p.y) * f, tx, ty, angle: Math.atan2(ty, tx), kind: q.kind };
 };
 WP.makePath = makePath;
+/** Open slide trough: outer rim width and water channel width (wide shell as in the mockup). */
+WP.troughSize = R => ({ out: 3.2 * R, inner: 2.5 * R });
 
 /*
  * Grundriss nach dem Designmockup: gläserner Aufzugturm links der Mitte, ein Startdeck auf Turmhöhe,
@@ -44,18 +46,20 @@ WP.makePath = makePath;
  * Koordinaten als Anteil von Breite/Höhe; jeder Formatgrundriss ist eigenständig gestaltet.
  */
 const PLANS = {
+  // Halbtotale nach dem Mockup (Plan P3): zwei große Bögen links, Trichter rechts der Mitte, Wippe tief über dem
+  // Beckenrand, gerade steile Sprungrutsche ganz rechts.
   land: {
-    waterY: .72, horizon: .30, lift: { x: .34, deck: .19, bottom: .80 },
-    mouths: [.22, .71, .625, .945],
-    funnel: { x: .69, y: .335, rx: .105, ry: .07 },
-    seesaw: { x: .50, y: .52, length: .19 },
-    jump: { x: .88, y: .62 },
-    panorama: { deckTo: .27, pts: [[.245,.232],[.17,.268],[.108,.318],[.12,.38],[.205,.425],[.262,.47],[.222,.53],[.13,.57],[.102,.63],[.145,.68]] },
-    funnelIn: { deckTo: .55, pts: [[.575,.245],[.596,.292]] },
-    tube: [[.693,.43],[.699,.53],[.705,.63]],
-    seesawIn: { deckTo: .425, pts: [[.44,.25],[.43,.31],[.405,.36]] },
-    seesawOut: [[.611,.678]],
-    jumpIn: { deckTo: .79, pts: [[.815,.236],[.843,.33],[.86,.45],[.869,.55]] },
+    waterY: .72, horizon: .30, lift: { x: .34, deck: .19, bottom: .80 }, towerW: .092,
+    mouths: [.235, .675, .55, .94],
+    funnel: { x: .67, y: .31, rx: .112, ry: .065 },
+    seesaw: { x: .505, y: .52, length: .17 },
+    jump: { x: .878, y: .625 },
+    panorama: { deckTo: .255, pts: [[.205,.203],[.14,.232],[.103,.28],[.108,.333],[.15,.37],[.215,.393],[.255,.43],[.262,.478],[.225,.52],[.165,.548],[.128,.592],[.135,.64],[.18,.675],[.222,.70]] },
+    funnelIn: { deckTo: .522, pts: [[.537,.232],[.55,.282]] },
+    tube: [[.672,.45],[.674,.56],[.675,.66]],
+    seesawIn: { deckTo: .445, pts: [[.457,.245],[.45,.30],[.43,.345]] },
+    seesawOut: [],
+    jumpIn: { deckTo: .79, pts: [[.806,.232],[.826,.33],[.852,.48]] },
     pool: [[.09,.80],[.12,.89],[.40,.94],[.76,.93],[.92,.87],[.74,.84],[.55,.87],[.44,.86]],
   },
   port: {
@@ -64,7 +68,7 @@ const PLANS = {
     funnel: { x: .68, y: .285, rx: .19, ry: .034 },
     seesaw: { x: .715, y: .47, length: .26, leftward: true },
     jump: { x: .875, y: .60 },
-    panorama: { deckTo: .27, pts: [[.24,.198],[.135,.222],[.072,.268],[.10,.318],[.205,.35],[.25,.40],[.172,.44],[.085,.48],[.082,.54],[.18,.572],[.248,.612],[.215,.66]] },
+    panorama: { deckTo: .24, pts: [[.215,.198],[.13,.222],[.075,.268],[.10,.318],[.19,.35],[.228,.40],[.165,.44],[.088,.48],[.085,.54],[.17,.572],[.228,.612],[.21,.66]] },
     funnelIn: { deckTo: .48, pts: [[.495,.20],[.505,.245]] },
     tube: [[.685,.34],[.665,.39],[.60,.418],[.515,.435],[.477,.48],[.468,.57],[.475,.645]],
     seesawIn: { deckTo: .74, pts: [[.765,.21],[.80,.29],[.835,.35]] },
@@ -74,8 +78,10 @@ const PLANS = {
   },
 };
 
-WP.createLayout = function (world, size = 28) {
+WP.createLayout = function (world, size = 36) {
   const W = world.w, H = world.h, land = W > H * 1.2, R = size, GAP = 2 * R + 18, P = land ? PLANS.land : PLANS.port;
+  // Swimmers grow towards the front of the lagoon (perspective), so they keep a wider distance there.
+  const poolGap = 2 * R * (land ? 1.45 : 1.25) + 18, towerHW = Math.round(Math.max(R + 34, W * (P.towerW || 0) / 2));
   const pt = (x, y) => [x * W, y * H], points = a => a.map(p => pt(...p));
   const waterY = H * P.waterY, xLift = W * P.lift.x, deckY = H * P.lift.deck, top = deckY + R + 6, bottom = H * P.lift.bottom;
   const origin = [xLift, deckY];
@@ -94,7 +100,7 @@ WP.createLayout = function (world, size = 28) {
   seesaw.dir = dir;
   // Übergaben wie im Mockup: Die Zulaufrinne endet als Ausguss über dem Einstiegsende, das Ausstiegsende gießt in eine
   // Auffangrinne. Abstände aus Rinnenbreite (2R+30, siehe art.js) und größter Neigung, damit sich nichts überdeckt.
-  const tilt = seesaw.length / 2 * Math.sin(seesaw.maxAngle), rim = 2 * (R + 15) + Math.round(R * .42);
+  const tilt = seesaw.length / 2 * Math.sin(seesaw.maxAngle), rim = WP.troughSize(R).out + Math.round(R * .42);
   const spout = [boardStart[0], boardStart[1] - (rim + tilt + 8)], catchTop = [boardEnd[0] + dir * R * .5, boardEnd[1] + rim + tilt + 12];
   seesaw.spout = spout; seesaw.catchTop = catchTop;
   const boardTipped = [seesaw.x + dir * Math.cos(seesaw.maxAngle) * seesaw.length / 2, seesaw.y + Math.sin(seesaw.maxAngle) * seesaw.length / 2];
@@ -153,7 +159,7 @@ WP.createLayout = function (world, size = 28) {
   // Deckflächen für die Darstellung: Lauffläche (Füße) liegt R unter der Tiermitte.
   const deckXs = routes.map(r => r.launch[0]);
   const deck = { y: deckY + R, x0: Math.min(...deckXs) - R * 1.6, x1: Math.max(...deckXs) + R * 1.6, centerY: deckY };
-  return { W,H,R,GAP,land,horizon:H*P.horizon,waterY,origin,start:origin,deck,
+  return { W,H,R,GAP,poolGap,towerHW,land,horizon:H*P.horizon,waterY,origin,start:origin,deck,
     lift:{x:xLift,top,bottom,deckY,path:liftPath},platformPath,routes,
     pool:{path:poolPath,joinS,pickup:{x:xLift,y:bottom}},gather,funnel,seesaw,jump };
 };

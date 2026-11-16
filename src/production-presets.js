@@ -10,7 +10,7 @@
     if (scenario === 'waterpark') return {
       version: 1, name: `Wasserpark – ${short ? 'Vier Tiere (30 Sekunden)' : 'Ein Parktag (10 Minuten)'}`,
       scenario, seed,
-      params: { mode: short ? 'short' : 'day', animals: short ? 4 : 16, size: short ? 30 : 28, ending: 'quiet', fireworks: false, dayMinutes: 0, decoDensity: short ? 0.5 : 1 },
+      params: { mode: short ? 'short' : 'day', animals: short ? 4 : 16, size: short ? 38 : 36, ending: 'quiet', fireworks: false, dayMinutes: 0, decoDensity: short ? 0.5 : 1 },
       video: { aspect: short ? '9:16' : '16:9', resolution: 1080, fps: 60, durationSec: short ? 30 : 600,
         tempo: 1, audio: true, volume: { ...EBS.getScenario('waterpark').audio.defaultVolume },
         quality: { crf: 18, preset: 'medium', bitrate: null } },

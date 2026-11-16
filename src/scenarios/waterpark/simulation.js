@@ -12,7 +12,7 @@ class Simulation {
     this.world=world; this.video=video; this.timeScale=timeScale||1; this.L=WP.createLayout(world,this.cfg.size);
     this.step=0; this.t=0; this.videoTime=0; this.events=new Array(1024); this.eventSeq=0; this.recent=[]; this.decorations=[];
     this.rides=0; this.routeRides=[0,0,0,0]; this.animals=[]; this.lastDispatch=-99; this.lastLift=-99;this.gatherCount=0;
-    this.landingReservations=[null,null,null,null];
+    this.landingReservations=[null,null,null,null]; this.panoramaBatch=0;
     this.seesawAngle=0; this.seesawVel=0; this.seesawState='ready'; this.seesawResetUntil=0; this.finishedAt=null;
     this.preflight=WP.preflight({params:this.cfg,video,world,timeScale}); this.timing={...this.preflight};
     this.story=WP.storyState(this.cfg,this.video,0,this.timing); this.previousOpen=[...this.story.openRoutes];
@@ -45,6 +45,7 @@ class Simulation {
     const row=this._list('route',id);
     if(id!==0&&row.length)return false;
     if(id===2&&this.t<this.seesawResetUntil)return false;
+    if(id===0)return row.length<3&&(!row.length||row[row.length-1].s>this.L.GAP*3.5);
     return !row.length||row[row.length-1].s>this.L.GAP*1.3;
   }
   _chooseRoute(b) {
@@ -53,7 +54,7 @@ class Simulation {
     for(let k=0;k<4;k++){const r=(preferred+k)%4;if(this.story.openRoutes[r]&&this._routeFree(r))return r;}
     return -1;
   }
-  _poolHasSpace(s,ignore,clearance=this.L.GAP) {
+  _poolHasSpace(s,ignore,clearance=this.L.poolGap) {
     return this.animals.every(b=>b===ignore||b.state!=='pool'||Math.abs(b.s-s)>=clearance);
   }
   _gather(b,from) {
@@ -66,9 +67,16 @@ class Simulation {
       b.gatherPath=this.L.gather.path;b.gatherTarget=b.gatherPath.length-this.gatherCount*this.L.GAP;this.gatherCount++;
     }
   }
+  /** Where a rider on route id waits for its landing: on the deck, before the seesaw spout or on the springboard. */
+  _gateS(id) {
+    const L=this.L,r=L.routes[id];
+    return id===3?Math.max(0,r.feature.entryS-L.R):id===2?Math.max(0,r.feature.leadS-L.R):Math.max(0,r.launchS-L.R);
+  }
   _arrive(b) {
     const r=this.L.routes[b.route]; b.laps++; this.rides++; this.routeRides[b.route]++;
-    this.landingReservations[b.route]=null;
+    // The next panorama rider already past the gate inherits the landing; otherwise the bay is free again.
+    const next=b.route===0&&this.landingReservations[0]===b.id?this._list('route',0).find(o=>o!==b&&o.s>this._gateS(0)):null;
+    this.landingReservations[b.route]=next?next.id:null;
     this._emit('splash',r.end[0],r.end[1],b.kind,Math.max(.25,b.v/230));
     if(this.cfg.mode==='short')this._gather(b,{x:r.end[0],y:r.end[1]});
     else {b.state='pool';b.s=this.L.pool.joinS[b.route];b.v=150;}
@@ -82,7 +90,7 @@ class Simulation {
     // Returned animals keep moving to the visible lift inlet. Closing redirects that same inlet to the lagoon.
     let ahead=null;
     for(const b of this._list('pool')) {
-      let cap=ahead?ahead.s-L.GAP:L.pool.path.length;const old=b.s;
+      let cap=ahead?ahead.s-L.poolGap:L.pool.path.length;const old=b.s;
       for(let i=0;i<4;i++)if(this.landingReservations[i]!=null){const stop=L.pool.joinS[i]-L.GAP*2.5;if(b.s<=stop+1e-7)cap=Math.min(cap,stop);}
       b.s=Math.min(cap,b.s+170*cfg.current*dt); b.v=Math.max(0,(b.s-old)/dt);
       if(!ahead&&b.s>=L.pool.path.length-1e-7) {
@@ -132,14 +140,16 @@ class Simulation {
         // Reserve a real landing gap before the last descent, and before launching a jump.
         // Water guests upstream wait outside that gap until the arriving guest joins their lane.
         if(cfg.mode!=='short'){
-          const gate=id===3?Math.max(0,r.feature.entryS-L.R):id===2?Math.max(0,r.feature.leadS-L.R):Math.max(0,r.path.length-L.GAP*4);
-          if(b.s+speed*dt>=gate&&this.landingReservations[id]!==b.id){
+          const gate=this._gateS(id),owner=this.landingReservations[id],convoy=id===0&&owner!=null&&this.animals[owner].state==='route'&&this.animals[owner].route===0&&this.animals[owner].s>b.s&&(b.s>gate||this.panoramaBatch>0);
+          if(b.s+speed*dt>=gate&&owner!==b.id&&!convoy){
             const adjacentBay=this.landingReservations.some((owner,j)=>j!==id&&owner!=null&&Math.abs(L.pool.joinS[j]-L.pool.joinS[id])<L.GAP*2.5);
-            if(!adjacentBay&&this.landingReservations[id]==null&&this._poolHasSpace(L.pool.joinS[id],b,L.GAP*2.5))this.landingReservations[id]=b.id;
+            if(!adjacentBay&&this.landingReservations[id]==null&&this._poolHasSpace(L.pool.joinS[id],b,L.GAP*2.5+2)){this.landingReservations[id]=b.id;if(id===0)this.panoramaBatch=2;}
             else cap=Math.min(cap,gate);
           }
         }
         b.s=Math.min(cap,b.s+speed*dt);b.v=Math.max(0,(b.s-old)/dt);
+        // A convoy holds at most three riders, then the bay is handed back to the lagoon traffic
+        if(id===0&&cfg.mode!=='short'&&old<=this._gateS(0)&&b.s>this._gateS(0)&&this.landingReservations[0]!==b.id)this.panoramaBatch--;
         const f=r.feature;
         if(f&&id!==2&&old<f.entryS&&b.s>=f.entryS)this._emit(id===1?'funnel':id===2?'seesaw':'spring',f.x,f.y,b.kind);
         if(id===2&&b.s>=f.entryS&&b.s<=f.exitS){const u=(b.s-f.entryS)/(f.exitS-f.entryS);seesawU=u;seesawKind=b.kind;this.seesawState=u<.2?'loaded':u<.8?'tipping':'returning';}
@@ -227,7 +237,7 @@ class Simulation {
       if(b.kind<0||b.kind>3||!Number.isInteger(b.kind)||b.laps<0||!Number.isInteger(b.laps))errors.push('Ungültige Tierart oder Fahrtenzahl');
       const q=this.pose(b);if(!Number.isFinite(q.x)||!Number.isFinite(q.y))errors.push('Ungültige Darstellung');
     }
-    for(const state of ['pool','lift','platform',...(this.cfg.mode==='short'?[]:['gather'])]){const row=this._list(state);for(let i=1;i<row.length;i++)if(row[i-1].s-row[i].s<this.L.GAP-1e-4)errors.push(`Abstand in ${state} zu klein`);}
+    for(const state of ['pool','lift','platform',...(this.cfg.mode==='short'?[]:['gather'])]){const row=this._list(state),gap=state==='pool'?this.L.poolGap:this.L.GAP;for(let i=1;i<row.length;i++)if(row[i-1].s-row[i].s<gap-1e-4)errors.push(`Abstand in ${state} zu klein`);}
     for(let route=0;route<4;route++){const row=this._list('route',route);for(let i=1;i<row.length;i++)if(row[i-1].s-row[i].s<this.L.GAP-1e-4)errors.push('Rutschenabstand zu klein');if(route&&row.length>1)errors.push('Attraktion doppelt belegt');}
     const pool=this._list('pool');for(const b of this._list('route'))if(this.L.routes[b.route].path.length-b.s<this.L.GAP*3){const p=this.pose(b);for(const other of pool){const q=this.pose(other);if(Math.hypot(p.x-q.x,p.y-q.y)<this.L.R*2-.1)errors.push('Landebucht durch ein schwimmendes Tier belegt');}}
     const parking=this._list('gather');for(let i=0;i<parking.length;i++)for(let j=i+1;j<parking.length;j++){const p=this.pose(parking[i]),q=this.pose(parking[j]);if(Math.hypot(p.x-q.x,p.y-q.y)<this.L.R*2-.1)errors.push('Tiere überlappen beim Sammeln');}
@@ -235,7 +245,7 @@ class Simulation {
     return {ok:errors.length===0,errors};
   }
   stateHash() {
-    return hash(JSON.stringify({step:this.step,t:+this.t.toFixed(6),rides:this.rides,lastDispatch:this.lastDispatch,seesawResetUntil:this.seesawResetUntil,seesawAngle:+this.seesawAngle.toFixed(9),seesawVel:+this.seesawVel.toFixed(9),landingReservations:this.landingReservations,
+    return hash(JSON.stringify({step:this.step,t:+this.t.toFixed(6),rides:this.rides,lastDispatch:this.lastDispatch,seesawResetUntil:this.seesawResetUntil,seesawAngle:+this.seesawAngle.toFixed(9),seesawVel:+this.seesawVel.toFixed(9),landingReservations:this.landingReservations,panoramaBatch:this.panoramaBatch,
       animals:this.animals.map(b=>[b.id,b.kind,b.state,b.route,+b.s.toFixed(6),+b.v.toFixed(6),b.laps,b.done])})).toString(16).padStart(8,'0');
   }
   destroy() {this.decorations.length=0;this.recent.length=0;this.events.length=0;}
