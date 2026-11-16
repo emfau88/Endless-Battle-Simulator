@@ -170,6 +170,29 @@ test('Territory: Hochformat zeigt automatisch die schlanke Anzeige, Querformat d
   assert.deepEqual(errors, []);
 });
 
+test('Territory: Speerträger ersetzen nur das Bild der Einheiten; Simulation und Originalansicht bleiben gleich', async t => {
+  const { page, errors } = await live(t, 'auto');
+  const shot = units => page.evaluate(units => {
+    const s = EBS.app.session;
+    s.start(EBS.mergeConfig(s.cfg, { params: { layout: 'short', profile: 'blitz', incomeMultiplier: 2, aggression: 1, offensiveInterval: 2, marchDuration: 1.5, units },
+      video: { aspect: '9:16', tempo: 2 } }));
+    for (let i = 0; i < 480; i++) s.step();
+    const before = s.sim.stateHash(); s.render(); s.render();
+    const view = s.renderer.hexView, round = s.sim.roundSim;
+    return { units: view.units, drawn: view.unitCount || 0, webgl: view.backend === 'webgl', same: before === s.sim.stateHash(), round: round.hash(),
+      moves: round.moves.length, events: s.sim.eventSeq, picture: s.renderer.canvas.toDataURL('image/png').length, image: s.renderer.canvas.toDataURL('image/png') };
+  }, units);
+  const tanks = await shot('tanks'), soldiers = await shot('soldiers');
+  assert.equal(tanks.webgl && soldiers.webgl, true, 'der Test braucht den WebGL-Pfad des Exports');
+  assert.deepEqual([tanks.units, tanks.drawn, tanks.same], ['tanks', 0, true], 'Standard: nichts Zusätzliches gezeichnet');
+  assert.equal(soldiers.units, 'soldiers'); assert.equal(soldiers.same, true, 'Zeichnen verändert die Simulation nicht');
+  // Eleven boxes (figure plus contact shadow) with five faces of two triangles: 330 vertices per spearman.
+  assert.ok(soldiers.drawn >= 330 && soldiers.drawn % 330 === 0, 'ganze Speerträger gezeichnet: ' + soldiers.drawn);
+  assert.deepEqual([soldiers.round, soldiers.moves, soldiers.events], [tanks.round, tanks.moves, tanks.events], 'derselbe Krieg mit beiden Darstellungen');
+  assert.notEqual(soldiers.image, tanks.image, 'das Bild unterscheidet sich');
+  assert.deepEqual(errors, []);
+});
+
 test('Territory: Pause hält die Simulation an, Fortsetzen bleibt reproduzierbar', async t => {
   const { page, errors } = await live(t);
   const state = () => page.evaluate(() => ({ hash: EBS.app.sim.stateHash(), step: EBS.app.sim.step }));
