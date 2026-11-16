@@ -18,7 +18,7 @@
     // Slim and off: no bands, the map fills the picture.
     // The slim portrait frame renders a slightly taller view and shows its upper part: the map sits a
     // little lower, clear of the caption line, while its lowest rows end under the Shorts interface.
-    if (mode !== 'full') return { portrait, mode, x: 0, y: 0, w: world.w, h: world.h + (mode === 'slim' && portrait ? Math.round(world.h * .09) : 0),
+    if (mode !== 'full') return { portrait, mode, x: 0, y: 0, w: world.w, h: world.h + (mode === 'slim' && portrait ? Math.round(world.h * .06) : 0),
       cardsX: 0, cardsY: 0, cardsW: 0 };
     const top = 105, bottom = portrait && cards ? 244 : 0;
     const side = !portrait && cards ? 332 : 0;

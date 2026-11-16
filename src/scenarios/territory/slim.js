@@ -49,8 +49,9 @@
     g.beginPath(); g.roundRect(x, y, w, h, r); g.fillStyle = PLATE; g.fill();
     g.lineWidth = 3; g.strokeStyle = accent + '8c'; g.stroke();
   }
-  function drawCaption(g, c, cx, cy) {
-    const big = c.kind === 'victory', size = big ? 104 : 64, subSize = big ? 34 : 28;
+  // top: upper edge of the plate (captions in the free strip above the map); the result is centred on y instead.
+  function drawCaption(g, c, cx, y, top) {
+    const big = c.kind === 'victory', size = big ? 104 : 58, subSize = big ? 34 : 27, cy = top ? y + size * .71 : y;
     // The opening line must be readable in the very first frame: no fade-in there.
     const pop = c.kind === 'hook' ? 1 : ease(c.age / .16), out = Number.isFinite(c.hold) ? clamp((c.hold - c.age) / .28, 0, 1) : 1;
     const scale = .88 + .12 * pop;
@@ -121,7 +122,8 @@
     const r = sim.roundSim, cx = world.w / 2, portrait = layout.portrait;
     drawNames(g, r, view, layout);
     drawRings(g, sim, remainder, view, layout);
-    drawShares(g, r, cx, portrait ? Math.round(world.h * .086) : 46, portrait ? world.w * .76 : world.w * .42);
+    // Portrait: caption line at the very top, the share bar right below it, both above the map.
+    drawShares(g, r, cx, portrait ? 180 : 46, portrait ? world.w * .76 : world.w * .42);
     const caption = sim.cfg.showWinner || r.phase !== 'finished' ? captionAt(sim, remainder) : null;
     if (!caption) return;
     if (caption.kind === 'victory') {
@@ -130,7 +132,8 @@
       veil.addColorStop(0, 'rgba(4,14,20,.42)'); veil.addColorStop(1, 'rgba(4,14,20,0)');
       g.save(); g.globalAlpha = ease(caption.age / .4); g.fillStyle = veil; g.fillRect(0, 0, world.w, world.h); g.restore();
     }
-    drawCaption(g, caption, cx, caption.kind === 'victory' ? world.h * .46 : portrait ? world.h * .142 : 150);
+    if (caption.kind === 'victory') drawCaption(g, caption, cx, world.h * .46, false);
+    else drawCaption(g, caption, cx, portrait ? 40 : 109, true);
   };
   EBS.Territory.captionAt = captionAt;
 })();
