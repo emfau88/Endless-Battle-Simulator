@@ -7,7 +7,9 @@ let browser;
 before(async () => { browser = await launchBrowser({ gpu: false }); });
 after(async () => { await browser?.close(); });
 
-const open = async (cfg = {}) => (await openExportPage(browser, { scenario: 'marblexl', seed: 42, ...cfg })).page;
+// 720p und kurze Bildfolgen: Die Halle wird ohne Grafikkarte gezeichnet, das kostet je Bild rund eine Sekunde.
+// Die Vergleiche selbst sind unverändert streng (Zustand und Bild müssen exakt gleich sein).
+const open = async (cfg = {}) => (await openExportPage(browser, { scenario: 'marblexl', seed: 42, ...cfg, video: { resolution: 720, ...(cfg.video || {}) } })).page;
 const run = (page, sec) => page.evaluate((s) => window.exportAPI.simulate(s), sec);
 const check = (page) => page.evaluate(() => window.exportAPI.check());
 const hash = (page) => page.evaluate(() => window.exportAPI.hash());
@@ -30,16 +32,16 @@ test('Linie läuft eine Minute: Kugeln in allen Zuständen, Zähler steigt, Tone
 
 test('Gleiche Zeit ergibt denselben Zustand; Zeichnen und Kamera verändern ihn nicht', async () => {
   const drawn = await open({ video: { aspect: '9:16' } }), plain = await open({ view: { camera: false, hud: false } });
-  await drawn.evaluate(() => { window.exportAPI.renderFrames(60, 0.1); });       // 2 s mit Bildern bei 30 fps
-  await run(plain, 2);
+  await drawn.evaluate(() => { window.exportAPI.renderFrames(30, 0.1); });       // 1 s mit Bildern bei 30 fps
+  await run(plain, 1);
   assert.equal(await hash(drawn), await hash(plain));
   await Promise.all([drawn.close(), plain.close()]);
 });
 
 test('Seek-Regel: Bild nach Sprung gleich Bild nach durchgehender Wiedergabe', async () => {
   const jump = await open(), cont = await open();
-  await run(jump, 6 - 1 / 30);                                                    // Sprung bis kurz vor Sekunde 6
-  await cont.evaluate(() => { window.exportAPI.renderFrames(179, 0.1); });       // 179 gezeichnete Bilder bei 30 fps
+  await run(jump, 2 - 1 / 30);                                                    // Sprung bis kurz vor Sekunde 2
+  await cont.evaluate(() => { window.exportAPI.renderFrames(59, 0.1); });        // 59 gezeichnete Bilder bei 30 fps
   const [a, b] = await Promise.all([frame(jump), frame(cont)]);
   assert.equal(await hash(jump), await hash(cont));
   assert.ok(a === b, 'Bild nach Sprung weicht vom Bild nach durchgehender Wiedergabe ab');
