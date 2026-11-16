@@ -76,6 +76,8 @@ Weitere Wasserpark-Vorlagen: Parktag mit [5](presets/waterpark-day-5min.json), [
 
 [Marble Works](docs/PROGRESSIVE_MARBLE_V1.md) · [Scrap Wars](docs/SCRAP_WARS_INTEGRATION_2026-11-12.md) · [Mycelium](docs/MYCELIUM_2026-11-13.md) · [Pyramid](docs/ENDLESS_PYRAMID_2026-11-13.md) · [Territory Wars](docs/TERRITORY_INTEGRATION_2026-11-13.md) · [Waterpark](docs/WASSERPARK_MOCKUP_2026-11-16.md) · [Integrations- und Exportprüfungen](docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md)
 
-Vorhandene Exportoptionen bedeuten keine vollständige Abnahme jeder Kombination und Filmlänge. Bei Marble Works ist die gewünschte ASMR-Klanggestaltung noch offen ([Prüfstand](docs/PROGRESSIVE_MARBLE_V1_ABNAHME.md#offene-klangabnahme)).
+Vorhandene Exportoptionen bedeuten keine vollständige Abnahme jeder Kombination und Filmlänge. Den Klang von Marble Works hat der Nutzer am 14.11.2026 anhand der Reviewvideos freigegeben ([Kameraton](docs/MARBLEWORKS_CAMERA_AUDIO.md)).
+
+Wie es weitergeht: [Gesamtplan](docs/GESAMTPLAN_2026-11-16.md) · Aufbau: [Architektur](docs/ARCHITEKTUR.md) · Regeln für Assistenten: [AGENTS.md](AGENTS.md)
 
 Technik: JavaScript, PixiJS, Matter.js, Three.js; Videoexport über Playwright und FFmpeg. Szenarien liegen in `src/scenarios/`, die Exportpipeline in `lib/`. Bestehende Tests: `npm test`, Simulationsreferenzen: `npm run golden`.
