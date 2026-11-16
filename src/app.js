@@ -253,6 +253,11 @@ async function bootLive() {
     markCustomProfile(c.key);
     if (c.restart) {
       restart({ params: { ...(c.sets && c.sets[v]), [c.key]: v } }); // Apply the selected scene's related defaults.
+      // Bringt die Auswahl eine eigene Standardmischung mit (resetMix), gilt sie ab sofort – wie beim Szenariowechsel.
+      if (c.resetMix) {
+        session.cfg.video.volume = normalizeConfig({ scenario: session.cfg.scenario, params: session.cfg.params }).video.volume;
+        save(); buildVolumeUi(); syncVolumeUi();
+      }
       if (c.rebuildUi) { buildScenarioUi(); syncUi(); }
     }
     else {

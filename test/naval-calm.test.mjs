@@ -1,0 +1,119 @@
+// Seeschlacht, Modus „Ruhiges Duell“ (in Arbeit): eigenes Regelwerk neben dem unveränderten Standardmodus.
+// Der Standardmodus selbst ist über die Referenz-Hashes abgesichert (npm run golden).
+import { test, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import { pathToFileURL } from 'node:url';
+import { INDEX, launchBrowser, openExportPage } from '../lib/browser.mjs';
+
+let browser;
+before(async () => { browser = await launchBrowser({ gpu: false }); });
+after(async () => { await browser?.close(); });
+
+const open = async (cfg = {}) => (await openExportPage(browser, { seed: 42, ...cfg })).page;
+const run = (page, sec) => page.evaluate((s) => window.exportAPI.simulate(s), sec);
+const check = (page) => page.evaluate(() => window.exportAPI.check());
+const hash = (page) => page.evaluate(() => window.exportAPI.hash());
+const config = (page) => page.evaluate(() => window.exportAPI.config());
+const CALM = { params: { mode: 'calm' }, video: { aspect: '16:9' } };
+// Zustandsreferenz des Modus: Seed 42, Querformat, nach 1 200 und 7 200 Schritten. Nur nach einer gewollten
+// Verhaltensänderung des Modus neu eintragen und im Pull Request begründen.
+const REFERENCE = ['30430187', '36607512'];
+
+test('Standardmodus bleibt unberührt: Modus endless, bekannte Klangliste, kein Segelzustand', async () => {
+  const page = await open();
+  const c = await config(page), s = await run(page, 1);
+  assert.equal(c.params.mode, 'endless');
+  assert.equal(c.params.cannons, 4);
+  assert.deepEqual(c.video.volume, { master: 100, shot: 100, hit: 100, splash: 100, land: 100, reload: 100 });
+  assert.equal(s.ballsExpected, 40);
+  assert.equal('mode' in s, false, 'Momentaufnahme des Standardmodus hat neue Felder bekommen');
+  assert.equal('sails' in s.ships[0], false);
+  await page.close();
+  // ein unbekannter Modus fällt auf den Standard zurück
+  const other = await open({ params: { mode: 'gibt-es-nicht' } });
+  assert.equal((await config(other)).params.mode, 'endless');
+  await other.close();
+});
+
+test('Ruhiges Duell: Grundwerte des Modus (2 Kanonen je Schiff, halbe Feuerrate, eigene Standardmischung)', async () => {
+  const page = await open(CALM), base = await open({ video: { aspect: '16:9' } });
+  const c = await config(page);
+  assert.equal(c.params.mode, 'calm');
+  assert.deepEqual(c.video.volume, { master: 65, shot: 100, hit: 100, bounce: 100, splash: 100, land: 100, reload: 100 });
+  const s = await run(page, 120), b = await run(base, 120);
+  assert.equal(s.mode, 'calm');
+  assert.equal(s.ballsExpected, 20, 'zwei Schiffe × zwei Kanonen × fünf Kugeln');
+  // halbe Feuerrate bei halber Kanonenzahl: rund ein Viertel der Schüsse des Standardmodus
+  const ratio = s.shots / b.shots;
+  assert.ok(ratio > 0.2 && ratio < 0.32, `Schussverhältnis zum Standardmodus ${ratio.toFixed(3)} (erwartet etwa 0,25)`);
+  await page.close(); await base.close();
+});
+
+test('Ruhiges Duell: gleicher Seed = gleicher Ablauf, Zustandsreferenz, Kreislauf und Segelschäden (2 Minuten)', async () => {
+  const pages = [await open(CALM), await open(CALM)], hashes = [];
+  for (const page of pages) {
+    await run(page, 20);
+    const h20 = await hash(page), s = await run(page, 100), c = await check(page);
+    hashes.push([h20, await hash(page)]);
+    assert.ok(c.ok, c.errors.join('; '));
+    assert.equal(s.ballsTotal, s.ballsExpected, 'Kugelanzahl hat sich verändert');
+    assert.equal(s.shots - s.recycled, s.inFlight + s.inRecycle, 'Bilanz Schüsse/Recycling stimmt nicht');
+    assert.equal(s.splashes, s.shots - s.inFlight, 'Kugel hat die Flugphase ohne Wasserkontakt verlassen');
+    assert.ok(s.bounces > 0, 'keine Abpraller gezählt');
+    assert.ok(s.sailHits > 20, `zu wenige Segeldurchschüsse: ${s.sailHits}`);
+    for (const ship of s.ships) {
+      assert.equal(ship.sails.length, 5);
+      assert.ok(ship.sails.some((x) => x.holes > 0 && x.wear > 0), `${ship.name}: Segel ohne Schaden`);
+      for (const x of ship.sails) assert.ok(x.wear >= 0 && x.wear <= 1);
+    }
+    await page.close();
+  }
+  assert.deepEqual(hashes[0], hashes[1], 'zwei Läufe mit gleichem Seed weichen ab');
+  assert.deepEqual(hashes[0], REFERENCE, 'Zustandsreferenz des Modus hat sich geändert');
+});
+
+test('Ruhiges Duell: Zeichnen verändert den Zustand nicht (Segel mit Löchern im Bild)', async () => {
+  const video = { aspect: '16:9', resolution: 720, fps: 30 };
+  const drawn = await open({ ...CALM, video }), plain = await open({ ...CALM, video });
+  await run(drawn, 14);
+  for (let k = 0; k < 3; k++) await drawn.evaluate(() => { window.exportAPI.renderFrames(30, 0.1); });   // 90 Bilder = 3 s
+  const s = await run(plain, 17);
+  assert.ok(s.sailHits > 0, 'im Prüfzeitraum ist noch kein Segel durchschossen');
+  assert.equal(await hash(drawn), await hash(plain));
+  await drawn.close(); await plain.close();
+});
+
+test('Ruhiges Duell: läuft auch im Hochformat und mit drei Schiffen (je 1 Minute)', async () => {
+  for (const cfg of [{ params: { mode: 'calm' }, video: { aspect: '9:16' } }, { params: { mode: 'calm', ships: 3 }, video: { aspect: '16:9' } }]) {
+    const page = await open(cfg), s = await run(page, 60), c = await check(page);
+    assert.ok(c.ok, c.errors.join('; '));
+    assert.equal(s.ballsTotal, s.ballsExpected);
+    assert.equal(s.ballsExpected, (cfg.params.ships || 2) * 2 * 5);
+    await page.close();
+  }
+});
+
+test('Oberfläche: Moduswechsel blendet den Kanonenregler aus und lädt die Standardmischung des Modus', async (t) => {
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });   // frisches Profil, eigener localStorage
+  t.after(() => ctx.close());
+  const page = await ctx.newPage(), errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await page.goto(pathToFileURL(INDEX).href);
+  await page.waitForFunction(() => window.EBS && window.EBS.app && window.EBS.app.sim, null, { timeout: 30000 });
+  const state = () => page.evaluate(() => ({
+    scenario: window.EBS.app.cfg.scenario, mode: document.getElementById('p-mode').value, simMode: window.EBS.app.cfg.params.mode,
+    cannonsHidden: document.getElementById('p-cannons').closest('.ctl, label').hidden,
+    master: +document.getElementById('vol-master').value, cfgMaster: window.EBS.app.cfg.video.volume.master,
+    bounce: !!document.getElementById('vol-bounce'), balls: window.EBS.app.sim.balls.length,
+  }));
+  const endless = { scenario: 'naval', mode: 'endless', simMode: 'endless', cannonsHidden: false, master: 100, cfgMaster: 100, bounce: false, balls: 40 };
+  assert.deepEqual(await state(), endless);
+  await page.selectOption('#p-mode', 'calm');
+  await page.waitForFunction(() => window.EBS.app.cfg.params.mode === 'calm' && document.getElementById('vol-bounce'));
+  assert.deepEqual(await state(), { scenario: 'naval', mode: 'calm', simMode: 'calm', cannonsHidden: true, master: 65, cfgMaster: 65, bounce: true, balls: 20 });
+  await page.selectOption('#p-mode', 'endless');
+  await page.waitForFunction(() => window.EBS.app.cfg.params.mode === 'endless' && !document.getElementById('vol-bounce'));
+  assert.deepEqual(await state(), endless);
+  assert.deepEqual(errors, []);
+});

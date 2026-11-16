@@ -70,7 +70,8 @@ Anmeldung mit `EBS.registerScenario({ … })`.
 
 `key`, `label`, `type` (`range`, `select`, `check`), dazu `min`, `max`, `step`, `options`, `format`.
 `restart: true` für Werte, die den Aufbau ändern. `sets` lädt je Auswahl zusammengehörige Standardwerte.
-`visible(params)` blendet einen Regler abhängig von anderen aus.
+`visible(params)` blendet einen Regler abhängig von anderen aus. `rebuildUi` baut nach der Auswahl die Regler neu
+auf; `resetMix` lädt dabei die Standardmischung der neuen Auswahl (für Modi mit eigener Klangtabelle).
 
 Parameternamen dürfen nicht mit Kern-Schlüsseln kollidieren: `version`, `name`, `description`, `scenario`, `seed`,
 `format`, `aspect`, `resolution`, `fps`, `durationSec`, `tempo`, `audio`, `crf`, `preset`, `bitrate`, `hud`,
@@ -130,7 +131,7 @@ Richtwert: Der 20-Minuten-Export der Pyramide in 1080p60 lief mit rund 21 Bilder
 - `scripts/test-ci.mjs` ordnet jede Testdatei über ihren Dateinamen einer von 18 Gruppen zu; der Prüflauf auf GitHub
   startet jede Gruppe einzeln (`.github/workflows/ci.yml`).
 - **Referenz-Hashes** (`npm run golden`) decken Naval, Kugelfabrik und Mycelium ab. Die anderen Szenarien halten
-  ihre Zustandsreferenzen in den eigenen Testdateien.
+  ihre Zustandsreferenzen in den eigenen Testdateien; ebenso der Naval-Modus „Ruhiges Duell“ (`test/naval-calm.test.mjs`).
 - Vorlage für den Rahmen eines Szenarios: `test/fixtures/dummy-scenario.js`.
 
 ## 8 · Checkliste: neues Szenario
@@ -149,7 +150,7 @@ Richtwert: Der 20-Minuten-Export der Pyramide in 1080p60 lief mit rund 21 Bilder
 
 | Punkt | Umgang |
 |---|---|
-| Drei sehr große Einzeldateien: `pyramid.js` (1 927 Zeilen), `naval.js` (1 593), `marble.js` (1 356) | Erst teilen, wenn dort gebaut wird. Beweis der Gleichheit über Referenz-Hashes und Referenzbilder. |
+| Drei sehr große Einzeldateien: `pyramid.js` (1 927 Zeilen), `naval.js` (1 700), `marble.js` (1 356) | Erst teilen, wenn dort gebaut wird. Beweis der Gleichheit über Referenz-Hashes und Referenzbilder. Bei Naval liegt der erste Baustein schon getrennt (`naval/sails.js`); die vollständige Aufteilung steht aus. |
 | Verdrahtung von Hand an sechs Stellen (Checkliste oben) | Checkliste abarbeiten; kein Automatismus nötig. |
 | Fahrplan-Logik viermal einzeln gebaut (Naval-Himmel, Pyramid-Tageslauf, Waterpark-Story, Marble-Works-Meilensteine) | Gemeinsamer Baustein, sobald das nächste Szenario ihn braucht. |
 | 4K-Export langsam (Bildübergabe als JPEG/Base64) | Bei Bedarf (R11). |
