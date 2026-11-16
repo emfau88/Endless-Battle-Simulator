@@ -1,6 +1,6 @@
 # Gesamtplan: ein Main, sichere Architektur, Ausbau je Szenario
 
-**Zuletzt aktualisiert:** 16.11.2026, abends. **Status:** vom Nutzer am 16.11.2026 freigegeben („freie Hand“),
+**Zuletzt aktualisiert:** 16.11.2026, spätabends. **Status:** vom Nutzer am 16.11.2026 freigegeben („freie Hand“),
 Umsetzung läuft.
 
 Die [ROADMAP](ROADMAP.md) bleibt die einzige aktive Aufgabenliste; die Vorhaben dieses Plans stehen dort als
@@ -37,7 +37,7 @@ Drei Zustände: **Erledigt**, **Läuft**, **Offen**. Dazu **Entfällt** für ges
 | 2 · Abnahme-Mappe (R33) | **Offen** | 16 Clips zu je 20 Sekunden; noch nicht beauftragt. |
 | 3 · Verbesserungen je Szenario (R36) | **Offen** | Reihenfolge folgt aus der Abnahme-Mappe. |
 | 4 · Naval-Langvideo (R34) | **Offen** | Kommt nach Marble XL. |
-| 5 · Marble XL (R35) | **Läuft** | M0 und M1 erledigt. Der erste Prototyp (vier gleiche Linien) wurde abgelehnt; das Entwurfsbild der Produktionslinie mit neun Maschinen hat der Nutzer am 16.11. als richtige Richtung bestätigt. Verbesserungen sind besprochen, der Bau (M2) ist noch nicht beauftragt. Arbeitsstand im Branch `marble-xl/stufe-1`, der Bericht `docs/MARBLE_XL_STUFE_1_2026-11-16.md` liegt dort. |
+| 5 · Marble XL (R35) | **Läuft** | M0 und M1 erledigt. Der erste Prototyp (vier gleiche Linien) wurde abgelehnt; das Entwurfsbild der Produktionslinie mit neun Maschinen hat der Nutzer am 16.11. als richtige Richtung bestätigt. Die besprochenen Verbesserungen sind in einer zweiten Fassung umgesetzt (Tiefe im Hintergrund, Lichtzonen, deutlichere Kugelzustände, größere Farbstation, Richtungsmarken, reservierter Platz für Linie 2). Offen: Rückmeldung zur zweiten Fassung, Hochformat-Anordnung, Bau der Grundlinie (M2). Arbeitsstand im Branch `marble-xl/stufe-1`, der Bericht `docs/MARBLE_XL_STUFE_1_2026-11-16.md` liegt dort. |
 
 ---
 
@@ -363,7 +363,7 @@ Aus dem ersten Prototyp bleiben die Kamera rein aus der Videozeit, die ausblende
 | Nr. | Paket | Inhalt | Abnahme |
 |---|---|---|---|
 | M0 | **Baukasten bereitstellen** | Zeichen- und Bahnhelfer der klassischen Fabrik als `EBS.MarbleClassic.kit`. | Erledigt am 16.11.: Referenz-Hashes unverändert. |
-| M1 | **Entwurfsbild der Produktionslinie** | Gezeichnete Halle mit allen neun Stationen, Kugeln von Hand gesetzt; Übersicht und vier Nahansichten. | Erledigt am 16.11. **Stopp: Freigabe des Nutzers steht aus.** |
+| M1 | **Entwurfsbild der Produktionslinie** | Gezeichnete Halle mit allen neun Stationen, Kugeln von Hand gesetzt; Übersicht und vier Nahansichten. | Erledigt am 16.11., Richtung bestätigt; zweite Fassung mit den besprochenen Verbesserungen am selben Tag. **Stopp: Rückmeldung zur zweiten Fassung steht aus.** Das Hochformat ist noch nicht entworfen. |
 | M2 | **Grundlinie mit Simulation** | Vorrat, Aufzug, Behälter, Polierer und Sortierröhren laufen wirklich; Kugelzustände, Auftragszähler, Kamera. | Keine Kugel geht verloren, Seek-Regel erfüllt. **Stopp: 20-Sekunden-Clip ansehen.** |
 | M3 | **Weitere Stationen** | Je Station ein eigener PR mit Simulation, Grafik, Klang, Test: Waschtrommel, Tunnelofen, Farbstation, Kühlstrecke, Prüfung mit Ausschuss, Radaufzug. | Je Station: Ein- und Ausgang halten die Kugelbilanz. |
 | M4 | **Kapitel und Ausbauten** | Stationen gehen nacheinander in Betrieb, später eine zweite Linie; Finale, wenn der Auftrag voll ist. | Fahrplan-Test: alle 2 bis 3 Minuten ein sichtbarer Ausbau. |
