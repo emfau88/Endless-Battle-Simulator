@@ -504,12 +504,12 @@ aufgreifen; R21 spätestens vor Änderungen an Besitz-/Recyclingmechanik schlie�
   ([Vorher/Nachher](WASSERPARK_OPTIK_2026-11-16.md)).
   Der [Optik-Plan „so gut wie das Mockup“](WASSERPARK_MOCKUP_PLAN_2026-11-16.md) mit den Paketen P1–P9 ist am
   16.11.2026 umgesetzt, einschließlich neuem Hochformat-Grundriss
-  ([Abschlussbericht](WASSERPARK_MOCKUP_2026-11-16.md)). Der Branch `codex/waterpark-mockup` ist gepusht,
-  aber nicht in `main`.
+  ([Abschlussbericht](WASSERPARK_MOCKUP_2026-11-16.md)). Der Stand liegt seit PR 13 in `main`.
   Die Anzeige im Video ist seitdem englisch (Regel für alle Szenarien, vom Nutzer am 16.11.2026 bestätigt).
-  **Offene Entscheidungen des Nutzers:** Wasserspiele tagsüber, Ende mit Brunnenshow,
-  Zusammenführen nach `main`. Der Bericht enthält dazu Empfehlungen und weitere Vorschläge (Short straffen,
-  sichtbares Ziel im Langvideo).
+  **Offene Entscheidungen des Nutzers:** Wasserspiele tagsüber, Ende mit Brunnenshow.
+  Alle offenen Punkte, bekannten Schwächen und Vorschläge (Short straffen, Ton füllen, sichtbares Ziel,
+  Handlung für 15–20 Minuten) stehen in der
+  [Merkliste](WASSERPARK_OFFENE_PUNKTE_2026-11-16.md). Nichts davon ist beauftragt.
   **Restabnahme:** die kurzen laufenden Proben persönlich auf PC/Kopfhörer und echtem Handy ansehen
   und anhören; nur daraus entstehende konkrete Mängel nacharbeiten. Ganze Shorts/Langfilme werden
   separat produziert. Ausschnittsexport, Rennen und Auftragsmodus bleiben spätere Erweiterungen.
