@@ -42,6 +42,14 @@ function glazed(g, tint, paint) {
   c.width = c.height = 1;
 }
 
+/** Aerial perspective: paints into an offscreen copy and lays it down about 10 % lighter with 20 % less contrast. */
+function hazed(g, paint, filter = 'contrast(0.8) brightness(1.1) saturate(0.92)') {
+  const c = document.createElement('canvas'); c.width = g.canvas.width; c.height = g.canvas.height;
+  const cg = c.getContext('2d'); cg.setTransform(g.getTransform()); paint(cg);
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.filter = filter; g.drawImage(c, 0, 0); g.restore();
+  c.width = c.height = 1;
+}
+
 const TROUGH = WP.troughSize;
 
 /** Soft drop shadow of a path (cached layers only, uses a blur filter). */
@@ -124,45 +132,92 @@ WP.paintSky = function (g, L) {
 WP.paintBack = function (g, L, rng, art) {
   const { W, H, waterY, land } = L, wallH = H * (land ? .052 : .04), wallTop = waterY - wallH;
   L.wallTop = wallTop;
-  // Far hazy hills with faint palm silhouettes
-  const farTop = waterY - H * (land ? .33 : .25), midTop = waterY - H * (land ? .2 : .145);
+  // Retaining wall behind the attractions: terraces on its top, bushes along its foot
+  const rwTop = waterY - H * (land ? .19 : .13), rwBot = waterY - H * (land ? .095 : .07);
+  L.terraceY = rwTop;
+  const farTop = waterY - H * (land ? .40 : .30), midTop = waterY - H * (land ? .29 : .21);
   const ridge = (y0, amp, freq, ph) => { const pts = []; for (let x = -20; x <= W + 20; x += 8) pts.push([x, y0 + Math.sin(x * freq + ph) * amp + Math.sin(x * freq * 2.7 + ph * 2) * amp * .35]); return pts; };
-  let gr = g.createLinearGradient(0, farTop - 40, 0, wallTop);
-  gr.addColorStop(0, '#b4e2d2'); gr.addColorStop(1, '#88c59a');
-  g.fillStyle = gr; poly(g, [...ridge(farTop, 26, .004, rng.range(0, 6)), [W + 20, wallTop], [-20, wallTop]]); g.fill();
-  g.save(); g.globalAlpha = .38;
-  for (let i = 0; i < (land ? 9 : 6); i++) art.palm(g, rng, rng.range(0, W), farTop + rng.range(30, 90), rng.range(80, 140), rng.range(-.2, .2));
-  g.restore();
-  gr = g.createLinearGradient(0, farTop - 40, 0, wallTop);
-  gr.addColorStop(0, 'rgba(214,240,250,.45)'); gr.addColorStop(1, 'rgba(214,240,250,0)');
-  g.fillStyle = gr; g.fillRect(0, farTop - 60, W, wallTop - farTop + 60);
-  // Jungle band (Pyramid island technique: dark base plus layered foliage blobs)
-  const canopy = ridge(midTop, 18, .011, rng.range(0, 6));
-  glazed(g, C.glaze, g => {
-    g.fillStyle = '#1f5a28'; poly(g, [...canopy, [W + 20, wallTop + 4], [-20, wallTop + 4]]); g.fill();
-    for (let i = 0; i < (land ? 14 : 9); i++) art.palm(g, rng, rng.range(-20, W + 20), midTop + rng.range(20, 60), rng.range(110, 200), rng.range(-.2, .2));
-    art.foliage(g, rng, canopy, 6, (wallTop - midTop) * .75, (nx, ny) => ny > 0, { dens: 3, rMin: 4, rMax: 11, flowers: .02 });
-  });
-  // Rocks with a side waterfall (animated water is drawn per frame)
   const fall = land ? { x: W * .925, top: H * .34, w: 58 } : { x: W * .9, top: H * .47, w: 50 };
   L.waterfall = { ...fall, bottom: wallTop + 6 };
-  const rocks = [];
-  for (let i = 0; i < 9; i++) {
-    const cx = fall.x + rng.range(-1, 1) * (land ? 120 : 90), cy = fall.top + 30 + rng.range(0, 1) * (wallTop - fall.top - 30), r = rng.range(45, 85);
-    rocks.push([cx, cy, r]);
+  // Layers 2-4 in aerial perspective: far jungle silhouette, palm row, rock face with the waterfall
+  hazed(g, g => {
+    let gr = g.createLinearGradient(0, farTop - 40, 0, rwBot);
+    gr.addColorStop(0, '#bfe7d8'); gr.addColorStop(1, '#93cda4');
+    g.fillStyle = gr; poly(g, [...ridge(farTop, 26, .004, rng.range(0, 6)), [W + 20, rwBot], [-20, rwBot]]); g.fill();
+    g.save(); g.globalAlpha = .34;
+    for (let i = 0; i < (land ? 11 : 7); i++) art.palm(g, rng, rng.range(0, W), farTop + rng.range(30, 80), rng.range(80, 140), rng.range(-.2, .2));
+    g.restore();
+    gr = g.createLinearGradient(0, farTop - 40, 0, rwTop);
+    gr.addColorStop(0, 'rgba(214,240,250,.5)'); gr.addColorStop(1, 'rgba(214,240,250,0)');
+    g.fillStyle = gr; g.fillRect(0, farTop - 60, W, rwTop - farTop + 60);
+    const canopy = ridge(midTop, 18, .011, rng.range(0, 6));
+    glazed(g, C.glaze, g => {
+      g.fillStyle = '#2a6a30'; poly(g, [...canopy, [W + 20, rwBot], [-20, rwBot]]); g.fill();
+      for (let i = 0; i < (land ? 15 : 9); i++) art.palm(g, rng, rng.range(-20, W + 20), midTop + rng.range(20, 50), rng.range(120, 210), rng.range(-.2, .2));
+      art.foliage(g, rng, canopy, 6, (rwTop - midTop) * .9, (nx, ny) => ny > 0, { dens: 3, rMin: 4, rMax: 11, flowers: .02 });
+    });
+  });
+  hazed(g, g => {
+    const rocks = [];
+    for (let i = 0; i < 9; i++) {
+      const cx = fall.x + rng.range(-1, 1) * (land ? 120 : 90), cy = fall.top + 30 + rng.range(0, 1) * (rwBot - fall.top - 30), r = rng.range(45, 85);
+      rocks.push([cx, cy, r]);
+    }
+    rocks.push([fall.x - 70, fall.top + 10, 70], [fall.x + 70, fall.top + 20, 75], [fall.x, fall.top - 12, 62]);
+    for (const [cx, cy, r] of rocks) {
+      const pts = []; for (let k = 0; k < 9; k++) { const a = k / 9 * TAU; pts.push([cx + Math.cos(a) * r * rng.range(.8, 1.1), cy + Math.sin(a) * r * .8 * rng.range(.8, 1.1)]); }
+      g.lineJoin = 'round'; g.lineWidth = 3; g.strokeStyle = C.rockDark;
+      const rg = g.createLinearGradient(cx - r, cy - r, cx + r, cy + r); rg.addColorStop(0, C.rockLight); rg.addColorStop(.6, C.rock); rg.addColorStop(1, C.rockDark);
+      g.fillStyle = rg; poly(g, pts); g.fill(); g.stroke();
+    }
+    glazed(g, C.glaze, g => art.foliage(g, rng, [[fall.x - 140, fall.top - 30], [fall.x - 40, fall.top - 50], [fall.x + 40, fall.top - 45], [fall.x + 150, fall.top - 20]], 6, 26, (nx, ny) => ny > 0, { dens: 3, rMin: 3, rMax: 9, flowers: .05 }));
+  }, 'contrast(0.9) brightness(1.05)');
+  // Layer 5: retaining wall of beige blocks with a light cap
+  const rwH = rwBot - rwTop, courses = 3, ch = rwH / courses;
+  let gr = g.createLinearGradient(0, rwTop, 0, rwBot); gr.addColorStop(0, '#e3d5c0'); gr.addColorStop(1, '#cfbea4');
+  g.fillStyle = gr; g.fillRect(0, rwTop, W, rwH);
+  for (let r = 0; r < courses; r++) {
+    const y = rwTop + r * ch;
+    for (let x = (r % 2) * -38, k = 0; x < W; x += 76, k++) {
+      const v = Math.sin(x * 12.9898 + r * 78.233) * 43758.5453 % 1;
+      g.fillStyle = v > .35 ? 'rgba(255,255,255,.1)' : v < -.35 ? 'rgba(120,90,60,.08)' : 'rgba(0,0,0,0)'; g.fillRect(x + 2, y + 2, 72, ch - 4);
+    }
+    g.strokeStyle = '#b8a385'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
+    for (let x = (r % 2) * -38; x < W; x += 76) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + ch); g.stroke(); }
   }
-  rocks.push([fall.x - 70, fall.top + 10, 70], [fall.x + 70, fall.top + 20, 75], [fall.x, fall.top - 12, 62]);
-  for (const [cx, cy, r] of rocks) {
-    const pts = []; for (let k = 0; k < 9; k++) { const a = k / 9 * TAU; pts.push([cx + Math.cos(a) * r * rng.range(.8, 1.1), cy + Math.sin(a) * r * .8 * rng.range(.8, 1.1)]); }
-    g.lineJoin = 'round'; g.lineWidth = 3; g.strokeStyle = C.rockDark;
-    const rg = g.createLinearGradient(cx - r, cy - r, cx + r, cy + r); rg.addColorStop(0, C.rockLight); rg.addColorStop(.6, C.rock); rg.addColorStop(1, C.rockDark);
-    g.fillStyle = rg; poly(g, pts); g.fill(); g.stroke();
-  }
-  glazed(g, C.glaze, g => art.foliage(g, rng, [[fall.x - 140, fall.top - 30], [fall.x - 40, fall.top - 50], [fall.x + 40, fall.top - 45], [fall.x + 150, fall.top - 20]], 6, 26, (nx, ny) => ny > 0, { dens: 3, rMin: 3, rMax: 9, flowers: .05 }));
+  roundRect(g, -10, rwTop - 9, W + 20, 13, 3, '#b8a385'); roundRect(g, -10, rwTop - 8, W + 20, 10, 3, '#efe5d6');
+  // Terraces on the wall: parasols with loungers, lamps, a little hedge between them
+  const deco = land ? { parasols: [[W * .06, 70], [W * .962, 64]], lamps: [W * .02, W * .985] } : { parasols: [[W * .08, 60]], lamps: [W * .03] };
+  glazed(g, C.glaze, g => art.foliage(g, rng, [[-10, rwTop - 6], [W + 10, rwTop - 6]], 2, 16, (nx, ny) => ny < 0, { dens: 2, rMin: 3, rMax: 8, flowers: .06 }));
+  for (const [x, r] of deco.parasols) parasol(g, x, rwTop, r);
+  L.lamps = deco.lamps.map(x => [x, rwTop]);
+  for (const x of deco.lamps) lamp(g, x, rwTop);
+  // Layer 6: bushes and blossoms in front of the wall foot
+  const bushes = []; for (let x = -40; x < W + 40;) { const w = rng.range(90, 180); bushes.push([x, w, rng.range(.55, 1) * (wallTop - rwBot + 34)]); x += w * rng.range(.7, 1); }
+  glazed(g, C.glaze, g => { for (const [x, w, h] of bushes) art.foliage(g, rng, [[x, wallTop - 4], [x + w, wallTop - 4]], 3, h, (nx, ny) => ny < 0, { dens: 3, rMin: 5, rMax: 13, flowers: .06 }); });
+  for (let i = 0; i < (land ? 11 : 7); i++) leafPlant(g, rng, (i + rng.range(.2, .8)) * W / (land ? 11 : 7), wallTop - 2, rng.range(.8, 1.2) * (land ? 1 : .8));
+  for (let i = 0; i < (land ? 22 : 13); i++) hibiscus(g, rng.range(0, W), wallTop - rng.range(14, 54), rng.range(5, 8), rng);
   // Big frame palms at the edges
-  const big = land ? [[30, 520, .14], [140, 330, .08], [W - 20, 430, -.18]] : [[20, 430, .12], [W - 22, 360, -.16]];
+  const big = land ? [[-8, 500, .16], [W + 6, 470, -.2]] : [[20, 430, .12], [W - 22, 360, -.16]];
   glazed(g, C.glaze, g => { for (const [x, h, lean] of big) art.palm(g, rng, x, wallTop + 6, h, lean); });
-  // Pool edge: two sandstone courses under a light coping (everything stands on it)
+  // Left: wooden flume from the wall onto a waterwheel (turned per frame) and a small arched footbridge
+  if (land) {
+    const wr = Math.round(H * .046), wheel = { x: W * .031, y: wallTop - wr * .3, r: wr };
+    L.wheel = wheel;
+    const fx1 = wheel.x + wr * .55, fy = wheel.y - wr - 14;
+    roundRect(g, wheel.x - 16, wheel.y - 6, 32, wallTop - wheel.y + 10, 5, C.stoneDark); roundRect(g, wheel.x - 13, wheel.y - 4, 26, 10, 4, C.stoneCap);
+    roundRect(g, -10, fy - 14, fx1 + 12, 20, 4, C.woodDark); roundRect(g, -10, fy - 12, fx1 + 10, 16, 3, C.woodLight);
+    line(g, [[-10, fy - 9], [fx1 - 2, fy - 9]], 5, C.water); line(g, [[-10, fy - 10.5], [fx1 - 2, fy - 10.5]], 1.5, 'rgba(255,255,255,.85)');
+    post(g, wheel.x - wr * .45, fy + 6, wheel.y - wr * .5, 10);
+    L.flume = [fx1, fy];
+    const b0 = W * .061, b1 = W * .104, by = wallTop - 6, arch = 24, bp = u => [b0 + (b1 - b0) * u, by - Math.sin(Math.PI * u) * arch];
+    const deckPts = Array.from({ length: 13 }, (_, i) => bp(i / 12));
+    for (const u of [.12, .5, .88]) { const [x, y] = bp(u); line(g, [[x, y - 30], [x, Math.min(by, y + 8)]], 7, C.woodDark); line(g, [[x, y - 30], [x, Math.min(by, y + 8)]], 4, C.woodLight); }
+    line(g, deckPts, 12, C.woodDark); line(g, deckPts, 8, C.woodLight); line(g, deckPts.map(([x, y]) => [x, y - 2]), 2, 'rgba(250,200,130,.9)');
+    line(g, deckPts.map(([x, y]) => [x, y - 30]), 6, C.woodDark); line(g, deckPts.map(([x, y]) => [x, y - 30]), 3, C.woodLight);
+  }
+  // Layer 7: pool edge, two sandstone courses under a light coping (everything stands on it)
   g.fillStyle = C.stone; g.fillRect(0, wallTop, W, wallH);
   g.strokeStyle = C.stoneJoint; g.lineWidth = 2;
   const rows = 2, bh = wallH / rows;
@@ -176,19 +231,37 @@ WP.paintBack = function (g, L, rng, art) {
   roundRect(g, -10, wallTop - 10, W + 20, 13, 4, C.stoneCap);
   line(g, [[0, wallTop - 8], [W, wallTop - 8]], 2, C.stoneLight);
   line(g, [[0, wallTop + 5], [W, wallTop + 5]], 2, 'rgba(120,90,50,.3)');
-  // Planted wall top with hibiscus
-  glazed(g, C.glaze, g => art.foliage(g, rng, [[-10, wallTop - 10], [W + 10, wallTop - 10]], 2, 20, (nx, ny) => ny < 0, { dens: 2, rMin: 3, rMax: 9, flowers: .05 }));
-  for (let i = 0; i < (land ? 16 : 10); i++) hibiscus(g, rng.range(0, W), wallTop - rng.range(14, 30), rng.range(5, 8), rng);
-  // Terraces with parasols and loungers, lamps, waterwheel stand and bridge
-  const deco = land ? { parasols: [[W * .055, wallTop, 70], [W * .965, wallTop, 64]], lamps: [W * .025, W * .985] }
-    : { parasols: [[W * .08, wallTop, 60]], lamps: [W * .03] };
-  for (const [x, y, r] of deco.parasols) parasol(g, x, y, r);
-  L.lamps = deco.lamps.map(x => [x, wallTop - 120]);
-  for (const x of deco.lamps) lamp(g, x, wallTop);
   // Pool coping at the waterline
   roundRect(g, -10, waterY - 9, W + 20, 12, 3, C.stoneLight);
   line(g, [[0, waterY + 3], [W, waterY + 3]], 3, 'rgba(20,110,120,.25)');
 };
+/** Waterwheel on the left, turned by the water from the flume (angle is a function of time). */
+WP.paintWaterwheel = function (g, L, angle) {
+  const w = L.wheel; if (!w) return;
+  const { x, y, r } = w;
+  g.save(); g.translate(x, y);
+  g.lineCap = 'round';
+  for (const [rr, lw, col] of [[r, 9, C.woodDark], [r, 5, C.woodLight], [r * .62, 6, C.woodDark], [r * .62, 3, C.wood]]) { g.strokeStyle = col; g.lineWidth = lw; g.beginPath(); g.arc(0, 0, rr, 0, TAU); g.stroke(); }
+  g.rotate(angle);
+  for (let k = 0; k < 8; k++) {
+    g.rotate(TAU / 8);
+    line(g, [[0, 0], [r, 0]], 6, C.woodDark); line(g, [[0, 0], [r, 0]], 3, C.woodLight);
+    roundRect(g, r - 6, -9, 16, 18, 3, C.woodDark); roundRect(g, r - 4, -7, 12, 14, 2, C.woodLight);
+  }
+  g.restore();
+  ellipse(g, x, y, 9, 9, C.woodDark); ellipse(g, x, y, 5, 5, '#f2cf5b');
+};
+/** Big-leaf plant (banana / elephant ear): pointed leaves fanning up from the ground, each with a midrib. */
+function leafPlant(g, rng, x, y, s) {
+  const n = 6, cols = ['#3f9a34', '#5cb43a', '#7cc63e'];
+  for (let k = 0; k < n; k++) {
+    const a = -Math.PI / 2 + (k / (n - 1) - .5) * 2.3 + rng.range(-.12, .12), len = (34 + rng.range(0, 26)) * s, wd = len * .34;
+    g.save(); g.translate(x, y); g.rotate(a);
+    g.fillStyle = cols[k % 3]; g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(len * .45, -wd, len, 0); g.quadraticCurveTo(len * .45, wd, 0, 0); g.fill();
+    g.strokeStyle = '#2c6f26'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(2, 0); g.lineTo(len * .92, 0); g.stroke();
+    g.restore();
+  }
+}
 function hibiscus(g, x, y, r, rng) {
   const col = ['#ff6f9f', '#ff8db3', '#ff9a5a', '#ffd1e2'][Math.floor(rng.next() * 4)];
   g.fillStyle = col;

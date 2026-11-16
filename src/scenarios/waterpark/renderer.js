@@ -193,6 +193,11 @@ class WaterparkRenderer extends EBS.CanvasScene {
     this.drawGuests(g, vt, day, false);
     g.drawImage(this.back, 0, 0, L.W, L.H);
     this.drawWaterfall(g, vt);
+    if (this.A.wheel) {
+      const w = this.A.wheel, [fx, fy] = this.A.flume;
+      WP.paintWaterwheel(g, this.A, vt * 0.7);
+      this.pour(g, vt, [fx + 4, fy + 2], [w.x + w.r * 0.6, w.y - w.r * 0.35], L.R * 0.75, 7);
+    }
     this.drawWater(g, vt);
     g.drawImage(this.struct, 0, 0, L.W, L.H);
     this.drawFlow(g, vt);
