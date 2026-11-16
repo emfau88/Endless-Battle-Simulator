@@ -42,9 +42,13 @@ test('Bestehende Produktionsdateien entsprechen den UI-Vorlagen und definierten 
     const fromUi = await page.evaluate(([id, kind]) => EBS.productionPreset(id, kind), [id, kind]);
     assert.deepEqual(fromUi, file, `${id}/${kind}: Datei und Oberfläche`);
     const normalized = await page.evaluate(config => EBS.normalizeConfig(config), file);
+    // Territory Short: own short map with story; the length is planned up to the victory (33 s is the starting value).
+    const story = id === 'territory' && kind === 'short';
     assert.deepEqual([normalized.scenario, normalized.video.aspect, normalized.video.durationSec, normalized.video.resolution,
       normalized.video.fps, normalized.video.audio, normalized.video.tempo],
-    [id, kind === 'short' ? '9:16' : '16:9', kind === 'short' ? 60 : 600, 1080, 30, true, id === 'territory' ? .75 : 1]);
+    [id, kind === 'short' ? '9:16' : '16:9', story ? 33 : kind === 'short' ? 60 : 600, 1080, 30, true, story ? 2 : id === 'territory' ? .75 : 1]);
+    if (story) assert.deepEqual([normalized.params.layout, normalized.params.story, normalized.params.videoEnd, normalized.params.repeatRounds],
+      ['short', 'crown', 'victory', false]);
     assert.deepEqual(normalized.video.quality, { crf: 20, preset: 'medium', bitrate: null });
     if (id === 'pyramid') {
       assert.deepEqual(normalized.video.volume, { master: 70, scoop: 110, pulse: 55.25, tip: 110, cap: 100,
@@ -90,10 +94,16 @@ test('Vorlagenknöpfe erhalten den Seed und laden alle sechs Szenarien mit speic
     for (const kind of ['short', 'long']) {
       await page.click(kind === 'short' ? '#btnShortPreset' : '#btnLongPreset');
       const expected = await page.evaluate(([id, kind]) => EBS.normalizeConfig(EBS.productionPreset(id, kind, 731)), [id, kind]);
+      if (id === 'territory' && kind === 'short') {
+        // The video ends with the victory: the planned length replaces the starting value of the preset.
+        await page.waitForFunction(() => document.querySelector('#durationOut').textContent !== '…');
+        expected.video.durationSec = await page.evaluate(() => EBS.app.cfg.video.durationSec);
+        assert.ok(expected.video.durationSec > 25 && expected.video.durationSec < 45, String(expected.video.durationSec));
+        assert.equal(await page.isDisabled('#durationText'), true);
+      } else assert.equal(await page.inputValue('#durationText'), kind === 'short' ? '1m' : '10m');
       assert.deepEqual(await page.evaluate(() => EBS.app.cfg), expected);
       assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('ebs.cfg'))), expected);
       assert.equal(await page.inputValue('#scenario'), id);
-      assert.equal(await page.inputValue('#durationText'), kind === 'short' ? '1m' : '10m');
       assert.equal(await page.isChecked('#audio'), true);
       const [download] = await Promise.all([page.waitForEvent('download'), page.click('#btnSaveCfg')]);
       assert.deepEqual(JSON.parse(readFileSync(await download.path(), 'utf8')), expected);

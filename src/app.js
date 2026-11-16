@@ -232,6 +232,7 @@ async function bootLive() {
     $('audioHint').textContent = !hasAudio ? 'Dieses Szenario hat noch keinen Ton.'
       : on ? (['pyramid-water-v1', 'waterpark-water-v1'].includes(currentAudio()?.mixProfile) ? `Ruhige ${session.scenario.id === 'waterpark' ? 'Wasserpark' : 'Pyramiden'}-Mischung mit durchgehendem Wasserloop und leisen Aktionsgeräuschen. Gesamtlautstärke 70 % = Standard. `
         : usesCameraAudio() ? 'Der Ton folgt dem Kamerablick. 100 % = ruhige Standardmischung. Nach links leiser, nach rechts lauter. '
+        : Number.isFinite(currentAudio()?.fixedGainDb) ? 'Leise, feste Mischung: nur wichtige Ereignisse sind hörbar. 100 % = Standard. Nach links leiser, nach rechts lauter. '
         : 'Standard 100 % = YouTube-Lautheit (−14 LUFS). Nach links leiser, nach rechts lauter (bis 200 % = +6 dB). ')
         + 'Gilt für den Ton im exportierten Video, im Hoch- wie im Querformat; die Vorschau ist stumm.'
         : 'Ton ist ausgeschaltet – das Video wird ohne Tonspur exportiert.';

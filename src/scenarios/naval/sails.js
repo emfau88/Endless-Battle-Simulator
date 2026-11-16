@@ -11,11 +11,10 @@ const { RNG, canvasTex } = EBS;
 const { clamp, lerp, lerpColor } = EBS.util;
 
 const SAIL = {
-  // Durchschüsse bis zur vollen Abnutzung je Segel: Großsegel, Großmarssegel, Focksegel, Vormarssegel, Klüver.
-  // Gemessen im ruhigen Duell (Querformat, Seeds 42 und 7, 570 s): rund 40 / 28 / 117 / 43 / 155 Durchschüsse.
-  // Eingestellt für einen 10-Minuten-Film: Die Bugsegel sind nach etwa 9½ Minuten voll abgenutzt, das Großmarssegel
-  // erreicht etwa 75 %, das Wappensegel etwa 60 % (das Schiff bleibt erkennbar).
-  fullHits: [72, 38, 116, 44, 150],
+  // Die Segel sind die zweite Lebensanzeige: Abnutzung = Schiffsschaden × Anteil je Segel (Großsegel, Großmarssegel,
+  // Focksegel, Vormarssegel, Klüver). Die Bugsegel sind dem Gegner zugewandt und leiden schneller; das Wappensegel
+  // bleibt bis zum Untergang erkennbar.
+  wearPerDamage: [0.72, 0.95, 1.18, 1.22, 1.15],
   maxHoles: [11, 6, 9, 5, 6],   // einzelne Löcher je Segel bei voller Schiffsgröße; weitere Durchschüsse vergrößern vorhandene
   minSpeed: 140,                // langsamere Kugeln (Roller an Deck) reißen kein Loch
   pad: 10, texScale: 2,         // Rand und Auflösung der Tuch-Textur
@@ -52,30 +51,36 @@ const bottomY = (sl, x) => sl.hgt * (0.96 + 0.08 * (1 - Math.min(1, (x / (sl.hw 
 function create(geo, len, facing, seedOf) {
   return layout(geo, len, facing).map((s) => ({ ...s, holes: [], hits: 0, wear: 0, seed: seedOf(s.idx) }));
 }
+/** Neues Schiff, neue Segel: Schäden löschen, anderer Seed für die abgeleiteten Schäden. */
+function reset(s, seed) { s.holes.length = 0; s.hits = 0; s.wear = 0; s.seed = seed; }
+/** Abnutzung aller Segel aus dem Schiffsschaden (0…1) ableiten. Rückgabe: true, wenn sich etwas geändert hat. */
+function setDamage(sails, damage) {
+  let changed = false;
+  for (const s of sails) {
+    const w = Math.min(1, Math.max(0, damage) * SAIL.wearPerDamage[s.idx]);
+    if (w !== s.wear) { s.wear = w; changed = true; }
+  }
+  return changed;
+}
 /**
- * Eine Kugel durchschlägt das Segel an der Stelle (x, y). Erhöht die Abnutzung und setzt ein neues Loch oder
- * vergrößert das nächstgelegene. rng = eigener Zufallsstrom der Segel, R = Kugelradius, max = Löcher-Obergrenze.
- * Rückgabe: true, wenn ein neues Loch entstanden ist.
+ * Eine Kugel durchschlägt das Segel an der Stelle (x, y). Solange die Abnutzung noch Löcher „hergibt“, entsteht dort
+ * ein neues (voll bei 60 % Abnutzung); wie groß es ist und wie weit es aufreißt, folgt später allein der Abnutzung.
+ * rng = eigener Zufallsstrom der Segel, R = Kugelradius, max = Löcher-Obergrenze. Rückgabe: true bei neuem Loch.
  */
 function punch(s, x, y, rng, R, max) {
-  const full = SAIL.fullHits[s.idx], ext = extent(s);
   s.hits++;
-  s.wear = Math.min(1, s.hits / full);
-  // Die Zahl der Löcher wächst mit der Abnutzung (voll bei 60 %); dazwischen vergrößern Durchschüsse das nächste Loch.
   const want = Math.max(1, Math.round(max * Math.pow(Math.min(1, s.wear / 0.6), 0.8)));
-  let near = null, nd = Infinity;
-  for (const h of s.holes) { const d = Math.hypot(h.x - x, h.y - y); if (d < nd) { nd = d; near = h; } }
-  const r0 = R * rng.range(0.8, 1.08), k = rng.range(0.4, 1.6);
-  if (s.holes.length < want && !(near && nd < near.r + r0 * 1.1)) {
-    s.holes.push({ x, y, r: r0, tear: 0, ang: rng.range(-0.4, 0.4), seed: rng.int(1, 1e9) });
-    return true;
-  }
-  if (near) {
-    near.r = Math.min(R * 1.7, near.r + 0.6 * R * (max / full) * k);
-    if (s.wear > 0.25) near.tear = Math.min(ext * 0.4, near.tear + ((1.4 * ext) / (0.75 * full)) * k);   // Risse: zusammen rund 1,4 Segelbreiten
-  }
-  return false;
+  if (s.holes.length >= want) return false;
+  const r0 = R * rng.range(0.8, 1.08);
+  for (const h of s.holes) if (Math.hypot(h.x - x, h.y - y) < holeR(h, s.wear, R) + r0 * 1.1) return false;   // zu dicht an einem vorhandenen Loch
+  // g = wie stark dieses Loch mitwächst, tk = wie weit es aufreißt (etwa jedes zweite reißt gar nicht)
+  s.holes.push({ x, y, r0, g: rng.range(0.5, 1.5), tk: rng.next() < 0.55 ? rng.range(0.5, 1) : 0, ang: rng.range(-0.4, 0.4), seed: rng.int(1, 1e9) });
+  return true;
 }
+const grow = (w) => { const k = clamp(w, 0, 1); return k * k * (3 - 2 * k); };
+/** Aktueller Radius eines Lochs und Länge seines Risses – reine Funktionen der Abnutzung. */
+const holeR = (hl, wear, R) => Math.min(R * 1.7, hl.r0 + R * 0.55 * hl.g * grow(wear));
+const holeTear = (hl, sl) => hl.tk * extent(sl) * 0.4 * clamp((sl.wear - 0.25) / 0.6, 0, 1);
 
 // ---------- Darstellung: abgeleitete Schäden ----------
 /** Ausgefranste Kante, lose Streifen, schiefe Rah: reine Funktion aus Abnutzung und Segel-Seed. */
@@ -102,10 +107,10 @@ function stripShape(sl, st) {
   return { x0, x1, yT, left, right };
 }
 const css = (c, a = 1) => `rgba(${(c >> 16) & 255},${(c >> 8) & 255},${c & 255},${a})`;
-function holeOutline(hl, ox, oy) {
+function holeOutline(hl, ox, oy, rad) {
   const r = new RNG(hl.seed), n = 9, rot = r.range(0, 6.2832), pts = [];
   for (let k = 0; k < n; k++) {
-    const a = rot + (k / n) * 6.2832, rr = hl.r * (r.next() < 0.25 ? r.range(0.64, 0.8) : r.range(0.9, 1.14));
+    const a = rot + (k / n) * 6.2832, rr = rad * (r.next() < 0.25 ? r.range(0.64, 0.8) : r.range(0.9, 1.14));
     pts.push([ox + hl.x + Math.cos(a) * rr, oy + hl.y + Math.sin(a) * rr]);
   }
   return { pts, r };
@@ -148,7 +153,7 @@ function texture(sl, sails, team, feat, R) {
     // 1) Schmauch um die Einschüsse, dazu mit der Zeit etwas Schmutz
     g.globalCompositeOperation = 'source-atop';
     for (const hl of sl.holes) {
-      const rr = hl.r * 2.5, gr = g.createRadialGradient(hl.x, hl.y, hl.r * 0.5, hl.x, hl.y, rr);
+      const hr = holeR(hl, sl.wear, R), rr = hr * 2.5, gr = g.createRadialGradient(hl.x, hl.y, hr * 0.5, hl.x, hl.y, rr);
       gr.addColorStop(0, 'rgba(46,36,28,.36)'); gr.addColorStop(1, 'rgba(46,36,28,0)');
       g.fillStyle = gr; g.beginPath(); g.arc(hl.x, hl.y, rr, 0, 6.2832); g.fill();
     }
@@ -164,14 +169,14 @@ function texture(sl, sails, team, feat, R) {
     g.globalCompositeOperation = 'source-over';
     // 2) eigene Löcher und Risse
     for (const hl of sl.holes) {
-      const { pts, r } = holeOutline(hl, 0, 0);
+      const hr = holeR(hl, sl.wear, R), tear = holeTear(hl, sl), { pts, r } = holeOutline(hl, 0, 0, hr);
       cut(() => poly(pts));
-      if (hl.tear > 0) {
-        const dx = Math.sin(hl.ang), dy = Math.cos(hl.ang), nx = dy, ny = -dx, m = Math.max(4, Math.round(hl.tear / (R * 0.9)));
+      if (tear > 0) {
+        const dx = Math.sin(hl.ang), dy = Math.cos(hl.ang), nx = dy, ny = -dx, m = Math.max(4, Math.round(extent(sl) * 0.4 * hl.tk / (R * 0.9)));
         const lf = [], rt = [];
         for (let k = 0; k <= m; k++) {
-          const s = k / m, wd = hl.r * 0.62 * Math.pow(1 - s, 0.7) + (k < m ? 0.8 : 0), off = k ? r.range(-0.32, 0.32) * hl.r * (1 - s * 0.5) : 0;
-          const cx = hl.x + dx * hl.tear * s + nx * off, cy = hl.y + dy * hl.tear * s + ny * off;
+          const s = k / m, wd = hr * 0.62 * Math.pow(1 - s, 0.7) + (k < m ? 0.8 : 0), off = k ? r.range(-0.32, 0.32) * hr * (1 - s * 0.5) : 0;
+          const cx = hl.x + dx * tear * s + nx * off, cy = hl.y + dy * tear * s + ny * off;
           lf.push([cx - nx * wd, cy - ny * wd]); rt.push([cx + nx * wd, cy + ny * wd]);
         }
         cut(() => poly([...lf, ...rt.reverse()]));
@@ -180,7 +185,7 @@ function texture(sl, sails, team, feat, R) {
     // 3) Löcher der anderen Segel an gleicher Stelle: die Kugel hat alle Lagen durchschlagen
     for (const o of sails) {
       if (o === sl) continue;
-      for (const hl of o.holes) { const { pts } = holeOutline(hl, o.x - sl.x, o.y - sl.y); cut(() => poly(pts)); }
+      for (const hl of o.holes) { const { pts } = holeOutline(hl, o.x - sl.x, o.y - sl.y, holeR(hl, o.wear, R)); cut(() => poly(pts)); }
     }
     if (!sq) return;
     // 4) ausgefranste Unterkante: die Zacken wachsen mit der Abnutzung
@@ -260,5 +265,5 @@ class SailsView {
   destroy() { for (const v of this.items) if (v.tex) { v.tex.destroy(true); v.tex = null; } }
 }
 
-EBS.NavalSails = { SAIL, layout, contains, extent, create, punch, features, View: SailsView };
+EBS.NavalSails = { SAIL, layout, contains, extent, create, reset, setDamage, punch, features, View: SailsView };
 })();

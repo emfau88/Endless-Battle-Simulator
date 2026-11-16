@@ -19,6 +19,7 @@ Shorts in 9:16 und längere Videos in 16:9. Alle Texte im Video sind englisch.
 | Prüflauf | Letzter abgeschlossener Lauf auf `main` grün (14.11.). Der Lauf nach dem Wasserpark-Merge war beim Schreiben noch nicht fertig. |
 | Ordnung | Ein Main. Erledigte Branches und alte Arbeitskopien sind entfernt, drei Diagnose-Stände als Marken `archive/…` gesichert. |
 | Abnahme am Handy | Für fast alle Szenarien noch offen (siehe R33). |
+| Shorts | [Leitlinien für Shorts](SHORTS_LEITLINIEN.md); erstes Short nach diesen Regeln: Territory „Die letzte Krone“ (R37). |
 
 Vier Zustände bleiben getrennt: **vorhanden** (im Code), **integriert** (Einstellung, Vorschau, Export), **technisch
 geprüft** (mit Umfang und Programmstand) und **abgenommen** (laufender Clip wirklich angesehen und angehört).
@@ -29,7 +30,8 @@ geprüft** (mit Umfang und Programmstand) und **abgenommen** (laufender Clip wir
 |---|---|---|---|
 | **R31** | **Ein Main: Ordnung halten** | Aufräumen ist erledigt ([Stand im Gesamtplan](GESAMTPLAN_2026-11-16.md#0--umsetzungsstand)). Offen: Entscheidung zum leichten Schutz von `main`, erste Versionsmarke `v0.8.0` | Nur `main` und laufende Arbeit sichtbar; Regeln aus [AGENTS.md](../AGENTS.md) gelten |
 | **R35** | **Marble XL als Produktionslinie** ([Gesamtplan, Abschnitt 9](GESAMTPLAN_2026-11-16.md#9--block-5-marble-xl)) | Liegt als Szenario „in Arbeit“ auf `main`. Die Linie läuft ohne Neubeginn (Chargen, Röhren leeren sich, Zähler zählt durch). Nächster Schritt: 10-Minuten-Video in 1440p60 rendern und ansehen; danach sichtbarer Abtransport unter den Röhren. Die Linie läuft als bewegter Entwurf; die Rückmeldung zum ersten Testclip ist eingearbeitet (feste Übersicht, weicher leiserer Ton, Ofen- und Farbeffekte), dazu größere Kugeln und abschaltbare Schilder (Standard aus); Glühen nur noch zwischen Ofen und Farbstation; die Kühlstrecke ist jetzt eine Trockenstrecke; kleine Deko-Animationen sind eingebaut; ein sechster Testclip liegt vor. Offen: Rückmeldung dazu, mehr Kugeln gleichzeitig, eigene Klänge je Station, danach Warteschlangen und Physik (M2) | M2: Grundlinie läuft, keine Kugel geht verloren, 20-Sekunden-Clip abgenommen |
-| **R04** | **Kanalpilot fortsetzen** | Ein Short und ein Langvideo pro Woche aus Pyramid, Naval oder Scrap Wars | Auswertung nach 7 und 28 Tagen entscheidet über Ausbau |
+| **R37** | **Territory-Short „Die letzte Krone“** ([Bericht](TERRITORY_SHORT_2026-11-16.md)) | Short-Karte, verdeckte Regie, schlanke Anzeige, leiser Ton und neue Short-Vorlage sind gebaut und geprüft; ein 20-Sekunden-Clip mit Ton liegt vor. Offen: dein Urteil zu Bild und Ton am Handy, danach der Export des ganzen Shorts (rund 32 Sekunden, braucht deinen Auftrag) | Ganzes Short exportiert und von dir abgenommen |
+| **R04** | **Kanalpilot fortsetzen** | Ein Short und ein Langvideo pro Woche aus Pyramid, Naval oder Scrap Wars; Regeln in den [Leitlinien für Shorts](SHORTS_LEITLINIEN.md) | Auswertung nach 7 und 28 Tagen entscheidet über Ausbau |
 | **R33** | **Abnahme-Mappe** | 16 Clips zu je 20 Sekunden (acht Szenarien, hochkant und quer, mit Ton) | Jeder Clip von dir bewertet; daraus folgt die Reihenfolge für R36 |
 
 R33 bündelt die bisherigen Einzelabnahmen **R18** (Naval), **R20** (Scrap Wars), **R17** (Territory Wars),
@@ -39,7 +41,7 @@ R33 bündelt die bisherigen Einzelabnahmen **R18** (Naval), **R20** (Scrap Wars)
 
 | Nr. | Aufgabe | Hinweis |
 |---|---|---|
-| **R34** | **Naval-Langvideo „Who survives the night?“** (20 bis 30 Minuten) | Pakete N0 bis N6 im [Gesamtplan, Abschnitt 8](GESAMTPLAN_2026-11-16.md#8--block-4-naval-langvideo-20-bis-30-minuten). N0 schließt zuerst die Prüflücke **R21** (Besitz und Reihenfolge der Kugeln im Zustands-Hash). **R01** und **R05** gehen darin auf. **Läuft seit 16.11.:** Auf Wunsch des Nutzers vorgezogen. Erledigt ist N1a, der Modus „Ruhiges Duell (in Arbeit)“ ([Bericht](NAVAL_RUHIGES_DUELL_2026-11-16.md)). Als Nächstes offen: Lebensanzeige schlüssig machen, Runden mit Versenkung (N2), Ton für wenige Schüsse; N0 steht weiter aus. |
+| **R34** | **Naval-Langvideo „Who survives the night?“** (20 bis 30 Minuten) | Pakete N0 bis N6 im [Gesamtplan, Abschnitt 8](GESAMTPLAN_2026-11-16.md#8--block-4-naval-langvideo-20-bis-30-minuten). N0 schließt zuerst die Prüflücke **R21** (Besitz und Reihenfolge der Kugeln im Zustands-Hash). **R01** und **R05** gehen darin auf. **Läuft seit 16.11.:** Auf Wunsch des Nutzers vorgezogen. Erledigt sind N1a, der Modus „Ruhiges Duell (in Arbeit)“, und N2a, Runden mit Versenkung, Punktestand und schlüssiger Lebensanzeige ([Bericht](NAVAL_RUHIGES_DUELL_2026-11-16.md)). Erledigt ist auch N2b, die Rakete vom Heck (Idee des Nutzers). Erledigt ist auch N2c, der eigene Auftritt der goldenen Kugel (Idee des Nutzers). Als Nächstes offen: Ton für wenige Schüsse, Finale am Videoende, Lesbarkeit (Bugkante, Leuchtspur, Kanonen); N0 steht weiter aus. |
 | **R35** | **Marble XL, weitere Pakete** | Weitere Stationen, Kapitel und Ausbauten, Hochformat, 20-Minuten-Vorlagen (M3 bis M7). |
 | **R36** | **Wichtigste Verbesserungen je Szenario** | Höchstens drei je Szenario, Vorschlag im [Gesamtplan, Abschnitt 7](GESAMTPLAN_2026-11-16.md#7--block-3-die-wichtigsten-verbesserungen-je-szenario); Reihenfolge nach R33. |
 | **R32** | **Architektur absichern** | A1 (Beschreibung) ist erledigt. A2 Vertragstest für jedes Szenario; A4 bis A7 entstehen mit dem ersten Szenario, das sie braucht. |
@@ -79,12 +81,13 @@ R33 bündelt die bisherigen Einzelabnahmen **R18** (Naval), **R20** (Scrap Wars)
    Pull Request und Prüflauf? Empfehlung: ja.
 2. **Waterpark:** Wasserspiele tagsüber, Ende mit Brunnenshow.
 3. **Abnahme-Mappe (R33):** Wann sollen die 16 Clips entstehen?
+4. **Territory-Short (R37):** Passt Bild und Ton im 20-Sekunden-Clip? Dann das ganze Short exportieren.
 
 Getroffene Entscheidungen stehen im [CHANGELOG](CHANGELOG.md#entscheidungen).
 
 ## 7 · Pflege
 
-- IDs werden nie wiederverwendet. **Nächste freie ID: R37.**
+- IDs werden nie wiederverwendet. **Nächste freie ID: R38.**
 - Neue offene Punkte nur hier eintragen. Erledigtes mit Datum, Commit und Bericht in den CHANGELOG übertragen.
 - Der Fortschritt der einzelnen Schritte steht in [Abschnitt 0 des Gesamtplans](GESAMTPLAN_2026-11-16.md#0--umsetzungsstand) und wird mit jedem Paket nachgezogen.
 - Diese Datei bleibt kurz. Verlauf, Messwerte und Begründungen gehören in datierte Berichte unter `docs/`.
