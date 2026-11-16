@@ -1,8 +1,8 @@
 # Marble Factory XL: Stufe 1 (Vorschau)
 
 Stand: 16.11.2026. Branch `marble-xl/stufe-1`. Gehört zu R35 und zum
-[Gesamtplan, Abschnitt 9](GESAMTPLAN_2026-11-16.md). **Status: lauffähiger Prototyp; inhaltlich vom Nutzer nicht
-freigegeben (siehe Rückmeldung unten).**
+[Gesamtplan, Abschnitt 9](GESAMTPLAN_2026-11-16.md). **Status: erster Prototyp abgelehnt; Entwurfsbild der
+Produktionslinie vom Nutzer als richtige Richtung bestätigt; Bau noch nicht beauftragt.**
 
 ## Was es ist
 
@@ -69,6 +69,42 @@ letzte Station.
 - Eingebetteter Betrieb der klassischen Bausteine (`EBS.MarbleClassic`), ohne die klassische Fabrik zu ändern.
 - Die vier Prüfungen in `test/marblexl.test.mjs` als Muster.
 
+## Entwurfsbild der Produktionslinie (16.11.2026)
+
+`src/scenarios/marblexl/concept.js` zeichnet die Halle mit Zwischendeck und neun Stationen im Stil der klassischen
+Fabrik; `scripts/marblexl-concept.mjs` rendert Übersicht und vier Nahansichten. Die Kugeln sind von Hand gesetzt,
+es läuft keine Simulation. Bilder lokal unter `output/marblexl-vorschau/konzept-produktionslinie/`.
+
+| Nr. | Station | Was mit der Kugel geschieht |
+|---|---|---|
+| 01 RAW | Vorratskasten, Kettenaufzug, Behälter mit Zellenrad | matte, gesprenkelte Rohkugel |
+| 02 WASH | Glastrommel mit Schaufeln und Wasser | wird sauber und nass glänzend |
+| 03 POLISH | zwei Bürstenräder, Funken | wird klar und glänzend |
+| 04 KILN | Tunnelofen mit Sichtfenster und Abzügen | glüht orange bis weiß |
+| 05 COLOUR | sechs Pigmenttanks, Injektor, Glaskammer | bekommt Farbe und Wirbel |
+| 06 COOL | geschwungene Glasrohrstrecke vor drei Lüftern | das Glühen klingt ab |
+| 07 INSPECT | Prüfring, Bildschirm, Ausschusskasten | wird geprüft, Ausschuss fällt heraus |
+| 08 LIFT | großes Rad mit zehn Taschen | wird zur Sortierung gehoben |
+| 09 SORT | sechs hohe Röhren | sammelt sich nach Farbe, die Röhren füllen sich |
+
+**Rückmeldung des Nutzers:** „Das geht in die richtige Richtung, gefällt mir gut.“ Weiterbauen erst nach
+gesonderter Freigabe.
+
+## Besprochene Verbesserungen (noch nicht umgesetzt)
+
+1. **Tiefe statt Deko:** leere Wandflächen mit einer dunklen, kontrastarmen Hintergrundebene füllen (ferne
+   Rohrbrücken, Maschinen, Fenster), nicht mit hellen Einzelteilen.
+2. **Ruhige, funktionale Details:** Wandlüfter, Dampf an der Waschtrommel, Hitzeflimmern über dem Ofen,
+   Kabel- und Rohrtrassen von den Maschinen zur Decke, Schaltschränke. Höchstens ein bewegtes Detail je leerer
+   Fläche, nichts heller als die Kugeln.
+3. **Platz freihalten** für die zweite Linie und spätere Ausbauten (unter dem Ofen, rechts unten).
+4. **Verwandlung deutlicher:** stärkere Unterschiede zwischen roh, gewaschen und poliert.
+5. **Farbstation als Höhepunkt:** größere Glaskammer, sichtbarer Farbstrahl.
+6. **Lichtzonen je Station** (Ofen orange, Kühlung blau, Wäsche türkis), die übrige Halle etwas dunkler.
+7. **Weg lesbarer:** Richtungsmarken an den Rohren, klare Anschlüsse an Trommel und Radaufzug.
+8. **Hochformat** für Shorts fehlt noch (drei Ebenen übereinander).
+
 ## Nächster Schritt
 
-Vorschau-Bild einer Produktionslinie mit neuen Maschinen im klassischen Stil, danach Stopp für die Freigabe.
+Nach Freigabe des Nutzers: Verbesserungen ins Entwurfsbild einarbeiten oder die Grundlinie mit Simulation bauen
+(Vorrat, Aufzug, Behälter, Polierer, Sortierröhren) und einen 20-Sekunden-Clip zeigen.
