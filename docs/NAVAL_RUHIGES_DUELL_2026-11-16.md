@@ -164,7 +164,7 @@ Notlösung stand die Gesamtlautstärke auf 65 %.
 | Lautheit der 10-Minuten-Episode | −17,7 LUFS | −20,6 LUFS |
 | Spitze | −5,7 dBFS | −3,0 dBFS |
 | stärkster Eingriff des Begrenzers | bis −20 dB | −6,7 dB, sonst rund −2 dB |
-| 20-Sekunden-Probe, fertiges AAC | −17,8 LUFS | −20,7 LUFS, höchstens −2,9 dBTP |
+| 20-Sekunden-Probe | −17,8 LUFS (Mischung vor dem Kodieren) | −20,7 LUFS im fertigen AAC, höchstens −2,9 dBTP |
 
 Die Mischung ist damit etwas leiser, aber die Schüsse behalten ihren Anschlag. Ob die Balance stimmt, entscheidet
 das Hörurteil des Nutzers.
