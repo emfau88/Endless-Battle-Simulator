@@ -1310,7 +1310,13 @@ class MarbleRenderer {
 //  Registrierung
 // =====================================================================
 // Bausteine der klassischen Fabrik für Marble XL (src/scenarios/marblexl.js)
-EBS.MarbleClassic = { MarbleFactory, MarbleRenderer, COLORS, R, drawBall };
+EBS.MarbleClassic = {
+  MarbleFactory, MarbleRenderer, COLORS, R, drawBall,
+  // Zeichen- und Bahnhelfer im Stil der klassischen Fabrik (setPX: Gerätepixel je Einheit für Schatten)
+  kit: { lin, rad, shadow, noShadow, rr, circ, css, tone, STEEL, STEEL_DARK, CYL, BRASS_CYL, BRASS, TUBE_IN, TUBE_OUT,
+    plate, bolt, band, trace, onLayer, tubesBack, tubesFront, rod, collar, post, hopperPath, drawGear, drawDiscLight,
+    drawBall, drawSwirl, drawGloss, buildPath, pathAt, sAtAxis, setPX: (v) => { PX = v; } },
+};
 
 EBS.registerScenario({
   id: 'marble',
