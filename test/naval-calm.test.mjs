@@ -20,7 +20,8 @@ const CALM = { params: { mode: 'calm' }, video: { aspect: '16:9' } };
 // Stand 2: Runden mit festem Schaden je Treffer, Segel am Schiffsschaden (vorher '30430187', '36607512').
 // Stand 3: Rakete vom Heck (vorher 'ccf6c083', '6096ac27').
 // Stand 4: Goldtreffer zählt doppelt (vorher '5a64ecd4', '66d227d3').
-const REFERENCE = ['48a74102', 'dff41b7b'];
+// Stand 5: Kanonen 30 % größer, die Mündung sitzt dadurch etwas weiter vorn (vorher '48a74102', 'dff41b7b').
+const REFERENCE = ['dc0bcd3f', 'a30e14c3'];
 
 test('Standardmodus bleibt unberührt: Modus endless, bekannte Klangliste, kein Segelzustand', async () => {
   const page = await open();

@@ -1,6 +1,6 @@
 # Naval: Modus „Ruhiges Duell“ (in Arbeit)
 
-Stand: 16.11.2026, nachts. Erste vier Pakete des Naval-Ausbaus (R34, im [Gesamtplan](GESAMTPLAN_2026-11-16.md) Abschnitt 8.4
+Stand: 17.11.2026. Erste vier Pakete des Naval-Ausbaus (R34, im [Gesamtplan](GESAMTPLAN_2026-11-16.md) Abschnitt 8.4
 als N1a, N2a, N2b und N2c geführt). Der Nutzer hat die Richtung anhand von Standbildern und Testclips freigegeben, den Einbau als
 neuen Modus beauftragt und danach die Vorschläge zu Lebensanzeige, Runden und Segeln zur Umsetzung freigegeben.
 
@@ -118,6 +118,27 @@ Messwerte (reine Simulation, Querformat, fünf Seeds zu je 20 Minuten, 33 Runden
 Minute; Runden 140 bis 204 s, Median 172 s (ohne Goldtreffer 182 s).
 
 Der Klang des Goldtreffers ist vorläufig ein weicher Metallklang aus dem Marble-Works-Satz.
+
+## 3d · Lesbarkeit (Vorschau, wartet auf Freigabe)
+
+Dritter der freigegebenen Vorschläge; sichtbare Änderungen kommen zuerst als Vorschau.
+
+- **Kanonen 30 % größer.** Es sind nur noch zwei je Schiff; neben den gleich groß gebliebenen Kugeln wirkten sie
+  klein. Die Mündung sitzt dadurch etwas weiter vorn.
+- **Leuchtspur in voller Länge.** Die Spur hing an der Zeit und war bei halbem Flugtempo nur halb so lang. Sie wird
+  jetzt in jedem vierten statt jedem zweiten Schritt fortgeschrieben.
+- **Erhöhte Bugkante: gemessen und verworfen.** Eine niedrige Wand am Bug sollte Kugeln länger an Deck halten.
+
+| Reine Simulation, fünf Seeds zu je 10 Minuten | ohne Bugkante | Kante 5 % der Schiffslänge | Kante 9 % |
+|---|---|---|---|
+| Abpraller je Treffer | 0,56 | 0,97 | 1,14 |
+| Kugel bleibt liegen und wird angestoßen | 30-mal | 287-mal | 455-mal |
+| Notfall (Kugel verschwindet mit einem Wölkchen) | 1 | 55 | 105 |
+
+Die Kante bringt fast doppelt so viele Abpraller, aber Kugeln verklemmen sich an Deck und müssen dann etwa einmal
+pro Minute per Notfall verschwinden. Das sieht schlechter aus als wenige Abpraller.
+
+Rundenlänge mit größeren Kanonen (fünf Seeds zu je 20 Minuten, 34 Runden): 134 bis 196 s, Median 168 s.
 
 ## 4 · Aufbau im Code
 
