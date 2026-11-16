@@ -103,7 +103,7 @@ class LineRenderer extends EBS.CanvasScene {
     g.fillStyle = '#05070b'; g.fillRect(0, 0, w.w, w.h);
     g.save();
     g.translate(w.w / 2 - cam.cx * cam.s, w.h / 2 - cam.cy * cam.s); g.scale(cam.s, cam.s);
-    X.drawScene(g, sim.t, cam.s * this.scale, this.bgScale);
+    X.drawScene(g, sim.t, cam.s * this.scale, this.bgScale, { signs: !!sim.cfg.signs });
     g.restore();
     X.vignette(g, w.w, w.h);
   }
@@ -112,9 +112,10 @@ class LineRenderer extends EBS.CanvasScene {
 EBS.registerScenario({
   id: 'marblexl',
   title: 'Marble Factory XL (in Arbeit)',
-  defaults: {},
-  controls: [],
-  normalizeParams: () => ({}),
+  // Schilder (Titel, Stationsschilder, Messingschilder) sind nur Darstellung und standardmäßig aus; der Zähler bleibt.
+  defaults: { signs: false },
+  controls: [{ key: 'signs', label: 'Schilder zeigen (Titel und Stationen)', type: 'check' }],
+  normalizeParams: (p) => ({ signs: p.signs === true || p.signs === 'true' || p.signs === 1 }),
   create: (ctx) => new LineSim(ctx),
   createRenderer: (ctx) => new LineRenderer(ctx),
   panelStats(sim) {

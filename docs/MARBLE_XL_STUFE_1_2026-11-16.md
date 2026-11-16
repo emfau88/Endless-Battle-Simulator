@@ -2,7 +2,8 @@
 
 Stand: 16.11.2026. Branch `marble-xl/stufe-1`. Gehört zu R35 und zum
 [Gesamtplan, Abschnitt 9](GESAMTPLAN_2026-11-16.md). **Status: bewegter Entwurf; Rückmeldung zum ersten Testclip
-eingearbeitet, zweiter Testclip liegt vor; Rückmeldung dazu steht aus.**
+eingearbeitet; dritte Fassung mit größeren Kugeln und abschaltbaren Schildern liegt als Testclip vor; Rückmeldung dazu
+steht aus.**
 
 ## Was es ist
 
@@ -179,7 +180,31 @@ Zweiter Testclip (lokal, `output/marblexl-vorschau/testclip-2026-11-16-v2/`): Qu
 Noch ohne eigenen Klang: Wasser und Purzeln in der Trommel, Feuer im Ofen, Sprühen, Lüfter. Für Ofen und Sprühen
 gibt es nur weiche Platzhalter.
 
+## Größere Kugeln und Schalter für die Schilder (16.11.2026, dritte Fassung)
+
+Auftrag des Nutzers: keine Kamerafahrt, Kugeln größer (mit allem, was dafür nötig ist), Schilder abschaltbar und
+standardmäßig aus.
+
+| Punkt | Umsetzung | Stand |
+|---|---|---|
+| Kugeln größer | Kugeln und Glasrohre um 35 % vergrößert: bei 1080p rund 30 statt 22 Pixel Durchmesser. Die klassische Fabrik (`marble.js`) ist unverändert; die Rohre zeichnet `concept.js` jetzt selbst in der größeren Breite. | **Erledigt** |
+| Was dafür mitwachsen musste | Zellenrad und Behälter (höher, breiterer Hals), Träger am Kettenaufzug, Förderband und Zahnräder tiefer, Bürstenräder im Polierer weiter auseinander (Gehäuse höher), Taschenkranz am Radaufzug, Ringe, Klappen und Sockel der Sortierröhren, Sortierkasten breiter und höher, Prüfring, Vorrats- und Ausschusskasten neu belegt | **Erledigt** |
+| Röhren der Sortierung | Eine Röhre fasst jetzt 9 statt 13 Kugeln. Die Röhren starten deshalb fast leer (drei Kugeln) und füllen sich in einem Durchlauf ganz. | **Erledigt** (Vorschau-Ablauf) |
+| Schilder | Neuer Schalter „Schilder zeigen (Titel und Stationen)“, Standard **aus**. Aus: kein Titelschild, keine Stationsschilder, keine Messingschilder; der Zähler rückt nach oben. An: wie bisher. Export: `--param signs=true`. | **Erledigt** |
+| Zähler „… / 96“ und Wandaufschrift „BAY 2“ | Bleiben immer sichtbar (Fortschritt und Platz für die zweite Linie). | Entscheidung des Assistenten, Rückmeldung offen |
+| Kamera | Querformat bleibt feste Übersicht (unverändert seit der zweiten Fassung). | **Erledigt** |
+
+Nicht geändert: Takt (eine Kugel alle 1,6 s), Ton, Hochformat. Im Hochformat sind die Kugeln ebenfalls größer,
+abgenommen ist es nicht.
+
+**Geprüft:** `node --test test/marblexl.test.mjs` (3 von 3 bestanden), `npm run golden` (36 Fälle, identisch mit der
+Referenz). Kein vollständiger `npm test`.
+
+**Dritter Testclip** (lokal, `output/marblexl-vorschau/testclip-2026-11-16-v3/`): Querformat, 20 s, 1080p30, Schilder
+aus. Ton unverändert (−24,8 LUFS, Spitze −6 dBFS). Dazu je ein Standbild mit und ohne Schilder.
+
 ## Nächster Schritt
 
-Rückmeldung des Nutzers zum zweiten Testclip abwarten (Ton, Ofen, Farbstation). Offen bleiben: eigene Klänge
-für Trommel, Ofen und Sprühen, Beschriftungen beruhigen, Hochformat, danach echte Warteschlangen und Physik.
+Rückmeldung des Nutzers zum dritten Testclip abwarten (Kugelgröße, Bild ohne Schilder; Ton, Ofen und Farbstation
+aus dem zweiten Clip sind ebenfalls noch offen). Offen bleiben: mehr Kugeln gleichzeitig (kürzerer Takt), eigene
+Klänge für Trommel, Ofen und Sprühen, Hochformat, danach echte Warteschlangen und Physik.

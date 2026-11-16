@@ -8,14 +8,47 @@
  */
 (function () {
 'use strict';
-const C = EBS.MarbleClassic, K = C.kit, R = C.R, COLORS = C.COLORS;
-const { lin, rad, shadow, noShadow, rr, circ, css, STEEL, STEEL_DARK, CYL, BRASS_CYL, BRASS, TUBE_OUT,
-  plate, bolt, band, tubesBack, tubesFront, rod, collar, post, hopperPath, drawGear, drawBall, drawSwirl, drawGloss, buildPath, pathAt } = K;
+const C = EBS.MarbleClassic, K = C.kit, R0 = C.R, COLORS = C.COLORS;
+const { lin, rad, shadow, noShadow, rr, circ, css, STEEL, STEEL_DARK, CYL, BRASS_CYL, BRASS,
+  plate, bolt, band, trace, onLayer, rod, post, hopperPath, drawGear, drawBall, drawSwirl, drawGloss, buildPath, pathAt } = K;
+// Kugeln und Glasrohre sind hier größer als in der klassischen Fabrik, damit sie in der festen Übersicht gut
+// zu sehen sind. MS = Vergrößerung; R und die Rohrbreiten gelten in Hallen-Einheiten.
+const MS = 1.35, R = R0 * MS, TUBE_IN = K.TUBE_IN * MS, TUBE_OUT = K.TUBE_OUT * MS;
 const TAU = Math.PI * 2, HALF_PI = Math.PI / 2;
 const W = 3840, H = 2160, FLOOR = 2080, DECK = 1010;
 const FONT = 'Bahnschrift, "Segoe UI", Arial, sans-serif';
 const P = { x: 0, y: 0, tx: 1, ty: 0 };
 let T = 0, FLOW = null;                                          // Bildzeit in Sekunden, Kugeln des aktuellen Bildes
+let SIGNS = false;                                               // Titel, Stationsschilder und Messingschilder zeigen
+
+// ---------------------------------------------------------------- Glasrohre in der Breite der größeren Kugeln
+// Gleiche Zeichenweise wie im klassischen Baukasten; dort ist die Rohrbreite fest.
+const traceAll = (g, tubes, dx = 0, dy = 0) => { g.beginPath(); for (const t of tubes) trace(g, t.p, t.s0, t.s1, dx, dy); };
+function tubesBack(g, tubes) {
+  g.save(); g.lineJoin = 'round';
+  shadow(g, 18, 8, 14, 0.5);
+  traceAll(g, tubes); g.lineWidth = 2 * TUBE_OUT; g.strokeStyle = 'rgba(7,13,21,.72)'; g.stroke();
+  noShadow(g);
+  traceAll(g, tubes); g.lineWidth = 2 * TUBE_IN; g.strokeStyle = 'rgba(96,150,190,.10)'; g.stroke();
+  traceAll(g, tubes, 5 * MS, 9 * MS); g.lineWidth = 2 * TUBE_IN - 22 * MS; g.strokeStyle = 'rgba(120,180,220,.05)'; g.stroke();
+  g.restore();
+}
+function tubesFront(g, tubes) {
+  onLayer(g, (t) => {                       // Lichtreflexe, auf das Rohrinnere beschnitten
+    traceAll(t, tubes, 7 * MS, 13 * MS); t.lineWidth = 9 * MS; t.strokeStyle = 'rgba(120,190,255,.13)'; t.stroke();
+    traceAll(t, tubes, -6 * MS, -11 * MS); t.lineWidth = 8 * MS; t.strokeStyle = 'rgba(255,255,255,.20)'; t.stroke();
+    traceAll(t, tubes, -8 * MS, -14.5 * MS); t.lineWidth = 2.6 * MS; t.strokeStyle = 'rgba(255,255,255,.80)'; t.stroke();
+    t.globalCompositeOperation = 'destination-in';
+    traceAll(t, tubes); t.lineWidth = 2 * TUBE_IN - 1; t.strokeStyle = '#000'; t.stroke();
+  });
+  onLayer(g, (t) => {                       // Glaswand: dunkle Außenkante + helle Kante, Inneres frei
+    traceAll(t, tubes); t.lineWidth = 2 * TUBE_OUT + 3; t.strokeStyle = 'rgba(3,7,12,.85)'; t.stroke();
+    traceAll(t, tubes); t.lineWidth = 2 * TUBE_OUT; t.strokeStyle = 'rgba(176,220,246,.62)'; t.stroke();
+    t.globalCompositeOperation = 'destination-out';
+    traceAll(t, tubes); t.lineWidth = 2 * TUBE_OUT - 5; t.strokeStyle = '#000'; t.stroke();
+  });
+}
+function collar(g, p, s, len = 14, extra = 6, stops = CYL) { const q = pathAt(p, s, P); band(g, q.x, q.y, len, TUBE_OUT + extra, Math.atan2(q.ty, q.tx), stops); }
 
 // ---------------------------------------------------------------- Kugeln in ihren Zuständen
 const RAW = 0x5c5145, WASHED = 0x8496aa, CLEAR = 0x93c4e8;
@@ -23,7 +56,7 @@ const texCache = new Map();
 function ballTex(hex, gloss, swirl) {
   const key = hex + '|' + gloss + '|' + swirl;
   if (texCache.has(key)) return texCache.get(key);
-  const c0 = R + 3, S = 2, cv = document.createElement('canvas'); cv.width = cv.height = 2 * c0 * S;
+  const R = R0, c0 = R + 3, S = 2 * MS, cv = document.createElement('canvas'); cv.width = cv.height = Math.ceil(2 * c0 * S);   // in klassischer Größe gezeichnet, größer abgelegt
   const g = cv.getContext('2d'); g.scale(S, S);
   drawBall(g, c0, hex);
   if (swirl) { g.save(); g.globalAlpha = swirl; drawSwirl(g, c0); g.restore(); }
@@ -42,15 +75,15 @@ function glow(g, x, y, hex, a, r) {
 }
 /** kind: raw | washed | clear | color; heat 0..1 lässt die Kugel orange glühen */
 function marble(g, x, y, kind, color = 0, heat = 0) {
-  const c0 = R + 3;
+  const c0 = (R0 + 3) * MS;
   const hex = kind === 'raw' ? RAW : kind === 'washed' ? WASHED : kind === 'clear' ? CLEAR : COLORS[color].hex;
   if (kind === 'color') glow(g, x, y, hex, 0.30 * (1 - heat * 0.6), R * 2.1);
   if (kind === 'clear' && heat < 0.05) glow(g, x, y, 0xbfe4ff, 0.10, R * 1.7);
   if (heat > 0.02) glow(g, x, y, 0xff8a2a, 0.55 * heat, R * 2.8);
   const t = ballTex(hex, kind === 'raw' ? 0 : kind === 'washed' ? 0.75 : 1, kind === 'color' ? 0.6 : kind === 'clear' ? 0.4 : 0);
   g.drawImage(t, x - c0, y - c0, 2 * c0, 2 * c0);
-  if (kind === 'washed') for (const [dx, dy, r] of [[-8, -9, 2.6], [7, -2, 1.7], [-2, 9, 2.1], [10, 9, 1.4]]) { circ(g, x + dx, y + dy, r); g.fillStyle = 'rgba(190,242,255,.9)'; g.fill(); }
-  if (kind === 'clear' && heat < 0.05) sparkle(g, x - R * 0.44, y - R * 0.48, 14);
+  if (kind === 'washed') for (const [dx, dy, r] of [[-8, -9, 2.6], [7, -2, 1.7], [-2, 9, 2.1], [10, 9, 1.4]]) { circ(g, x + dx * MS, y + dy * MS, r * MS); g.fillStyle = 'rgba(190,242,255,.9)'; g.fill(); }
+  if (kind === 'clear' && heat < 0.05) sparkle(g, x - R * 0.44, y - R * 0.48, 14 * MS);
   if (heat > 0.02) {
     g.save(); circ(g, x, y, R); g.clip(); g.globalCompositeOperation = 'lighter';
     g.fillStyle = rad(g, x, y, 0, x, y, R, [[0, `rgba(255,236,190,${0.75 * heat})`], [0.7, `rgba(255,140,40,${0.6 * heat})`], [1, `rgba(255,90,20,${0.35 * heat})`]]);
@@ -61,6 +94,7 @@ function marble(g, x, y, kind, color = 0, heat = 0) {
 // ---------------------------------------------------------------- kleine Bausteine
 function gearAt(g, x, y, z, m, o) { g.save(); g.translate(x, y); if (o && o.rot) g.rotate(o.rot); drawGear(g, 0, z, m, o); g.restore(); }
 function nameplate(g, x, y, text, w = 0) {
+  if (!SIGNS) return;
   g.save(); g.font = `700 14px ${FONT}`; const tw = w || g.measureText(text).width + 28;
   rr(g, x, y, tw, 24, 4); g.fillStyle = lin(g, 0, y, 0, y + 24, BRASS); g.fill(); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1.2; g.stroke();
   g.fillStyle = 'rgba(40,24,4,.88)'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, x + tw / 2, y + 13); g.restore();
@@ -156,9 +190,9 @@ function deck(g) {                                 // Zwischendeck aus Stahl
 
 // ---------------------------------------------------------------- Bahnen (Kugelmitte)
 const PATHS = {
-  shaft: buildPath([[222, 1986], [222, 300]]),
-  top: buildPath([[222, 300], [222, 258], [274, 244], [442, 308], [470, 360]], 36),
-  feed: buildPath([[650, 645], [650, 705], [946, 800]], 44),
+  shaft: buildPath([[236, 1986], [236, 300]]),
+  top: buildPath([[236, 300], [236, 258], [288, 244], [442, 308], [470, 360]], 36),
+  feed: buildPath([[650, 657], [650, 722], [946, 800]], 44),
   drumOut: buildPath([[1276, 800], [1392, 800]]),
   polIn: buildPath([[1716, 800], [1832, 800]]),
   polOut: buildPath([[2108, 800], [2356, 800]]),
@@ -175,15 +209,15 @@ const COLS = [1280, 1150, 1020, 890, 760, 630].map((x) => {
 const at = (p, f) => pathAt(p, p.len * f, { x: 0, y: 0, tx: 1, ty: 0 });
 
 // ---------------------------------------------------------------- Stationen: Rückseite / Vorderseite
-const WHEEL = { x: 650, y: 603, r: 62, rp: 42 }, HOP = { x: 650, rim: 330, neckHw: 27, xl: 420, xr: 677, shoulder: 425, neckTop: 511, neckBot: 541 };
-const LIFT = { cx: 150, rs: 40, top: 250, bot: 1950, ballX: 222 };
-const DRUM = { x: 1110, y: 700, r: 185 }, BELT = { x0: 1400, x1: 1700, cy: 861 };
-const POL = { x: 1790, y: 590, w: 360, h: 400 }, KILN = { x: 2340, y: 680, w: 920, h: 240 };
+const WHEEL = { x: 650, y: 603, r: 82, rp: 54 }, HOP = { x: 650, rim: 310, neckHw: TUBE_IN, xl: 420, xr: 700, shoulder: 405, neckTop: 491, neckBot: 521 };
+const LIFT = { cx: 150, rs: 40, top: 250, bot: 1950, ballX: 236 };
+const DRUM = { x: 1110, y: 700, r: 185 }, BELT = { x0: 1400, x1: 1700, cy: 800 + R + 39 };
+const POL = { x: 1790, y: 578, w: 360, h: 424 }, KILN = { x: 2340, y: 680, w: 920, h: 240 };
 const TANKS = [3040, 3140, 3240, 3340, 3440, 3540], CRADLE = { x: 3300, y: 1440 };
 const BIG = { x: 1640, y: 1530, r: 280, rp: 236 };
 
 function liftBack(g) {
-  const lf = LIFT, sx = lf.cx - lf.rs - 66, sw = lf.ballX + TUBE_OUT + 18 - sx, sy0 = lf.top - lf.rs - 62, sy1 = lf.bot + lf.rs + 62;
+  const lf = LIFT, sx = lf.cx - lf.rs - 84, sw = lf.ballX + TUBE_OUT + 18 - sx, sy0 = lf.top - lf.rs - 62, sy1 = lf.bot + lf.rs + 62;
   plate(g, sx, sy0, sw, sy1 - sy0, 26, { stops: [[0, '#2e3640'], [0.5, '#222830'], [1, '#161a20']], blur: 24 });
   rr(g, sx + 12, sy0 + 12, sw - 24, sy1 - sy0 - 24, 18); g.fillStyle = lin(g, sx, 0, sx + sw, 0, [[0, '#0a0d12'], [0.5, '#141a22'], [1, '#0a0d12']]); g.fill(); g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 2; g.stroke();
   for (let y = lf.top + 30; y < lf.bot - 20; y += 92) { g.fillStyle = 'rgba(255,255,255,.03)'; g.fillRect(sx + 14, y, sw - 28, 2); g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(sx + 14, y + 2, sw - 28, 2); }
@@ -196,7 +230,7 @@ function liftBack(g) {
 }
 function carrier(g, x, y, dir) {
   g.save(); g.translate(x, y); g.scale(dir, 1);
-  g.beginPath(); g.moveTo(-4, -7); g.lineTo(48, -4.5); g.lineTo(50, -13); g.lineTo(53.5, -13); g.lineTo(52, 3); g.lineTo(-4, 3); g.closePath();
+  g.beginPath(); g.moveTo(-4, -7); g.lineTo(72, -4.5); g.lineTo(74, -13); g.lineTo(77.5, -13); g.lineTo(76, 3); g.lineTo(-4, 3); g.closePath();
   g.fillStyle = lin(g, 0, -8, 0, 4, [[0, '#fff0b8'], [0.35, '#dba744'], [1, '#7c4f16']]); g.fill(); g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = 1.2; g.stroke();
   rr(g, -8, -12, 17, 22, 4); g.fillStyle = lin(g, 0, -12, 0, 10, STEEL); g.fill(); g.stroke(); g.restore();
 }
@@ -274,7 +308,7 @@ function beltFront(g) {
   const b = BELT;
   plate(g, b.x0 - 6, b.cy - 13, b.x1 - b.x0 + 12, 26, 13, { blur: 10, sa: 0.5 });
   g.save(); g.shadowColor = 'rgba(40,220,255,.9)'; g.shadowBlur = 10; g.fillStyle = 'rgba(120,235,255,.95)'; rr(g, b.x0 + 30, b.cy + 15.5, b.x1 - b.x0 - 60, 2.4, 1.2); g.fill(); g.restore();
-  gearAt(g, 1700, 861, 12, 6, { rot: T * 5.2 }); gearAt(g, 1612, 912, 22, 6, { rot: 0.1 - T * 5.2 * 12 / 22 }); gearAt(g, 1456, 898, 30, 6, { rot: 0.2 + T * 5.2 * 12 / 30 }); gearAt(g, 1336, 898, 10, 6, { brass: true, rot: -T * 5.2 * 12 / 10 });
+  gearAt(g, 1700, b.cy, 12, 6, { rot: T * 5.2 }); gearAt(g, 1612, b.cy + 51, 22, 6, { rot: 0.1 - T * 5.2 * 12 / 22 }); gearAt(g, 1456, b.cy + 37, 30, 6, { rot: 0.2 + T * 5.2 * 12 / 30 }); gearAt(g, 1336, b.cy + 37, 10, 6, { brass: true, rot: -T * 5.2 * 12 / 10 });
 }
 
 function polisherBack(g) {
@@ -283,7 +317,7 @@ function polisherBack(g) {
   plate(g, p.x, p.y, p.w, p.h, 18, { blur: 26 });
   glassPane(g, p.x + 40, p.y + 56, p.w - 80, p.h - 96, 14);
   // Bürstenräder: weicher Filz mit Borsten
-  for (const [by, dir] of [[716, 1], [884, -1]]) {
+  for (const [by, dir] of [[800 - 61 - R, 1], [800 + 61 + R, -1]]) {
     g.save(); g.translate(cx, by); g.rotate(dir * (0.4 + T * 11));
     circ(g, 0, 0, 60); g.fillStyle = rad(g, 0, 0, 8, 0, 0, 60, [[0, '#7a5a2a'], [0.5, '#d9b878'], [0.85, '#f3e2b8'], [1, '#b89455']]); g.fill();
     g.strokeStyle = 'rgba(90,60,20,.55)'; g.lineWidth = 1.4;
@@ -499,8 +533,9 @@ function inspectBack(g) {
 }
 function inspectFront(g) {
   band(g, 2040, 1803, 34, TUBE_OUT + 10, 0, STEEL); band(g, 2040, 1803, 10, TUBE_OUT + 12, 0, BRASS_CYL, false);
-  glow(g, 2040, 1803, 0x7fe9ff, FLOW && FLOW.scan ? 0.95 : 0.3, 110);
-  g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = lin(g, 0, 1740, 0, 1866, [[0, 'rgba(127,233,255,0)'], [0.5, 'rgba(127,233,255,.55)'], [1, 'rgba(127,233,255,0)']]); g.fillRect(2036, 1740, 8, 126); g.restore();
+  glow(g, 2040, 1803, 0x7fe9ff, FLOW && FLOW.scan ? 0.95 : 0.3, 110 * MS);
+  const sh = TUBE_OUT + 31;
+  g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = lin(g, 0, 1803 - sh, 0, 1803 + sh, [[0, 'rgba(127,233,255,0)'], [0.5, 'rgba(127,233,255,.55)'], [1, 'rgba(127,233,255,0)']]); g.fillRect(2036, 1803 - sh, 8, 2 * sh); g.restore();
   led(g, 2000, 1680, 0x54ff9a); led(g, 2026, 1680, 0xffc13a, 4); led(g, 2052, 1680, 0x35d8ff, 4);
   nameplate(g, 1972, 1706, 'OPTICAL CONTROL', 136);
   glassShine(g, 1898, 1960, 122, 80, 8);
@@ -516,12 +551,13 @@ function bigWheelBack(g) {
   circ(g, b.x, b.y, b.r); g.fillStyle = rad(g, b.x, b.y, 40, b.x, b.y, b.r, [[0, '#101720'], [1, '#05080c']]); g.fill();
   // Rad mit zehn Taschen und Speichen
   g.save(); g.translate(b.x, b.y); g.rotate(BIG_ROT0 - BIG_W * T);
-  g.beginPath(); g.arc(0, 0, b.rp + 34, 0, TAU); g.arc(0, 0, b.rp - 34, 0, TAU, true);
-  g.fillStyle = rad(g, 0, 0, b.rp - 40, 0, 0, b.rp + 36, [[0, '#3a434e'], [0.5, '#6f7b88'], [1, '#353d47']]); g.fill('evenodd');
-  g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 1.5; circ(g, 0, 0, b.rp + 34); g.stroke(); circ(g, 0, 0, b.rp - 34); g.stroke();
+  const rw = R + 12;                                               // halbe Breite des Taschenkranzes
+  g.beginPath(); g.arc(0, 0, b.rp + rw, 0, TAU); g.arc(0, 0, b.rp - rw, 0, TAU, true);
+  g.fillStyle = rad(g, 0, 0, b.rp - rw - 6, 0, 0, b.rp + rw + 2, [[0, '#3a434e'], [0.5, '#6f7b88'], [1, '#353d47']]); g.fill('evenodd');
+  g.strokeStyle = 'rgba(0,0,0,.7)'; g.lineWidth = 1.5; circ(g, 0, 0, b.rp + rw); g.stroke(); circ(g, 0, 0, b.rp - rw); g.stroke();
   for (let k = 0; k < 10; k++) {
     const a = k * TAU / 10;
-    g.save(); g.rotate(a); rr(g, 30, -8, b.rp - 66, 16, 6); g.fillStyle = lin(g, 0, -8, 0, 8, STEEL); g.fill(); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1.2; g.stroke(); g.restore();
+    g.save(); g.rotate(a); rr(g, 30, -8, b.rp - rw - 32, 16, 6); g.fillStyle = lin(g, 0, -8, 0, 8, STEEL); g.fill(); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1.2; g.stroke(); g.restore();
     circ(g, Math.cos(a) * b.rp, Math.sin(a) * b.rp, R + 4); g.fillStyle = '#06080b'; g.fill(); g.strokeStyle = 'rgba(0,0,0,.85)'; g.lineWidth = 2; g.stroke();
   }
   g.restore();
@@ -539,25 +575,27 @@ function bigWheelFront(g) {
 }
 
 function sorterBack(g) {
-  const x = 566, y = 1296, w = 790, h = 762;
+  const x = 550, y = 1276, w = 806, h = 782;
   plate(g, x, y, w, h, 18, { blur: 26 });
   rr(g, x + 14, y + 46, w - 28, h - 60, 10); g.fillStyle = lin(g, 0, y, 0, y + h, [[0, '#0b0f15'], [1, '#141a23']]); g.fill(); g.strokeStyle = 'rgba(0,0,0,.75)'; g.lineWidth = 2.5; g.stroke();
   g.save(); rr(g, x + 14, y + 46, w - 28, h - 60, 10); g.clip();
   g.strokeStyle = 'rgba(255,255,255,.028)'; g.lineWidth = 1; for (let lx = x + 14; lx < x + w; lx += 24) { g.beginPath(); g.moveTo(lx, y); g.lineTo(lx, y + h); g.stroke(); }
-  COLS.forEach((c, i) => { g.fillStyle = lin(g, 0, c.yRail, 0, 2030, [[0, css(COLORS[i].hex, 0)], [0.4, css(COLORS[i].hex, 0.10)], [1, css(COLORS[i].hex, 0.24)]]); g.fillRect(c.x - 44, c.yRail, 88, 2040 - c.yRail); });
+  const gw = TUBE_OUT + 12;
+  COLS.forEach((c, i) => { g.fillStyle = lin(g, 0, c.yRail, 0, 2030, [[0, css(COLORS[i].hex, 0)], [0.4, css(COLORS[i].hex, 0.10)], [1, css(COLORS[i].hex, 0.24)]]); g.fillRect(c.x - gw, c.yRail, 2 * gw, 2040 - c.yRail); });
   g.restore();
   cornerBolts(g, x, y, w, h, 5, 14);
   nameplate(g, x + 26, y + 12, 'COLOR SORTER · MK II');
 }
 function sorterFront(g) {
   COLS.forEach((c, i) => {
-    band(g, c.x, c.yRail + 52, 16, TUBE_OUT + 7, HALF_PI);
-    rr(g, c.x - 18, c.yRail + 48.5, 36, 7, 3.5); g.fillStyle = css(COLORS[i].hex, 0.95); g.fill(); g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 1; g.stroke();
-    glow(g, c.x, c.yRail + 52, COLORS[i].hex, 0.4, 70);
+    const vy = c.yRail + TUBE_OUT + 12;                           // Ring direkt unter der Sortierschiene
+    band(g, c.x, vy, 16, TUBE_OUT + 7, HALF_PI);
+    rr(g, c.x - 18 * MS, vy - 3.5, 36 * MS, 7, 3.5); g.fillStyle = css(COLORS[i].hex, 0.95); g.fill(); g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 1; g.stroke();
+    glow(g, c.x, vy, COLORS[i].hex, 0.4, 70 * MS);
     band(g, c.x, 2012, 12, TUBE_OUT + 6, HALF_PI);
-    rr(g, c.x - 32, 2026, 64, 12, 6); g.fillStyle = css(COLORS[i].hex, 0.9); g.fill(); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1.2; g.stroke();
+    rr(g, c.x - TUBE_OUT, 2026, 2 * TUBE_OUT, 12, 6); g.fillStyle = css(COLORS[i].hex, 0.9); g.fill(); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1.2; g.stroke();
     // Klappe an der Sortierschiene
-    g.save(); g.translate(c.x + 30, c.yRail + 24); g.rotate(i === 2 ? -1.3 : -0.06); rr(g, -4, -3, 56, 6, 3); g.fillStyle = lin(g, 0, -3, 0, 3, BRASS); g.fill(); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1; g.stroke(); g.restore();
+    g.save(); g.translate(c.x + 30 * MS, c.yRail + 24 * MS); g.rotate(i === 2 ? -1.3 : -0.06); rr(g, -4, -3, 56, 6, 3); g.fillStyle = lin(g, 0, -3, 0, 3, BRASS); g.fill(); g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 1; g.stroke(); g.restore();
   });
 }
 
@@ -571,7 +609,7 @@ function rawBin(g, front) {
   glassShine(g, x + 16, y + 44, w - 32, h - 92, 10);
   cornerBolts(g, x, y, w, h, 4.4, 12);
   nameplate(g, x + 18, y + 10, 'RAW STOCK', 110);
-  g.save(); g.font = `800 26px ${FONT}`; g.fillStyle = '#eafcff'; g.textAlign = 'right'; g.textBaseline = 'middle'; g.shadowColor = 'rgba(34,211,238,.9)'; g.shadowBlur = 10; g.fillText('41', x + w - 20, y + 23); g.restore();
+  if (SIGNS) { g.save(); g.font = `800 26px ${FONT}`; g.fillStyle = '#eafcff'; g.textAlign = 'right'; g.textBaseline = 'middle'; g.shadowColor = 'rgba(34,211,238,.9)'; g.shadowBlur = 10; g.fillText('41', x + w - 20, y + 23); g.restore(); }
   vents(g, x + 24, y + h - 36, w - 48, 2);
 }
 
@@ -682,7 +720,8 @@ function sparkle(g, x, y, s) {
 // ihr Ort und Zustand hängen nur von ihrem Alter u ab. Damit ist jedes Bild nach einem Sprung sofort richtig.
 const PERIOD = 1.6, LOOP = PERIOD * 48;
 const SEQ = [2, 5, 0, 3, 1, 4, 4, 1, 5, 2, 0, 3];                // Farbfolge der Kugeln
-const BASE = [5, 3, 5, 2, 4, 3];                                  // Füllstand der Röhren zu Beginn (Cyan … Grün)
+const BASE = [1, 0, 1, 0, 1, 0];                                  // Füllstand der Röhren zu Beginn (Cyan … Grün)
+const SP = 2 * R + 0.6, SLOT0 = 2006 - R, CAP = 9;                // Röhre: Abstand der Lagen, unterste Lage, Fassungsvermögen
 const mod = (a, m) => ((a % m) + m) % m;
 const colorOf = (n) => SEQ[mod(n, SEQ.length)];
 const smooth = (x) => { x = x < 0 ? 0 : x > 1 ? 1 : x; return x * x * (3 - 2 * x); };
@@ -704,7 +743,7 @@ const ST = (() => {
 const BIG_ROT0 = A_PICK + BIG_W * ST.ride;                         // eine Tasche steht bei der Übergabe bereit
 const railTime = (c) => colS[c] / 230;
 const slotIndex = (n) => { const c = colorOf(n), first = Math.ceil(-ST.rail / PERIOD); let k = BASE[c]; for (let m = first; m < n; m++) if (colorOf(m) === c) k++; return k; };
-const fallTime = (c, idx) => Math.sqrt(2 * Math.max(40, 1984 - idx * 46 - COLS[c].yRail) / 1500);
+const fallTime = (c, idx) => Math.sqrt(2 * Math.max(40, SLOT0 - idx * SP - COLS[c].yRail) / 1500);
 
 /** Ort und Zustand der Kugel n zur Zeit t (null = noch im Behälter). */
 function poseOf(n, t) {
@@ -742,9 +781,9 @@ function poseOf(n, t) {
   const ur = u - ST.rail, rt = railTime(c), idx = slotIndex(n);
   if (ur < 0.35) { const f = smooth(ur / 0.35), q = pathAt(PATHS.sortRail, 0, P); o.x = lerp(BIG.x + Math.cos(A_REL) * BIG.rp, q.x, f); o.y = lerp(BIG.y + Math.sin(A_REL) * BIG.rp, q.y, f); return o; }
   if (ur < 0.35 + rt) { const q = pathAt(PATHS.sortRail, colS[c] * ((ur - 0.35) / rt), P); o.x = q.x; o.y = q.y; return o; }
-  if (idx > 12) return null;                                       // Röhre voll (in der Vorschau, vor dem Neubeginn)
+  if (idx >= CAP) return null;                                     // Röhre voll (in der Vorschau, vor dem Neubeginn)
   const ft = fallTime(c, idx), f = Math.min(1, (ur - 0.35 - rt) / ft);
-  o.x = COLS[c].x; o.y = lerp(COLS[c].yRail + 6, 1984 - idx * 46, f * f); o.landed = f >= 1;
+  o.x = COLS[c].x; o.y = lerp(COLS[c].yRail + 6, SLOT0 - idx * SP, f * f); o.landed = f >= 1;
   return o;
 }
 /** Alle sichtbaren Kugeln zur Zeit t und die Zahl der fertigen. */
@@ -770,8 +809,8 @@ function eventsBetween(t0, t1, emit) {
     ['xlHopper', -2 * PERIOD - 0.2, 470, 380]];
   for (const [type, e, x, y] of fixed) for (let n = Math.floor((t0 - e) / PERIOD) + 1; n * PERIOD + e <= t1; n++) emit(type, n * PERIOD + e, x, y, 1, colorOf(n));
   for (let n = Math.floor((t0 - ST.rail - 6) / PERIOD); n * PERIOD + ST.rail <= t1; n++) {
-    const c = colorOf(n), idx = Math.min(12, slotIndex(n)), land = n * PERIOD + ST.rail + 0.35 + railTime(c) + fallTime(c, idx);
-    if (land > t0 && land <= t1) emit('xlLand', land, COLS[c].x, 1984 - idx * 46, 1, c);
+    const c = colorOf(n), idx = Math.min(CAP - 1, slotIndex(n)), land = n * PERIOD + ST.rail + 0.35 + railTime(c) + fallTime(c, idx);
+    if (land > t0 && land <= t1) emit('xlLand', land, COLS[c].x, SLOT0 - idx * SP, 1, c);
   }
 }
 
@@ -786,14 +825,14 @@ function cameraAt(t, world, auto) {
 function placeMarbles(g) {
   const lf = LIFT, tf = mod(T, LOOP), fl = FLOW;
   // Aufzug: beladene Träger fahren rechts hoch
-  for (let k = 0; k < 9; k++) { const y = lf.bot - 30 - mod(k * 185 + T * LIFT_V, 1665); if (y > 344) marble(g, lf.ballX, y - 34, 'raw'); }
+  for (let k = 0; k < 9; k++) { const y = lf.bot - 30 - mod(k * 185 + T * LIFT_V, 1665); if (y > 344) marble(g, lf.ballX, y - R - 8, 'raw'); }
   { const q = pathAt(PATHS.top, PATHS.top.len * mod(T / PERIOD, 1), P); marble(g, q.x, q.y, 'raw'); }
   // Vorrat und Behälter (ruhende Kugeln)
-  for (const [dx, dy] of [[40, 0], [86, 2], [132, 0], [170, -2], [62, -40], [108, -39], [150, -40], [84, -78], [128, -78], [34, -40]]) marble(g, 316 + dx, 1984 + dy, 'raw');
-  for (const [dx, dy] of [[0, 0], [-46, -30], [-92, -58], [-138, -86], [-24, -62], [-70, -92], [-116, -120], [-12, -110]]) marble(g, 646 + dx * 0.98, 490 + dy * 0.82, 'raw');
-  marble(g, 1930, 2012, 'washed'); marble(g, 1982, 2014, 'raw');
+  for (const [x, y] of [[350, 1976], [411, 1976], [472, 1976], [380, 1925], [441, 1925], [350, 1874], [411, 1874], [472, 1874]]) marble(g, x, y, 'raw');
+  for (const [x, y] of [[652, 486], [600, 452], [545, 428], [490, 404], [662, 427], [593, 393], [538, 369], [648, 369]]) marble(g, x, y, 'raw');
+  marble(g, 1930, 2008, 'washed'); marble(g, 1989, 2009, 'raw');
   // ruhende Kugeln in den Röhren, darüber die laufenden
-  COLS.forEach((c, i) => { for (let k = 0; k < BASE[i]; k++) marble(g, c.x, 1984 - k * 46, 'color', i); });
+  COLS.forEach((c, i) => { for (let k = 0; k < BASE[i]; k++) marble(g, c.x, SLOT0 - k * SP, 'color', i); });
   for (const p of fl.list) {
     if (p.trail) for (let j = 3; j >= 1; j--) { const q = poseOf(p.n, tf - 0.05 * j); if (q) glow(g, q.x, q.y, 0xff8a2a, 0.2 * p.heat * (1 - j / 4), R * 2.3); }   // Nachglühen
     if (p.kind === 'color' && p.tint < 1) { marble(g, p.x, p.y, 'clear', 0, p.heat); g.save(); g.globalAlpha = p.tint; marble(g, p.x, p.y, 'color', p.color, p.heat); g.restore(); }
@@ -804,16 +843,19 @@ function placeMarbles(g) {
 // ---------------------------------------------------------------- Gesamtbild
 let BG = null;                                                    // unbewegter Hintergrund, einmal vorgezeichnet
 function background(scale) {
-  if (BG && BG.scale === scale) return BG.canvas;
+  if (BG && BG.scale === scale && BG.signs === SIGNS) return BG.canvas;
   const cv = document.createElement('canvas'); cv.width = Math.round(W * scale); cv.height = Math.round(H * scale);
   const g = cv.getContext('2d'); g.scale(scale, scale); g.lineJoin = 'round';
   K.setPX(scale);
   const lamps = hall(g); depth(g); zoneLights(g); deck(g); lampBars(g, lamps);
-  BG = { scale, canvas: cv }; return cv;
+  BG = { scale, signs: SIGNS, canvas: cv }; return cv;
 }
-/** Zeichnet die Halle zur Zeit t in den vorbereiteten Kontext (Hallen-Einheiten). px = Gerätepixel je Einheit. */
-function drawScene(g, t, px, bgScale = 1) {
-  T = t; g.lineJoin = 'round';
+/**
+ * Zeichnet die Halle zur Zeit t in den vorbereiteten Kontext (Hallen-Einheiten). px = Gerätepixel je Einheit.
+ * opts.signs: Titel, Stationsschilder und Messingschilder zeigen (Standard: aus). Der Zähler bleibt immer sichtbar.
+ */
+function drawScene(g, t, px, bgScale = 1, opts = null) {
+  T = t; g.lineJoin = 'round'; SIGNS = !!(opts && opts.signs);
   FLOW = flowAt(mod(T, LOOP));
   const bg = background(bgScale);
   g.drawImage(bg, 0, 0, W, H);
@@ -836,17 +878,17 @@ function drawScene(g, t, px, bgScale = 1) {
   hopperFront(g); drumFront(g); beltFront(g); polisherFront(g); kilnFront(g);
   colourFront(g); coolFront(g); inspectFront(g); bigWheelFront(g); sorterFront(g); rawBin(g, true);
   quietDetails(g);
-  neon(g, 1790, 150, 'MARBLE FACTORY ', 'XL', 78);
-  board(g, 1790, 318, FLOW ? FLOW.done : 35);
-  for (const [x, y, a, b] of [[560, 250, '01 ', 'RAW'], [1110, 440, '02 ', 'WASH'], [1970, 520, '03 ', 'POLISH'], [2800, 610, '04 ', 'KILN'],
+  if (SIGNS) neon(g, 1790, 150, 'MARBLE FACTORY ', 'XL', 78);
+  board(g, 1790, SIGNS ? 318 : 132, FLOW ? FLOW.done : 35);
+  if (SIGNS) for (const [x, y, a, b] of [[560, 232, '01 ', 'RAW'], [1110, 440, '02 ', 'WASH'], [1970, 520, '03 ', 'POLISH'], [2800, 610, '04 ', 'KILN'],
     [3300, 1650, '05 ', 'COLOUR'], [2580, 1910, '06 ', 'COOL'], [2040, 1490, '07 ', 'INSPECT'], [1640, 1180, '08 ', 'LIFT'], [960, 1230, '09 ', 'SORT']]) neon(g, x, y, a, b, 40);
 }
 function vignette(g, w, h) { g.fillStyle = rad(g, w / 2, h * 0.46, Math.min(w, h) * 0.55, w / 2, h / 2, Math.max(w, h) * 0.62, [[0, 'rgba(0,0,0,0)'], [0.6, 'rgba(0,0,0,.14)'], [1, 'rgba(0,0,0,.55)']]); g.fillRect(0, 0, w, h); }
 /** Standbild der ganzen Halle (für Entwurfsbilder). */
-function render(t = 30) {
+function render(t = 30, signs = false) {
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const g = cv.getContext('2d');
-  drawScene(g, t, 1); vignette(g, W, H);
+  drawScene(g, t, 1, 1, { signs }); vignette(g, W, H);
   return cv;
 }
 function board(g, x, y, done) {
@@ -862,8 +904,8 @@ function board(g, x, y, done) {
   g.restore();
 }
 /** Liefert Übersicht und Ausschnitte als PNG-Daten (Base64 ohne Präfix). crops: [{ x, y, w, h }] */
-function exportImages(crops = [], t = 30) {
-  const full = render(t);
+function exportImages(crops = [], t = 30, signs = false) {
+  const full = render(t, signs);
   const scaled = (sx, sy, sw, sh, dw, dh) => { const c = document.createElement('canvas'); c.width = dw; c.height = dh; const t = c.getContext('2d'); t.imageSmoothingQuality = 'high'; t.drawImage(full, sx, sy, sw, sh, 0, 0, dw, dh); const u = c.toDataURL('image/png'); return u.slice(u.indexOf(',') + 1); };
   return { overview: scaled(0, 0, W, H, 1920, 1080), crops: crops.map((c) => scaled(c.x, c.y, c.w, c.h, c.w, c.h)) };
 }

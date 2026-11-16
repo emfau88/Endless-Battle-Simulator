@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Entwurfsbild der Marble-XL-Produktionslinie (Übersicht und drei Ausschnitte) als PNG.
-//   node scripts/marblexl-concept.mjs [--out output/marblexl-konzept]
+//   node scripts/marblexl-concept.mjs [--out output/marblexl-konzept] [--at 30] [--signs]
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { ROOT, launchAuto, openExportPage } from '../lib/browser.mjs';
@@ -17,7 +17,8 @@ const crops = [
 const browser = await launchAuto();
 try {
   const { page, errors } = await openExportPage(browser, { scenario: 'marble', seed: 42, video: { aspect: '16:9' } });
-  const res = await page.evaluate(([c, t]) => window.EBS.MarbleXLConcept.exportImages(c, t), [crops, at]);
+  const signs = process.argv.includes('--signs');                                              // Schilder zeigen (Standard: aus)
+  const res = await page.evaluate(([c, t, s]) => window.EBS.MarbleXLConcept.exportImages(c, t, s), [crops, at, signs]);
   if (errors.length) throw errors[0];
   await mkdir(out, { recursive: true });
   await writeFile(join(out, 'uebersicht.png'), Buffer.from(res.overview, 'base64'));
