@@ -1,0 +1,297 @@
+{
+  "note": "Intentional M2/M3 Scrapyard geometry reference. Regenerate only after reviewing map/flow changes; never replace archived Scrap prototype or other scenario golden hashes.",
+  "schema": 1,
+  "params": {
+    "rulesVersion": "v3",
+    "arena": "yard",
+    "episodeMode": "endless",
+    "workshop": false,
+    "repeatRounds": true,
+    "endPauseSec": 3
+  },
+  "timeScale": 1,
+  "cases": [
+    {
+      "arena": "yard",
+      "aspect": "16:9",
+      "seed": 42,
+      "checkpoints": [
+        {
+          "step": 0,
+          "phase": "running",
+          "round": 1,
+          "completedRounds": 0,
+          "stateHash": "6fd4d64d",
+          "roundHash": "2ac17deb",
+          "roundStateSha256": "c05d60d0af89ab7427017696b78f3677b9aa377b702e9b7f9cb1846fb70ccba5",
+          "eventsSha256": "c80b092fb9527011e01ff0e7207fcf22fbf20e00ebc4952e8f4c0032a1f9941c"
+        },
+        {
+          "step": 600,
+          "phase": "running",
+          "round": 1,
+          "completedRounds": 0,
+          "stateHash": "9628361c",
+          "roundHash": "30149c57",
+          "roundStateSha256": "723f9596bf1c94fe958e50eb5cbbcebb951e7e536c972f10c447e8f7861deb86",
+          "eventsSha256": "768a4e85a34397ec58f000e8a97f9edfdbac4b727b8548295ddfece6cdcb8e1a"
+        },
+        {
+          "step": 2400,
+          "phase": "running",
+          "round": 1,
+          "completedRounds": 0,
+          "stateHash": "b2748024",
+          "roundHash": "eaf1b013",
+          "roundStateSha256": "12fdbb363df4a7fb04431aa5504bf63713873e9f88cc14b9ebc51bca0cfa9a22",
+          "eventsSha256": "a689eaf6fd9e2c6e7feb116e3785d47dc73dc0c9a4e209f603330de4b6b9c2c8"
+        },
+        {
+          "step": 7200,
+          "phase": "pause",
+          "round": 3,
+          "completedRounds": 3,
+          "stateHash": "7f82d49a",
+          "roundHash": "7cae06e8",
+          "roundStateSha256": "c67308326b17a0b44d30f79f7944e76939dd9b7daa37b3345c5436c2727453ce",
+          "eventsSha256": "6d08000acf689fa091ddb22659a0e10bddbe585d656756414338b53e2149b767"
+        }
+      ]
+    },
+    {
+      "arena": "yard",
+      "aspect": "16:9",
+      "seed": 7,
+      "checkpoints": [
+        {
+          "step": 0,
+          "phase": "running",
+          "round": 1,
+          "completedRounds": 0,
+          "stateHash": "20082f90",
+          "roundHash": "42fc6db2",
+          "roundStateSha256": "b4c626e4f81e2f4abe3feb1b6678ce4fbd23002e1b2319c496afc32ccab61055",
+          "eventsSha256": "7d08b759f681d9dff81190fe5d95d5e7e8c5c5760b327140f41bc1f421f224e1"
+        },
+        {
+          "step": 600,
+          "phase": "running",
+          "round": 1,
+          "completedRounds": 0,
+          "stateHash": "608a41d4",
+          "roundHash": "bb67d41c",
+          "roundStateSha256": "9a08260d652944458041459f8415f15ef132f10f6ffec5a5c1191c2ffba7c608",
+          "eventsSha256": "63c74928559ca297ec5f0ae9682b1e9f739f661a8c0692e7d675c7bf5ff7c3c6"
+        },
+        {
+          "step": 2400,
+          "phase": "running",
+          "round": 2,
+          "completedRounds": 1,
+          "stateHash": "e36b3fca",
+          "roundHash": "40d4424b",
+          "roundStateSha256": "42394d9af38d7c339c90045bc054df5cf7f3442eaf1c4072135a6dfd7b040312",
+          "eventsSha256": "f16799204b9c6208cd805e1308f0f3fdb3ef7783cb101d0b29f01cbdad4eaf30"
+        },
+        {
+          "step": 7200,
+          "phase": "running",
+          "round": 3,
+          "completedRounds": 2,
+          "stateHash": "9964c3e0",
+          "roundHash": "8184e2a3",
+          "roundStateSha256": "8f50df73dcfd4c77c1c373de72bec21e67c7d2de9f77f12362f7431b98f1fb54",
+          "eventsSha256": "5d995427af15122c9122b3e34a4532f639b707625c422104160ffcf0844a34b6"
+        }
+      ]
+    },
+    {
+      "arena": "yard",
+      "aspect": "16:9",
+      "seed": 314,
+      "checkpoints": [
+        {
+          "step": 0,
+          "phase": "running",
+          "round": 1,
+          "completedRounds": 0,
+          "stateHash": "08ff5ad6",
+          "roundHash": "aa7b8001",
+          "roundStateSha256": "76bf534f7f5d7cb7c17941f01153c605f98f3f1b5b7a4aa93301a77ab6c00f71",
+          "eventsSha256": "61df1205b487895f33d0e584403066e9c8d405f487899792467b99d730f3764f"
+        },
+        {
+          "step": 600,
+          "phase": "running",
+          "round": 1,
+          "completedRounds": 0,
+          "stateHash": "3792d197",
+          "roundHash": "87b56433",
+          "roundStateSha256": "3606c0d3d18323baae45c74d5a9851b0093f22f61ebd461f038396f28b5f9c59",
+          "eventsSha256": "644cee572213e29e68a475c00523cdda90fad17b929973d1710061ded87110d8"
+        },
+        {
+          "step": 2400,
+          "phase": "pause",
+          "round": 1,
+          "completedRounds": 1,
+          "stateHash": "f939a670",
+          "roundHash": "10c305f7",
+          "roundStateSha256": "8b8baedbed4de4a355512a0e759988a24bae55feb6c01a670dbb53c337090113",
+          "eventsSha256": "4c54b603531b0cb1b2a40146a5cf8af6c259cc491d13145478a2533e8a5011b8"
+        },
+        {
+          "step": 7200,
+          "phase": "running",
+          "round": 3,
+          "completedRounds": 2,
+          "stateHash": "eae3ff54",
+          "roundHash": "20efd34a",
+          "roundStateSha256": "15c511886292f0f8677582d3ba7ef4cb55b270e320ac357cad59817b9eae2b6b",
+          "eventsSha256": "f2a8f35fad31b46efc34eac06fc8f145eaf73c88a33fb0b74a31cd781644b904"
+        }
+      ]
+    },
+    {
+      "arena": "yard",
+      "aspect": "9:16",
+      "seed": 42,
+      "checkpoints": [
+        {
+          "step": 0,
+          "phase": "running",
+          "round": 1,
+          "completedRounds": 0,
+          "stateHash": "fcbc3c40",
+          "roundHash": "171eb8fe",
+          "roundStateSha256": "e00920ae6419bc69ae6a46cbd905c0d661f2f7992b2b13a230a92ec7cdd4873d",
+          "eventsSha256": "7330cab05b406a984e5da996ad3cd263db885e10004ff5bd16ccb73ab6fb03fd"
+        },
+        {
+          "step": 600,
+          "phase": "running",
+          "round": 1,
+          "completedRounds": 0,
+          "stateHash": "f6e140e5",
+          "roundHash": "330a87cb",
+          "roundStateSha256": "8937aa64d1c3b720274384ef40ff6d3e2a1621b1e4f4af1e15a57553c939b490",
+          "eventsSha256": "4a16f9091ee2e8b471dac116b744d7a1254098fdc113649ac593b01bafcb8e3e"
+        },
+        {
+          "step": 2400,
+          "phase": "running",
+          "round": 2,
+          "completedRounds": 1,
+          "stateHash": "fa07fcc1",
+          "roundHash": "e9617bad",
+          "roundStateSha256": "c798c1d9bf3812a59a506360750d2811552e3d9d7a50bd5ea420124e4440d0fb",
+          "eventsSha256": "d72ab37e9fe1cd92fad16a572464671e01e66ab2c99dfc3113b7db290f27d647"
+        },
+        {
+          "step": 7200,
+          "phase": "running",
+          "round": 4,
+          "completedRounds": 3,
+          "stateHash": "ece159fa",
+          "roundHash": "72caaffc",
+          "roundStateSha256": "34ef64f11cec17cf6abb79a75ec60725e8ccb5667cafaeb21528f99d280e0ef1",
+          "eventsSha256": "4c3a4cef844bfc62610a46a93ff571aa68be6361f5a2551c9800a6212fac58e2"
+        }
+      ]
+    },
+    {
+      "arena": "yard",
+      "aspect": "9:16",
+      "seed": 7,
+      "checkpoints": [
+        {
+          "step": 0,
+          "phase": "running",
+          "round": 1,
+          "completedRounds": 0,
+          "stateHash": "9a96df94",
+          "roundHash": "fb3fedd0",
+          "roundStateSha256": "8b13a1999ce1652e6ee1041da3abaf39668f62be4a845f645c97c5185ad316fc",
+          "eventsSha256": "06d77de798dd75c3e813c4b3cdb8decdb93719948f9a23183bd2e61f69c061f5"
+        },
+        {
+          "step": 600,
+          "phase": "running",
+          "round": 1,
+          "completedRounds": 0,
+          "stateHash": "3f83e9b8",
+          "roundHash": "945f8142",
+          "roundStateSha256": "1736927bf12ce721e9af5a6e435425a076640863d5e091be6a207696200e00b8",
+          "eventsSha256": "32d1ad7a0f41db43a61a1062f79864f077b9fe89e3a632b8a8d7a2e40201f9aa"
+        },
+        {
+          "step": 2400,
+          "phase": "running",
+          "round": 2,
+          "completedRounds": 1,
+          "stateHash": "9f9bd523",
+          "roundHash": "d1660272",
+          "roundStateSha256": "a360fa7303e7f9219a63ff3dee33e64dc5ac369d5e61fc3b929e51acc7f72df2",
+          "eventsSha256": "5770fc6330efb686d5ad5ee4994fa3c7d5bb003ed2f16743b692a3557a03970f"
+        },
+        {
+          "step": 7200,
+          "phase": "running",
+          "round": 4,
+          "completedRounds": 3,
+          "stateHash": "d6a6c69f",
+          "roundHash": "b29df038",
+          "roundStateSha256": "54b009dd37295cd4c10d9f3a5d3f59fa68e91462f8a05bb331fe951283d9d486",
+          "eventsSha256": "fafa773c1b96ac64dad897bb5f86276a39ac263b9e315fa923eeb2b2ea00a79b"
+        }
+      ]
+    },
+    {
+      "arena": "yard",
+      "aspect": "9:16",
+      "seed": 314,
+      "checkpoints": [
+        {
+          "step": 0,
+          "phase": "running",
+          "round": 1,
+          "completedRounds": 0,
+          "stateHash": "41a3d592",
+          "roundHash": "67aba606",
+          "roundStateSha256": "560fb7d027e557993fd3b3e1df12ef736a4b96df0e1afc3918c1e615ba7dd5a9",
+          "eventsSha256": "52b69b7315be19f84887b08657d6939a43c0660f9d6843d89c227cc6f47c485e"
+        },
+        {
+          "step": 600,
+          "phase": "running",
+          "round": 1,
+          "completedRounds": 0,
+          "stateHash": "8b5878ac",
+          "roundHash": "934e4969",
+          "roundStateSha256": "cf3e2d3535b502f5d3627d731331d20bea3543dda11e21b7590ac2b18eb7e5e2",
+          "eventsSha256": "aa764dcbbd2a35cbcc74b5cb921fd0a702175e489d60d36a73ece1b3a325edf8"
+        },
+        {
+          "step": 2400,
+          "phase": "running",
+          "round": 2,
+          "completedRounds": 1,
+          "stateHash": "a7fc6995",
+          "roundHash": "637cb0f0",
+          "roundStateSha256": "ae9a0833dd98d5f368634ee692d859a36850232790de70bf5d7abe6d651fde78",
+          "eventsSha256": "eb6b70eedc93c0e35a678787beeccb62aa18bf7c23810fdf422a905955b5ba80"
+        },
+        {
+          "step": 7200,
+          "phase": "running",
+          "round": 3,
+          "completedRounds": 2,
+          "stateHash": "e58533ef",
+          "roundHash": "873e5b6b",
+          "roundStateSha256": "e1128405626d078c4f12ebe274c477dbe77cecb441ce9a4b3e281df7416a2bc8",
+          "eventsSha256": "d720bb967778b0e165b4afcacce0a5d2483106d560852a073a3e299c02a56462"
+        }
+      ]
+    }
+  ]
+}

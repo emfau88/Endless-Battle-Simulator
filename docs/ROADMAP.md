@@ -1,5 +1,15 @@
 # Roadmap
 
+**Scrap-Optik · 15.11.2026:** P1–P5 des [Optikplans](SCRAP_OPTIK_PLAN_2026-11-14.md)
+sind auf `codex/scrap-optik` umgesetzt und geprüft:
+[Vergleichsbilder und Prüfungen](SCRAP_OPTIK_P4_P5_2026-11-15.md).
+Der Nutzer hat den Push auf diesen Branch freigegeben; kein Merge in `main`.
+P6 (eigene Schrift) ist auf Nutzerwunsch nicht vorgesehen. Der anschließend freigegebene
+Ausbau M3 (eigener Scrapyard-Hochformat-Grundriss) und M2 (vier zusätzliche Außenkisten
+im Querformat) ist umgesetzt: [Geometrie und Vergleich](SCRAP_GEOMETRIE_2026-11-15.md).
+Foundry und Crossroads bleiben nach Prüfung ihrer Wege unverändert; dort ist für
+diesen Ausbau kein weiteres Geometriepaket vorgesehen.
+
 **Aktueller Stand · 13.11.2026:** R26 vereint die fünf vorhandenen Szenarien in einem
 gemeinsamen Produktionsgenerator. Auf Wunsch des Nutzers entfällt die Teilen-Link-Oberfläche;
 Seed, Feinjustierungen sowie Speichern/Laden von Einstellungen bleiben erhalten.
