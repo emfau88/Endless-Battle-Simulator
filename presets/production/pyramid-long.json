@@ -17,7 +17,24 @@
     "tempo": 1,
     "audio": true,
     "volume": {
-      "master": 100
+      "master": 70,
+      "scoop": 110,
+      "pulse": 55.25,
+      "tip": 110,
+      "cap": 100,
+      "splash": 110,
+      "boing": 100,
+      "wheee": 55,
+      "squeak": 110,
+      "full": 100,
+      "launch": 100,
+      "firework": 100,
+      "emote": 110,
+      "fish": 110,
+      "ufo": 110,
+      "twinkle": 110,
+      "chirp": 110,
+      "water": 100
     },
     "quality": {
       "crf": 20,
