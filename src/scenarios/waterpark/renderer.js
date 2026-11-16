@@ -11,17 +11,19 @@ const mix = (a, b, k) => a.map((v, i) => Math.round(v + (b[i] - v) * clamp(k, 0,
 const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
 const smooth = u => u * u * (3 - 2 * u);
 
-// Daylight keys identical to Endless Pyramid: p, multiply tint, warm light, its strength, night 0..1, sun rays 0..1
+// Daylight keys after Endless Pyramid: p, multiply tint, warm light, its strength, night 0..1, sun rays 0..1.
+// Day and morning are identical; sunset and dusk are cooler and weaker, because the bright cream palette of the
+// mockup turned bubblegum pink under the magenta tint, and the night light is blue so that foam stays white.
 const DAY_KEYS = [
   [0.00, [255, 226, 214], [255, 160, 150], 0.30, 0.00, 0.45],
   [0.10, [255, 246, 238], [255, 190, 160], 0.10, 0.00, 0.85],
   [0.22, [255, 255, 255], [255, 220, 180], 0.00, 0.00, 1.00],
   [0.50, [255, 255, 255], [255, 220, 180], 0.00, 0.00, 1.00],
   [0.62, [255, 228, 188], [255, 170, 80], 0.45, 0.00, 0.75],
-  [0.72, [255, 186, 150], [255, 110, 40], 0.95, 0.05, 0.30],
-  [0.80, [180, 130, 170], [240, 80, 110], 0.60, 0.35, 0.05],
-  [0.88, null, [120, 90, 200], 0.10, 0.90, 0.00],
-  [1.00, null, [120, 90, 200], 0.00, 1.00, 0.00],
+  [0.72, [255, 208, 172], [255, 132, 60], 0.60, 0.05, 0.30],
+  [0.80, [172, 162, 206], [255, 146, 112], 0.30, 0.35, 0.05],
+  [0.88, null, [96, 128, 214], 0.10, 0.90, 0.00],
+  [1.00, null, [96, 128, 214], 0.00, 1.00, 0.00],
 ];
 function dayState(p, nightDark) {
   const night = mix([255, 255, 255], [34, 46, 110], nightDark);
@@ -666,6 +668,10 @@ class WaterparkRenderer extends EBS.CanvasScene {
   grade(g, day) {
     const L = this.L, m = day.mult, shore = L.waterY;
     if (m[0] + m[1] + m[2] < 762) { g.globalCompositeOperation = 'multiply'; g.fillStyle = `rgb(${m[0]},${m[1]},${m[2]})`; g.fillRect(-20, -20, L.W + 40, L.H + 40); }
+    if (day.night > 0.02) {   // the lagoon stays a deep turquoise at night instead of sinking into navy
+      const tg = g.createLinearGradient(0, shore, 0, L.H); tg.addColorStop(0, `rgba(0,170,176,${(0.3 * day.night).toFixed(3)})`); tg.addColorStop(1, `rgba(0,132,150,${(0.2 * day.night).toFixed(3)})`);
+      g.globalCompositeOperation = 'screen'; g.fillStyle = tg; g.fillRect(-20, shore, L.W + 40, L.H - shore + 20);
+    }
     if (day.warmK > 0.01) {
       const sp = day.short ? [L.W / 2, L.horizon] : this.sunPos;
       g.globalCompositeOperation = 'screen';
