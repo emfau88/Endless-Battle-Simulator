@@ -463,9 +463,11 @@ WP.paintSpringStand = function (g, L) {
  *  the water spills over the low front lip into the lagoon (open slides pour straight into the lagoon). */
 WP.paintBasins = function (g, L) {
   const R = L.R, { out } = TROUGH(R), top = L.wallTop - 12, face = L.waterY - 1;
+  L.basins = [];
   for (const r of L.routes) {
     const segs = r.drawSegments; if (segs[segs.length - 1].kind !== 'tube') continue;
     const x = r.end[0], w = Math.round(out * 1.2), sw = Math.round(w * .2), lip = top + 30, i0 = x - w / 2 + sw, iw = w - 2 * sw;
+    L.basins.push({ x, i0, iw, lip, face });
     roundRect(g, x - w / 2 - 2.5, top - 18.5, w + 5, 30, 10, C.outline);
     roundRect(g, x - w / 2, top - 16, w, 25, 9, C.rim); line(g, [[x - w / 2 + 8, top - 13], [x + w / 2 - 8, top - 13]], 2.5, C.rimLight);
     roundRect(g, i0 - 4.5, lip - 2.5, iw + 9, face - lip + 5, 4, C.outline);

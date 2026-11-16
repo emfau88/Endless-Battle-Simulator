@@ -79,6 +79,20 @@ class WaterparkRenderer extends EBS.CanvasScene {
     this.frontBoxes = [{ x: f.x - f.rx - 14, y: f.y, w: f.rx * 2 + 28, h: f.ry + 16 }, ...tubes.map(box)];
     // Route geometry for the moving water film, the belt loop and the return lane
     this.routePaths = L.routes.map(r => { const p = new Path2D(); for (const s of r.drawSegments) if (s.kind !== 'deck') s.forEach((q, i) => (i ? p.lineTo(q.x, q.y) : p.moveTo(q.x, q.y))); return p; });
+    // Steep stretches (more than about 30 degrees down) get brighter and faster streaks
+    this.steepPaths = L.routes.map(r => {
+      const p = new Path2D();
+      for (const s of r.drawSegments) {
+        if (s.kind === 'deck') continue;
+        let on = false;
+        for (let i = 1; i < s.length; i++) {
+          const a = s[i - 1], b = s[i], dy = b.y - a.y, len = Math.hypot(b.x - a.x, dy) || 1;
+          if (dy / len > 0.5) { if (!on) p.moveTo(a.x, a.y); p.lineTo(b.x, b.y); on = true; } else on = false;
+        }
+      }
+      return p;
+    });
+    this.caustic = this.causticTile();
     const E = L.lift, rp = (this.rp = Math.round(R * .7)), bx = (this.bx = E.x - rp);
     this.belt = new Path2D(); this.belt.moveTo(bx, E.bottom); this.belt.lineTo(bx, E.top); this.belt.arc(bx + rp, E.top, rp, Math.PI, 0);
     this.belt.lineTo(bx + 2 * rp, E.bottom); this.belt.arc(bx + rp, E.bottom, rp, 0, Math.PI); this.belt.closePath();
@@ -90,6 +104,42 @@ class WaterparkRenderer extends EBS.CanvasScene {
     this.moon = L.land ? [L.W * 0.765, L.H * 0.09, 44] : [L.W * 0.085, L.H * 0.13, 40];
     this.moonImg = this.art.moonSprite(sc, this.moon[2]);
     this.beltPos = 0; this.beltT = null; this.ufoCanvas = null;
+  }
+  /** Seamless tile of light lines (cell edges of a wrapped Voronoi net), flattened for the view onto the lagoon. */
+  causticTile() {
+    const w = 256, h = 128, c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d'), img = g.createImageData(w, h), rng = new EBS.RNG(hashSeed('waterpark-caustic', 5)), pts = [];
+    for (let i = 0; i < 24; i++) pts.push([rng.range(0, w), rng.range(0, h)]);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      let d1 = 1e9, d2 = 1e9;
+      for (const [px, py] of pts) {
+        let dx = Math.abs(x - px), dy = Math.abs(y - py); dx = Math.min(dx, w - dx); dy = Math.min(dy, h - dy) * 2;
+        const d = Math.hypot(dx, dy); if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) d2 = d;
+      }
+      const e = d2 - d1; if (e >= 2.4) continue;
+      const i = (y * w + x) * 4; img.data[i] = img.data[i + 1] = img.data[i + 2] = 255; img.data[i + 3] = Math.round(255 * (1 - e / 2.4));
+    }
+    g.putImageData(img, 0, 0); return c;
+  }
+  /** White foam cap where water lands: bubbling crest, two growing rings and a few drops (a function of t). */
+  foam(g, t, x, y, w, k = 0, amp = 1) {
+    for (let i = 0; i < 2; i++) {
+      const ph = (t * 0.9 + i / 2 + k * 0.29) % 1;
+      g.strokeStyle = `rgba(255,255,255,${(0.75 * (1 - ph) * amp).toFixed(3)})`; g.lineWidth = 2.4;
+      g.beginPath(); g.ellipse(x, y + 5, w * (0.9 + ph * 1.5), 4 + ph * 10, 0, 0, TAU); g.stroke();
+    }
+    ellipse(g, x, y + 3, w * 1.05, 6.5, `rgba(255,255,255,${(0.85 * amp).toFixed(3)})`);
+    g.fillStyle = `rgba(255,255,255,${(0.95 * amp).toFixed(3)})`;
+    for (let j = 0; j < 9; j++) {
+      const bx = x + (j - 4) * w * 0.22 + Math.sin(t * 5 + j + k) * 2, by = y - Math.abs(Math.sin(t * 6 + j * 1.7 + k)) * 5 - (j % 2) * 4;
+      dot(g, bx, by, w * 0.2 * (1 - Math.abs(j - 4) * 0.1));
+    }
+    for (let j = 0; j < 4; j++) dot(g, x + (j - 1.5) * w * 0.3 + Math.sin(t * 4 + j * 2 + k) * 3, y - w * 0.32 - Math.abs(Math.sin(t * 5 + j + k)) * 4, w * 0.15);
+    g.fillStyle = `rgba(240,253,255,${(0.9 * amp).toFixed(3)})`;
+    for (let j = 0; j < 5; j++) {
+      const ph = (t * 1.7 + j / 5 + k * 0.23) % 1, dx = (j - 2) * w * 0.42 * (0.4 + ph);
+      dot(g, x + dx, y - Math.sin(ph * Math.PI) * w * 0.85, 2.6 * (1 - ph * 0.5));
+    }
   }
   layer(draw) {
     const c = document.createElement('canvas'); c.width = Math.round(this.L.W * this.scale); c.height = Math.round(this.L.H * this.scale);
@@ -250,6 +300,7 @@ class WaterparkRenderer extends EBS.CanvasScene {
       const ph = (t * 0.8 + k / 5) % 1;
       ellipse(g, f.x + (k - 2) * f.w * 0.22, y1 + 4 - ph * 6, f.w * (0.24 + 0.1 * Math.sin(t * 3 + k)) * (1 - ph * 0.4), 7 + Math.sin(t * 4 + k) * 2 * wv, `rgba(255,255,255,${0.75 - ph * 0.5})`);
     }
+    this.foam(g, t, f.x, y1, f.w * 0.62, 4);
   }
   drawWater(g, t) {
     const L = this.L, R = L.R, cfg = this.sim.cfg, W = L.W, H = L.H, y0 = L.waterY, ls = this.scale, hW = H - y0, wv = cfg.waves ?? 0.7;
@@ -269,7 +320,30 @@ class WaterparkRenderer extends EBS.CanvasScene {
     gr = g.createLinearGradient(0, y0, 0, H);
     gr.addColorStop(0, 'rgba(90,228,234,.22)'); gr.addColorStop(0.5, 'rgba(36,206,220,.16)'); gr.addColorStop(1, 'rgba(16,184,208,.24)');
     g.fillStyle = gr; g.fillRect(0, y0, W, hW);
+    // Light net on the lagoon floor: two drifting layers, the larger one only in the front part
+    if (this.patCtx !== g) { this.patCtx = g; this.causticPat = g.createPattern(this.caustic, 'repeat'); }
+    const net = 1 - 0.6 * (this.dayState?.night ?? 0), pat = this.causticPat;
+    g.save(); g.fillStyle = pat;
+    pat.setTransform(new DOMMatrix([1, 0, 0, 1, (t * 9) % 256, y0 + (t * 4) % 128]));
+    g.globalAlpha = 0.11 * net; g.fillRect(0, y0 + 4, W, hW);
+    pat.setTransform(new DOMMatrix([1.4, 0, 0, 1.4, -(t * 7) % 358, y0 + (t * 3) % 179]));
+    [[0.4, 0.03], [0.55, 0.05], [0.72, 0.08]].forEach(([u, a], i, arr) => {
+      const ya = y0 + hW * u, yb = i + 1 < arr.length ? y0 + hW * arr[i + 1][0] : H;
+      g.globalAlpha = a * net; g.fillRect(0, ya, W, yb - ya);
+    });
+    g.restore();
     g.globalCompositeOperation = 'lighter';
+    // Twinkling four-point stars
+    const nStar = L.land ? 12 : 9;
+    for (let i = 0; i < nStar; i++) {
+      const hx = Math.abs((Math.sin(i * 91.17 + 3.1) * 43758.5453) % 1), hy = Math.abs((Math.sin(i * 17.31 + 1.7) * 24634.634) % 1);
+      const tw = Math.pow(Math.max(0, Math.sin(t * 1.7 + i * 2.39)), 6); if (tw < 0.05) continue;
+      const x = hx * W, y = y0 + 14 + hy * (hW - 30), u = (y - y0) / hW, s = (5 + (i % 3) * 3) * (0.6 + 0.5 * u) * tw;
+      g.globalAlpha = Math.min(1, tw * 0.95 * Math.min(1.2, (cfg.sparkle ?? 0.55) * 1.6)); g.fillStyle = '#ffffff';
+      g.beginPath(); g.moveTo(x - s * 2.2, y); g.lineTo(x, y - s * 0.28); g.lineTo(x + s * 2.2, y); g.lineTo(x, y + s * 0.28); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(x, y - s * 1.6); g.lineTo(x + s * 0.24, y); g.lineTo(x, y + s * 1.6); g.lineTo(x - s * 0.24, y); g.closePath(); g.fill();
+      dot(g, x, y, s * 0.3);
+    }
     const nSpark = Math.round(90 * Math.min(2, cfg.sparkle ?? 0.55));
     for (let i = 0; i < nSpark; i++) {
       const hx = (Math.sin(i * 12.9898) * 43758.5453) % 1, hy = (Math.sin(i * 78.233) * 12543.123) % 1;
@@ -281,6 +355,14 @@ class WaterparkRenderer extends EBS.CanvasScene {
     g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
     g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2;
     g.beginPath(); for (let x = 0; x <= W; x += 8) { const y = y0 + 4 + Math.sin(x * 0.05 + t * 2) * 1.3 * wv; x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+    // Fine ripples in the front part of the lagoon, larger towards the viewer
+    g.lineCap = 'round';
+    for (let i = 0; i < (L.land ? 56 : 44); i++) {
+      const hx = Math.abs((Math.sin(i * 45.13 + 0.7) * 31718.927) % 1), hy = Math.abs((Math.sin(i * 7.77 + 2.3) * 15731.743) % 1);
+      const u = 0.08 + 0.9 * hy, y = y0 + hW * u, len = 6 + 30 * u * (0.6 + 0.4 * ((i * 7) % 5) / 4), x = hx * W + Math.sin(t * 0.5 + i) * 10 * wv;
+      g.lineWidth = 1.5 + 1.2 * u; g.strokeStyle = `rgba(255,255,255,${((0.32 + 0.38 * u) * (0.6 + 0.4 * Math.sin(t * 1.3 + i))).toFixed(3)})`;
+      g.beginPath(); g.moveTo(x - len, y); g.quadraticCurveTo(x, y - 1.5 - 2 * u, x + len, y); g.stroke();
+    }
     // Return current: a faint lane with drifting dashes
     g.lineCap = 'round'; g.lineJoin = 'round';
     g.strokeStyle = 'rgba(190,250,255,.08)'; g.lineWidth = 2 * R + 14; g.stroke(this.lane);
@@ -305,17 +387,19 @@ class WaterparkRenderer extends EBS.CanvasScene {
       g.save(); g.translate(0, wo);
       g.setLineDash([18, 46, 6, 70]); g.lineDashOffset = -t * 95 * rs - i * 37; g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 2.4; g.stroke(P);
       g.translate(0, -wf * 0.3); g.setLineDash([10, 64, 4, 50]); g.lineDashOffset = -t * 125 * rs - i * 53; g.strokeStyle = 'rgba(235,255,255,.55)'; g.lineWidth = 1.8; g.stroke(P);
+      g.restore();
+      g.save(); g.translate(0, wo - wf * 0.12);                       // steep stretches: brighter and faster
+      g.setLineDash([30, 40]); g.lineDashOffset = -t * 210 * rs - i * 29; g.strokeStyle = 'rgba(255,255,255,.72)'; g.lineWidth = 3; g.stroke(this.steepPaths[i]);
+      g.translate(0, wf * 0.3); g.setLineDash([14, 52]); g.lineDashOffset = -t * 250 * rs - i * 41; g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.stroke(this.steepPaths[i]);
       g.restore(); g.setLineDash([]);
-      if (i < 3) {                                                  // outlet into the lagoon
-        const [ex, ey] = r.end;
-        for (let k = 0; k < 3; k++) {
-          const ph = (t * 0.9 + k / 3) % 1;
-          g.strokeStyle = `rgba(255,255,255,${0.55 * (1 - ph)})`; g.lineWidth = 2;
-          g.beginPath(); g.ellipse(ex, ey + 9, 12 + ph * R * 1.7, 3 + ph * 8, 0, 0, TAU); g.stroke();
-        }
-        ellipse(g, ex, ey + 6, R * (0.85 + 0.1 * Math.sin(t * 5 + i)), 6, 'rgba(255,255,255,.6)');
-      }
+      if (i < 3) { const [ex, ey] = r.end; this.foam(g, t, ex, ey + 2, R * 1.2, i); }   // outlet into the lagoon
     });
+    for (const b of this.A.basins || []) {
+      g.save(); g.beginPath(); g.rect(b.i0 + 2, b.lip - 4, b.iw - 4, b.face - b.lip + 6); g.clip();
+      g.setLineDash([12, 16]); g.lineDashOffset = -t * 160;
+      for (let k = 1; k < 5; k++) { const x = b.i0 + b.iw * k / 5; line(g, [[x, b.lip - 4], [x + (k - 2.5) * 1.5, b.face + 2]], 2.2, 'rgba(255,255,255,.7)'); }
+      g.restore(); g.setLineDash([]);
+    }
     g.restore();
     this.drawFlags(g, t, open);
   }
@@ -412,12 +496,7 @@ class WaterparkRenderer extends EBS.CanvasScene {
     g.setLineDash([9, 15]); g.lineDashOffset = -t * 170 - k * 11; g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 2;
     for (const u of [-0.55, 0, 0.55]) { g.beginPath(); g.moveTo(ax + u * w * 0.75, ay); g.lineTo(bx + u * w, by); g.stroke(); }
     g.setLineDash([]);
-    for (let i = 0; i < 2; i++) {
-      const ph = (t * 1.4 + i / 2 + k * 0.3) % 1;
-      g.strokeStyle = `rgba(255,255,255,${0.6 * (1 - ph)})`; g.lineWidth = 2;
-      g.beginPath(); g.ellipse(bx, by, w * (0.9 + ph * 0.8), 3 + ph * 4, 0, 0, TAU); g.stroke();
-    }
-    ellipse(g, bx, by, w * 0.95, 4.5, 'rgba(255,255,255,.75)');
+    this.foam(g, t, bx, by - 2, w * 0.95, k + 5, 0.9);
     g.restore();
   }
   drawSpring(g, t) {
@@ -436,7 +515,7 @@ class WaterparkRenderer extends EBS.CanvasScene {
   /** Display pose: walking on the deck, sitting on flat slides, arms up on steep ones, dizzy in the funnel. */
   display(b) {
     const L = this.L, q = this.sim.pose(b);
-    const d = { b, x: q.x, y: q.y, ang: q.angle || 0, mode: q.mode, speed: q.speed || 0, look: q.look || [1, 0], part: null, tilt: 0, behindFunnel: false };
+    const d = { b, x: q.x, y: q.y, ang: q.angle || 0, mode: q.mode, speed: q.speed || 0, look: q.look || [1, 0], part: null, tilt: 0, behindFunnel: false, spray: 0 };
     if (b.state !== 'route' || q.mode === 'pool') return d;
     const r = L.routes[b.route], p = WP.samplePath(r.path, b.s); d.part = p.kind;
     if (p.kind === 'deck') { d.mode = 'roll'; d.ang = 0; d.y -= Math.abs(Math.sin(b.s / L.R * 1.2)) * 3; d.speed = Math.min(d.speed, 200); }
@@ -446,6 +525,8 @@ class WaterparkRenderer extends EBS.CanvasScene {
     else if (p.kind !== 'flight') {
       const incl = p.tx >= 0 ? Math.atan2(p.ty, p.tx) : Math.atan2(-p.ty, -p.tx);
       d.tilt = incl; d.ang = clamp(incl * 0.55, -0.55, 0.55); d.mode = Math.abs(p.ty) > 0.62 ? 'fall' : 'lift';
+      const n = WP.samplePath(r.path, Math.min(r.path.length, b.s + L.R * 2)), turn = Math.abs(Math.atan2(p.tx * n.ty - p.ty * n.tx, p.tx * n.tx + p.ty * n.ty));
+      d.spray = clamp(Math.max((p.ty - 0.35) / 0.5, turn / 0.5), 0, 1);
     }
     d.behindFunnel = !L.land && b.route === 2 && p.kind !== 'deck' && b.s < r.feature.entryS;
     return d;
@@ -488,6 +569,14 @@ class WaterparkRenderer extends EBS.CanvasScene {
     if (d.part !== 'funnel') {
       g.fillStyle = 'rgba(240,253,255,.9)';
       for (let k = 0; k < 5; k++) { const ph = (t * 3.2 + k / 5) % 1; dot(g, back * R * (0.9 + ph * 0.9), R * 0.35 - Math.sin(ph * Math.PI) * R * 0.55 - k % 2 * 3, 2.6 * (1 - ph * 0.5)); }
+      if (d.spray > 0.05) {                                          // spray fans out to both sides on steep parts and in bends
+        const n = 4 + Math.round(4 * d.spray), id = d.b.id;
+        g.fillStyle = `rgba(255,255,255,${(0.55 + 0.4 * d.spray).toFixed(3)})`;
+        for (let k = 0; k < n; k++) {
+          const ph = (t * 2.6 + k / n + id * 0.13) % 1, side = k % 2 ? 1 : -1, h = R * (0.55 + 0.25 * (k % 3)) * (0.6 + 0.4 * d.spray);
+          dot(g, side * R * (0.7 + ph * 1.2), R * 0.3 - Math.sin(ph * Math.PI) * h, 3 * (1 - ph * 0.6));
+        }
+      }
     }
     g.restore();
   }
@@ -495,8 +584,14 @@ class WaterparkRenderer extends EBS.CanvasScene {
     const L = this.L, R = L.R, t = this.sim.t, wv = this.sim.cfg.waves ?? 0.7;
     for (const d of swimmers) {
       const { x, y, b } = d;
-      g.strokeStyle = 'rgba(255,255,255,.45)'; g.lineWidth = 1.5;
-      g.beginPath(); g.ellipse(x, y + R * 0.45, R * 1.7 + Math.sin(t * 3 + b.id) * 1.5 * wv, R * 0.5, 0, 0, TAU); g.stroke();
+      g.lineWidth = 2.6; g.strokeStyle = 'rgba(255,255,255,.85)';
+      g.beginPath(); g.ellipse(x, y + R * 0.47, R * 1.02, R * 0.24, 0, 0, TAU); g.stroke();   // bright collar at the waterline
+      g.lineWidth = 3;
+      for (let k = 0; k < 2; k++) {
+        const ph = (t * 0.55 + b.id * 0.37 + k / 2) % 1;
+        g.strokeStyle = `rgba(255,255,255,${(0.8 * (1 - ph) ** 1.3).toFixed(3)})`;
+        g.beginPath(); g.ellipse(x, y + R * 0.47, R * (1.1 + ph * 1.0) + Math.sin(t * 3 + b.id) * wv, R * (0.3 + ph * 0.3), 0, 0, TAU); g.stroke();
+      }
       this.drawCritterAt(g, b, d);
       g.save(); g.beginPath(); g.rect(x - R * 2, y + R * 0.35, R * 4, R * 1.2); g.clip();
       g.beginPath(); g.arc(x, y, R + 0.5, 0, TAU); g.fillStyle = 'rgba(28,186,206,.55)'; g.fill(); g.restore();
@@ -522,6 +617,7 @@ class WaterparkRenderer extends EBS.CanvasScene {
         g.strokeStyle = `rgba(255,255,255,${0.7 * Math.max(0, 1 - aa / 1.2)})`; g.lineWidth = 2;
         g.beginPath(); g.ellipse(e.x, e.y + 8, 10 + aa * 90, 3 + aa * 26, 0, 0, TAU); g.stroke();
       }
+      if (a < 0.9) this.foam(g, t, e.x, e.y + 4, 22 * st, e.seq, 1 - a / 0.9);
       const rng = new EBS.RNG(e.seq * 7919 + 13);
       g.fillStyle = 'rgba(235,252,255,.95)';
       for (let i = 0; i < 16; i++) {
