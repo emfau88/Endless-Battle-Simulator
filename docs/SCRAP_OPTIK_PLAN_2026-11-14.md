@@ -275,11 +275,16 @@ drei Materialien, die Stationen sitzen an gut lesbaren Achsen und das 16:9-Bild 
   (lange flache Barriere statt Quader). Regeln: Durchgänge ≥ 2 Roboterdurchmesser (bei r = 24 also ≥ 96 AE,
   Radius im Code prüfen) zu Wand und Nachbarblock, auch diagonal an Ecken; ≥ 40 AE Abstand zu Startpunkten und
   Waffenpositionen; Spiegelung bleibt; Begehbarkeitstest aller Karten grün.
-  Golden-Hashes danach bewusst mit `npm run golden:write` neu schreiben und im Bericht begründen
-  (wie bei Sunny Yard). Vorher und nachher 3 Seeds Rundenverlauf vergleichen (Dauer, Leerlauf, Sieger), wie im
+  Scrap-Kartenreferenzen danach bewusst mit `node scripts/scrap-map-hashes.mjs --write` setzen und im Bericht begründen.
+  Die gemeinsame Golden-Fixture deckt andere Szenarien ab und bleibt unverändert. Vorher und nachher
+  3 Seeds Rundenverlauf vergleichen (Dauer, Leerlauf, Sieger), wie im
   [Qualitätsbericht](SCRAP_VIDEOQUALITAET_2026-11-13.md).
 - **M3 · eigener Hochformat-Grundriss für Scrapyard (nur nach Freigabe):** nach dem Vorbild
   `portraitHalf` in `materials.js`. Bis dahin für 9:16-Produktionen Sunny Yard empfehlen.
+
+**Stand 15.11.2026:** M3 und M2 sind nach ausdrücklicher Nutzerfreigabe umgesetzt.
+M2 bleibt auf Scrapyard begrenzt; Foundry und Crossroads behalten ihre bisherigen Wege.
+[Umsetzung, Vorher/Nachher und Prüfungen](SCRAP_GEOMETRIE_2026-11-15.md).
 
 ---
 
