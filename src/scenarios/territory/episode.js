@@ -31,6 +31,8 @@
     storySec: clamp(num(p.storySec, 60), 40, 180),
     // 'victory': the video ends with the first result plus the result hold (planned before the export).
     videoEnd: p.videoEnd === 'victory' ? 'victory' : 'free',
+    // Presentation only: the source tanks or small spearmen that suit the castles.
+    units: p.units === 'soldiers' ? 'soldiers' : 'tanks',
   });
   const roundSeed = (seed, round) => round === 1 ? seed >>> 0 : hashSeed('territory-round-v1', seed >>> 0, round);
   const serializeRound = sim => JSON.stringify(sim, (_, value) => value instanceof Map ? { entries: [...value] } : value);

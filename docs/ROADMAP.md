@@ -30,7 +30,7 @@ geprüft** (mit Umfang und Programmstand) und **abgenommen** (laufender Clip wir
 |---|---|---|---|
 | **R31** | **Ein Main: Ordnung halten** | Aufräumen ist erledigt ([Stand im Gesamtplan](GESAMTPLAN_2026-11-16.md#0--umsetzungsstand)). Offen: Entscheidung zum leichten Schutz von `main`, erste Versionsmarke `v0.8.0` | Nur `main` und laufende Arbeit sichtbar; Regeln aus [AGENTS.md](../AGENTS.md) gelten |
 | **R35** | **Marble XL als Produktionslinie** ([Gesamtplan, Abschnitt 9](GESAMTPLAN_2026-11-16.md#9--block-5-marble-xl)) | Liegt als Szenario „in Arbeit“ auf `main`. Die Linie läuft ohne Neubeginn (Chargen, Röhren leeren sich, Zähler zählt durch). Nächster Schritt: 10-Minuten-Video in 1440p60 rendern und ansehen; danach sichtbarer Abtransport unter den Röhren. Die Linie läuft als bewegter Entwurf; die Rückmeldung zum ersten Testclip ist eingearbeitet (feste Übersicht, weicher leiserer Ton, Ofen- und Farbeffekte), dazu größere Kugeln und abschaltbare Schilder (Standard aus); Glühen nur noch zwischen Ofen und Farbstation; die Kühlstrecke ist jetzt eine Trockenstrecke; kleine Deko-Animationen sind eingebaut; ein sechster Testclip liegt vor. Offen: Rückmeldung dazu, mehr Kugeln gleichzeitig, eigene Klänge je Station, danach Warteschlangen und Physik (M2) | M2: Grundlinie läuft, keine Kugel geht verloren, 20-Sekunden-Clip abgenommen |
-| **R37** | **Territory-Short „Die letzte Krone“** ([Bericht](TERRITORY_SHORT_2026-11-16.md)) | Short-Karte, verdeckte Regie, schlanke Anzeige, leiser Ton und neue Short-Vorlage sind gebaut und geprüft; ein 20-Sekunden-Clip mit Ton liegt vor. Offen: dein Urteil zu Bild und Ton am Handy, danach der Export des ganzen Shorts (rund 32 Sekunden, braucht deinen Auftrag) | Ganzes Short exportiert und von dir abgenommen |
+| **R37** | **Territory-Short „Die letzte Krone“** ([Bericht](TERRITORY_SHORT_2026-11-16.md)) | Short-Karte, verdeckte Regie, schlanke Anzeige, leiser Ton und neue Short-Vorlage sind gebaut und geprüft; ein 20-Sekunden-Clip mit Ton liegt vor; in `main` seit PR #24. Speerträger statt Panzer sind freigegeben und in der Short-Vorlage; das erste ganze Short (Seed 42, rund 32 Sekunden) ist exportiert. Offen: dein Urteil zu Bild und Ton am Handy, der Upload und die Entscheidung zu Champions | Short von dir abgenommen und hochgeladen |
 | **R04** | **Kanalpilot fortsetzen** | Ein Short und ein Langvideo pro Woche aus Pyramid, Naval oder Scrap Wars; Regeln in den [Leitlinien für Shorts](SHORTS_LEITLINIEN.md) | Auswertung nach 7 und 28 Tagen entscheidet über Ausbau |
 | **R33** | **Abnahme-Mappe** | 16 Clips zu je 20 Sekunden (acht Szenarien, hochkant und quer, mit Ton) | Jeder Clip von dir bewertet; daraus folgt die Reihenfolge für R36 |
 
@@ -81,7 +81,8 @@ R33 bündelt die bisherigen Einzelabnahmen **R18** (Naval), **R20** (Scrap Wars)
    Pull Request und Prüflauf? Empfehlung: ja.
 2. **Waterpark:** Wasserspiele tagsüber, Ende mit Brunnenshow.
 3. **Abnahme-Mappe (R33):** Wann sollen die 16 Clips entstehen?
-4. **Territory-Short (R37):** Passt Bild und Ton im 20-Sekunden-Clip? Dann das ganze Short exportieren.
+4. **Territory-Short (R37):** Passt Bild und Ton im exportierten Short? Dann hochladen.
+5. **Territory-Short (R37):** Je Fraktion ein großer Champion als nächster Schritt?
 
 Getroffene Entscheidungen stehen im [CHANGELOG](CHANGELOG.md#entscheidungen).
 

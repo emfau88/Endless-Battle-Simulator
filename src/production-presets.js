@@ -21,7 +21,7 @@
     if (scenario === 'territory' && short) return {
       version: 1, name: `${labels[scenario]} – Short (Die letzte Krone)`, scenario, seed,
       params: { layout: 'short', profile: 'blitz', incomeMultiplier: 2, aggression: 1, offensiveInterval: 2, marchDuration: 1.5,
-        repeatRounds: false, endPauseSec: 3, cameraElevation: 1, story: 'crown', storySec: 60, videoEnd: 'victory' },
+        repeatRounds: false, endPauseSec: 3, cameraElevation: 1, story: 'crown', storySec: 60, videoEnd: 'victory', units: 'soldiers' },
       video: { aspect: '9:16', resolution: 1080, fps: 30, durationSec: 33, tempo: 2, audio: true, volume: { master: 100 },
         quality: { crf: 20, preset: 'medium', bitrate: null } },
       view: { hud: true, camera: false },

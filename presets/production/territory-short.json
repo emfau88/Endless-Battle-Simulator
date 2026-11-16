@@ -15,7 +15,8 @@
     "cameraElevation": 1,
     "story": "crown",
     "storySec": 60,
-    "videoEnd": "victory"
+    "videoEnd": "victory",
+    "units": "soldiers"
   },
   "video": {
     "aspect": "9:16",
