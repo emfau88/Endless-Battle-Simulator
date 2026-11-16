@@ -109,7 +109,7 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Datum | Entscheidung |
 |---|---|
-| 16.11.2026 | Marble XL darf als „in Arbeit“ auf `main`. Langes Video: ganz rendern (1440p, 60 Bilder pro Sekunde) statt einer wiederholten Schleife. |
+| 16.11.2026 | Marble XL darf als „in Arbeit“ auf `main` („du kannst mergen, wenn nichts dagegen spricht“). Zum langen Video liegt nur eine Empfehlung des Assistenten vor (ganz rendern in 1440p mit 60 Bildern pro Sekunde statt einer wiederholten Schleife); entschieden ist das noch nicht. |
 | 16.11.2026 | Marble XL: Kugeln größer, alles dafür Nötige darf angepasst werden. Schilder (Titel, Stationen) sind über einen Schalter abschaltbar und standardmäßig aus. Weiterhin keine Kamerafahrt. Die Kugeln beginnen im Ofen zu glühen und kühlen auf dem Weg zur Farbstation wieder ab. Die Kühlstrecke wird zur Trockenstrecke für die frische Farbe. |
 | 16.11.2026 | Marble XL: im Querformat keine Kamerafahrt. Die klirrenden Klänge der klassischen Fabrik sind dort unerwünscht; Vorbild sind die weichen Klänge von Marble Works, insgesamt eher leiser. Das Hochformat bleibt vorerst außen vor. |
 | 16.11.2026 | Marble XL wird eine Produktionslinie mit verschiedenen Maschinen (Ideen aus Marble Works, Stil der klassischen Kugelfabrik). Das Entwurfsbild „geht in die richtige Richtung“; weiterbauen erst nach gesonderter Freigabe. Übersichtsdateien (Gesamtplan, Roadmap, Changelog, Berichte) sind immer aktuell zu halten und Erledigtes ist zu kennzeichnen. |
