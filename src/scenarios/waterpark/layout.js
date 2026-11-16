@@ -94,9 +94,10 @@ WP.createLayout = function (world, size = 28) {
   seesaw.dir = dir;
   // Übergaben wie im Mockup: Die Zulaufrinne endet als Ausguss über dem Einstiegsende, das Ausstiegsende gießt in eine
   // Auffangrinne. Abstände aus Rinnenbreite (2R+30, siehe art.js) und größter Neigung, damit sich nichts überdeckt.
-  const tilt = seesaw.length / 2 * Math.sin(seesaw.maxAngle), rim = 2 * (R + 15);
+  const tilt = seesaw.length / 2 * Math.sin(seesaw.maxAngle), rim = 2 * (R + 15) + Math.round(R * .42);
   const spout = [boardStart[0], boardStart[1] - (rim + tilt + 8)], catchTop = [boardEnd[0] + dir * R * .5, boardEnd[1] + rim + tilt + 12];
   seesaw.spout = spout; seesaw.catchTop = catchTop;
+  const boardTipped = [seesaw.x + dir * Math.cos(seesaw.maxAngle) * seesaw.length / 2, seesaw.y + Math.sin(seesaw.maxAngle) * seesaw.length / 2];
   const jump = { x: W * P.jump.x, y: H * P.jump.y, landing: [mouths[3] * W, waterY] };
   const flight = [];
   for (let j = 0; j <= 40; j++) { const f = j / 40; flight.push([jump.x + (jump.landing[0] - jump.x) * f, jump.y + (jump.landing[1] - jump.y) * f - Math.sin(Math.PI * f) * H * (land ? .09 : .07)]); }
@@ -104,7 +105,7 @@ WP.createLayout = function (world, size = 28) {
   const routes = [];
   function route(id, name, color, parts, feature) {
     const path = makePath(parts), r = { id, name, color, path, drawSegments: path.drawSegments, feature, start: origin, end: [mouths[id] * W, waterY] };
-    if (feature) { const part = parts.find(p => p.hidden && p.kind !== 'drop'); feature.entryS = part.startS; feature.exitS = part.endS; feature.start = part.points[0]; feature.end = part.points[part.points.length - 1]; }
+    if (feature) { const part = parts.find(p => p.hidden && p.kind !== 'drop'); feature.entryS = part.startS; feature.exitS = part.endS; feature.start = part.points[0]; feature.end = part.points[part.points.length - 1]; feature.leadS = parts.find(p => p.hidden).startS; }
     const first = parts.find(p => p.kind !== 'deck'); r.launch = first.points[0]; r.launchS = first.startS;
     routes.push(r);
   }
@@ -118,8 +119,8 @@ WP.createLayout = function (world, size = 28) {
   route(2, 'Wippe', '#efc98a', [deckTo(P.seesawIn.deckTo),
     { points: [[P.seesawIn.deckTo * W, deckY], ...points(P.seesawIn.pts), spout] },
     { points: [spout, boardStart], smooth: false, kind: 'drop', hidden: true },
-    { points: [boardStart, boardEnd], smooth: false, kind: 'seesaw', hidden: true },
-    { points: [boardEnd, catchTop], smooth: false, kind: 'drop', hidden: true },
+    { points: [boardStart, boardTipped], smooth: false, kind: 'seesaw', hidden: true },
+    { points: [boardTipped, catchTop], smooth: false, kind: 'drop', hidden: true },
     { points: [catchTop, ...points(P.seesawOut), [mouths[2] * W, waterY]] }
   ], seesaw);
   route(3, 'Sprung', '#f2a9b5', [deckTo(P.jumpIn.deckTo),

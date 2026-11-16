@@ -375,16 +375,20 @@ class WaterparkRenderer extends EBS.CanvasScene {
     const open = this.sim.story?.openRoutes?.[2] !== false, at = lx => [f.x + Math.cos(phi) * lx, f.y + Math.sin(phi) * lx];
     g.save(); g.translate(f.x, f.y); g.rotate(phi); const board = [[-half, 0], [half, 0]]; WP.paintTrough(g, board, R);
     if (!open) line(g, board, WP.troughSize(R).inner - 9, WP.ART_COLORS.innerWall, 0.5, 3.5);
-    else {                                                                    // water running towards the exit end
-      g.lineCap = 'round'; g.setLineDash([16, 42, 6, 54]); g.lineDashOffset = -t * 110 * (this.sim.cfg.rollSpeed || 1);
-      line(g, [[-d * half, 2.5], [d * half, 2.5]], 2.4, 'rgba(255,255,255,.5)'); g.setLineDash([]);
+    else {                                                                    // water running towards the lower end
+      const k = clamp((this.sim.seesawAngle || 0) / f.maxAngle, -1, 1);
+      g.lineCap = 'round'; g.setLineDash([16, 42, 6, 54]);
+      g.lineDashOffset = -t * 110; line(g, [[-d * half, 2.5], [d * half, 2.5]], 2.4, `rgba(255,255,255,${(.5 * clamp(.55 + .45 * k, 0, 1)).toFixed(3)})`);
+      g.lineDashOffset = -t * 110; line(g, [[d * half, 2.5], [-d * half, 2.5]], 2.4, `rgba(255,255,255,${(.5 * clamp(-k, 0, 1)).toFixed(3)})`);
+      g.setLineDash([]);
     }
     g.restore();
     WP.paintSeesawWheel(g, this.A, phi);
     if (!open) return;
     const [sx, sy] = f.spout, entry = at(-d * half), exit = at(d * half);
     this.pour(g, t, [sx, sy + R * 0.85], entry, R, 0);
-    this.pour(g, t, [exit[0] + d * R * 0.6, exit[1] + 4], f.catchTop, R, 1);
+    g.save(); g.globalAlpha = clamp(.55 + .45 * (this.sim.seesawAngle || 0) / f.maxAngle, .2, 1);
+    this.pour(g, t, [exit[0] + d * R * 0.6, exit[1] + 4], f.catchTop, R, 1); g.restore();
   }
   /** Short water curtain from a slide end down into the next trough, with a foam ring where it lands. */
   pour(g, t, [ax, ay], [bx, by], R, k) {

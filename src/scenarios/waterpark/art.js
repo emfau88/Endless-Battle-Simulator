@@ -39,7 +39,10 @@ function pathShadow(g, pts, width, alpha = .2) {
 }
 /** Open cream half-pipe with a turquoise water film (static part). */
 function trough(g, pts, R) {
-  const { out, inner } = TROUGH(R), wf = inner - 14;
+  const { out, inner } = TROUGH(R), wf = inner - 14, D = Math.round(R * .42);
+  // Side wall below the rim: stacked strokes give the slab its thickness (light from the upper left)
+  line(g, pts, out + 5, C.outline, 0, D + 1.5);
+  for (let k = D; k > 0; k -= 2) line(g, pts, out, k > D * .55 ? '#b48d5e' : '#d1b083', .5, k);
   line(g, pts, out + 5, C.outline, 0, 1.5);
   line(g, pts, out, C.rimShade, 1.5, 6);
   line(g, pts, out, C.rimLight, -1, -2);
@@ -347,7 +350,7 @@ WP.paintFunnelFront = function (g, L) {
 
 /** Seesaw stand: stone footing, A-frame legs and the large bearing wheel (the board itself moves). */
 WP.paintSeesawStand = function (g, L) {
-  const s = L.seesaw, { x, y } = s, h = Math.min(L.wallTop - y - 6, L.R * 4.2), foot = y + h;
+  const s = L.seesaw, { x, y } = s, h = L.wallTop - y + 4, foot = y + h;
   roundRect(g, x - 70, foot - 6, 140, 20, 6, '#d2bd99'); roundRect(g, x - 70, foot - 6, 140, 6, 4, '#efe2c6');
   for (const sx of [-1, 1]) { line(g, [[x, y + 6], [x + sx * 52, foot - 4]], 19, C.woodDark); line(g, [[x, y + 6], [x + sx * 52, foot - 4]], 15, C.wood); line(g, [[x - 3, y + 8], [x + sx * 52 - 3, foot - 6]], 4, C.woodLight); }
   beam(g, [x - 30, y + h * .55], [x + 30, y + h * .55], 8);

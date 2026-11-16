@@ -107,6 +107,29 @@ test('Zustandswechsel bewegen Tiere ohne Teleportation und Prüfer erkennt besch
   }
 });
 
+test('Wippe folgt dem Gewicht: kippt zur belasteten Seite, schlägt an und das Tier hält nie auf dem Brett',()=>{
+  for(const world of worlds){
+    const sim=create({mode:'day',animals:16},world,300),f=sim.L.seesaw,m=f.maxAngle;
+    let seq=0,knocks=0,rides=0;const on=new Map();
+    for(let step=0;step<300*60;step++){
+      sim.stepOnce();
+      for(;seq<sim.eventSeq;seq++)if(sim.events[seq%sim.events.length].type==='seesaw')knocks++;
+      assert.ok(Math.abs(sim.seesawAngle)<=m+1e-12,'Anschlag begrenzt die Neigung');
+      for(const b of sim.animals){
+        const board=b.state==='route'&&b.route===2&&b.s>=f.entryS&&b.s<=f.exitS;
+        if(!board){if(on.has(b.id)){assert.ok(on.get(b.id).last>=m*.99,'Abstieg am Anschlag der Ausgangsseite');on.delete(b.id);rides++;}continue;}
+        const u=(b.s-f.entryS)/(f.exitS-f.entryS),r=on.get(b.id)||{t:sim.t,last:0};on.set(b.id,r);r.last=sim.seesawAngle;
+        assert.ok(b.v>0,`Tier hält auf dem Brett (u=${u.toFixed(2)})`);
+        if(u>.08&&u<.35)assert.ok(sim.seesawAngle<0,'Einstiegsseite senkt sich unter dem Gewicht');
+        if(u>.75)assert.ok(sim.seesawAngle>0,'Ausgangsseite senkt sich unter dem Gewicht');
+        assert.ok(sim.t-r.t<3,'Fahrt über das Brett dauert höchstens 3 s');
+      }
+    }
+    assert.ok(rides>=8,`genug Wippfahrten (${rides})`);
+    assert.ok(knocks>=rides*2-1&&knocks<=rides*2+1,`zwei Anschläge je Fahrt (${knocks} bei ${rides})`);
+  }
+});
+
 test('Dekoration ist begrenzt; Ton und sichtbare Ereignisse teilen den Auslösezeitpunkt',()=>{
   const sim=create({mode:'relax',decoDensity:2},worlds[0],600);
   for(let i=0;i<600*60;i++){

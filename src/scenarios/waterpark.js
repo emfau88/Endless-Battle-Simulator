@@ -34,7 +34,7 @@ const audio = {
     tip: { label: 'Aufzug: Startklappe', samples: ['impactMetal_light_000'], gain: 0.07, semis: 2, detune: 0.8, minGap: 0.12 },
     slide: { label: 'Rutsche: Wasser', samples: ['synth:splash'], gain: 0.035, semis: -5, detune: 1, minGap: 0.35 },
     funnel: { label: 'Trichter: Blubbern', samples: ['synth:myco-pop'], gain: 0.10, semis: -7, detune: 2, minGap: 0.2 },
-    seesaw: { label: 'Wippe: Kippen', samples: ['synth:boing'], gain: 0.055, semis: -9, detune: 1, minGap: 0.3 },
+    seesaw: { label: 'Wippe: Anschlag', samples: ['impactWood_medium_000', 'impactWood_medium_001'], gain: 0.11, semis: -2, detune: 1, minGap: 0.3 },
     spring: { label: 'Sprungbrett', samples: ['synth:boing'], gain: 0.12, semis: -2, detune: 1, minGap: 0.15 },
     splash: { label: 'Landung: Platscher', samples: ['synth:splash'], gain: 0.16, ref: 1, detune: 2, minGap: 0.1 },
     cheer: { label: 'Tierchen: Jubeln', samples: ['synth:squeak'], gain: 0.055, semis: -2, detune: 2, minGap: 0.3 },
