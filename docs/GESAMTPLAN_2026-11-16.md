@@ -1,26 +1,43 @@
 # Gesamtplan: ein Main, sichere Architektur, Ausbau je Szenario
 
-**Stand:** 16.11.2026. **Status: vom Nutzer am 16.11.2026 freigegeben („freie Hand“), Umsetzung läuft.**
+**Zuletzt aktualisiert:** 16.11.2026, abends. **Status:** vom Nutzer am 16.11.2026 freigegeben („freie Hand“),
+Umsetzung läuft.
 
 Die [ROADMAP](ROADMAP.md) bleibt die einzige aktive Aufgabenliste; die Vorhaben dieses Plans stehen dort als
-R31 bis R36. Dieser Plan liefert Begründung, Reihenfolge und Paketbeschreibungen. Abschnitt 2 hält die
-Ausgangslage vor dem Aufräumen fest und wird nicht fortgeschrieben.
+R31 bis R36. Dieser Plan liefert Begründung, Reihenfolge und Paketbeschreibungen.
+
+**Pflege:** Abschnitt 0 wird nach jedem abgeschlossenen Paket aktualisiert, im selben Pull Request wie die
+Änderung. Abschnitt 2 hält die Ausgangslage vor dem Aufräumen fest und wird nicht fortgeschrieben.
 
 ## 0 · Umsetzungsstand
 
-| Schritt | Stand am 16.11.2026, abends |
-|---|---|
-| Wasserpark | Fertig und in `main` (PR #13), Anzeige englisch. |
-| 0.2 Komplettsicherung | Erledigt: `EBS-Sicherung-2026-11-16.bundle` (86 MB, geprüft) neben dem Projektordner. |
-| 0.4 Scrap-Optik | Pull Request #15: mit `main` zusammengeführt, Scrap-Tests lokal bestanden. Der Scrap-Browsertest bekam eine eigene Prüfgruppe und 90 s Navigationszeit, weil er auf dem GitHub-Rechner sein Zeitlimit riss. |
-| Wasserpark-Merkliste | Pull Request #14 am 16.11. zusammengeführt. |
-| 0.6 Doku-Paket | Dieser Pull Request: Gesamtplan, `AGENTS.md`, `ARCHITEKTUR.md`, neue kurze Roadmap, Abriss/Burrow-Plan, Sunny-Yard-Bericht. |
-| 0.8 Branches | Erledigt: 42 lokale und 35 GitHub-Branches gelöscht (alle vollständig in `main` enthalten). Drei Diagnose-Stände als Marken `archive/…` gesichert, dann gelöscht. |
-| 0.9 Arbeitskopien | Erledigt: acht alte Arbeitskopien entfernt, Hauptordner steht auf `main`. Ihre Review-Medien liegen in `output/aus-arbeitskopien/`. |
-| 0.3, 0.10 `output/` | **Geändert:** Auf Wunsch des Nutzers bleibt `output/` lokal und wird weder ins Repository übernommen noch geleert. |
-| 0.5 Kennzeichen „in Arbeit“, Sammelprüfung | Verschoben: Das Kennzeichen entsteht mit dem ersten Marble-XL-Paket; die Sammelprüfung nur, falls der Schutz von `main` gewünscht wird. |
-| 0.11 Schutz, Versionsmarke | Offen (Entscheidung des Nutzers). |
-| Marble XL | Erster Prototyp abgelehnt, Entwurfsbild der Produktionslinie liegt vor (Abschnitt 9). Branch `marble-xl/stufe-1`. |
+Drei Zustände: **Erledigt**, **Läuft**, **Offen**. Dazu **Entfällt** für gestrichene Schritte.
+
+### Block 0 · Sichern und aufräumen (R31)
+
+| Schritt | Stand | Ergebnis |
+|---|---|---|
+| 0.1 Wasserpark abwarten | **Erledigt** | Fertig und in `main` (PR #13), Anzeige englisch. |
+| 0.2 Komplettsicherung | **Erledigt** | `EBS-Sicherung-2026-11-16.bundle` (86 MB, geprüft) neben dem Projektordner. |
+| 0.3 `output/` sichten | **Entfällt** | Entscheidung vom 16.11.: `output/` bleibt lokal, nichts kommt ins Repository, nichts wird gelöscht. |
+| 0.4 Scrap-Optik mergen | **Erledigt** | PR #15. Der Scrap-Browsertest bekam eine eigene Prüfgruppe und 90 s Navigationszeit, weil er auf dem GitHub-Rechner sein Zeitlimit riss. |
+| 0.5 Kennzeichen „in Arbeit“, Sammelprüfung | **Offen** | Das Kennzeichen entsteht mit dem ersten Marble-XL-Paket auf `main`; die Sammelprüfung nur, falls der Schutz von `main` gewünscht wird. |
+| 0.6 Doku-Paket | **Erledigt** | PR #16: dieser Plan, `AGENTS.md`, `ARCHITEKTUR.md`, neue kurze Roadmap, Abriss/Burrow-Plan, Sunny-Yard-Bericht. Dazu PR #14 (Wasserpark-Merkliste). |
+| 0.7 Wasserpark mergen | **Erledigt** | PR #13. |
+| 0.8 Erledigte Branches löschen | **Erledigt** | 42 lokale und 35 GitHub-Branches gelöscht (alle vollständig in `main`). Drei Diagnose-Stände als Marken `archive/…` gesichert, dann gelöscht. |
+| 0.9 Arbeitskopien entfernen | **Erledigt** | Acht alte Arbeitskopien entfernt, Hauptordner auf `main`. Ihre Review-Medien liegen in `output/aus-arbeitskopien/`. |
+| 0.10 `output/` leeren | **Entfällt** | Siehe 0.3. |
+| 0.11 Schutz von `main`, Versionsmarke | **Offen** | Entscheidung des Nutzers steht aus. |
+
+### Blöcke 1 bis 5
+
+| Block | Stand | Ergebnis und nächster Schritt |
+|---|---|---|
+| 1 · Architektur (R32) | **Läuft** | A1 erledigt (`ARCHITEKTUR.md`). A2 Vertragstest offen. A4 bis A7 entstehen mit dem ersten Szenario, das sie braucht. |
+| 2 · Abnahme-Mappe (R33) | **Offen** | 16 Clips zu je 20 Sekunden; noch nicht beauftragt. |
+| 3 · Verbesserungen je Szenario (R36) | **Offen** | Reihenfolge folgt aus der Abnahme-Mappe. |
+| 4 · Naval-Langvideo (R34) | **Offen** | Kommt nach Marble XL. |
+| 5 · Marble XL (R35) | **Läuft** | M0 und M1 erledigt. Der erste Prototyp (vier gleiche Linien) wurde abgelehnt; das Entwurfsbild der Produktionslinie mit neun Maschinen hat der Nutzer am 16.11. als richtige Richtung bestätigt. Verbesserungen sind besprochen, der Bau (M2) ist noch nicht beauftragt. Arbeitsstand im Branch `marble-xl/stufe-1`, der Bericht `docs/MARBLE_XL_STUFE_1_2026-11-16.md` liegt dort. |
 
 ---
 

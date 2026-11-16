@@ -21,7 +21,9 @@ Videos in 16:9, als MP4 mit Ton.
    fremde ungespeicherte Änderungen liegen.
 5. Am Ende jeder Sitzung ist alles committet und gepusht. Wenn etwas nur lokal liegt, sag es ausdrücklich.
 6. Merge nach `main`, Push auf `main` und das Löschen von Branches sind eigene Freigaben des Nutzers.
-7. Roadmap und Changelog im selben Pull Request pflegen wie die Änderung.
+7. **Übersicht aktuell halten.** Im selben Pull Request wie die Änderung: ROADMAP (offene Aufgaben), CHANGELOG
+   (Erledigtes) und Abschnitt 0 des Gesamtplans (Erledigt / Läuft / Offen). Auch den Bericht des betroffenen
+   Szenarios und die README nachziehen, wenn sich dort etwas ändert. Keine zweite Kopie eines Plans anlegen.
 
 ## Dateien
 

@@ -27,8 +27,8 @@ geprüft** (mit Umfang und Programmstand) und **abgenommen** (laufender Clip wir
 
 | Nr. | Aufgabe | Nächster Schritt | Fertig, wenn |
 |---|---|---|---|
-| **R31** | **Ein Main: Ordnung halten** | Entscheidung zum leichten Schutz von `main`; erste Versionsmarke `v0.8.0` | Nur `main` und laufende Arbeit sichtbar; Regeln aus [AGENTS.md](../AGENTS.md) gelten |
-| **R35** | **Marble XL als Produktionslinie** ([Gesamtplan, Abschnitt 9](GESAMTPLAN_2026-11-16.md#9--block-5-marble-xl)) | Entwurfsbild mit neun verschiedenen Maschinen liegt vor (M1); Freigabe des Nutzers steht aus, danach M2 Grundlinie mit Simulation | M2: Grundlinie läuft, keine Kugel geht verloren, 20-Sekunden-Clip abgenommen |
+| **R31** | **Ein Main: Ordnung halten** | Aufräumen ist erledigt ([Stand im Gesamtplan](GESAMTPLAN_2026-11-16.md#0--umsetzungsstand)). Offen: Entscheidung zum leichten Schutz von `main`, erste Versionsmarke `v0.8.0` | Nur `main` und laufende Arbeit sichtbar; Regeln aus [AGENTS.md](../AGENTS.md) gelten |
+| **R35** | **Marble XL als Produktionslinie** ([Gesamtplan, Abschnitt 9](GESAMTPLAN_2026-11-16.md#9--block-5-marble-xl)) | Entwurfsbild mit neun verschiedenen Maschinen liegt vor (M1) und ist vom Nutzer am 16.11. als richtige Richtung bestätigt. Verbesserungen sind besprochen; der Bau der Grundlinie (M2) ist noch nicht beauftragt | M2: Grundlinie läuft, keine Kugel geht verloren, 20-Sekunden-Clip abgenommen |
 | **R04** | **Kanalpilot fortsetzen** | Ein Short und ein Langvideo pro Woche aus Pyramid, Naval oder Scrap Wars | Auswertung nach 7 und 28 Tagen entscheidet über Ausbau |
 | **R33** | **Abnahme-Mappe** | 16 Clips zu je 20 Sekunden (acht Szenarien, hochkant und quer, mit Ton) | Jeder Clip von dir bewertet; daraus folgt die Reihenfolge für R36 |
 
@@ -86,5 +86,6 @@ Getroffene Entscheidungen stehen im [CHANGELOG](CHANGELOG.md#entscheidungen).
 
 - IDs werden nie wiederverwendet. **Nächste freie ID: R37.**
 - Neue offene Punkte nur hier eintragen. Erledigtes mit Datum, Commit und Bericht in den CHANGELOG übertragen.
+- Der Fortschritt der einzelnen Schritte steht in [Abschnitt 0 des Gesamtplans](GESAMTPLAN_2026-11-16.md#0--umsetzungsstand) und wird mit jedem Paket nachgezogen.
 - Diese Datei bleibt kurz. Verlauf, Messwerte und Begründungen gehören in datierte Berichte unter `docs/`.
 - **Kein Export über 20 Sekunden ohne ausdrücklichen Auftrag.** Reine Simulationsvorläufe sind davon ausgenommen.
