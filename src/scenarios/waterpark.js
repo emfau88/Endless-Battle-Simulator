@@ -8,7 +8,7 @@ const times = value => `${value.toFixed(2).replace('.', ',')}×`;
 const normalMode = params => params.mode !== 'short';
 const finiteMode = params => params.mode !== 'relax';
 const defaults = {
-  mode: 'relax', animals: 16, size: 24, speed: 1, beltSpeed: 1, rollSpeed: 1, current: 1,
+  mode: 'relax', animals: 16, size: 28, speed: 1, beltSpeed: 1, rollSpeed: 1, current: 1,
   route0: true, route1: true, route2: true, route3: true,
   dayCycle: true, dayMinutes: 0, dayStart: 0.12, nightDark: 0.7,
   ending: 'quiet', fireworks: false, decoDensity: 1,

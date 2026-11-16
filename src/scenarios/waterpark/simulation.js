@@ -19,8 +19,9 @@ class Simulation {
     this._decoSlots={major:-1,fish:-1,emote:-1}; this._pendingGuest=null; this._forcedUfo=false; this._showStarted=false;
     const n=this.cfg.mode==='short'?4:clamp(Math.round(this.cfg.animals/4)*4,4,24), L=this.L;this.expectedAnimals=n;
     const shift=hash('routes',this.seed)%4;
-    for(let i=0;i<n;i++) this.animals.push({id:i,kind:i%4,state:this.cfg.mode==='short'?'platform':'pool',
-      route:(i+shift)%4,s:this.cfg.mode==='short'?Math.max(0,L.platformPath.length-i*L.GAP):L.pool.path.length*(1-(i+.5)/n),
+    // Short: die vier Freunde warten zu Beginn hintereinander im Becherwerk und steigen oben einzeln aus.
+    for(let i=0;i<n;i++) this.animals.push({id:i,kind:i%4,state:this.cfg.mode==='short'?'lift':'pool',
+      route:(i+shift)%4,s:this.cfg.mode==='short'?Math.max(0,L.lift.path.length-i*L.GAP):L.pool.path.length*(1-(i+.5)/n),
       v:0,laps:0,launchAt:.4+i*2,done:false,routeHistory:[],gatherPath:null});
     this._refreshStory();
   }
@@ -164,7 +165,7 @@ class Simulation {
     else if(b.state==='route'){
       const r=L.routes[b.route];q=WP.samplePath(r.path,b.s);mode=q.kind==='flight'?'fall':'roll';
       angle=q.kind==='funnel'?.22*Math.sin(b.s/L.R):b.s/L.R;
-      if(q.kind==='seesaw'){const offset=b.s-r.feature.entryS-r.feature.length/2;q.x=r.feature.x+Math.cos(this.seesawAngle)*offset;q.y=r.feature.y+Math.sin(this.seesawAngle)*offset;angle=this.seesawAngle;}
+      if(q.kind==='seesaw'){const f=r.feature,d=f.dir||1,offset=b.s-f.entryS-f.length/2,phi=this.seesawAngle*d;q.x=f.x+Math.cos(phi)*offset*d;q.y=f.y+Math.sin(phi)*offset*d;angle=phi;}
       if(b.s>=r.path.length-1e-7){mode='pool';angle=0;}
     } else if(b.state==='gather')q=WP.samplePath(b.gatherPath,b.s);
     else q=WP.samplePath(L.pool.path,b.s);
