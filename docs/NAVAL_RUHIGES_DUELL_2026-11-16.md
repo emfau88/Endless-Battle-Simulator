@@ -1,7 +1,7 @@
 # Naval: Modus „Ruhiges Duell“ (in Arbeit)
 
-Stand: 16.11.2026, nachts. Erste drei Pakete des Naval-Ausbaus (R34, im [Gesamtplan](GESAMTPLAN_2026-11-16.md) Abschnitt 8.4
-als N1a, N2a und N2b geführt). Der Nutzer hat die Richtung anhand von Standbildern und Testclips freigegeben, den Einbau als
+Stand: 16.11.2026, nachts. Erste vier Pakete des Naval-Ausbaus (R34, im [Gesamtplan](GESAMTPLAN_2026-11-16.md) Abschnitt 8.4
+als N1a, N2a, N2b und N2c geführt). Der Nutzer hat die Richtung anhand von Standbildern und Testclips freigegeben, den Einbau als
 neuen Modus beauftragt und danach die Vorschläge zu Lebensanzeige, Runden und Segeln zur Umsetzung freigegeben.
 
 ## 1 · Umfang
@@ -20,7 +20,8 @@ node export.mjs --scenario naval --param mode=calm --duration 20 --aspect 16:9 -
 ```
 
 Seit dem zweiten Paket enthalten: Runden mit Versenkung, Punktestand und neuem Schiff (Abschnitt 3a).
-Seit dem dritten Paket enthalten: die Rakete vom Heck (Abschnitt 3b).
+Seit dem dritten Paket enthalten: die Rakete vom Heck (Abschnitt 3b). Seit dem vierten: der Auftritt der goldenen Kugel
+(Abschnitt 3c).
 Noch **nicht** enthalten: Finale am Videoende, Wetter, eigene Tonabstimmung.
 
 ## 2 · Werte des Modus
@@ -98,6 +99,25 @@ Messwerte (reine Simulation, Querformat, fünf Seeds zu je 20 Minuten, 30 Runden
 182 s. Die Rakete verkürzt eine Runde also um rund eine halbe Minute.
 
 Die Klänge für Start und Knall sind vorläufig aus dem Kanonenklang abgeleitet.
+
+## 3c · Goldene Kugel
+
+Idee des Nutzers vom 16.11.: Die goldene Kugel soll etwas Besonderes tun, damit es mehr fürs Auge gibt. Bisher war sie
+nur anders gefärbt und wurde gezählt. Als Vorschau gebaut und von ihm anhand eines Testclips freigegeben.
+
+- **Goldtreffer:** Ihr Treffer zählt doppelt (4 % statt 2 %). Dazu ein goldener Blitz, ein Ring, Funkenregen und
+  trudelnde Goldsplitter; am Einschlag steigt kurz „GOLDEN HIT!“ auf, und das verlorene Stück des Balkens leuchtet
+  golden statt weiß.
+- **Im Flug:** Sie zieht eine Glitzerspur hinter sich her.
+- **Im Segel:** Beim Durchschuss stieben Goldfunken aus dem Tuch.
+- **Fehlschuss:** goldener Platscher mit Ring.
+- **Schalter:** Alles hängt am vorhandenen Regler „Goldene Kugel mit Zähler“ und gilt nur im ruhigen Duell; im
+  Standardmodus bleibt die goldene Kugel wie bisher.
+
+Messwerte (reine Simulation, Querformat, fünf Seeds zu je 20 Minuten, 33 Runden): Goldtreffer etwa dreimal pro
+Minute; Runden 140 bis 204 s, Median 172 s (ohne Goldtreffer 182 s).
+
+Der Klang des Goldtreffers ist vorläufig ein weicher Metallklang aus dem Marble-Works-Satz.
 
 ## 4 · Aufbau im Code
 
