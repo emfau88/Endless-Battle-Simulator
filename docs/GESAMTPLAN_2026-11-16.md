@@ -35,8 +35,8 @@ Drei Zustände: **Erledigt**, **Läuft**, **Offen**. Dazu **Entfällt** für ges
 |---|---|---|
 | 1 · Architektur (R32) | **Läuft** | A1 erledigt (`ARCHITEKTUR.md`). A2 Vertragstest offen. A4 bis A7 entstehen mit dem ersten Szenario, das sie braucht. |
 | 2 · Abnahme-Mappe (R33) | **Offen** | 16 Clips zu je 20 Sekunden; noch nicht beauftragt. |
-| 3 · Verbesserungen je Szenario (R36) | **Offen** | Reihenfolge folgt aus der Abnahme-Mappe. |
-| 4 · Naval-Langvideo (R34) | **Läuft** | Vom Nutzer am 16.11. vorgezogen. N1a erledigt: Modus „Ruhiges Duell (in Arbeit)“ als eigener Schalter `mode=calm`, Standardmodus bitgleich. N2a erledigt: Runden mit Versenkung, Punktestand, Feuerpause mit Reparatur, Segel am Schiffsschaden ([Bericht](NAVAL_RUHIGES_DUELL_2026-11-16.md)). N2b erledigt: Rakete vom Heck. Der eigene Effekt für die goldene Kugel (Idee des Nutzers) liegt als Vorschau vor und wartet auf Freigabe. Danach: Ton, Finale und Lesbarkeit (Abschnitt 8.4). N0 steht weiter aus. |
+| 3 · Verbesserungen je Szenario (R36) | **Läuft** | Territory Wars vorgezogen (R37): Short „Die letzte Krone“ mit kleiner Karte, verdeckter Regie, schlanker Anzeige und leisem Ton ist gebaut und geprüft ([Bericht](TERRITORY_SHORT_2026-11-16.md)); offen sind die Abnahme am Handy und der Export des ganzen Shorts. Die übrigen Szenarien folgen nach der Abnahme-Mappe. |
+| 4 · Naval-Langvideo (R34) | **Läuft** | Vom Nutzer am 16.11. vorgezogen. N1a erledigt: Modus „Ruhiges Duell (in Arbeit)“ als eigener Schalter `mode=calm`, Standardmodus bitgleich. N2a erledigt: Runden mit Versenkung, Punktestand, Feuerpause mit Reparatur, Segel am Schiffsschaden ([Bericht](NAVAL_RUHIGES_DUELL_2026-11-16.md)). N2b erledigt: Rakete vom Heck. N2c erledigt: goldene Kugel mit eigenem Auftritt. Nächster Schritt: Ton, Finale und Lesbarkeit (Abschnitt 8.4). N0 steht weiter aus. |
 | 5 · Marble XL (R35) | **Läuft** | M0 und M1 erledigt. Der erste Prototyp (vier gleiche Linien) wurde abgelehnt; das Entwurfsbild der Produktionslinie mit neun Maschinen hat der Nutzer am 16.11. als richtige Richtung bestätigt. Die besprochenen Verbesserungen sind in einer zweiten Fassung umgesetzt (Tiefe im Hintergrund, Lichtzonen, deutlichere Kugelzustände, größere Farbstation, Richtungsmarken, reservierter Platz für Linie 2). Der Nutzer hat die zweite Fassung bestätigt. Seitdem läuft die Linie als bewegter Entwurf (Kugeln folgen einem festen Zeitplan durch alle neun Stationen, noch ohne Warteschlangen und Physik); Die Rückmeldung zum ersten Testclip ist eingearbeitet: im Querformat feste Übersicht ohne Kamerafahrt, weiche Marble-Works-Klänge mit fester, leiserer Mischung (rund −24,8 LUFS), Feuereffekte am Ofen, an der Farbstation ein Sprühstoß je Kugel in ihrer Farbe. Dritte Fassung: Kugeln und Glasrohre 35 % größer, Schilder über einen Schalter abschaltbar und standardmäßig aus. Vierte Fassung: Die Kugeln beginnen im Ofen zu glühen und kühlen im Fallrohr zur Farbstation wieder ab. Fünfte Fassung: Die Kühlstrecke 06 ist jetzt eine Trockenstrecke für die frische Farbe. Sechste Fassung: nasse Farbe deutlicher, kleine Deko-Animationen eingebaut (Ofen-Anzeigen, Lämpchen, Prüfbildschirm, Dampf, Sortierklappen, Zähler). Ein sechster 20-Sekunden-Testclip liegt vor. Offen: Rückmeldung dazu, mehr Kugeln gleichzeitig, eigene Klänge für Trommel, Ofen und Sprühen, Hochformat (auf Wunsch des Nutzers vorerst zurückgestellt), echte Warteschlangen und Physik (M2). Arbeitsstand im Branch `marble-xl/stufe-1`, der Bericht `docs/MARBLE_XL_STUFE_1_2026-11-16.md` liegt dort. |
 
 ---
@@ -281,7 +281,7 @@ Vorschlag, nach der Abnahme-Mappe zu bestätigen. Je Szenario höchstens drei Pu
 | **Scrap Wars** | Optik-Branch mergen (0.4) | Ton und Lesbarkeit am Handy abnehmen | Highlight-Vorschlag: aus dem Ereignisprotokoll die spannendsten 30–45 Sekunden eines Turniers als Short vorschlagen |
 | **Marble Works** | Nahaufnahme-Vorlagen für Shorts (Polieren, Farbinfusion, Sortieren) | Auftrag mit 360 Kugeln per Simulationsvorlauf messen: ergibt das ein Video um 20 Minuten? | Kugeln in der Übersicht größer und kontrastreicher |
 | **Kugelfabrik** (klassisch) | Bleibt unverändert als Short-Maschine | Kleinigkeiten aus R09 nur nach Sichtbefund | Der Ausbau erfolgt als Marble XL (Block 5) |
-| **Territory Wars** | Short-Vorlage schneller: Profil „Intensive Front“, Tempo 1,5 statt 0,75 | Zahlen und Namen am Handy größer | Ausschnittsexport und Sieger-Abschluss |
+| **Territory Wars** | **Erledigt bis auf die Abnahme (R37):** eigener Short-Modus statt nur schnellerer Vorlage, weil Tempo 1,5 für eine ganze Runde nicht reicht ([Bericht](TERRITORY_SHORT_2026-11-16.md)) | **Erledigt im Short:** schlanke Anzeige mit großen Namensschildern | Sieger-Abschluss im Short erledigt; Ausschnittsexport offen |
 | **Mycelium** | Short mit vorgewachsenem, hellerem Start | Renderzeit senken | Als ruhiges Langvideo positionieren |
 | **Wasserpark** | P8 Hochformat | P9 Abend, Nacht, Finale; Anzeige englisch | Vorlagen-Exporttest, danach deine Schlussabnahme |
 
@@ -353,15 +353,14 @@ Dieser Abschnitt präzisiert 8.2 und 8.3; er ersetzt sie nicht.
 
 | N2b | **Rakete vom Heck** | Seltene zweite Attacke: etwa alle 20 Sekunden je Schiff, sichtbar vorbereitet, zerplatzt über dem Gegner in sieben kurzlebige Splitter (je 0,5 %). Nicht Teil des Kugelkreislaufs. Runden damit im Median 182 s. | **Erledigt**, vom Nutzer freigegeben (PR #25) |
 
-| N2c | **Goldene Kugel** | Goldtreffer zählt doppelt und bekommt einen eigenen Auftritt (Blitz, Ring, Funkenregen, „GOLDEN HIT!“); Glitzerspur im Flug, Goldfunken im Segel, goldener Platscher. Runden damit im Median 172 s. | **Vorschau**, wartet auf Freigabe (Branch `naval/goldkugel`) |
+| N2c | **Goldene Kugel** | Goldtreffer zählt doppelt und bekommt einen eigenen Auftritt (Blitz, Ring, Funkenregen, „GOLDEN HIT!“); Glitzerspur im Flug, Goldfunken im Segel, goldener Platscher. Runden damit im Median 172 s. | **Erledigt**, vom Nutzer freigegeben (PR #26) |
 
 Die Runden sind Teil des ruhigen Duells geworden; ein eigener Modus `rounds` wie in 8.3 geplant entfällt damit. Die
 Short-Vorlage „Who sinks first?“ aus N2 steht noch aus.
 
 **Freigegeben am 16.11. („Vorschläge so umsetzen“), noch offen:** Ton für wenige Schüsse, Lesbarkeit (Bugkante,
 Leuchtspur, Kanonen; vorher als Vorschau). **Ideen des Nutzers:** Die seltene zweite Attacke vom
-Heck ist als N2b umgesetzt. Neu dazu: Die goldene Kugel soll etwas Besonderes tun, damit es mehr fürs Auge gibt; das
-kommt zuerst als Vorschau.
+Heck ist als N2b umgesetzt. Die goldene Kugel mit eigenem Auftritt ist als N2c umgesetzt.
 
 **Noch nicht entschieden (Empfehlung des Assistenten):**
 

@@ -20,7 +20,9 @@ Die ursprünglichen `impact*.ogg`-Dateien stammen unverändert aus **Kenney – 
 
 ## Marble Works · weiche Variante C
 
-Nur Marble Works verwendet die zwölf vorbereiteten `mw-soft-*.ogg`-Dateien. Die ursprünglichen
+Marble Works verwendet die zwölf vorbereiteten `mw-soft-*.ogg`-Dateien; die Short-Karte von Territory Wars nutzt
+daraus Holz, weichen Körper und mechanischen Kontakt (Marsch, Gefecht, Eroberung, Bunkerbau) mit demselben festen
+Mischprofil, dazu die vorhandenen Syntheseklänge `synth:myco-pop`, `synth:myco-breeze` und `synth:myco-pling`. Die ursprünglichen
 Samples bleiben unverändert. Als Basis dienen zwölf lokale Kenney-Aufnahmen aus dem Impact-Sounds-Paket;
 ihre unveränderten Kopien und der originale CC0-Lizenztext liegen in `marbleworks-source/`.
 

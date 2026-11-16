@@ -16,6 +16,16 @@
         quality: { crf: 18, preset: 'medium', bitrate: null } },
       view: { hud: true, camera: false },
     };
+    // Territory Short: small map with the hidden story "The last crown"; the video ends three
+    // seconds after the result (length is planned from the seed, about half a minute).
+    if (scenario === 'territory' && short) return {
+      version: 1, name: `${labels[scenario]} – Short (Die letzte Krone)`, scenario, seed,
+      params: { layout: 'short', profile: 'blitz', incomeMultiplier: 2, aggression: 1, offensiveInterval: 2, marchDuration: 1.5,
+        repeatRounds: false, endPauseSec: 3, cameraElevation: 1, story: 'crown', storySec: 60, videoEnd: 'victory' },
+      video: { aspect: '9:16', resolution: 1080, fps: 30, durationSec: 33, tempo: 2, audio: true, volume: { master: 100 },
+        quality: { crf: 20, preset: 'medium', bitrate: null } },
+      view: { hud: true, camera: false },
+    };
     return {
       version: 1,
       name: `${labels[scenario]} – ${short ? 'Short (1 Minute)' : 'Langvideo (10 Minuten)'}`,
