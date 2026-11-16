@@ -49,6 +49,17 @@ Holzgerüst mit Streben, Strohschirme, Laternen, Hibiskus, Schilf und eine Licht
 Wasserfilm, der in Fahrtrichtung fließt. Das Glasrohr am Trichter hat Ringfugen und Glanzlinien.
 Der Trichter hat einen Strudel. Geschlossene Rutschen sind trocken und mit einer Schranke gesperrt.
 
+**Wippe mit Übergaben (Nachtrag nach Nutzerhinweis).** Vorher lief die Zulaufrinne mit einem Haken
+hinter das Brett, und die Abflussrinne kam schräg hinter dem Brettende hervor. Jetzt gilt:
+- Die Zulaufrinne endet als Ausguss über dem Einstiegsende. Das Tier plumpst mit einem kleinen
+  Wasserstrahl auf das Brett.
+- Am anderen Ende gießt das Brett in eine kurze Auffangrinne, wie im Mockup.
+- Die Abstände ergeben sich aus Rinnenbreite und größter Neigung, deshalb überdecken sich die Teile
+  auch beim Kippen nicht.
+- Im Querformat sitzt die Wippe dafür etwas höher.
+
+[Bild](nachweise/waterpark_optik_wippe_16x9_2026-11-16.png)
+
 **Anzeige.** Pyramiden-Stil (Bahnschrift, Sperrung, dunkler Verlauf oben). Das Abschlussbanner
 steht im Querformat frei zwischen Titel und Mond, im Hochformat ersetzt es die Unterzeile.
 
