@@ -113,3 +113,25 @@ ein großes Paket (vier Modelle, Bewegung, Einbindung). Empfohlen wird ein klein
 großer Champion aus demselben Baukasten wie die Soldaten, etwa dreimal so groß, mit eigener Silhouette je Farbe. Er
 steht an der Burg und führt die Angriffe auf Burgen an, also genau die drei Höhepunkte. Reine Darstellung, keine neue
 Regel. Erst wenn das im Clip trägt, lohnen echte Monster.
+
+## 8 · Das erste exportierte Short
+
+Exportiert am 17.11.2026 auf ausdrücklichen Auftrag, aus dem Stand `92e17e6` mit der Short-Vorlage und Speerträgern.
+
+| Wert | Ergebnis |
+|---|---|
+| Seed, Geschichte | 42; EMBER fällt bei 9,7 s, AZUR bei 15,3 s, JADE bei 29,2 s, SOLAR gewinnt |
+| Bild | 1080 × 1920, 60 Bilder je Sekunde, H.264, CRF 18 |
+| Länge | 32,217 s, 1 933 Bilder, 16,7 MB |
+| Ton | AAC 48 kHz Stereo, 80 Klänge, −24,32 LUFS, Spitze −7,69 dBFS, fester Pegel −3 dB |
+| Prüfung des Exporters | bestanden (Codec, Auflösung, Bildrate, Bildanzahl, Dauer, Simulationszustand `ead66bd7`) |
+| Sichtprüfung | zehn Bilder aus der fertigen Datei: Einstiegsfrage im ersten Bild, drei Burgfälle, Umfärben der Karte, Siegerbild |
+
+Die Vorlage steht auf 30 Bildern je Sekunde; für den Upload wurde mit 60 exportiert, weil sich bei Tempo 2 viel
+bewegt. Die Simulation ist bei beiden Bildraten dieselbe.
+
+```bash
+node export.mjs --config presets/production/territory-short.json --fps 60 --crf 18 --out output/territory_short_die_letzte_krone_seed42.mp4
+```
+
+Nicht geprüft: Wiedergabe und Ton am Handy. Das Hörurteil liegt beim Nutzer.
