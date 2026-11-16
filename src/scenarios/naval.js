@@ -96,6 +96,19 @@ const MODES = {
 // der Schütze bekommt einen Punkt und ein neues Schiff läuft ein. Solange ein Schiff sinkt oder einläuft, schweigen alle
 // Kanonen; in dieser Pause flickt die Crew der übrigen Schiffe den Schaden, jede Runde beginnt also bei 100 gegen 100.
 // (Ohne Reparatur wäre der fast ebenso beschädigte Sieger rund 40 Sekunden später selbst gesunken.) Zeiten in Sekunden.
+// Rakete vom Heck (ruhiges Duell): seltene zweite Attacke. Sie wird sichtbar aufgelegt, die Lunte brennt, dann fliegt
+// sie im Bogen über das gegnerische Schiff und zerplatzt dort in Splitter. Splitter sind kurzlebig und gehören nicht
+// zum Kugelkreislauf: Wer trifft, nimmt einen halben Kanonentreffer; wer daneben fällt, verlischt im Wasser.
+const ROCKET = {
+  period: 20,        // Sekunden zwischen zwei Raketen eines Schiffs (die Schiffe wechseln sich ab)
+  prepT: 6,          // so lange vorher wird die Rakete aufgelegt
+  fuseT: 2,          // so lange brennt zuletzt die Lunte
+  flightT: 2.6,      // Flugzeit bis zum Zerplatzen
+  shards: 7,         // Splitter je Rakete
+  shardHit: 0.005,   // Schaden je Splittertreffer bei Standard-Intensität
+  rail: 0.16,        // Länge der Startschiene (Anteil der Schiffslänge)
+  railAngle: 1.26,   // Winkel der Schiene über der Waagerechten (rund 72°)
+};
 const CANNON_PACE = [1, 1.17, 0.9, 1.08, 0.96, 1.12], CANNON_SPEED = [1, 0.97, 1.04, 0.95, 1.02, 0.99];
 const ROUND = {
   hit: 0.02,          // Schaden je Treffer bei Standard-Intensität (35 %): 50 Treffer bis zum Untergang
@@ -208,7 +221,7 @@ class NavalBattle {
     // Modus (null = Standard). Ein Modus legt die Kanonenzahl fest und hat für die Segel einen eigenen Zufallsstrom.
     const M = (this.modeDef = MODES[cfg.mode] || null);
     this.fireTempo = M ? M.fireTempo : 1;
-    this.calm = M ? { bounces: 0, sailHits: 0, score: new Array(L.n).fill(0), sunk: 0, round: 1, last: null } : null;
+    this.calm = M ? { bounces: 0, sailHits: 0, score: new Array(L.n).fill(0), sunk: 0, round: 1, last: null, rockets: 0, shardHits: 0 } : null;
     if (M) { cfg.cannons = M.cannons; this.sailRng = new RNG(hashSeed(cfg.seed, 'sail')); }
     this.engine = Engine.create({ gravity: { x: 0, y: L.g / 1000, scale: 0.001 }, positionIterations: 8, velocityIterations: 6 });
     this.world = this.engine.world;
@@ -218,6 +231,7 @@ class NavalBattle {
     this._surfaceNow = (x) => this.surfaceY(x, this.t);
     this.events = new Array(256); this.eventSeq = 0;
     this.hitQueue = []; this.clinkQueue = [];
+    this.shards = [];   // Raketensplitter (nur ruhiges Duell): fester Vorrat, wird wiederverwendet
     this.ships = []; this.balls = [];
     this.allShipsMask = ((1 << L.n) - 1) * SHIP_CAT;
     this.allMastsMask = ((1 << L.n) - 1) * MAST_CAT;
@@ -305,6 +319,9 @@ class NavalBattle {
       // Runden (nur ruhiges Duell): Zustand afloat | sinking | arriving, Versatz beim Sinken und Einlaufen, Schiffsnummer
       phase: 'afloat', phaseT: 0, down: 0, list: 0, slide: 0, alpha: 1, gen: 0, hitT: -9, hitFrom: 0, repairFrom: 0,
       edge: i === 0 ? -1 : i === n - 1 ? 1 : 0, enter: (i === 0 ? L.xs[i] : L.W - L.xs[i]) + 0.8 * len,
+      // Rakete: Zeit bis zum nächsten Start, fliegende Rakete, Fuß der Startschiene am Heck (Schiffskoordinaten)
+      rocketT: ROCKET.period * (0.6 + i / n), rk: { on: false, t: 0, x0: 0, y0: 0, cx: 0, cy: 0, x1: 0, y1: 0, x: 0, y: 0, ang: 0 },
+      railX: facing * -0.56 * len, railY: geo.castle.y0 + 0.04 * len, shardsTaken: 0,
       ammo: 0, magBalls: [], lane: [], cannons: [], totalBalls: 0,
       shots: 0, hitsDealt: 0, hitsTaken: 0, smokeAcc: 0, fireAcc: 0,
       liftX: L.xs[i] + geo.port.x, footY: 0, headY: 0, liftLen: 0, portX: 0, portY: 0, rackX: 0, rackY: 0, ballMask: 0,
@@ -400,6 +417,7 @@ class NavalBattle {
     this.step++; this.t = this.step * this.dt;
     this._processHits();
     this._updateBalls();
+    if (this.calm) this._updateRockets();
     this._updateShipDamage();
     this.particles.update(this.dt, this._surfaceNow);
     this.shake *= 0.9;
@@ -493,6 +511,7 @@ class NavalBattle {
       if (this.ships.every((o) => o.phase === 'afloat')) {
         this.calm.round = this.calm.sunk + 1;
         for (const o of this.ships) for (const c of o.cannons) c.timer = this.rng.range(0.8, 2.6);
+        for (const o of this.ships) o.rocketT = ROCKET.period * (0.6 + o.i / this.ships.length);
       }
     }
   }
@@ -642,10 +661,11 @@ class NavalBattle {
   // ---------- Ruhiges Duell: Segelschäden ----------
   // Gegnerische Kugeln durchschlagen das Tuch und fliegen weiter; die Physik bleibt davon unberührt.
   _sailMax(sl) { return Math.max(2, Math.round(NavalSails.SAIL.maxHoles[sl.idx] * Math.pow(this.L.shipScale, 1.5))); }
+  // ball = Kugel oder Splitter (trägt den Merkzustand), p = Ort, b = { speed, velocity } in Pixeln je Schritt
   _sailCheck(ball, p, b) {
     let key = -1, ship = null, sail = null, lx = 0, ly = 0;
     for (const sh of this.ships) {
-      if (sh.i === ball.owner || Math.abs(p.x - sh.x) > sh.len || p.y > sh.y) continue;
+      if (sh.i === ball.owner || sh.phase !== 'afloat' || Math.abs(p.x - sh.x) > sh.len || p.y > sh.y) continue;
       const loc = this._worldToLocal(sh, p.x, p.y);
       for (const s of sh.sails) {
         if (NavalSails.contains(s, loc.x - s.x, loc.y - s.y)) { key = sh.i * 8 + s.idx; ship = sh; sail = s; lx = loc.x - s.x; ly = loc.y - s.y; break; }
@@ -681,6 +701,131 @@ class NavalBattle {
     for (let i = 0, n = fresh ? 7 : 3; i < n; i++) {
       P.spawn(w.x + r.range(-5, 5) * u, w.y + r.range(-5, 5) * u, vx * r.range(0.1, 0.32) + r.range(-60, 60) * u, vy * r.range(0.1, 0.32) + r.range(-70, 30) * u,
         r.range(0.9, 1.7), r.range(6, 11) * u, r.range(5, 9) * u, 0.95, i % 3 ? cloth : ship.team.sail, T_SPLINTER, 0, 150 * u, 1.9, r.range(-9, 9), F_DROPLET);
+    }
+  }
+
+  // ---------- Ruhiges Duell: Rakete vom Heck ----------
+  _railTip(ship) {
+    const a = ROCKET.railAngle, d = ROCKET.rail * ship.len;
+    return this._localToWorld(ship, ship.railX + ship.facing * Math.cos(a) * d, ship.railY - Math.sin(a) * d);
+  }
+  _launchRocket(ship) {
+    const L = this.L, u = L.u, r = this.rng, rk = ship.rk;
+    // Ziel: der Gegner (im Duell der andere, sonst der nächste schwimmende), Sprengpunkt knapp über den Mastspitzen
+    let tgt = null;
+    for (const o of this.ships) if (o !== ship && o.phase === 'afloat' && (!tgt || Math.abs(o.x0 - ship.x0) < Math.abs(tgt.x0 - ship.x0))) tgt = o;
+    if (!tgt) return false;
+    const p = this._railTip(ship);
+    rk.on = true; rk.t = 0; rk.x0 = p.x; rk.y0 = p.y;
+    rk.x1 = tgt.x0 + r.range(-0.18, 0.18) * tgt.len; rk.y1 = L.waterY + tgt.geo.deckY - r.range(0.9, 1.02) * tgt.len;
+    rk.cx = rk.x0 + 0.35 * (rk.x1 - rk.x0); rk.cy = Math.min(rk.y0, rk.y1) - 0.36 * Math.abs(rk.x1 - rk.x0);
+    rk.x = p.x; rk.y = p.y; rk.ang = Math.atan2(rk.cy - rk.y0, rk.cx - rk.x0);
+    this.calm.rockets++;
+    this.particles.spawn(p.x, p.y, 0, 0, 0.14, 26 * u, 60 * u, 0.9, 0xffe2a8, T_SOFT, 1, 0, 0, 0, 0);
+    this._event('rocket', p.x, p.y, 1);
+    return true;
+  }
+  _burstRocket(ship) {
+    const rk = ship.rk, u = this.L.u, r = this.rng, f = this.fx, P = this.particles, dir = rk.x1 >= rk.x0 ? 1 : -1;
+    rk.on = false;
+    // Blitz, Ring, Funken, Rauch
+    P.spawn(rk.x, rk.y, 0, 0, 0.2, 40 * u, 150 * u, 1, 0xfff0c0, T_SOFT, 1, 0, 0, 0, 0);
+    P.spawn(rk.x, rk.y, 0, 0, 0.45, 20 * u, 130 * u, 0.7, 0xffd9a0, T_RING, 1, 0, 0, 0, 0);
+    for (let i = 0; i < 18; i++) {
+      const a = f.range(0, 6.283), sp = f.range(140, 420) * u;
+      P.spawn(rk.x, rk.y, Math.cos(a) * sp, Math.sin(a) * sp, f.range(0.25, 0.6), f.range(4, 7) * u, 1 * u, 1, 0xffc46b, T_SPARK, 1, 260 * u, 1.6, 0, 0);
+    }
+    for (let i = 0; i < 6; i++) {
+      P.spawn(rk.x + f.range(-10, 10) * u, rk.y + f.range(-10, 10) * u, f.range(-40, 40) * u, -f.range(10, 50) * u, f.range(1.2, 2.2), 18 * u, 70 * u,
+        0.45, 0x8d8d96, T_SOFT, 0, -10 * u, 1.4, 0, F_FADEIN);
+    }
+    this.shake = Math.min(14 * u, this.shake + 5 * u);
+    this._event('burst', rk.x, rk.y, 1);
+    // Splitter: Fächer nach unten, leicht in Flugrichtung geneigt
+    const n = ROCKET.shards;
+    for (let k = 0; k < n; k++) {
+      const a = Math.PI / 2 - dir * 0.12 + ((k + 0.5) / n - 0.5) * 1.5 + r.range(-0.08, 0.08), sp = r.range(140, 240) * u;
+      let sh = this.shards.find((o) => !o.on);
+      if (!sh) { if (this.shards.length >= 32) continue; sh = { on: false }; this.shards.push(sh); }
+      Object.assign(sh, { on: true, x: rk.x, y: rk.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, owner: ship.i, age: 0, sailKey: -1, sailGo: 0, seed: r.int(1, 1e9) });
+    }
+  }
+  _shardHit(sh, ship, loc, kind) {
+    const u = this.L.u, f = this.fx, P = this.particles;
+    sh.on = false;
+    // kleiner Einschlag: Funken und Holzsplitter
+    P.spawn(sh.x, sh.y, 0, 0, 0.1, 14 * u, 40 * u, 0.9, 0xfff0c0, T_SOFT, 1, 0, 0, 0, 0);
+    for (let i = 0; i < 5; i++) {
+      const a = -Math.PI / 2 + f.range(-1.3, 1.3), sp = f.range(100, 300) * u;
+      P.spawn(sh.x, sh.y, Math.cos(a) * sp, Math.sin(a) * sp, f.range(0.2, 0.4), f.range(3, 5) * u, 1 * u, 1, 0xffc46b, T_SPARK, 1, 420 * u, 1.2, 0, 0);
+    }
+    for (let i = 0; i < 3; i++) {
+      P.spawn(sh.x, sh.y, f.range(-160, 160) * u, -f.range(80, 260) * u, f.range(0.7, 1.3), f.range(6, 10) * u, f.range(6, 10) * u, 1,
+        [0x8a5a36, 0x6b4228, 0xa8743f][i], T_SPLINTER, 0, 800 * u, 0.3, f.range(-12, 12), F_DROPLET);
+    }
+    this._event('hit', sh.x, sh.y, 0.5);
+    // In der Feuerpause ist die Runde entschieden: Nachzügler richten keinen Schaden mehr an
+    if (!this.ships.every((o) => o.phase === 'afloat')) return;
+    ship.hitFrom = ship.damage; ship.hitT = this.t;
+    ship.damage = Math.min(1, ship.damage + ROCKET.shardHit * (this.cfg.intensity / 0.35));
+    ship.shardsTaken++; this.calm.shardHits++;
+    if (NavalSails.setDamage(ship.sails, ship.damage)) ship.sailVer++;
+    const target = Math.round((Math.min(ship.damage, TUNING.maxDamage) / TUNING.maxDamage) * TUNING.maxActiveHoles + 0.35);
+    if (this._activeHoles(ship) < target) this._addHole(ship, loc.x, loc.y, kind, 0.6);
+    if (ship.damage >= 1) this._startSinking(ship, sh.owner);
+  }
+  _updateRockets() {
+    const L = this.L, u = L.u, dt = this.dt, f = this.fx, P = this.particles;
+    const peace = this.ships.every((o) => o.phase === 'afloat');
+    for (const ship of this.ships) {
+      const rk = ship.rk;
+      // Vorbereitung und Start: nur während des Gefechts
+      if (peace && !rk.on) {
+        ship.rocketT -= dt;
+        if (ship.rocketT < ROCKET.fuseT && this.step % 3 === 0) {       // Lunte sprüht Funken
+          const p = this._localToWorld(ship, ship.railX, ship.railY);
+          P.spawn(p.x, p.y, f.range(-60, 60) * u, -f.range(20, 110) * u, f.range(0.2, 0.45), f.range(3, 5) * u, 1 * u, 1, 0xffd27a, T_SPARK, 1, 300 * u, 1.5, 0, 0);
+        }
+        if (ship.rocketT <= 0 && this._launchRocket(ship)) ship.rocketT = ROCKET.period * this.rng.range(0.9, 1.1);
+      }
+      if (rk.on) {
+        // Flug auf einer festen Bahn (quadratische Bézierkurve), unabhängig vom Kugeltempo
+        rk.t += dt;
+        const k = Math.min(1, rk.t / ROCKET.flightT), a = (1 - k) * (1 - k), b = 2 * (1 - k) * k, c = k * k;
+        const nx = a * rk.x0 + b * rk.cx + c * rk.x1, ny = a * rk.y0 + b * rk.cy + c * rk.y1;
+        rk.ang = Math.atan2(ny - rk.y, nx - rk.x); rk.x = nx; rk.y = ny;
+        // Rauchfahne und Feuerschweif
+        P.spawn(nx - Math.cos(rk.ang) * 16 * u, ny - Math.sin(rk.ang) * 16 * u, f.range(-18, 18) * u, f.range(-18, 18) * u, f.range(0.7, 1.3), 9 * u, f.range(26, 40) * u,
+          0.42, 0xb9bcc6, T_SOFT, 0, -8 * u, 1.6, 0, F_FADEIN);
+        if (this.step % 2 === 0) P.spawn(nx - Math.cos(rk.ang) * 14 * u, ny - Math.sin(rk.ang) * 14 * u, -Math.cos(rk.ang) * 120 * u + f.range(-50, 50) * u,
+          -Math.sin(rk.ang) * 120 * u + f.range(-50, 50) * u, f.range(0.15, 0.3), f.range(4, 6) * u, 1 * u, 1, 0xffb54d, T_SPARK, 1, 0, 1.5, 0, 0);
+        if (k >= 1) this._burstRocket(ship);
+      }
+    }
+    // Splitter: fallen mit der Schwerkraft des Modus, durchschlagen Segel, treffen Rumpf oder Kastell oder verlöschen im Wasser
+    for (const sh of this.shards) {
+      if (!sh.on) continue;
+      sh.age += dt; sh.vy += L.g * dt;
+      sh.x += sh.vx * dt; sh.y += sh.vy * dt;
+      const sy = this.surfaceY(sh.x, this.t);
+      if (sh.y > sy || sh.x < -40 * u || sh.x > L.W + 40 * u) {
+        sh.on = false;
+        if (sh.y > sy) {
+          for (let i = 0; i < 5; i++) P.spawn(sh.x + f.range(-4, 4) * u, sy, f.range(-70, 70) * u, -f.range(90, 240) * u, f.range(0.35, 0.7), f.range(3, 6) * u, f.range(2, 4) * u, 0.9, 0xd6f5ff, T_DROP, 0, 1000 * u, 0.2, 0, F_DROPLET);
+          this._event('splash', sh.x, sy, 120 * u);
+        }
+        continue;
+      }
+      this._sailCheck(sh, sh, { speed: Math.hypot(sh.vx, sh.vy) * dt, velocity: { x: sh.vx * dt, y: sh.vy * dt } });
+      for (const ship of this.ships) {
+        if (ship.i === sh.owner || ship.phase !== 'afloat' || Math.abs(sh.x - ship.x) > ship.len) continue;
+        const loc = this._worldToLocal(ship, sh.x, sh.y), c = ship.geo.castle;
+        if (loc.x >= c.x0 && loc.x <= c.x1 && loc.y >= c.y0 && loc.y <= c.y1) { this._shardHit(sh, ship, loc, 'castle'); break; }
+        if (loc.y >= ship.geo.deckY) {
+          const xr = polyXRange(ship.geo.outline, loc.y);
+          if (xr && loc.x >= xr[0] && loc.x <= xr[1]) { this._shardHit(sh, ship, loc, 'hull'); break; }
+        }
+      }
     }
   }
 
@@ -979,10 +1124,11 @@ class NavalBattle {
       ships: this.ships.map((s) => ({
         name: s.team.name, damage: s.damage, health: 1 - s.damage, ammo: s.ammo, shots: s.shots, hitsTaken: s.hitsTaken,
         holes: s.holes.filter((h) => !h.patched).length, patches: s.holes.filter((h) => h.patched).length, sink: s.sink,
-        ...(s.sails ? { sails: s.sails.map((x) => ({ hits: x.hits, holes: x.holes.length, wear: x.wear })), phase: s.phase, gen: s.gen } : {}),
+        ...(s.sails ? { sails: s.sails.map((x) => ({ hits: x.hits, holes: x.holes.length, wear: x.wear })), phase: s.phase, gen: s.gen, shardsTaken: s.shardsTaken, rocketIn: s.rocketT } : {}),
       })),
       ...(this.calm ? { mode: this.cfg.mode, bounces: this.calm.bounces, sailHits: this.calm.sailHits,
-        score: [...this.calm.score], sunk: this.calm.sunk, round: this.calm.round } : {}),
+        score: [...this.calm.score], sunk: this.calm.sunk, round: this.calm.round,
+        rockets: this.calm.rockets, shardHits: this.calm.shardHits, shardsFlying: this.shards.filter((o) => o.on).length } : {}),
     };
   }
   stateHash() {
@@ -1000,9 +1146,11 @@ class NavalBattle {
     if (this.calm) {   // eigener Zustand des Modus: Abpraller, Segel und deren Zufallsstrom
       s += `|${this.calm.bounces}|${this.sailRng.s}|${this.calm.score.join(',')}|`;
       for (const sh of this.ships) {
-        s += `${sh.phase[0]}${sh.gen},${f(sh.down)},${f(sh.slide)}:`;
+        s += `${sh.phase[0]}${sh.gen},${f(sh.down)},${f(sh.slide)},${f(sh.rocketT)},${sh.rk.on ? f(sh.rk.t) : '-'}:`;
         for (const sl of sh.sails) s += `${sl.hits},${sl.holes.length},${f(sl.wear)};`;
       }
+      s += `|${this.calm.rockets},${this.calm.shardHits}|`;
+      for (const o of this.shards) if (o.on) s += `${f(o.x)},${f(o.y)};`;
     }
     return fnv1a(s).toString(16).padStart(8, '0');
   }
@@ -1017,6 +1165,14 @@ class NavalBattle {
 // =====================================================================
 //  Renderer (PixiJS) – liest nur den Simulationszustand
 // =====================================================================
+// Rakete (zeigt nach +x, Ursprung am hinteren Ende des Rumpfs): Leitstab, heller Rumpf mit Farbring, farbige Spitze
+function drawRocket(g, len, color) {
+  const w = len * 0.2;
+  g.moveTo(-len * 0.9, 0).lineTo(0, 0).stroke({ width: Math.max(1.5, w * 0.22), color: 0x8a5a36, cap: 'round' });
+  g.roundRect(0, -w / 2, len * 0.72, w, w * 0.25).fill(0xd8d2c4).stroke({ width: 1.5, color: 0x2a1a10 });
+  g.rect(len * 0.18, -w / 2, len * 0.16, w).fill(color);
+  g.poly([len * 0.72, -w / 2, len, 0, len * 0.72, w / 2]).fill(color).stroke({ width: 1.5, color: 0x2a1a10, join: 'round' });
+}
 let ballTex = null;
 function getBallTexture() {
   if (ballTex) return ballTex;
@@ -1143,6 +1299,19 @@ class ShipView {
       cc.addChild(barrel); cc.addChild(carriage); root.addChild(cc);
       return { cc, barrel };
     });
+    // Ruhiges Duell: Startschiene am Heck und die aufgelegte Rakete (erscheint während der Vorbereitung)
+    this.rail = null; this.rocket = null;
+    if (ship.sails) {
+      const a = ROCKET.railAngle, d = ROCKET.rail * len, ex = ship.railX + f * Math.cos(a) * d, ey = ship.railY - Math.sin(a) * d;
+      this.rail = new PIXI.Graphics();
+      this.rail.moveTo(ship.railX - f * 0.02 * len, ship.railY + 0.035 * len).lineTo(ship.railX, ship.railY).stroke({ width: Math.max(3, 0.014 * len), color: 0x3a2416, cap: 'round' });
+      this.rail.moveTo(ship.railX, ship.railY).lineTo(ex, ey).stroke({ width: Math.max(2.5, 0.011 * len), color: 0x6b4528, cap: 'round' });
+      this.rail.moveTo(ship.railX, ship.railY).lineTo(ex, ey).stroke({ width: 1, color: 0xb9925c, alpha: 0.7 });
+      root.addChild(this.rail);
+      this.rocket = new PIXI.Graphics(); drawRocket(this.rocket, len * 0.13, ship.team.color);
+      this.rocket.rotation = Math.atan2(ey - ship.railY, ex - ship.railX); this.rocket.visible = false;
+      root.addChild(this.rocket);
+    }
     // Mündungsfeuer als Licht: warmer Schein auf Segeln und Rumpf, solange der Rückstoß abklingt
     this.flash = new PIXI.Sprite(getParticleTextures()[T_SOFT]); this.flash.anchor.set(0.5); this.flash.blendMode = 'add';
     this.flash.tint = 0xffb264; this.flash.visible = false; root.addChild(this.flash);
@@ -1155,6 +1324,17 @@ class ShipView {
     this.hull.tint = lerpColor(0xffffff, 0x8f7c70, s.damage / TUNING.maxDamage);
     for (const sl of this.sails) sl.c.scale.set(1 + 0.025 * Math.sin(t * 1.3 + sl.phase), 1 + 0.02 * Math.sin(t * 1.1 + sl.phase * 1.3));
     if (this.sailsView) this.sailsView.draw(t);
+    if (this.rocket) {
+      // aufgelegte Rakete: gleitet während der Vorbereitung die Schiene hinauf, zittert kurz vor dem Start
+      const left = s.rocketT, on = !s.rk.on && left < ROCKET.prepT && s.phase === 'afloat';
+      this.rocket.visible = on;
+      if (on) {
+        const k = clamp((ROCKET.prepT - left) / (ROCKET.prepT - ROCKET.fuseT), 0, 1), e = k * k * (3 - 2 * k), a = ROCKET.railAngle, d = ROCKET.rail * s.len * (0.25 + 0.5 * e);
+        const jit = left < ROCKET.fuseT ? Math.sin(t * 61) * 0.8 : 0;
+        this.rocket.position.set(s.railX + s.facing * Math.cos(a) * d + jit, s.railY - Math.sin(a) * d);
+        this.rocket.alpha = clamp(k * 4, 0, 1);
+      }
+    }
     this.lantern.alpha = 0.55 + 0.15 * Math.sin(t * 7.3 + s.i) + 0.1 * Math.sin(t * 13.1);
     // Flagge
     const fl = this.flag, [fx, fy] = this.flagPos, fw = 0.12 * s.len, fh = 0.06 * s.len, dir = -s.facing;
@@ -1382,6 +1562,10 @@ class NavalRenderer {
     this.gTrails = new PIXI.Graphics(); this.world.addChild(this.gTrails);
     this.flyGlow = new PIXI.Container(); this.flyLayer = new PIXI.Container();
     this.world.addChild(this.flyGlow); this.world.addChild(this.flyLayer);
+    this.gRocket = new PIXI.Graphics(); this.world.addChild(this.gRocket);   // ruhiges Duell: Rakete im Flug und Splitter
+    this.rocketViews = sim.calm ? sim.ships.map((sh) => {
+      const g = new PIXI.Graphics(); drawRocket(g, sh.len * 0.13, sh.team.color); g.visible = false; this.world.addChild(g); return g;
+    }) : [];
     this.ballViews = sim.balls.map((b) => {
       const team = sim.ships[b.owner].team, sc = (2 * b.r) / 60;
       const fly = new PIXI.Sprite(getBallTexture()); fly.anchor.set(0.5); fly.scale.set(sc); fly.visible = false;
@@ -1541,6 +1725,7 @@ class NavalRenderer {
     }
     // Recycling
     this._drawRecycling(t);
+    if (sim.calm) this._drawRockets();
     // Kugeln
     const gt = this.gTrails; gt.clear();
     const gv = this.ballViews[sim.goldBall.id], gTex = gb ? getGoldTexture() : getBallTexture();
@@ -1643,6 +1828,23 @@ class NavalRenderer {
    * mit dem Seegang über das Rohr gleitet. Hinten (gRec) liegen Rohrkörper und Sockelinneres, vorne (gRecFront)
    * Glasreflexe, Messingringe und Sockelplatte – die Kugeln liegen dazwischen und sitzen so sichtbar im Rohr.
    */
+  // Ruhiges Duell: Raketen im Flug (fertige Figur, nur verschoben und gedreht) und Splitter mit Glut und kurzem Schweif
+  _drawRockets() {
+    const sim = this.sim, u = this.L.u, g = this.gRocket, r = this.L.ballR * 0.45;
+    sim.ships.forEach((sh, i) => {
+      const v = this.rocketViews[i], rk = sh.rk;
+      v.visible = rk.on;
+      if (rk.on) { v.rotation = rk.ang; v.position.set(rk.x - Math.cos(rk.ang) * sh.len * 0.09, rk.y - Math.sin(rk.ang) * sh.len * 0.09); }
+    });
+    g.clear();
+    for (const sh of sim.shards) {
+      if (!sh.on) continue;
+      g.moveTo(sh.x - sh.vx * 0.07, sh.y - sh.vy * 0.07).lineTo(sh.x, sh.y).stroke({ width: 3 * u, color: 0xffb54d, alpha: 0.55, cap: 'round' });
+      g.circle(sh.x, sh.y, r * 2.4).fill({ color: 0xffa040, alpha: 0.22 });
+      g.circle(sh.x, sh.y, r).fill(0x3a3f4a).stroke({ width: 1.2 * u, color: 0xffd9a0, alpha: 0.9 });
+    }
+  }
+
   _drawRecycling(t) {
     const sim = this.sim, L = this.L, u = L.u, g = this.gRec, f = this.gRecFront, r = L.ballR;
     g.clear(); f.clear();
@@ -1771,6 +1973,9 @@ function calmAudioTable(base) {
   const { shot, hit, ...rest } = base.events;
   return (calmAudio = { ...base, defaultVolume: { master: 65 }, events: { shot, hit,
     bounce: { label: 'Abpraller', samples: ['impactWood_medium_000', 'impactWood_medium_001'], gain: 0.2, semis: 5, detune: 2, minGap: 0.06, ref: 0.8 },
+    // Rakete: vorläufig aus dem Kanonenklang abgeleitet (heller Start, dumpfer Knall); eigene Klänge folgen mit der Tonabstimmung
+    rocket: { label: 'Raketenstart', samples: ['synth:cannon'], gain: 0.16, semis: 9, detune: 1.5, minGap: 0.2 },
+    burst: { label: 'Raketenknall', samples: ['synth:cannon'], gain: 0.3, semis: -4, detune: 1.5, minGap: 0.2 },
     ...rest } });
 }
 

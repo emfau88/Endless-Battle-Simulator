@@ -1,7 +1,7 @@
 # Naval: Modus „Ruhiges Duell“ (in Arbeit)
 
-Stand: 16.11.2026, nachts. Erste zwei Pakete des Naval-Ausbaus (R34, im [Gesamtplan](GESAMTPLAN_2026-11-16.md) Abschnitt 8.4
-als N1a und N2a geführt). Der Nutzer hat die Richtung anhand von Standbildern und Testclips freigegeben, den Einbau als
+Stand: 16.11.2026, nachts. Erste drei Pakete des Naval-Ausbaus (R34, im [Gesamtplan](GESAMTPLAN_2026-11-16.md) Abschnitt 8.4
+als N1a, N2a und N2b geführt). Der Nutzer hat die Richtung anhand von Standbildern und Testclips freigegeben, den Einbau als
 neuen Modus beauftragt und danach die Vorschläge zu Lebensanzeige, Runden und Segeln zur Umsetzung freigegeben.
 
 ## 1 · Umfang
@@ -20,7 +20,8 @@ node export.mjs --scenario naval --param mode=calm --duration 20 --aspect 16:9 -
 ```
 
 Seit dem zweiten Paket enthalten: Runden mit Versenkung, Punktestand und neuem Schiff (Abschnitt 3a).
-Noch **nicht** enthalten: Finale am Videoende, Wetter, eigene Tonabstimmung, die Rakete vom Heck.
+Seit dem dritten Paket enthalten: die Rakete vom Heck (Abschnitt 3b).
+Noch **nicht** enthalten: Finale am Videoende, Wetter, eigene Tonabstimmung.
 
 ## 2 · Werte des Modus
 
@@ -77,6 +78,26 @@ leitet alles Sichtbare daraus ab; das Schwingen von Streifen und Rah ist eine re
 
 Warum die Reparatur: Ohne sie waren beide Schiffe am Rundenende fast gleich beschädigt, und der Sieger sank im
 Schnitt rund 40 Sekunden später selbst. Mit ihr dauert jede Runde etwa gleich lang.
+
+## 3b · Rakete vom Heck
+
+Idee des Nutzers vom 16.11.: eine seltene zweite Attacke neben den Kanonen. Als Vorschau gebaut und von ihm anhand
+eines Testclips freigegeben.
+
+- **Takt:** Jedes Schiff startet etwa alle 20 Sekunden eine Rakete; die Schiffe wechseln sich ab, im Duell fliegt also
+  etwa alle 10 Sekunden eine.
+- **Vorbereitung:** Sechs Sekunden vorher gleitet die Rakete auf die Startschiene am Heck, in den letzten zwei
+  Sekunden sprüht die Lunte Funken.
+- **Flug:** In 2,6 Sekunden auf fester Bahn mit Rauchfahne bis knapp über die Mastspitzen des Gegners.
+- **Splitter:** Dort zerplatzt sie in sieben Splitter. Sie durchschlagen Segel (mit Loch und Stofffetzen) und nehmen
+  bei einem Treffer auf Rumpf oder Kastell je 0,5 %; wer daneben fällt, verlischt im Wasser.
+- **Nicht Teil des Kugelkreislaufs:** Rakete und Splitter werden nicht recycelt.
+- **Feuerpause:** In der Pause wird keine Rakete vorbereitet; Nachzügler richten keinen Schaden an.
+
+Messwerte (reine Simulation, Querformat, fünf Seeds zu je 20 Minuten, 30 Runden): Runden 144 bis 202 s, Median
+182 s. Die Rakete verkürzt eine Runde also um rund eine halbe Minute.
+
+Die Klänge für Start und Knall sind vorläufig aus dem Kanonenklang abgeleitet.
 
 ## 4 · Aufbau im Code
 
