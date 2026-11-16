@@ -1,6 +1,6 @@
 # Gesamtplan: ein Main, sichere Architektur, Ausbau je Szenario
 
-**Zuletzt aktualisiert:** 16.11.2026, spätabends. **Status:** vom Nutzer am 16.11.2026 freigegeben („freie Hand“),
+**Zuletzt aktualisiert:** 16.11.2026, nachts (Naval: Modus „Ruhiges Duell“). **Status:** vom Nutzer am 16.11.2026 freigegeben („freie Hand“),
 Umsetzung läuft.
 
 Die [ROADMAP](ROADMAP.md) bleibt die einzige aktive Aufgabenliste; die Vorhaben dieses Plans stehen dort als
@@ -36,7 +36,7 @@ Drei Zustände: **Erledigt**, **Läuft**, **Offen**. Dazu **Entfällt** für ges
 | 1 · Architektur (R32) | **Läuft** | A1 erledigt (`ARCHITEKTUR.md`). A2 Vertragstest offen. A4 bis A7 entstehen mit dem ersten Szenario, das sie braucht. |
 | 2 · Abnahme-Mappe (R33) | **Offen** | 16 Clips zu je 20 Sekunden; noch nicht beauftragt. |
 | 3 · Verbesserungen je Szenario (R36) | **Offen** | Reihenfolge folgt aus der Abnahme-Mappe. |
-| 4 · Naval-Langvideo (R34) | **Offen** | Kommt nach Marble XL. |
+| 4 · Naval-Langvideo (R34) | **Läuft** | Vom Nutzer am 16.11. vorgezogen. N1a erledigt: Modus „Ruhiges Duell (in Arbeit)“ als eigener Schalter `mode=calm`, Standardmodus bitgleich ([Bericht](NAVAL_RUHIGES_DUELL_2026-11-16.md)). Nächster Schritt: die Vorschläge aus Abschnitt 8.4 entscheiden (zuerst Lebensanzeige und Runden). N0 steht weiter aus. |
 | 5 · Marble XL (R35) | **Läuft** | M0 und M1 erledigt. Der erste Prototyp (vier gleiche Linien) wurde abgelehnt; das Entwurfsbild der Produktionslinie mit neun Maschinen hat der Nutzer am 16.11. als richtige Richtung bestätigt. Die besprochenen Verbesserungen sind in einer zweiten Fassung umgesetzt (Tiefe im Hintergrund, Lichtzonen, deutlichere Kugelzustände, größere Farbstation, Richtungsmarken, reservierter Platz für Linie 2). Der Nutzer hat die zweite Fassung bestätigt. Seitdem läuft die Linie als bewegter Entwurf (Kugeln folgen einem festen Zeitplan durch alle neun Stationen, noch ohne Warteschlangen und Physik); Die Rückmeldung zum ersten Testclip ist eingearbeitet: im Querformat feste Übersicht ohne Kamerafahrt, weiche Marble-Works-Klänge mit fester, leiserer Mischung (rund −24,8 LUFS), Feuereffekte am Ofen, an der Farbstation ein Sprühstoß je Kugel in ihrer Farbe. Dritte Fassung: Kugeln und Glasrohre 35 % größer, Schilder über einen Schalter abschaltbar und standardmäßig aus. Vierte Fassung: Die Kugeln beginnen im Ofen zu glühen und kühlen im Fallrohr zur Farbstation wieder ab. Fünfte Fassung: Die Kühlstrecke 06 ist jetzt eine Trockenstrecke für die frische Farbe. Sechste Fassung: nasse Farbe deutlicher, kleine Deko-Animationen eingebaut (Ofen-Anzeigen, Lämpchen, Prüfbildschirm, Dampf, Sortierklappen, Zähler). Ein sechster 20-Sekunden-Testclip liegt vor. Offen: Rückmeldung dazu, mehr Kugeln gleichzeitig, eigene Klänge für Trommel, Ofen und Sprühen, Hochformat (auf Wunsch des Nutzers vorerst zurückgestellt), echte Warteschlangen und Physik (M2). Der Stand liegt seit dem 16.11. als Szenario „in Arbeit“ auf `main` (Auftrag des Nutzers), Bericht: `docs/MARBLE_XL_STUFE_1_2026-11-16.md`. Das lange Video wird ganz gerendert statt als wiederholte Schleife (Auftrag des Nutzers: 10 Minuten, 1440p, 60 Bilder pro Sekunde). Dafür läuft die Linie jetzt ohne Neubeginn: Chargen zu 48 Kugeln, die Röhren leeren sich, der Zähler zählt durch. |
 
 ---
@@ -329,6 +329,40 @@ Alles Neue hängt an einem Schalter `mode` (`endless` bleibt Standard).
 | N6 | **Vorlagen 20, 25, 30 Minuten** | Vorlauf-Prüfung des ganzen Films, je Kapitel ein 20-Sekunden-Ausschnitt zum Ansehen. | **Stopp: Langexport erst auf deinen Auftrag.** |
 
 Die offenen Punkte R01 (Schiffsoptik) und R05 (Zuschauerführung) gehen in N1 und N5 auf.
+
+### 8.4 Stand und Präzisierung (16.11.2026)
+
+Der Nutzer hat den Naval-Ausbau vorgezogen und die Richtung anhand gerenderter Standbilder und Testclips festgelegt.
+Dieser Abschnitt präzisiert 8.2 und 8.3; er ersetzt sie nicht.
+
+**Entschieden:**
+
+- Die Segel bleiben. Offene Kanonenboote wie beim Vergleichskanal sind verworfen.
+- Segelschäden wachsen sichtbar in vier Stufen; Löcher sitzen auf der echten Flugbahn, Stoff wird durchschlagen.
+- Wenige, gut verfolgbare Kugeln: zwei Kanonen je Schiff, mehr Rückprall, Masten weiter durchlässig.
+- Das Tempo ist deutlich langsamer: halbe Feuerrate, halbes Flugtempo.
+- Die Schiffe sind 25 % kleiner.
+- Das alles ist als eigener Modus `calm` („Ruhiges Duell“) eingebaut, nicht als Änderung des Standardmodus.
+
+**Neues Paket, erledigt:**
+
+| Nr. | Paket | Inhalt | Stand |
+|---|---|---|---|
+| N1a | **Ruhiges Duell** | Modus `calm` mit den Werten oben, Segel-Baustein `src/scenarios/naval/sails.js`, eigener Test. Messwerte und Grenzen im [Bericht](NAVAL_RUHIGES_DUELL_2026-11-16.md). | **Erledigt** (Branch `naval/ruhiges-duell`) |
+
+Der Rundenmodus aus N2 baut auf dem ruhigen Duell auf, nicht auf dem Standardmodus.
+
+**Noch nicht entschieden (Empfehlung des Assistenten):**
+
+| Punkt | Empfehlung |
+|---|---|
+| Lebensanzeige | Jeder zählende Treffer nimmt einen festen, sichtbaren Betrag; Abpraller und Segeldurchschüsse zählen erkennbar nicht. Heute bewegt sich der Balken im ruhigen Duell kaum (4 % in 5 Minuten). |
+| Länge des ersten Films | Etwa 10 Minuten statt 20 bis 30; die längeren Fassungen erst, wenn die Runden tragen. |
+| N5 (breite See mit Kamerafahrt) | Für den ersten Film streichen: Im Querformat gilt die feste Übersicht. |
+| Segelschaden im Rundenmodus | An den Schiffsschaden koppeln (Segel als Lebensanzeige); ein neues Schiff bringt frische Segel mit. |
+| Abpraller | Erhöhte Bugkante testen, damit Kugeln länger an Deck bleiben (heute im Schnitt 0,47 Abpraller je Treffer). |
+| Lesbarkeit | Leuchtspur so lang wie im Standardmodus; die zwei Kanonen etwa 30 % größer. |
+| Ton | Leise Meeresatmosphäre als Grundton, weiche Klänge für Abpraller und Segeldurchschuss; danach die Standardmischung wieder auf 100 %. |
 
 ---
 

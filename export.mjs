@@ -36,6 +36,8 @@ Video
 Abkürzungen für das Szenario "naval"
   --ships 2–4  --cannons 1–6  --fire-rate 0.2–3  --speed 0.64–1.6  --intensity 0–1 (oder 0–100)  --no-recycle
   --no-golden  --no-sky  --no-meteors  --no-whales      goldene Kugel, Himmelsverlauf, Sternschnuppen, Wal ausschalten
+  --param mode=calm      Modus „Ruhiges Duell“ (in Arbeit): 2 Kanonen, halbes Tempo, kleinere Schiffe, Segelschäden;
+                         zusätzlicher Klang: bounce
   Feineinstellung per --param: skyMinutes=0 (Morgengrauen am Videoende, mind. 10 min) | 5–240,
   meteorEvery=75 (Sekunden, 20–600), whaleEvery=210 (Sekunden, 30–1800)
 

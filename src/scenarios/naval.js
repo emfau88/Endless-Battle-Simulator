@@ -17,6 +17,7 @@ const { Engine, Body, Bodies, Composite, Events, Vertices, Common } = Matter;
 const { PHYS_HZ, DT, DT_MS, RNG, Particles, ParticleView, canvasTex, getParticleTextures } = EBS;
 const { clamp, lerp, angleDiff, num, bool, fnv1a, hashSeed, lerpColor, fmtTime, fmtInt, fmtIntEn } = EBS.util;
 const { T_SOFT, T_SPARK, T_SPLINTER, T_DROP, T_RING, T_BUBBLE, F_BUBBLE, F_DROPLET, F_FADEIN } = EBS.FX;
+const NavalSails = EBS.NavalSails;   // Segelschäden (src/scenarios/naval/sails.js), nur im Modus „Ruhiges Duell“
 
 // =====================================================================
 //  Konstanten und Stellschrauben
@@ -82,6 +83,15 @@ function skyProgress(p, t, durationSec) {
   return x * x * (3 - 2 * x);
 }
 
+// Modi: „endless“ (kein Eintrag) ist der unveränderte Standard und bleibt Bit für Bit gleich. Jeder weitere Modus ist ein
+// eigenes Regelwerk mit festen Grundwerten; Feuer- und Geschossgeschwindigkeit der Regler wirken darin relativ zum Modus.
+const MODES = {
+  // Ruhiges Duell (in Arbeit): wenige, gut verfolgbare Kugeln. Zwei Kanonen je Schiff, halbe Feuerrate, halbes
+  // Flugtempo bei gleichen Bögen (Schwerkraft ∝ Tempo², Mündungsgeschwindigkeit ∝ Tempo), mehr Rückprall,
+  // Schiffe 25 % kleiner (Kugeln bleiben gleich groß), dazu sichtbar wachsende Segelschäden.
+  calm: { cannons: 2, fireTempo: 0.5, flightTempo: 0.5, shipScale: 0.75, restitution: 0.7 },
+};
+
 // Layout aus der logischen Weltgröße (9:16, 16:9 oder 1:1 – kurze Seite 1080)
 function computeLayout(world, cfg) {
   const W = world.w, H = world.h, portrait = H > W * 1.2, wide = W > H * 1.2, u = Math.min(W, H) / 1080, n = cfg.ships;
@@ -92,12 +102,13 @@ function computeLayout(world, cfg) {
   const xs = [];
   for (let i = 0; i < n; i++) xs.push(W * (0.5 + (i / (n - 1) - 0.5) * span));
   const spacing = W * span / (n - 1);
-  const baseHull = (duel ? 400 : wide ? 430 : 335) * u;
+  const M = MODES[cfg.mode], ft = M ? M.flightTempo : 1, shipScale = M ? M.shipScale : 1;   // Standard: beide 1 (× 1 ist exakt)
+  const baseHull = (duel ? 400 : wide ? 430 : 335) * u * shipScale;
   const hull = Math.min(baseHull, spacing * 0.62);
   const sc = hull / baseHull;
-  const g = 470 * u;
+  const g = 470 * u * ft * ft;
   return {
-    W, H, portrait, wide, u, n, xs, spacing, hull, sc, g,
+    W, H, portrait, wide, u, n, xs, spacing, hull, sc, g, ft, shipScale,
     ballR: Math.max(7, 10.5 * u * Math.max(0.75, sc)),
     waterY: Math.round(H * (portrait ? 0.565 : duel ? 0.66 : 0.6)),
     floorY: portrait ? Math.round(H * 0.795) : Math.round(H - 74 * u),   // tiefster Punkt der Mulden
@@ -181,6 +192,11 @@ class NavalBattle {
     Common._nextId = 0; Common._seed = 0; // Matter-interne Zähler zurücksetzen -> reproduzierbar
     this.rng = new RNG(hashSeed(cfg.seed, 'physics'));
     this.fx = new RNG(hashSeed(cfg.seed, 'fx'));
+    // Modus (null = Standard). Ein Modus legt die Kanonenzahl fest und hat für die Segel einen eigenen Zufallsstrom.
+    const M = (this.modeDef = MODES[cfg.mode] || null);
+    this.fireTempo = M ? M.fireTempo : 1;
+    this.calm = M ? { bounces: 0, sailHits: 0 } : null;
+    if (M) { cfg.cannons = M.cannons; this.sailRng = new RNG(hashSeed(cfg.seed, 'sail')); }
     this.engine = Engine.create({ gravity: { x: 0, y: L.g / 1000, scale: 0.001 }, positionIterations: 8, velocityIterations: 6 });
     this.world = this.engine.world;
     this.step = 0; this.t = 0; this.shake = 0;
@@ -271,6 +287,7 @@ class NavalBattle {
       bodies: [body, mastBody].map((b) => ({ b, co: { x: b.position.x, y: b.position.y } })),
       x0: L.xs[i], x: L.xs[i], y: L.waterY, angle: 0, baseAngle: 0, recoilX: 0, recoilA: 0, sink: 0,
       maxSink: geo.fb * 0.42, damage: 0, holes: [], dmgVer: 0, lastPatch: 0,
+      sails: this.modeDef ? NavalSails.create(geo, len, facing, (k) => hashSeed(this.cfg.seed, `sail${i}_${k}`)) : null, sailVer: 0,
       ammo: 0, magBalls: [], lane: [], cannons: [], totalBalls: 0,
       shots: 0, hitsDealt: 0, hitsTaken: 0, smokeAcc: 0, fireAcc: 0,
       liftX: L.xs[i] + geo.port.x, footY: 0, headY: 0, liftLen: 0, portX: 0, portY: 0, rackX: 0, rackY: 0, ballMask: 0,
@@ -286,7 +303,7 @@ class NavalBattle {
     const mask = BALL_CAT | (this.allShipsMask & ~(SHIP_CAT << ship.i)) | (this.allMastsMask & ~(MAST_CAT << ship.i));
     for (let k = 0; k < count; k++) {
       const body = Bodies.circle(0, -5000, L.ballR, {
-        restitution: 0.3, friction: 0.03, frictionStatic: 0.2, frictionAir: 0, density: 0.004,
+        restitution: this.modeDef ? this.modeDef.restitution : 0.3, friction: 0.03, frictionStatic: 0.2, frictionAir: 0, density: 0.004,
         collisionFilter: { category: BALL_CAT, mask, group: 0 },
       });
       const ball = {
@@ -399,7 +416,7 @@ class NavalBattle {
         c.recoil = Math.max(0, c.recoil - this.dt * 3);
         c.angle += clamp(angleDiff(c.aim, c.angle), -maxTurn, maxTurn);
         // Ausgleich fürs Beuteprinzip: ein volles Regal feuert etwas schneller, ein leeres etwas langsamer
-        c.timer -= this.dt * this.cfg.fireRate * (this.beute ? clamp(1 + 0.03 * (ship.ammo - this.ammoTarget), 0.85, 1.3) : 1);
+        c.timer -= this.dt * this.cfg.fireRate * this.fireTempo * (this.beute ? clamp(1 + 0.03 * (ship.ammo - this.ammoTarget), 0.85, 1.3) : 1);
         if (c.timer <= 0) {
           if (ship.ammo > 0) this._fire(ship, c); else { c.waiting = true; c.timer = 0; }
         }
@@ -425,7 +442,7 @@ class NavalBattle {
     Body.setVelocity(b, { x: Math.cos(ang) * v / PHYS_HZ, y: Math.sin(ang) * v / PHYS_HZ - aStep * 0.5 });
     Composite.add(this.world, b);
     ball.state = 'fly'; ball.age = 0; ball.still = 0; ball.nudges = 0; ball.hit = false; ball.ghost = false;
-    ball.trailLen = 0; ball.trailHead = 0;
+    ball.trailLen = 0; ball.trailHead = 0; ball.sailKey = -1; ball.sailGo = 0; ball.lastBounce = 0;
     c.angle = ang; c.recoil = 1;
     const dirX = Math.cos(ang) >= 0 ? 1 : -1;
     ship.recoilX -= dirX * 2.4 * this.L.u; ship.recoilA -= dirX * 0.008;
@@ -451,11 +468,19 @@ class NavalBattle {
   }
 
   _processHits() {
-    const u = this.L.u;
+    const u = this.L.u, ft = this.L.ft;
     for (const h of this.hitQueue) {
       const ball = h.ball;
       if (ball.state !== 'fly' || ball.ghost) continue;
-      if (ball.hit || h.speed < 140 * u) { if (h.speed > 260 * u) this._fxDust(h.x, h.y); continue; }
+      if (ball.hit || h.speed < 140 * u * ft) {
+        if (h.speed > 260 * u * ft) this._fxDust(h.x, h.y);
+        // Ruhiges Duell: Abpraller nach dem ersten Treffer machen keinen Schaden, sind aber hörbar
+        if (this.calm && ball.hit && h.speed > 170 * u * ft && this.step - ball.lastBounce > 4) {
+          ball.lastBounce = this.step; this.calm.bounces++;
+          this._event('bounce', h.x, h.y, clamp(h.speed / this.L.v0, 0.3, 1));
+        }
+        continue;
+      }
       ball.hit = true;
       ball.body.collisionFilter.mask = ball.mask & ~this.allMastsMask;
       const ship = h.ship;
@@ -516,8 +541,52 @@ class NavalBattle {
     }
   }
 
+  // ---------- Ruhiges Duell: Segelschäden ----------
+  // Gegnerische Kugeln durchschlagen das Tuch und fliegen weiter; die Physik bleibt davon unberührt.
+  _sailMax(sl) { return Math.max(2, Math.round(NavalSails.SAIL.maxHoles[sl.idx] * Math.pow(this.L.shipScale, 1.5))); }
+  _sailCheck(ball, p, b) {
+    let key = -1, ship = null, sail = null, lx = 0, ly = 0;
+    for (const sh of this.ships) {
+      if (sh.i === ball.owner || Math.abs(p.x - sh.x) > sh.len || p.y > sh.y) continue;
+      const loc = this._worldToLocal(sh, p.x, p.y);
+      for (const s of sh.sails) {
+        if (NavalSails.contains(s, loc.x - s.x, loc.y - s.y)) { key = sh.i * 8 + s.idx; ship = sh; sail = s; lx = loc.x - s.x; ly = loc.y - s.y; break; }
+      }
+      if (key >= 0) break;
+    }
+    if (key !== ball.sailKey) {
+      // Segel verlassen, bevor das Loch gesetzt war: an der letzten Stelle im Tuch setzen
+      if (ball.sailKey >= 0 && ball.sailGo > 0) { this._sailHole(ball.sailShip, ball.sailRef, ball.sailX, ball.sailY, b); ball.sailGo = 0; }
+      ball.sailKey = key;
+      if (key >= 0) {
+        // das Loch entsteht ein Stück hinter der Eintrittskante, genau auf der Flugbahn
+        const slow = b.speed * PHYS_HZ < NavalSails.SAIL.minSpeed * this.L.u * this.L.ft;
+        ball.sailGo = slow ? 0 : this.sailRng.range(0.12, 0.6) * NavalSails.extent(sail);
+        ball.sailShip = ship; ball.sailRef = sail;
+      }
+    }
+    if (key >= 0 && ball.sailGo > 0) {
+      ball.sailX = lx; ball.sailY = ly;
+      ball.sailGo -= b.speed;
+      if (ball.sailGo <= 0) { ball.sailGo = 0; this._sailHole(ship, sail, lx, ly, b); }
+    }
+  }
+  _sailHole(ship, s, x, y, b) {
+    const r = this.sailRng, u = this.L.u, P = this.particles;
+    const fresh = NavalSails.punch(s, x, y, r, this.L.ballR, this._sailMax(s));
+    ship.sailVer++; this.calm.sailHits++;
+    // Stofffetzen fliegen ein Stück mit der Kugel und trudeln herunter (Partikel stehen nicht im Zustands-Hash)
+    const w = this._localToWorld(ship, s.x + x, s.y + y), cloth = lerpColor(ship.team.sail, 0x6e6252, 0.12);
+    const vx = b.velocity.x * PHYS_HZ, vy = b.velocity.y * PHYS_HZ;
+    if (fresh) P.spawn(w.x, w.y, 0, 0, 0.16, 14 * u, 46 * u, 0.55, 0xfff4dc, T_SOFT, 1, 0, 0, 0, 0);
+    for (let i = 0, n = fresh ? 7 : 3; i < n; i++) {
+      P.spawn(w.x + r.range(-5, 5) * u, w.y + r.range(-5, 5) * u, vx * r.range(0.1, 0.32) + r.range(-60, 60) * u, vy * r.range(0.1, 0.32) + r.range(-70, 30) * u,
+        r.range(0.9, 1.7), r.range(6, 11) * u, r.range(5, 9) * u, 0.95, i % 3 ? cloth : ship.team.sail, T_SPLINTER, 0, 150 * u, 1.9, r.range(-9, 9), F_DROPLET);
+    }
+  }
+
   _updateBalls() {
-    const W = this.L.W, u = this.L.u;
+    const W = this.L.W, u = this.L.u, ft = this.L.ft;
     for (const ball of this.balls) {
       if (ball.state === 'fly') {
         const b = ball.body, p = b.position;
@@ -528,17 +597,18 @@ class NavalBattle {
         }
         const sy = this.surfaceY(p.x, this.t);
         if (p.y + ball.r * 0.35 > sy) { this._splash(ball, p.x, sy); continue; }
+        if (this.calm && !ball.ghost) this._sailCheck(ball, p, b);
         if (!ball.ghost) {
-          if (b.speed < 0.45 && ball.age > 0.4) {
+          if (b.speed < 0.45 * ft && ball.age > 0.4) {
             if (++ball.still > 30) { // Kugel liegt an Deck -> Richtung Bug (offene Seite) anstoßen
               let near = this.ships[0];
               for (const s of this.ships) if (Math.abs(s.x - p.x) < Math.abs(near.x - p.x)) near = s;
               b.collisionFilter.mask = ball.mask & ~this.allMastsMask;
-              Body.setVelocity(b, { x: near.facing * 3.6 * u, y: -2.2 * u });
+              Body.setVelocity(b, { x: near.facing * 3.6 * u * ft, y: -2.2 * u * ft });
               ball.still = 0; ball.nudges++; this.stats.nudges++;
             }
           } else if (ball.still > 0) ball.still--;
-          if (ball.age > 15 || ball.nudges > 3) { // Notfall: Kugel fällt durch und landet im Recycling
+          if (ball.age > 15 / ft || ball.nudges > 3) { // Notfall: Kugel fällt durch und landet im Recycling
             b.collisionFilter.mask = 0; ball.ghost = true; this.stats.forced++;
             this._fxPoof(p.x, p.y);
           }
@@ -660,8 +730,8 @@ class NavalBattle {
     }
   }
   _fxSplash(x, y, speed) {
-    const P = this.particles, r = this.fx, u = this.L.u, k = clamp(speed / (600 * u), 0.6, 1.4);
-    const n = Math.round(clamp(speed / (35 * u), 10, 24));
+    const P = this.particles, r = this.fx, u = this.L.u, k = clamp(speed / (600 * u * this.L.ft), 0.6, 1.4);
+    const n = Math.round(clamp(speed / (35 * u * this.L.ft), 10, 24));
     for (let i = 0; i < n; i++) {
       P.spawn(x + r.range(-6, 6) * u, y, r.range(-150, 150) * u, -r.range(170, 520) * u * k, r.range(0.5, 1.1),
         r.range(4, 8) * u, r.range(3, 5) * u, 0.9, 0xd6f5ff, T_DROP, 0, 1000 * u, 0.2, 0, F_DROPLET);
@@ -783,6 +853,11 @@ class NavalBattle {
     for (const b of this.balls) {
       if (b.state === 'fly' && !(Number.isFinite(b.body.position.x) && Number.isFinite(b.body.position.y))) errors.push(`Kugel ${b.id}: NaN`);
     }
+    if (this.calm) for (const sh of this.ships) for (const sl of sh.sails) {
+      if (!(sl.wear >= 0 && sl.wear <= 1)) errors.push(`Schiff ${sh.i}, Segel ${sl.idx}: Abnutzung außerhalb des Bereichs`);
+      if (sl.holes.length > this._sailMax(sl)) errors.push(`Schiff ${sh.i}, Segel ${sl.idx}: ${sl.holes.length} Löcher, erlaubt ${this._sailMax(sl)}`);
+      for (const h of sl.holes) if (!(Number.isFinite(h.x) && Number.isFinite(h.y) && h.r > 0 && h.tear >= 0)) errors.push(`Schiff ${sh.i}, Segel ${sl.idx}: ungültiges Loch`);
+    }
     return { ok: errors.length === 0, errors, bodies };
   }
   snapshot() {
@@ -797,7 +872,9 @@ class NavalBattle {
       ships: this.ships.map((s) => ({
         name: s.team.name, damage: s.damage, health: 1 - s.damage, ammo: s.ammo, shots: s.shots, hitsTaken: s.hitsTaken,
         holes: s.holes.filter((h) => !h.patched).length, patches: s.holes.filter((h) => h.patched).length, sink: s.sink,
+        ...(s.sails ? { sails: s.sails.map((x) => ({ hits: x.hits, holes: x.holes.length, wear: x.wear })) } : {}),
       })),
+      ...(this.calm ? { mode: this.cfg.mode, bounces: this.calm.bounces, sailHits: this.calm.sailHits } : {}),
     };
   }
   stateHash() {
@@ -812,6 +889,10 @@ class NavalBattle {
       s += ';';
     }
     s += `${this.rng.s}|${this.fx.s}`;
+    if (this.calm) {   // eigener Zustand des Modus: Abpraller, Segel und deren Zufallsstrom
+      s += `|${this.calm.bounces}|${this.sailRng.s}|`;
+      for (const sh of this.ships) for (const sl of sh.sails) s += `${sl.hits},${sl.holes.length},${f(sl.wear)};`;
+    }
     return fnv1a(s).toString(16).padStart(8, '0');
   }
   destroy() {
@@ -865,13 +946,17 @@ class ShipView {
     }
     rig.moveTo(g.bowsprit[0][0], g.bowsprit[0][1]).lineTo(g.bowsprit[1][0], g.bowsprit[1][1]).stroke({ width: Math.max(4, 0.016 * len), color: 0x5e3d24, cap: 'round' });
     root.addChild(rig);
+    // Ruhiges Duell: Segel mit Schäden (eigene Teile); der Standardmodus zeichnet die Segel unverändert wie bisher
+    this.sailsView = ship.sails ? new NavalSails.View(ship, L) : null;
+    if (this.sailsView) this.sailsView.addTo(root);
+    this.sails = [];
+    if (!this.sailsView) {
     // Klüversegel
     const jib = new PIXI.Graphics();
     jib.poly(flat([g.bowsprit[1], [fore.x + f * fore.w, g.deckY - fore.h * 0.7], [fore.x + f * 0.14 * len, g.deckY - 0.12 * len]]))
       .fill({ color: team.sail, alpha: 0.92 }).stroke({ width: 2, color: 0x6e6252 });
     root.addChild(jib);
     // --- Segel (eigene Container zum leichten Blähen)
-    this.sails = [];
     const sailDefs = [
       [mains, 0.22, 0.55, 0.44], [mains, 0.58, 0.8, 0.33], [fore, 0.2, 0.55, 0.36], [fore, 0.58, 0.82, 0.27],
     ];
@@ -887,6 +972,7 @@ class ShipView {
       c.addChild(s); root.addChild(c);
       this.sails.push({ c, phase: idx * 1.7 + ship.i * 0.9 });
     });
+    }
     // Flagge
     this.flag = new PIXI.Graphics(); this.flagPos = [mains.x, g.deckY - mains.h]; root.addChild(this.flag);
 
@@ -956,6 +1042,7 @@ class ShipView {
     this.root.position.set(s.x, s.y); this.root.rotation = s.angle;
     this.hull.tint = lerpColor(0xffffff, 0x8f7c70, s.damage / TUNING.maxDamage);
     for (const sl of this.sails) sl.c.scale.set(1 + 0.025 * Math.sin(t * 1.3 + sl.phase), 1 + 0.02 * Math.sin(t * 1.1 + sl.phase * 1.3));
+    if (this.sailsView) this.sailsView.draw(t);
     this.lantern.alpha = 0.55 + 0.15 * Math.sin(t * 7.3 + s.i) + 0.1 * Math.sin(t * 13.1);
     // Flagge
     const fl = this.flag, [fx, fy] = this.flagPos, fw = 0.12 * s.len, fh = 0.06 * s.len, dir = -s.facing;
@@ -1506,6 +1593,7 @@ class NavalRenderer {
   }
 
   destroy() {
+    for (const v of this.shipViews) if (v.sailsView) v.sailsView.destroy();
     this.root.destroy({ children: true });
     for (const t of this.ownTex) t.destroy(true);
   }
@@ -1515,6 +1603,18 @@ class NavalRenderer {
 // =====================================================================
 //  Registrierung
 // =====================================================================
+// Ruhiges Duell: zusätzlich ein leiser Holzton für Abpraller. Bei so wenigen Schüssen hebt die Einmessung auf −14 LUFS
+// die Pegelspitzen über die Prüfgrenze des Exporters; die Standardmischung des Modus steht deshalb vorläufig auf 65 %
+// (so wurde der Testclip abgenommen). Eine eigene Abstimmung mit Meeresatmosphäre steht noch aus.
+let calmAudio = null;
+function calmAudioTable(base) {
+  if (calmAudio) return calmAudio;
+  const { shot, hit, ...rest } = base.events;
+  return (calmAudio = { ...base, defaultVolume: { master: 65 }, events: { shot, hit,
+    bounce: { label: 'Abpraller', samples: ['impactWood_medium_000', 'impactWood_medium_001'], gain: 0.2, semis: 5, detune: 2, minGap: 0.06, ref: 0.8 },
+    ...rest } });
+}
+
 EBS.registerScenario({
   id: 'naval',
   title: 'Endless Naval Battle',
@@ -1522,13 +1622,18 @@ EBS.registerScenario({
   // Video) – Himmel erreicht das Morgengrauen am Videoende (mindestens 10 min), Sternschnuppe etwa alle 75 s (jedes
   // Video ab 8 s hat mindestens eine), Wal etwa alle 3½ Minuten, goldene Kugel mit Zähler.
   defaults: {
+    mode: 'endless',
     ships: 2, cannons: 4, fireRate: 1, projectileSpeed: 1, intensity: 0.35, ballsPerCannon: 5, recycleVisible: true,
     goldenBall: true, sky: true, skyMinutes: 0, meteors: true, meteorEvery: 75, whales: true, whaleEvery: 210,
   },
   // Bedienelemente fürs Live-Bedienfeld (restart: true -> Änderung startet die Simulation neu)
   controls: [
+    // resetMix: der Modus bringt eine eigene Standardmischung mit; rebuildUi: Regler und Klangliste neu aufbauen
+    { key: 'mode', label: 'Modus', type: 'select', restart: true, rebuildUi: true, resetMix: true,
+      options: [['endless', 'Endlos (Standard)'], ['calm', 'Ruhiges Duell (in Arbeit)']] },
     { key: 'ships', label: 'Anzahl der Schiffe', type: 'select', restart: true, options: [[2, '2 Schiffe'], [3, '3 Schiffe'], [4, '4 Schiffe']] },
-    { key: 'cannons', label: 'Kanonen pro Schiff', type: 'range', restart: true, min: 1, max: 6, step: 1, format: (v) => String(v) },
+    // im ruhigen Duell legt der Modus die Kanonenzahl fest (2 je Schiff)
+    { key: 'cannons', label: 'Kanonen pro Schiff', type: 'range', restart: true, min: 1, max: 6, step: 1, format: (v) => String(v), visible: (p) => p.mode !== 'calm' },
     { key: 'fireRate', label: 'Feuergeschwindigkeit', type: 'range', min: 0.2, max: 3, step: 0.05, format: (v) => v.toFixed(2) + '×' },
     { key: 'projectileSpeed', label: 'Geschossgeschwindigkeit', type: 'range', min: 0.64, max: 1.6, step: 0.02, format: (v) => v.toFixed(2) + '×' },
     { key: 'intensity', label: 'Zerstörungsintensität', type: 'range', min: 0, max: 1, step: 0.01, format: (v) => Math.round(v * 100) + ' %' },
@@ -1543,6 +1648,7 @@ EBS.registerScenario({
   ],
   normalizeParams(p) {
     return {
+      mode: Object.hasOwn(MODES, p.mode) ? p.mode : 'endless',
       ships: clamp(Math.round(num(p.ships, 2)), 2, 4),
       cannons: clamp(Math.round(num(p.cannons, 4)), 1, 6),
       fireRate: clamp(num(p.fireRate, 1), 0.2, 3),
@@ -1580,6 +1686,7 @@ EBS.registerScenario({
   // minGap begrenzt die Dichte je Klang, damit bei knapp drei Schüssen pro Sekunde kein Ton-Chaos entsteht.
   // label = Name des Lautstärkereglers in der Oberfläche (video.volume.<Klang> in Prozent); gain = Verhältnis der Klänge
   // zueinander – die Gesamtlautheit misst der Exporter auf −14 LUFS ein (lib/audio.mjs)
+  audioForParams(p) { return p && Object.hasOwn(MODES, p.mode) ? calmAudioTable(this.audio) : this.audio; },
   audio: {
     events: {
       shot: { label: 'Kanonenschuss', samples: ['synth:cannon'], gain: 0.34, detune: 1.5, minGap: 0.07 },
