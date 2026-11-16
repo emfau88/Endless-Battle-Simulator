@@ -8,6 +8,10 @@ Acht deterministische Simulationen für Battle- und „Satisfying“-Videos mit 
 
 *Echte Aufnahmen aus dem Projekt. Zum Vergrößern anklicken; die Wüsten-Baustelle ist eine Variante von Pyramid.*
 
+[![Endless Waterpark im Querformat (Parktag) und im Hochformat (Vier-Tiere-Short)](docs/images/waterpark.jpg)](docs/images/waterpark.jpg)
+
+*Neu: **Endless Waterpark**, das achte Szenario. Links der Parktag im Querformat, rechts der Short im Hochformat.*
+
 ## Szenarien und Varianten
 
 Die folgenden Szenarien und Varianten sind im aktuellen Code vorhanden. Weitere Regler steuern Mengen, Tempo, Kamera, Effekte und Ton.
@@ -21,7 +25,7 @@ Die folgenden Szenarien und Varianten sind im aktuellen Code vorhanden. Weitere 
 | **Endless Mycelium**<br>`mycelium` | Wachstumszyklus aus Myzel, Laub, Pilzen und Sporen mit neuen Generationen.<br>**Farben:** Wechselnd (Mint, Violett, Bernstein, Blau), Nur Mint, Kühle Töne, Warme Töne. | Freie Dauer |
 | **Endless Pyramid**<br>`pyramid` | **Kulissen:** Glaspyramide in der Lagune oder Wüsten-Baustelle mit wachsender Pyramide.<br>**Figuren:** Leuchtkugeln oder Tierchen (Küken, Pinguin, Schweinchen, Frosch).<br>Tageslauf, Lichtfüllung / Aufbau und Feuerwerk einstellbar. | Freie Dauer; Tageslauf und Finale konfigurierbar |
 | **Territory Wars · Hex Dominion**<br>`territory` | Vier Reiche auf einer Hexkarte.<br>**Profile:** Ruhiger Aufbau, Gebietskrieg, Intensive Front, Eigene Einstellungen.<br>Hoch- oder Querformatkarte, Perspektive oder Draufsicht; optionale Folgerunden. | Freie Dauer |
-| **Endless Waterpark**<br>`waterpark` | Die vier Pyramid-Tierchen in einem Oasen-Wasserpark: Glaslift, Panoramarutsche, Trichter, Wippe, Sprungbrett und sichtbarer Rücklauf.<br>Hoch-/Querformat, Tag/Nacht, UFO und weitere Himmelsgäste, Wasserleben und ruhiger Wasserklang. | Vier-Tiere-Short, Parktag mit Abschluss oder Dauerbetrieb; Vorprüfung für endliche Filme |
+| **Endless Waterpark**<br>`waterpark` | Die vier Pyramid-Tierchen (Küken, Pinguin, Schweinchen, Frosch) in einem hellen Oasen-Wasserpark. Ein gläserner Becherlift bringt sie auf das Startdeck.<br>**Vier Attraktionen:** Panoramarutsche, Trichter mit Glasrohr, Wippe mit Gegengewicht und Anschlägen, steile Rutsche mit Sprungbrett. Alle enden in der Lagune, der Rücklauf zum Lift ist sichtbar.<br>**Eigener Grundriss je Format:** Halbtotale im Querformat; im Hochformat steht der Turm in der Mitte und jede Attraktion hat ihre eigene Spur.<br>Tageslauf bis in die Nacht, Öffnungsprogramm, UFO und weitere Himmelsgäste, springende Fische, Sprechblasen, ruhiger Wasserklang. Anzeige im Video englisch. | Vier-Tiere-Short, Parktag mit Abendruhe oder Fontänenshow, oder Dauerbetrieb; Vorprüfung für endliche Filme |
 
 ## Was lässt sich exportieren?
 
@@ -66,11 +70,11 @@ eigene Lautstärken bleiben erhalten. Der Wasserregler passt nur den Hintergrund
 
 </details>
 
-Weitere Wasserpark-Vorlagen: Parktag mit [5](presets/waterpark-day-5min.json), [10](presets/waterpark-day-10min.json) oder [20 Minuten](presets/waterpark-day-20min.json), ruhiger Dauerbetrieb mit [10](presets/waterpark-relax-10min.json) oder [20 Minuten](presets/waterpark-relax-20min.json). Ruhiger Abschluss und Fontänenshow sind wählbar; Feuerwerk ist separat schaltbar. [Umsetzung und geprüfter Stand](docs/WASSERPARK_UMSETZUNG_2026-11-16.md).
+Weitere Wasserpark-Vorlagen: Parktag mit [5](presets/waterpark-day-5min.json), [10](presets/waterpark-day-10min.json) oder [20 Minuten](presets/waterpark-day-20min.json), ruhiger Dauerbetrieb mit [10](presets/waterpark-relax-10min.json) oder [20 Minuten](presets/waterpark-relax-20min.json). Ruhiger Abschluss und Fontänenshow sind wählbar; Feuerwerk ist separat schaltbar. [Umsetzung und geprüfter Stand](docs/WASSERPARK_UMSETZUNG_2026-11-16.md) · [Optik nach dem Mockup, Hochformat und Vorschläge](docs/WASSERPARK_MOCKUP_2026-11-16.md).
 
 ## Details und Entwicklungsstand
 
-[Marble Works](docs/PROGRESSIVE_MARBLE_V1.md) · [Scrap Wars](docs/SCRAP_WARS_INTEGRATION_2026-11-12.md) · [Mycelium](docs/MYCELIUM_2026-11-13.md) · [Pyramid](docs/ENDLESS_PYRAMID_2026-11-13.md) · [Territory Wars](docs/TERRITORY_INTEGRATION_2026-11-13.md) · [Integrations- und Exportprüfungen](docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md)
+[Marble Works](docs/PROGRESSIVE_MARBLE_V1.md) · [Scrap Wars](docs/SCRAP_WARS_INTEGRATION_2026-11-12.md) · [Mycelium](docs/MYCELIUM_2026-11-13.md) · [Pyramid](docs/ENDLESS_PYRAMID_2026-11-13.md) · [Territory Wars](docs/TERRITORY_INTEGRATION_2026-11-13.md) · [Waterpark](docs/WASSERPARK_MOCKUP_2026-11-16.md) · [Integrations- und Exportprüfungen](docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md)
 
 Vorhandene Exportoptionen bedeuten keine vollständige Abnahme jeder Kombination und Filmlänge. Bei Marble Works ist die gewünschte ASMR-Klanggestaltung noch offen ([Prüfstand](docs/PROGRESSIVE_MARBLE_V1_ABNAHME.md#offene-klangabnahme)).
 

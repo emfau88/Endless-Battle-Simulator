@@ -103,6 +103,36 @@ des Wasserparks ist umgestellt: `RIDES`, `A DAY AT THE WATERPARK`, `FOUR FRIENDS
 Die Bedienoberfläche bleibt deutsch. Die Vergleichsblätter oben wurden vorher gerendert und zeigen noch die
 deutschen Texte.
 
+## Nachtrag · Ton und Wippe geprüft
+
+**Ton.** Der Wasserpark nutzt dieselbe Tonspur-Technik wie die Pyramide: derselbe Wasserloop, dieselbe feste
+Verstärkung, Klänge aus den Ereignissen der Simulation. Zwei Probeexporte in 720p30, gemessen, nicht gehört:
+
+| | Dauer | Klangereignisse | fertige Lautheit | Spitze |
+|---|---|---|---|---|
+| Wasserpark-Short hoch | 30 s | 22 | −23,9 LUFS | −7,2 dBTP |
+| Wüsten-Pyramide Short | 25 s | 103 | −23,5 LUFS | −7,0 dBTP |
+
+Die Gesamtlautheit ist gleich, weil der Wasserloop sie bestimmt. Die Aktionsklänge allein liegen im Wasserpark
+aber 12 LU unter denen der Pyramide (−43,8 gegen −31,8 LUFS), und es sind nur ein Fünftel so viele. Der Short
+klingt dadurch fast nur nach Wasser. Alle Klangarten werden ausgelöst (Parktag 600 s: 1097 Ereignisse, darunter
+80 Wippenanschläge, 39 Trichter, 29 Sprungbrett, 212 Platscher).
+
+**Wippe.** Eine Fahrt aus der Simulation, Querformat: Das Tier fällt auf das Einstiegsende, das Ende sinkt und
+schlägt an. Der Schwung trägt das Tier bergauf, es wird dabei von 296 auf 116 px/s langsamer. Kurz hinter der
+Mitte kippt das Brett, schlägt auf der anderen Seite an, das Tier rutscht bergab und fällt in die Auffangrinne.
+Danach pendelt das Brett gedämpft zurück. Das ist logisch und physikalisch stimmig und gut lesbar
+(Brett 4,5 Tierbreiten lang, 1,7 s auf dem Brett, zwei Anschläge).
+
+Schwächen:
+
+- **Hochformat:** Das Brett ist nur 2,2 Tierbreiten lang, die Fahrt dauert 0,75 s. Der Ablauf stimmt, wirkt aber
+  eher wie eine Klappe als wie eine Wippe. Mehr Länge braucht schmalere Rinnen im Hochformat.
+- Das Tier fällt senkrecht und rutscht sofort mit vollem Tempo seitwärts. Ein schräger Ausguss in Fahrtrichtung
+  würde den Schwung erklären.
+- Die Neigung von 9° ist zurückhaltend. 12–14° wären deutlicher.
+- Auf dem Brett sitzt das Tier ruhig. Arme hoch beim Kippen würde den Moment betonen.
+
 ## Messwerte
 
 Zeichenzeit bei 1080p, Mittel über 300 Bilder, nur `paint()`:
