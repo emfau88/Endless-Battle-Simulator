@@ -12,6 +12,7 @@ class Simulation {
     this.world=world; this.video=video; this.timeScale=timeScale||1; this.L=WP.createLayout(world,this.cfg.size);
     this.step=0; this.t=0; this.videoTime=0; this.events=new Array(1024); this.eventSeq=0; this.recent=[]; this.decorations=[];
     this.rides=0; this.routeRides=[0,0,0,0]; this.animals=[]; this.lastDispatch=-99; this.lastLift=-99;this.gatherCount=0;
+    this.beltTravel=0;   // distance the lift belt has run; display only, not part of the state hash
     this.landingReservations=[null,null,null,null]; this.panoramaBatch=0;
     this.seesawAngle=0; this.seesawVel=0; this.seesawState='ready'; this.seesawResetUntil=0; this.finishedAt=null;
     this.preflight=WP.preflight({params:this.cfg,video,world,timeScale}); this.timing={...this.preflight};
@@ -108,16 +109,17 @@ class Simulation {
       ahead=b;
     }
     // Lift passengers are allowed to finish after closing; only intake is stopped.
-    ahead=null;
+    ahead=null;let beltMove=0;
     for(const b of this._list('lift')) {
       const cap=ahead?ahead.s-L.GAP:L.lift.path.length, old=b.s;
-      b.s=Math.min(cap,b.s+180*cfg.beltSpeed*dt);b.v=Math.max(0,(b.s-old)/dt);
+      b.s=Math.min(cap,b.s+180*cfg.beltSpeed*dt);b.v=Math.max(0,(b.s-old)/dt);beltMove=Math.max(beltMove,b.s-old);
       if(!ahead&&b.s>=L.lift.path.length-1e-7){
         const platform=this._list('platform'),last=platform[platform.length-1];
         if(!last||last.s>=L.GAP){b.state='platform';b.s=0;b.v=0;this._emit('tip',L.lift.x,L.lift.top,b.kind);continue;}
       }
       ahead=b;
     }
+    this.beltTravel+=beltMove;   // the belt runs exactly as far as its passengers move
     ahead=null;
     for(const b of this._list('platform')) {
       const cap=ahead?ahead.s-L.GAP:L.platformPath.length, old=b.s;

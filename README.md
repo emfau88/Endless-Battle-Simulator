@@ -39,7 +39,7 @@ Die folgenden Szenarien und Varianten sind im aktuellen Code vorhanden. Weitere 
 | **Bildformat** | 9:16 und 16:9; zusätzlich 1:1 (nur per Konfiguration / Kommandozeile). Quadrat nutzt teils ein eingepasstes Querformatlayout. |
 | **Qualität** | 720p, 1080p, 1440p oder 4K (kurze Bildseite); 30 oder 60 fps. |
 | **Länge** | Frei von 1 Sekunde bis 4 Stunden. Marble Works kann bis zum Auftragsende + 12 Sekunden Fabrikfinale laufen (bei Zeitlupe länger); Scrap-Turniere enden nach 8 Runden + 5 Sekunden Ergebnisanzeige. |
-| **Ausschnitte** | Nur **Scrap Wars und Marble Works** (Kommandozeilenfunktion). Der Ton stammt aus der vollständigen Episodenmischung. |
+| **Ausschnitte** | Nur **Scrap Wars, Marble Works und Waterpark** (Kommandozeilenfunktion). Der Ton stammt aus der vollständigen Episodenmischung. |
 | **Einzelbild** | PNG (Skriptfunktion, kein eigener Button in der Oberfläche) |
 | **Einstellungen / Wiederholung** | Einstellungen als JSON speicherbar. Jedes MP4 erhält außerdem eine JSON mit Konfiguration, Seed, Aufnahmeparametern, Prüfsummen und Programmstand. |
 
