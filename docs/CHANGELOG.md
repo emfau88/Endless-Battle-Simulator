@@ -2,6 +2,12 @@
 
 Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen in der [ROADMAP](ROADMAP.md).
 
+## 18.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| R38, Cloud Wars: Umsetzungsplan für ein neues Szenario. Vorlage ist der spielbare Prototyp „Wolkenflug“. Er liegt mit fünf Standbildern unter `docs/reference/`. Der Plan enthält Leitplanken, Übernahme aus dem Prototyp, Regeln mit Startwerten, Stilbibel, Layout je Format, Ton, Seek-Konzept und die Pakete C0 bis C8 mit Stopps. Kein Code geändert. | Branch `docs/cloud-wars-plan` | [Plan](CLOUD_WARS_PLAN_2026-11-18.md) |
+
 ## 17.11.2026
 
 | Was | Commit | Bericht |
