@@ -56,3 +56,83 @@ Laufender Bericht zu R38. Plan und Startwerte: [CLOUD_WARS_PLAN_2026-11-18.md](C
   spielt das keine Rolle, weil dort eine Seite allein zeichnet.
 - Noch keine Wolken, kein Ton, keine Anzeige.
 - Entschieden: Maßstab je Format (siehe oben).
+
+## C1 · Wolken in der Simulation (18.11.2026)
+
+**Umfang**
+
+- `src/scenarios/cloudwars/simulation.js` mit den Regeln aus Abschnitt 3 des Plans:
+  - vier Teams (Nimbus, Cirrus, Cumulus, Stratus), eine Wolke je Team im Short, zwei im Runden-Modus
+  - neutrale Wolken, die auf der Windseite nachkommen; ihre Zahl richtet sich nach der Fläche (hochkant 10, quer 18)
+  - Wind mit langsam drehender Richtung
+  - Steuerung alle 0,25 s: Flucht, Beute, Tanken über dem See, Treiben; weich vom Rand abgestoßen
+  - Fressen mit Bremse für große Wolken, Verdunsten, Obergrenze
+  - Ausscheiden, Rundenende, im Runden-Modus Punktestand und neue Runde nach 4 s
+  - Ereignisse `absorb`, `eliminated`, `win`
+  - Fress-Aufzeichnungen (`eats`) für die fliegenden Puffs in C2
+- Zwei Zufallsströme (Ablauf und festgehaltene Aussehenswerte); `stateHash` deckt Wolken, Zufallsstände und
+  Fress-Aufzeichnungen ab.
+- Bis C2 zeichnet der Renderer die Wolken nur als einfache Scheiben mit Teamfarbe.
+
+**Abweichungen von den Startwerten (gemessen)**
+
+Runden-Modus quer über 6 bis 20 Seeds, je 20 Minuten Vorlauf ohne Bilder:
+
+| Einstellung | Median einer Runde | größte Masse |
+|---|---|---|
+| Plan (Team gegen Team ab 1,1-facher Masse, Bremse ab 40, Verdunsten 0,004) | 64 s | 90 |
+| Team gegen Team ab 1,35 | 109 s | 113 |
+| 1,5 / Bremse ab 25 / Verdunsten 0,006 (**gewählt**) | 156 s (20 Seeds); nach der Randänderung aus C2 132 s | 93 |
+| 1,6 / 25 / 0,006 | 360 s (fast jede Runde läuft in die Zeitgrenze) | 91 |
+| 1,7 / 25 / 0,006 | 360 s | 77 |
+
+- Zwischen 1,5 und 1,6 liegt eine Kante: Darüber holt der Führende die anderen nicht mehr ein. Gewählt ist 1,5.
+  Das ergibt im Median 2,6 Minuten statt der geplanten 3 bis 5. Mit den Blitzen aus C3 ändert sich das Gleichgewicht
+  ohnehin, deshalb wird dort neu gemessen.
+- Im Short bleibt Team gegen Team bei 1,1. Hochkant, Seeds 1–10: Sieger im Median nach 24 s (13–42 s), erstes
+  Ausscheiden nach 5–19 s. Das ist eine gute Grundlage für die Regie in C7.
+- Hochkant im Runden-Modus sind die Runden kürzer (Median 69 s), weil das Bild kleiner ist. Das Langvideo ist quer.
+
+**Geprüft:** `node --test test/cloudwars.test.mjs`, fünf Tests:
+
+- gleicher Seed, gleicher Ablauf
+- 10 Minuten Runden-Modus ohne Verletzung der Invarianten, Ereignisfolge ohne Lücke, Masse unter 120,
+  mindestens eine beendete Runde
+- Short mit Sieger innerhalb von 2 Minuten
+
+Kein vollständiger `npm test`, kein Export.
+
+## C2 · Wolken zeichnen (18.11.2026)
+
+**Umfang**
+
+- `src/scenarios/cloudwars/art.js`: Wolken-Sprites aus dem Prototyp (weicher Grundkörper, Lichtseiten, Glanzlichter),
+  dazu neu:
+  - Teamfarbe als Tönung der Schattenseite (30 %) und als Saum unten rechts
+  - Augen mit Blick in Fahrtrichtung und Blinzeln (aus Zeit und Kennung)
+  - Namensschild über jeder Team-Wolke, feste Schriftgröße in beiden Formaten
+  - Schatten am Boden, Wolke 34 logische Einheiten darüber
+  - fliegende Puffs beim Fressen und ein kurzes Nachfedern
+- Puffs, Federn und Blinzeln werden aus den Fress-Aufzeichnungen und der Simulationszeit berechnet. Der Renderer hat
+  keinen eigenen Zustand außer dem Sprite-Zwischenspeicher, und der hängt nur von Seed, Größenstufe, Art und Team ab.
+- Sprite-Neubau, wenn sich der Radius um mehr als eine Stufe (8 %) ändert. Die Grenze von drei Neubauten je Bild aus
+  dem Prototyp ist weggefallen, damit das Bild nicht vom Verlauf abhängt.
+- Simulation: Team-Wolken bleiben großteils im Bild (Mittelpunkt mindestens 0,7 Radien vom Rand). Vorher ragten große
+  Wolken halb hinaus. Dadurch fällt der Median einer Runde im Runden-Modus von 156 auf 132 s (20 Seeds).
+
+**Messwerte:** Ohne Grafikkarte, 1080p, je Bild einschließlich JPEG-Kodierung: Median 82–83 ms, höchstens 97–121 ms.
+Das ist nicht mit dem Plan-Ziel (nur Zeichnen, mit Grafikkarte) vergleichbar. Gemessen wird erneut in C4.
+
+**Vorschau:** [Hochformat](reference/cloudwars-c2-hochformat-2026-11-18.jpg) und
+[Querformat](reference/cloudwars-c2-querformat-2026-11-18.jpg). Je vier Bilder: Start, Fressen in Nahsicht, große
+Wolke, Gedränge.
+
+**Geprüft:** `node --test test/cloudwars.test.mjs`, sechs Tests. Neu ist der Seek-Test: Das Bild bei Sekunde 8 ist nach
+einem Sprung pixelgleich mit dem Bild nach 239 gezeichneten Bildern, mit mehreren Fress-Vorgängen dazwischen. Kein
+vollständiger `npm test`, kein Export.
+
+**Bekannt und offen**
+
+- Zwei Wolken desselben Teams können sich überdecken (Runden-Modus), dann überlappen auch die Namensschilder.
+- Die Runden sind mit 2,2 Minuten im Median kürzer als geplant. Neu messen mit den Blitzen in C3.
+- **Stopp, Stil-Checkpoint beim Nutzer:** Gesichter an oder aus? Teamfarbe kräftiger oder schwächer? Passen die Namen?
