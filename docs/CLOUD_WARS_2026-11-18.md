@@ -56,3 +56,48 @@ Laufender Bericht zu R38. Plan und Startwerte: [CLOUD_WARS_PLAN_2026-11-18.md](C
   spielt das keine Rolle, weil dort eine Seite allein zeichnet.
 - Noch keine Wolken, kein Ton, keine Anzeige.
 - Entschieden: Maßstab je Format (siehe oben).
+
+## C1 · Wolken in der Simulation (18.11.2026)
+
+**Umfang**
+
+- `src/scenarios/cloudwars/simulation.js` mit den Regeln aus Abschnitt 3 des Plans:
+  - vier Teams (Nimbus, Cirrus, Cumulus, Stratus), eine Wolke je Team im Short, zwei im Runden-Modus
+  - neutrale Wolken, die auf der Windseite nachkommen; ihre Zahl richtet sich nach der Fläche (hochkant 10, quer 18)
+  - Wind mit langsam drehender Richtung
+  - Steuerung alle 0,25 s: Flucht, Beute, Tanken über dem See, Treiben; weich vom Rand abgestoßen
+  - Fressen mit Bremse für große Wolken, Verdunsten, Obergrenze
+  - Ausscheiden, Rundenende, im Runden-Modus Punktestand und neue Runde nach 4 s
+  - Ereignisse `absorb`, `eliminated`, `win`
+  - Fress-Aufzeichnungen (`eats`) für die fliegenden Puffs in C2
+- Zwei Zufallsströme (Ablauf und festgehaltene Aussehenswerte); `stateHash` deckt Wolken, Zufallsstände und
+  Fress-Aufzeichnungen ab.
+- Bis C2 zeichnet der Renderer die Wolken nur als einfache Scheiben mit Teamfarbe.
+
+**Abweichungen von den Startwerten (gemessen)**
+
+Runden-Modus quer über 6 bis 20 Seeds, je 20 Minuten Vorlauf ohne Bilder:
+
+| Einstellung | Median einer Runde | größte Masse |
+|---|---|---|
+| Plan (Team gegen Team ab 1,1-facher Masse, Bremse ab 40, Verdunsten 0,004) | 64 s | 90 |
+| Team gegen Team ab 1,35 | 109 s | 113 |
+| 1,5 / Bremse ab 25 / Verdunsten 0,006 (**gewählt**) | 156 s (20 Seeds) | 93 |
+| 1,6 / 25 / 0,006 | 360 s (fast jede Runde läuft in die Zeitgrenze) | 91 |
+| 1,7 / 25 / 0,006 | 360 s | 77 |
+
+- Zwischen 1,5 und 1,6 liegt eine Kante: Darüber holt der Führende die anderen nicht mehr ein. Gewählt ist 1,5.
+  Das ergibt im Median 2,6 Minuten statt der geplanten 3 bis 5. Mit den Blitzen aus C3 ändert sich das Gleichgewicht
+  ohnehin, deshalb wird dort neu gemessen.
+- Im Short bleibt Team gegen Team bei 1,1. Hochkant, Seeds 1–10: Sieger im Median nach 24 s (13–42 s), erstes
+  Ausscheiden nach 5–19 s. Das ist eine gute Grundlage für die Regie in C7.
+- Hochkant im Runden-Modus sind die Runden kürzer (Median 69 s), weil das Bild kleiner ist. Das Langvideo ist quer.
+
+**Geprüft:** `node --test test/cloudwars.test.mjs`, fünf Tests:
+
+- gleicher Seed, gleicher Ablauf
+- 10 Minuten Runden-Modus ohne Verletzung der Invarianten, Ereignisfolge ohne Lücke, Masse unter 120,
+  mindestens eine beendete Runde
+- Short mit Sieger innerhalb von 2 Minuten
+
+Kein vollständiger `npm test`, kein Export.

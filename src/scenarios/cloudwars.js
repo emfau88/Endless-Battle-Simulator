@@ -1,15 +1,15 @@
 /*
  * Szenario „Cloud Wars“ (in Arbeit) – Plan: docs/CLOUD_WARS_PLAN_2026-11-18.md
  *
- * Stand Paket C0: Gerüst und Gelände. Der Seed wählt einen festen Ausschnitt der Landschaft aus dem Prototyp
- * „Wolkenflug“ (Wald, Felder, Seen, Straßen, Dörfer); er wird einmal vorgezeichnet. Noch keine Wolken.
+ * Stand Paket C1: Der Seed wählt einen festen Ausschnitt der Landschaft aus dem Prototyp „Wolkenflug“; er wird einmal
+ * vorgezeichnet. Darüber treiben Team-Wolken und neutrale Wolken (Simulation: cloudwars/simulation.js). Die Wolken
+ * sind bis Paket C2 nur einfache Scheiben.
  * Maßstab je Format (Wunsch des Nutzers: „auf Handy und PC jeweils passend“): Hochformat näher, 1 GE = 2,0 logische
  * Einheiten (1 080 × 1 920 → 540 × 960 GE); Querformat weiter, 1 GE = 1,4 (1 920 × 1 080 → 1 371 × 771 GE).
  */
 (function () {
 'use strict';
-const { fnv1a } = EBS.util;
-const T = EBS.CloudWarsTerrain;
+const T = EBS.CloudWarsTerrain, S = EBS.CloudWarsSim;
 const scaleFor = (world) => (world.h > world.w ? 2.0 : 1.4);
 
 const defaults = { mode: 'short' };
@@ -18,32 +18,31 @@ function normalizeParams(input) {
   return { mode: ['short', 'rounds'].includes(p.mode) ? p.mode : defaults.mode };
 }
 
-class CloudWarsSim {
+class CloudWarsSim extends EBS.CloudWarsSim.CloudWarsSimulation {
   constructor({ seed, params, world, timeScale = 1 }) {
-    this.seed = seed >>> 0; this.cfg = normalizeParams(params);
-    this.dt = EBS.DT * timeScale; this.step = 0; this.t = 0;
-    this.events = new Array(256); this.eventSeq = 0;
-    // Ausschnitt in Geländeeinheiten: Die logische Welt geteilt durch den Maßstab
-    this.geScale = scaleFor(world);
-    this.area = T.pickArea(this.seed, Math.round(world.w / this.geScale), Math.round(world.h / this.geScale));
-    this.audioWorldWidth = world.w;
+    const cfg = normalizeParams(params), geScale = scaleFor(world);
+    // Ausschnitt in Geländeeinheiten: die logische Welt geteilt durch den Maßstab
+    const area = T.pickArea(seed >>> 0, Math.round(world.w / geScale), Math.round(world.h / geScale));
+    super({ seed, params: cfg, area, dt: EBS.DT * timeScale });
+    this.geScale = geScale; this.audioWorldWidth = world.w;
   }
   setParam(k, v) { this.cfg = normalizeParams({ ...this.cfg, [k]: v }); }
-  stepOnce() { this.step++; this.t = this.step * this.dt; }
   checkInvariants() {
-    const a = this.area, errors = [];
-    if (![a.x, a.y, a.w, a.h].every(Number.isFinite)) errors.push('Ausschnitt ungültig');
-    return { ok: errors.length === 0, errors, bodies: 0 };
+    const r = super.checkInvariants(), a = this.area;
+    if (![a.x, a.y, a.w, a.h].every(Number.isFinite)) { r.errors.push('Ausschnitt ungültig'); r.ok = false; }
+    return r;
   }
   snapshot() {
-    const a = this.area, pct = (v) => Math.round(v * 100);
+    const mass = this.teamMass(), teams = S.TEAMS.map((tm, i) => ({ name: tm.name, mass: mass[i], clouds: this.clouds.filter((c) => c.team === i).length }));
+    const alive = teams.filter((tm) => tm.mass > 0).length, neutrals = this.clouds.filter((c) => c.team < 0).length;
+    const maxMass = Math.max(0, ...this.clouds.filter((c) => c.team >= 0).map((c) => c.mass));
     return {
-      t: this.t, step: this.step, area: { ...a },
-      summary: `Gelände: Wasser ${pct(a.water)} %, Wald ${pct(a.forest)} %, Felder ${pct(a.field)} %, ${a.villages} Dorf/Dörfer`
-        + (a.miss ? ` · ${a.miss} Regel(n) verfehlt` : ''),
+      t: this.t, step: this.step, area: { ...this.area }, round: this.round, scores: [...this.scores], winner: this.winner,
+      ended: this.endAt >= 0, endAt: this.endAt, roundStart: this.roundStart, teams, alive, neutrals, maxMass,
+      summary: `Runde ${this.round} · ${alive} Teams übrig · größte Wolke ${maxMass.toFixed(1)}`
+        + (this.winner >= 0 ? ` · Sieger ${S.TEAMS[this.winner].name}` : ''),
     };
   }
-  stateHash() { const a = this.area; return fnv1a(`${this.step}|${a.x}|${a.y}|${a.w}|${a.h}`).toString(16).padStart(8, '0'); }
   destroy() {}
 }
 
@@ -58,6 +57,15 @@ class CloudWarsRenderer extends EBS.CanvasScene {
     if (!this.ground) this.ground = T.renderArea(a, k * this.scale);
     g.fillStyle = '#7f9b62'; g.fillRect(0, 0, w.w, w.h);
     g.drawImage(this.ground, 0, 0, a.w * k, a.h * k);
+    // Platzhalter bis Paket C2: einfache Scheiben mit Teamfarbe, damit der Ablauf sichtbar ist
+    g.save(); g.scale(k, k);
+    for (const c of this.sim.clouds) {
+      const r = S.radiusOf(c.mass);
+      g.fillStyle = 'rgba(20,30,40,0.18)'; g.beginPath(); g.arc(c.x + r * 0.25, c.y + r * 0.4, r, 0, Math.PI * 2); g.fill();
+      g.fillStyle = c.team < 0 ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.95)'; g.beginPath(); g.arc(c.x, c.y, r, 0, Math.PI * 2); g.fill();
+      if (c.team >= 0) { g.strokeStyle = S.TEAMS[c.team].color; g.lineWidth = 3; g.stroke(); }
+    }
+    g.restore();
   }
   destroy() { if (this.ground) this.ground.width = this.ground.height = 1; super.destroy(); }
 }
@@ -74,9 +82,11 @@ EBS.registerScenario({
   createRenderer: (ctx) => new CloudWarsRenderer(ctx),
   panelStats(sim) {
     const a = sim.area, pct = (v) => `${Math.round(v * 100)} %`;
+    const snap = sim.snapshot();
     return [
+      ...snap.teams.map((tm, i) => ({ key: 'team' + i, label: tm.name, value: tm.mass > 0 ? tm.mass.toFixed(1) : 'raus' })),
+      { key: 'round', label: 'Runde', value: String(snap.round) },
       { key: 'water', label: 'Wasser', value: pct(a.water) }, { key: 'forest', label: 'Wald', value: pct(a.forest) },
-      { key: 'field', label: 'Felder', value: pct(a.field) }, { key: 'villages', label: 'Dörfer', value: String(a.villages) },
     ];
   },
   panelNote: (sim) => sim.snapshot().summary,
