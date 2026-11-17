@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [core, audio, production, marbleworks, scrap, scrap-browser, mycelium, pyramid, territory, waterpark, export-naval, export-marble, export-scrap, export-mycelium, export-pyramid, export-territory, export-marbleworks, export-marbleworks-audio]
+        suite: [core, audio, production, marbleworks, scrap, scrap-browser, mycelium, pyramid, territory, waterpark, cloudwars, export-naval, export-marble, export-scrap, export-mycelium, export-pyramid, export-territory, export-marbleworks, export-marbleworks-audio]
     defaults:
       run:
         shell: bash # Explizit: -eo pipefail; tee darf fehlgeschlagene Tests nicht verdecken.

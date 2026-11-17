@@ -6,7 +6,8 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Was | Commit | Bericht |
 |---|---|---|
-| R38, Cloud Wars: Umsetzungsplan für ein neues Szenario. Vorlage ist der spielbare Prototyp „Wolkenflug“. Er liegt mit fünf Standbildern unter `docs/reference/`. Der Plan enthält Leitplanken, Übernahme aus dem Prototyp, Regeln mit Startwerten, Stilbibel, Layout je Format, Ton, Seek-Konzept und die Pakete C0 bis C8 mit Stopps. Kein Code geändert. | Branch `docs/cloud-wars-plan` | [Plan](CLOUD_WARS_PLAN_2026-11-18.md) |
+| R38, Cloud Wars, Paket C0: neues Szenario „Cloud Wars (in Arbeit)“. Es zeigt einen festen Ausschnitt der Landschaft aus dem Prototyp (Wald, Felder, Seen, Straßen, Dörfer); der Seed wählt ihn nach Geländeregeln aus. Das Gelände wird einmal vorgezeichnet, ohne Fugen zwischen den Kacheln. Maßstab je Format nach Entscheidung des Nutzers: hochkant näher (2,0), quer weiter (1,4). Noch ohne Wolken. Geprüft: eigene Testdatei, die zwei angepassten Listen-Tests, Referenz-Hashes. | Branch `cloudwars/c0-gelaende` | [Bericht](CLOUD_WARS_2026-11-18.md) |
+| R38, Cloud Wars: Umsetzungsplan für ein neues Szenario. Vorlage ist der spielbare Prototyp „Wolkenflug“. Er liegt mit fünf Standbildern unter `docs/reference/`. Der Plan enthält Leitplanken, Übernahme aus dem Prototyp, Regeln mit Startwerten, Stilbibel, Layout je Format, Ton, Seek-Konzept und die Pakete C0 bis C8 mit Stopps. Kein Code geändert. | PR #31 | [Plan](CLOUD_WARS_PLAN_2026-11-18.md) |
 
 ## 17.11.2026
 
