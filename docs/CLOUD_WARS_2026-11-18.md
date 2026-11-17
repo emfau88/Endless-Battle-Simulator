@@ -13,12 +13,16 @@ Laufender Bericht zu R38. Plan und Startwerte: [CLOUD_WARS_PLAN_2026-11-18.md](C
   - Der Seed wählt nur den Ausschnitt.
   - `renderChunk` zeichnet jetzt mit wählbarer Schärfe direkt ins Zielbild. Jede Kachel ragt 3 Pixel in die nächste,
     damit keine Fugen entstehen. Die erste Fassung hatte sichtbare dunkle Linien an den Kachelgrenzen.
-- Ausschnitt-Wahl `pickArea`: bis zu 128 Kandidaten. Der erste, der alle Regeln erfüllt, wird genommen. Regeln:
+- Ausschnitt-Wahl `pickArea`: bis zu 256 Kandidaten, jeder um ein passendes Dorf gelegt. Der erste, der alle Regeln
+  erfüllt, wird genommen. Regeln:
   - Wasser 8–22 %, Wald 25–50 %, Felder ≥ 12 %
   - ein Dorf mit 8+ Häusern ganz im Bild, zwei Straßenstücke
   - freie Wiese höchstens 30 %. Diese Regel ist neu gegenüber dem Plan, weil Seed 42 sonst eine halbe Bildseite
     leere Wiese zeigte.
-- Maßstab 1 GE = 1,4 logische Einheiten.
+- Maßstab je Format nach Entscheidung des Nutzers („auf Handy und PC jeweils passend“): hochkant 1 GE = 2,0 logische
+  Einheiten (näher), quer 1,4 (mehr Landschaft). Mit dem kleineren Hochformat-Ausschnitt fand die Zufallssuche bei
+  6 von 12 Seeds keinen gültigen Ausschnitt; seit die Kandidaten um ein Dorf gelegt werden, sind es 0 von 40
+  (Seeds 1–20, beide Formate).
 - Der Renderer zeichnet das Gelände einmal vor, in der Schärfe des Ausgabebilds.
 - Verdrahtung:
   - `index.html`
@@ -28,12 +32,11 @@ Laufender Bericht zu R38. Plan und Startwerte: [CLOUD_WARS_PLAN_2026-11-18.md](C
 **Messwerte** (ohne Grafikkarte, 1080p, Seite öffnen bis erstes Bild):
 
 - 1,1–1,7 s je Seed, einschließlich der Ausschnitt-Wahl.
-- 16 Prüffälle (Seeds 42, 7, 2026, 1–5, je hoch und quer): alle Regeln erfüllt.
+- 40 Prüffälle (Seeds 1–20, je hoch und quer): alle Regeln erfüllt.
 
 **Vorschau**
 
-- [Hochformat](reference/cloudwars-c0-hochformat-2026-11-18.jpg): Seeds 42, 2026 und 4 mit Maßstab 1,4, ganz rechts
-  Seed 42 mit Maßstab 2,0 zum Vergleich.
+- [Hochformat](reference/cloudwars-c0-hochformat-2026-11-18.jpg): Seeds 1 bis 4 mit Maßstab 2,0.
 - [Querformat](reference/cloudwars-c0-querformat-2026-11-18.jpg): Seeds 42, 7, 3 und 5.
 
 **Geprüft**
@@ -52,4 +55,4 @@ Laufender Bericht zu R38. Plan und Startwerte: [CLOUD_WARS_PLAN_2026-11-18.md](C
   geöffnet sind die Bilder gleich (dreimal geprüft). Der Test öffnet die Seiten deshalb nacheinander. Für den Export
   spielt das keine Rolle, weil dort eine Seite allein zeichnet.
 - Noch keine Wolken, kein Ton, keine Anzeige.
-- **Stopp beim Nutzer:** Passt der Maßstab 1,4, oder soll es näher sein (2,0)?
+- Entschieden: Maßstab je Format (siehe oben).

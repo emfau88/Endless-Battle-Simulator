@@ -408,15 +408,25 @@ function measure(x0, y0, w, h) {
   return { water: water / n, forest: forest / n, field: field / n };
 }
 /**
- * Wählt aus dem Seed einen Ausschnitt von w × h GE. Bis zu 128 Kandidaten; der erste, der alle Regeln erfüllt, gewinnt,
+ * Wählt aus dem Seed einen Ausschnitt von w × h GE. Bis zu 256 Kandidaten, jeder um ein passendes Dorf gelegt; der erste, der alle Regeln erfüllt, gewinnt,
  * sonst der Kandidat mit den wenigsten Verstößen. Regeln: Wasser 8–22 %, Wald 25–50 %, Felder ≥ 12 %, ein Dorf mit
  * mindestens 8 Häusern ganz im Bild, mindestens zwei Straßenstücke, freie Wiese höchstens 30 %.
  */
 function pickArea(seed, w, h) {
   const rng = mulberry32((seed >>> 0) * 2654435761 + 977);
   let best = null;
-  for (let c = 0; c < 128; c++) {
-    const ox = Math.round((rng() - 0.5) * 400000), oy = Math.round((rng() - 0.5) * 400000);
+  for (let c = 0; c < 256; c++) {
+    // Kandidat um ein passendes Dorf legen: zufälliger Punkt, nächstes Dorf mit 8+ Häusern, das ins Bild passt
+    const px = (rng() - 0.5) * 400000, py = (rng() - 0.5) * 400000, jx = rng() - 0.5, jy = rng() - 0.5;
+    let ox = Math.round(px - w / 2), oy = Math.round(py - h / 2), near = Infinity;
+    for (let j = nodeIndex(py) - 3; j <= nodeIndex(py) + 3; j++) for (let i = nodeIndex(px) - 3; i <= nodeIndex(px) + 3; i++) {
+      const v = getVillage(i, j);
+      if (!v || v.houses.length < 8 || 2 * v.rad + 40 > Math.min(w, h)) continue;
+      const d = Math.hypot(v.x - px, v.y - py);
+      if (d >= near) continue;
+      near = d;
+      ox = Math.round(v.x - w / 2 + jx * (w - 2 * v.rad - 40)); oy = Math.round(v.y - h / 2 + jy * (h - 2 * v.rad - 40));
+    }
     const m = measure(ox, oy, w, h);
     const vill = villagesIn(ox, oy, ox + w, oy + h).filter((v) => v.houses.length >= 8 && v.x - v.rad > ox && v.x + v.rad < ox + w && v.y - v.rad > oy && v.y + v.rad < oy + h);
     const roads = edgesIn(ox, oy, ox + w, oy + h).length;

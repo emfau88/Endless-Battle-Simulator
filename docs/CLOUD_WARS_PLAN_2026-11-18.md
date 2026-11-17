@@ -97,8 +97,8 @@ Einheit: **GE** = Geländeeinheit des Prototyps. Takt 60 Schritte je Sekunde, `d
 
 ### Welt und Ausschnitt
 
-- Maßstab: **1 GE = 1,4 logische Einheiten.** Hochformat 1 080 × 1 920 → Ausschnitt 771 × 1 371 GE, Querformat
-  umgekehrt.
+- Maßstab je Format (Entscheidung des Nutzers vom 18.11.: „auf Handy und PC jeweils passend“): Hochformat
+  **1 GE = 2,0** logische Einheiten → Ausschnitt 540 × 960 GE; Querformat **1 GE = 1,4** → 1 371 × 771 GE.
 - Ausschnitt-Wahl aus dem Seed. Bis zu 64 Kandidaten-Ursprünge werden geprüft, der erste gültige wird genommen:
   - Wasser 8–22 %, Wald 25–50 %, Felder mindestens 12 %
   - mindestens ein Dorf mit 8+ Häusern, ganz im Bild
@@ -229,7 +229,7 @@ Feuerwehr mit Blaulicht.
 
 | | 9:16 (Short) | 16:9 (Langvideo) |
 |---|---|---|
-| Ansicht | Fest, ganzer Ausschnitt 771 × 1 371 GE | Fest, ganzer Ausschnitt 1 371 × 771 GE |
+| Ansicht | Fest, ganzer Ausschnitt 540 × 960 GE (Maßstab 2,0) | Fest, ganzer Ausschnitt 1 371 × 771 GE (Maßstab 1,4) |
 | Freier Bereich | Wichtiges zwischen 12 % und 78 % der Höhe; rechte 14 % frei halten (Bedienung der Plattform) | ganzes Bild |
 | Anzeige | Kein Rahmen. Oben vier kleine Farbpunkte mit Massebalken, 64 logische Einheiten hoch | Punktestand oben links (Teamname, Siege, Massebalken), Runde und Uhrzeit oben rechts, klein |
 | Einblendungen | Bei 30 % der Höhe, mittig, 64–80 logische Einheiten Schrift | Bei 18 % der Höhe, mittig, 56 logische Einheiten Schrift |
