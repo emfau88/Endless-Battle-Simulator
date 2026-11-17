@@ -21,6 +21,9 @@ after(async () => { await browser?.close(); });
 
 test('Waterpark settings keep four species and at least one usable route; short protects its four-route story', () => {
   assert.equal(normalize({}).params.mode, 'relax', 'initial scene must support the existing free video length');
+  const fresh = normalize({}).params;
+  assert.deepEqual([fresh.title, fresh.waterPlay, fresh.ending], [false, true, 'show'], 'no title card, water play on, a park day ends with the show');
+  assert.equal(normalize({ params: { title: true, waterPlay: false, ending: 'quiet' } }).params.title, true);
   const cfg = normalize({ params: { mode: 'short', animals: 24, route0: false, route1: false, route2: false, route3: false,
     size: 100, speed: 0, decoDensity: 3 }, view: { camera: true } });
   assert.equal(cfg.params.animals, 4);

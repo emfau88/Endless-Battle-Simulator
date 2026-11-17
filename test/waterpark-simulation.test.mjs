@@ -177,6 +177,28 @@ test('Fontänen-/Feuerwerksfinale funktioniert auch ohne zufällige Dekoration',
   simulate(sim,29);assert.ok(sim.story.show);assert.ok(sim.events.some(e=>e?.type==='firework'));assert.ok(sim.events.some(e=>e?.type==='launch'));
 });
 
+test('Fontänenshow: beginnt, sobald alle versammelt sind, frühestens 30 Sekunden vor Schluss; das Feuerwerk begleitet sie',()=>{
+  const params={mode:'day',animals:16,size:36},show=create({...params,ending:'show',fireworks:true},worlds[0],600),quiet=create(params,worlds[0],600);
+  assert.equal(show.story.finaleAt,570);assert.equal(quiet.story.finaleAt,592);
+  assert.equal(create({...params,ending:'show'},worlds[0],120).story.finaleAt,112,'kurze Videos behalten mindestens acht Sekunden');
+  simulate(show,599);simulate(quiet,599);
+  assert.ok(show.story.show);assert.ok(show.story.showAt>=570&&show.story.showAt>=show.finishedAt);
+  assert.ok(!quiet.story.show);assert.equal(quiet.story.showAt,null);
+  const rockets=show.events.filter(e=>e?.type==='launch').length;
+  assert.ok(rockets>=6&&rockets<=10,`${rockets} Raketen in der Show`);
+  assert.equal(show.stateHash(),quiet.stateHash(),'Der gewählte Schluss ändert den Ablauf der Tiere nicht');
+});
+
+test('Trichter: Die Spirale setzt die Richtung der Zulaufrinne ohne Knick fort',()=>{
+  for(const world of worlds){
+    const L=WP.createLayout(world,36),r=L.routes[1],f=L.funnel;
+    const a=WP.samplePath(r.path,f.entryS-1),b=WP.samplePath(r.path,f.entryS+1);
+    const turn=Math.abs(Math.atan2(a.tx*b.ty-a.ty*b.tx,a.tx*b.tx+a.ty*b.ty));
+    // Vorher knickte die Fahrt im Querformat um 46 Grad; die enge Spirale im Hochformat krümmt sich von selbst um etwa 18 Grad.
+    assert.ok(turn<.4,`${world.w}x${world.h}: Knick von ${(turn*180/Math.PI).toFixed(0)} Grad an der Einfahrt`);
+  }
+});
+
 test('Exportvorprüfung behält die Dauer und blockiert ein unmögliches langsames Short',()=>{
   const cfg={seed:42,params:{mode:'short'},video:{durationSec:30,tempo:1}};
   const plan=WP.createExportPlan(cfg,worlds[0]);let result;

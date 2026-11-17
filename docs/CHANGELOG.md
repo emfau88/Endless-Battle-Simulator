@@ -6,6 +6,7 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Was | Commit | Bericht |
 |---|---|---|
+| R30, Waterpark: vier Wünsche des Nutzers nach Standbildern des Parktags. Wasserspiele in der Lagune laufen den ganzen Tag (Strahl mit Krone, Bögen, Tropfen, Ringe, Schaum; Welle und Stoß reihum). Die Fontänenshow ist Standard für den Parktag: jede Fontäne mit eigenem wanderndem Farbverlauf und eigenem Takt, Beginn sobald alle versammelt sind und bis zu 30 Sekunden vor Schluss, Feuerwerk über die ganze Show. Rutsche und Trichter sind eine Form, im Querformat fährt das Tier ohne Knick ein (6 statt 46 Grad). Titel „Endless Waterpark“ ist abschaltbar und standardmäßig aus. Zeichenzeit im Budget (Tag 1,88 ms, Show 2,83 ms). | Branch `waterpark/wasserspiele` | [WASSERPARK_WASSERSPIELE_2026-11-17.md](WASSERPARK_WASSERSPIELE_2026-11-17.md) |
 | R34, Naval, sechstes Paket (N2e): Ton im Modus „Ruhiges Duell“, vom Nutzer nach zwei Hörproben freigegeben. Feste Mischung mit leisem Meeresrauschen (vorhandene CC0-Aufnahme) statt Einmessung auf −14 LUFS; eigene Klänge für Segeldurchschuss und Versenkung; 100 % ist wieder Standard. Der Begrenzer greift höchstens 6,7 dB ein statt bis zu 20 dB. | PR #29 | [NAVAL_RUHIGES_DUELL_2026-11-16.md](NAVAL_RUHIGES_DUELL_2026-11-16.md) |
 | R34, Naval, fünftes Paket (N2d): Lesbarkeit im Modus „Ruhiges Duell“, vom Nutzer anhand von Bild und Testclip freigegeben. Kanonen 30 % größer, Leuchtspur trotz halbem Flugtempo in voller Länge. Eine erhöhte Bugkante wurde gemessen und verworfen (fast doppelt so viele Abpraller, aber 55 statt 1 Notfall in 50 Minuten). | PR #28 | [NAVAL_RUHIGES_DUELL_2026-11-16.md](NAVAL_RUHIGES_DUELL_2026-11-16.md) |
 
@@ -124,6 +125,7 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Datum | Entscheidung |
 |---|---|
+| 17.11.2026 | Waterpark: Wasserspiele sind am Tag an und bewegt. Der Parktag endet mit der Brunnenshow, alle Fontänen mit bunten Farbverläufen und asynchron. Der Titel „Endless Waterpark“ ist standardmäßig aus. Rutsche und Trichter sollen organisch ineinander übergehen; eine gerade Schnittkante am Rinnenende wurde als „zu abgehackt“ abgelehnt. |
 | 16.11.2026 | Marble XL: ein durchlaufendes 10-Minuten-Video in 1440p mit 60 Bildern pro Sekunde wird ganz gerendert (keine wiederholte Schleife). Dafür wird zuerst das Leeren der vollen Röhren gebaut. |
 | 16.11.2026 | Marble XL darf als „in Arbeit“ auf `main` („du kannst mergen, wenn nichts dagegen spricht“). Zum langen Video liegt nur eine Empfehlung des Assistenten vor (ganz rendern in 1440p mit 60 Bildern pro Sekunde statt einer wiederholten Schleife); entschieden ist das noch nicht. |
 | 16.11.2026 | Marble XL: Kugeln größer, alles dafür Nötige darf angepasst werden. Schilder (Titel, Stationen) sind über einen Schalter abschaltbar und standardmäßig aus. Weiterhin keine Kamerafahrt. Die Kugeln beginnen im Ofen zu glühen und kühlen auf dem Weg zur Farbstation wieder ab. Die Kühlstrecke wird zur Trockenstrecke für die frische Farbe. |
