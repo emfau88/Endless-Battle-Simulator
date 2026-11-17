@@ -522,7 +522,7 @@ WP.paintSeesawStand = function (g, L) {
     post(g, x, top + 10, cy, 22);
     return;
   }
-  const spread = Math.min(s.length * .36, Math.max(64, (foot - cy) * .82)), pw = spread + 34;
+  const spread = Math.min(s.length * .36, Math.max(64, (foot - cy) * .82), Math.max(40, s.maxSpread ?? 1e9)), pw = spread + 34;
   roundRect(g, x - pw - 2.5, foot - 14.5, 2 * pw + 5, 27, 6, C.outline);
   roundRect(g, x - pw, foot - 12, 2 * pw, 22, 5, C.stone); roundRect(g, x - pw, foot - 12, 2 * pw, 8, 4, C.stoneLight);
   g.strokeStyle = C.stoneJoint; g.lineWidth = 1.5;

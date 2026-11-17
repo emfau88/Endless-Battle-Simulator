@@ -64,12 +64,12 @@ const PLANS = {
     waterY: .72, horizon: .30, lift: { x: .34, deck: .19, bottom: .80 }, towerW: .092,
     mouths: [.235, .675, .55, .94],
     funnel: { x: .67, y: .31, rx: .112, ry: .065, entry: .45 },   // Einfahrt vorn links, in Verlängerung der Zulaufrinne
-    seesaw: { x: .505, y: .52, length: .17 },
+    seesaw: { x: .505, y: .52, length: .17, pivot: .1 },
     jump: { x: .878, y: .625 },
     panorama: { deckTo: .255, pts: [[.205,.203],[.14,.232],[.103,.28],[.108,.333],[.15,.37],[.215,.393],[.255,.43],[.262,.478],[.225,.52],[.165,.548],[.128,.592],[.135,.64],[.18,.675],[.222,.70]] },
     funnelIn: { deckTo: .522, pts: [[.537,.232],[.55,.282]] },
     tube: [[.672,.45],[.674,.56],[.675,.66]],
-    seesawIn: { deckTo: .445, pts: [[.457,.245],[.45,.30],[.43,.345]] },
+    seesawIn: { deckTo: .445, pts: [[.457,.245],[.456,.30],[.451,.345]] },
     seesawOut: [],
     jumpIn: { deckTo: .79, pts: [[.806,.232],[.826,.33],[.852,.48]] },
     pool: [[.09,.80],[.12,.89],[.40,.94],[.76,.93],[.92,.87],[.74,.84],[.55,.87],[.44,.86]],
@@ -84,12 +84,12 @@ const PLANS = {
     waterY: .70, horizon: .25, lift: { x: .482, deck: .186, bottom: .77 }, deckX1: .975, poolDip: .058,
     mouths: [.085, .648, .778, .222],
     funnel: { x: .708, y: .388, rx: .134, ry: .032 },
-    seesaw: { x: .829, y: .297, length: .157, hang: true },
+    seesaw: { x: .829, y: .297, length: .157, hang: true, pivot: .22 },
     jump: { x: .322, y: .643 },
     panorama: { deckTo: .2157, pts: serpentine(.2157, .073, .186, .672, 5) },
     funnelIn: { deckTo: .623, pts: [[.623,.24],[.623,.30],[.623,.345]] },
     tube: [[.708,.45],[.70,.485],[.662,.515],[.648,.56],[.648,.64]],
-    seesawIn: { deckTo: .75, pts: [] },
+    seesawIn: { deckTo: .802, pts: [] },
     seesawOut: [[.925,.43],[.925,.50],[.912,.57],[.862,.63],[.80,.675]],
     jumpIn: { deckTo: .341, pts: [[.341,.24],[.341,.34],[.341,.45],[.34,.54],[.335,.60]] },
     pool: [[.06,.79],[.10,.875],[.36,.925],[.72,.92],[.90,.87],[.80,.81],[.64,.815],[.53,.81]],
@@ -116,16 +116,22 @@ WP.createLayout = function (world, size = 36) {
   const spiralA0 = Math.PI - (P.funnel.entry || 0);
   for (let j = 0; j <= 160; j++) { const f = j / 160, a = spiralA0 - f * Math.PI * 5, r = 1 - .94 * f; spiral.push([funnel.x + Math.cos(a) * spiralRx * r, funnel.y + Math.sin(a) * spiralRy * r]); }
   funnel.spiral = spiral;
-  const seesaw = { x: W * P.seesaw.x, y: H * P.seesaw.y, length: W * P.seesaw.length, maxAngle: .16, hang: !!P.seesaw.hang };
-  const dir = P.seesaw.leftward ? -1 : 1;
-  const boardStart = [seesaw.x - dir * seesaw.length / 2, seesaw.y], boardEnd = [seesaw.x + dir * seesaw.length / 2, seesaw.y];
+  // Kippbrett: Der Drehpunkt sitzt nahe am Einstiegsende, ein Gegengewicht am kurzen Arm hält den langen Arm oben. Das Tier
+  // landet knapp hinter dem Drehpunkt auf dem langen Arm. Sein Gewicht kippt das Brett, erst dann rutscht es bergab hinaus.
+  // Es rutscht nie bergauf. (x: Drehpunkt, back/front: kurzer und langer Arm, land: Landepunkt hinter dem Drehpunkt)
+  const dir = P.seesaw.leftward ? -1 : 1, sLen = W * P.seesaw.length, back = sLen * (P.seesaw.pivot ?? .5);
+  const seesaw = { x: W * P.seesaw.x - dir * (sLen / 2 - back), y: H * P.seesaw.y, length: sLen, back, front: sLen - back, land: R * .5,
+    maxAngle: .16, hang: !!P.seesaw.hang, maxSpread: Math.abs(W * P.seesaw.x - dir * (sLen / 2 - back) - xLift) - towerHW - 30 };
+  const boardEnd = [seesaw.x + dir * seesaw.front, seesaw.y];
+  // Landepunkt auf dem ruhenden Brett (langer Arm oben)
+  const boardStart = [seesaw.x + dir * Math.cos(seesaw.maxAngle) * seesaw.land, seesaw.y - Math.sin(seesaw.maxAngle) * seesaw.land];
   seesaw.dir = dir;
   // Übergaben wie im Mockup: Die Zulaufrinne endet als Ausguss über dem Einstiegsende, das Ausstiegsende gießt in eine
   // Auffangrinne. Abstände aus Rinnenbreite (2R+30, siehe art.js) und größter Neigung, damit sich nichts überdeckt.
-  const tilt = seesaw.length / 2 * Math.sin(seesaw.maxAngle), rim = WP.troughSize(R).out + Math.round(R * .42);
+  const tilt = seesaw.front * Math.sin(seesaw.maxAngle), rim = WP.troughSize(R).out + Math.round(R * .42);
   const spout = [boardStart[0], boardStart[1] - (rim + tilt + 8)], catchTop = [boardEnd[0] + dir * R * .5, boardEnd[1] + rim + tilt + 12];
   seesaw.spout = spout; seesaw.catchTop = catchTop;
-  const boardTipped = [seesaw.x + dir * Math.cos(seesaw.maxAngle) * seesaw.length / 2, seesaw.y + Math.sin(seesaw.maxAngle) * seesaw.length / 2];
+  const boardTipped = [seesaw.x + dir * Math.cos(seesaw.maxAngle) * seesaw.front, seesaw.y + Math.sin(seesaw.maxAngle) * seesaw.front];
   const jump = { x: W * P.jump.x, y: H * P.jump.y, landing: [mouths[3] * W, waterY] };
   const flight = [];
   for (let j = 0; j <= 40; j++) { const f = j / 40; flight.push([jump.x + (jump.landing[0] - jump.x) * f, jump.y + (jump.landing[1] - jump.y) * f - Math.sin(Math.PI * f) * H * (land ? .09 : .07)]); }

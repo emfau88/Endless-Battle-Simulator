@@ -107,7 +107,7 @@ test('Zustandswechsel bewegen Tiere ohne Teleportation und Prüfer erkennt besch
   }
 });
 
-test('Wippe folgt dem Gewicht: kippt zur belasteten Seite, schlägt an und das Tier hält nie auf dem Brett',()=>{
+test('Kippbrett: ruht mit dem langen Arm oben, kippt unter dem Tier, und das Tier rutscht nur bergab',()=>{
   for(const world of worlds){
     const sim=create({mode:'day',animals:16},world,300),f=sim.L.seesaw,m=f.maxAngle;
     let seq=0,knocks=0,rides=0;const on=new Map();
@@ -119,9 +119,10 @@ test('Wippe folgt dem Gewicht: kippt zur belasteten Seite, schlägt an und das T
         const board=b.state==='route'&&b.route===2&&b.s>=f.entryS&&b.s<=f.exitS;
         if(!board){if(on.has(b.id)){assert.ok(on.get(b.id).last>=m*.99,'Abstieg am Anschlag der Ausgangsseite');on.delete(b.id);rides++;}continue;}
         const u=(b.s-f.entryS)/(f.exitS-f.entryS),r=on.get(b.id)||{t:sim.t,last:0};on.set(b.id,r);r.last=sim.seesawAngle;
-        assert.ok(b.v>0,`Tier hält auf dem Brett (u=${u.toFixed(2)})`);
-        if(u>.08&&u<.35)assert.ok(sim.seesawAngle<0,'Einstiegsseite senkt sich unter dem Gewicht');
-        if(u>.75)assert.ok(sim.seesawAngle>0,'Ausgangsseite senkt sich unter dem Gewicht');
+        if(r.s==null)assert.ok(sim.seesawAngle<0,'Das Tier landet auf dem ruhenden Brett, langer Arm oben');
+        assert.ok(r.s==null||b.s>=r.s,'Das Tier rutscht nie zurück');r.s=b.s;
+        if(b.v>0)assert.ok(sim.seesawAngle>0,`Das Tier rutscht nur bergab (u=${u.toFixed(2)})`);
+        if(u>.5)assert.ok(sim.seesawAngle>=m*.99,'Ausgangsseite liegt am Anschlag');
         assert.ok(sim.t-r.t<3,'Fahrt über das Brett dauert höchstens 3 s');
       }
     }

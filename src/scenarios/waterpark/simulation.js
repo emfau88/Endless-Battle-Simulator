@@ -12,8 +12,9 @@ class Simulation {
     this.world=world; this.video=video; this.timeScale=timeScale||1; this.L=WP.createLayout(world,this.cfg.size);
     this.step=0; this.t=0; this.videoTime=0; this.events=new Array(1024); this.eventSeq=0; this.recent=[]; this.decorations=[];
     this.rides=0; this.routeRides=[0,0,0,0]; this.animals=[]; this.lastDispatch=-99; this.lastLift=-99;this.gatherCount=0;
+    this.beltTravel=0;   // distance the lift belt has run; display only, not part of the state hash
     this.landingReservations=[null,null,null,null]; this.panoramaBatch=0;
-    this.seesawAngle=0; this.seesawVel=0; this.seesawState='ready'; this.seesawResetUntil=0; this.finishedAt=null;
+    this.seesawAngle=-this.L.seesaw.maxAngle; this.seesawVel=0; this.seesawState='ready'; this.seesawResetUntil=0; this.finishedAt=null;
     this.preflight=WP.preflight({params:this.cfg,video,world,timeScale}); this.timing={...this.preflight};
     this.story=WP.storyState(this.cfg,this.video,0,this.timing); this.previousOpen=[...this.story.openRoutes];
     this._decoSlots={major:-1,fish:-1,emote:-1}; this._pendingGuest=null; this._forcedUfo=false; this._showStarted=false;
@@ -108,16 +109,17 @@ class Simulation {
       ahead=b;
     }
     // Lift passengers are allowed to finish after closing; only intake is stopped.
-    ahead=null;
+    ahead=null;let beltMove=0;
     for(const b of this._list('lift')) {
       const cap=ahead?ahead.s-L.GAP:L.lift.path.length, old=b.s;
-      b.s=Math.min(cap,b.s+180*cfg.beltSpeed*dt);b.v=Math.max(0,(b.s-old)/dt);
+      b.s=Math.min(cap,b.s+180*cfg.beltSpeed*dt);b.v=Math.max(0,(b.s-old)/dt);beltMove=Math.max(beltMove,b.s-old);
       if(!ahead&&b.s>=L.lift.path.length-1e-7){
         const platform=this._list('platform'),last=platform[platform.length-1];
         if(!last||last.s>=L.GAP){b.state='platform';b.s=0;b.v=0;this._emit('tip',L.lift.x,L.lift.top,b.kind);continue;}
       }
       ahead=b;
     }
+    this.beltTravel+=beltMove;   // the belt runs exactly as far as its passengers move
     ahead=null;
     for(const b of this._list('platform')) {
       const cap=ahead?ahead.s-L.GAP:L.platformPath.length, old=b.s;
@@ -137,7 +139,8 @@ class Simulation {
         const q=WP.samplePath(r.path,b.s),profile=q.kind==='seesaw'?clamp(.6+3*this.seesawAngle,.28,1.3):q.kind==='flight'?1.15:q.kind==='funnel'?.95:1+.6*Math.max(0,q.ty);
         const target=190*cfg.rollSpeed*profile;
         const acceleration=240*cfg.rollSpeed*dt;
-        const speed=b.v+clamp(target-b.v,-acceleration,acceleration);
+        // On the tipping board only gravity moves the rider: it sits until the board has tipped, then slides downhill. Never uphill.
+        const speed=q.kind==='seesaw'?clamp(b.v+1500*cfg.rollSpeed*Math.sin(this.seesawAngle)*dt,0,300*cfg.rollSpeed):b.v+clamp(target-b.v,-acceleration,acceleration);
         const old=b.s;let cap=ahead?ahead.s-L.GAP:r.path.length;
         // Reserve a real landing gap before the last descent, and before launching a jump.
         // Water guests upstream wait outside that gap until the arriving guest joins their lane.
@@ -154,17 +157,18 @@ class Simulation {
         if(id===0&&cfg.mode!=='short'&&old<=this._gateS(0)&&b.s>this._gateS(0)&&this.landingReservations[0]!==b.id)this.panoramaBatch--;
         const f=r.feature;
         if(f&&id!==2&&old<f.entryS&&b.s>=f.entryS)this._emit(id===1?'funnel':id===2?'seesaw':'spring',f.x,f.y,b.kind);
+        if(id===2&&old<f.entryS&&b.s>=f.entryS){b.s=f.entryS;b.v=0;}   // plop: the rider lands on the board and sits
         if(id===2&&b.s>=f.entryS&&b.s<=f.exitS){const u=(b.s-f.entryS)/(f.exitS-f.entryS);seesawU=u;seesawKind=b.kind;this.seesawState=u<.2?'loaded':u<.8?'tipping':'returning';}
-        if(id===2&&old<f.exitS&&b.s>=f.exitS)this.seesawResetUntil=this.t+.6;
+        if(id===2&&old<f.exitS&&b.s>=f.exitS)this.seesawResetUntil=this.t+.9;
         if(b.s>=r.path.length-1e-7&&(cfg.mode==='short'||this._poolHasSpace(L.pool.joinS[id],b))){this._arrive(b);continue;}
         ahead=b;
       }
     }
     {// Board follows the rider's weight against a counterweight spring and rests on rubber stops at +-maxAngle
-      const f=L.seesaw,m=f.maxAngle,target=seesawU==null?0:1.3*m*Math.tanh(4*(2*seesawU-1));
+      const f=L.seesaw,m=f.maxAngle,target=seesawU==null?-1.3*m:1.3*m;   // empty: the counterweight wins; loaded: the rider wins
       this.seesawVel+=(60*(target-this.seesawAngle)-5.4*this.seesawVel)*dt;this.seesawAngle+=this.seesawVel*dt;
       if(Math.abs(this.seesawAngle)>=m){const side=Math.sign(this.seesawAngle),hit=Math.abs(this.seesawVel);this.seesawAngle=side*m;this.seesawVel=0;
-        if(hit>.25)this._emit('seesaw',f.x+side*(f.dir||1)*f.length/2,f.y,seesawKind,clamp(.5+hit/2,.5,1));}
+        if(hit>.25)this._emit('seesaw',f.x+(f.dir||1)*(side>0?f.front:-f.back),f.y,seesawKind,clamp(.5+hit/2,.5,1));}
     }
     ahead=null;
     for(const b of this._list('gather')) {
@@ -183,7 +187,7 @@ class Simulation {
     else if(b.state==='route'){
       const r=L.routes[b.route];q=WP.samplePath(r.path,b.s);mode=q.kind==='flight'?'fall':'roll';
       angle=q.kind==='funnel'?.22*Math.sin(b.s/L.R):b.s/L.R;
-      if(q.kind==='seesaw'){const f=r.feature,d=f.dir||1,offset=((b.s-f.entryS)/(f.exitS-f.entryS)-.5)*f.length,phi=this.seesawAngle*d;q.x=f.x+Math.cos(phi)*offset*d;q.y=f.y+Math.sin(phi)*offset*d;angle=phi;}
+      if(q.kind==='seesaw'){const f=r.feature,d=f.dir||1,offset=f.land+(b.s-f.entryS)/(f.exitS-f.entryS)*(f.front-f.land),phi=this.seesawAngle*d;q.x=f.x+Math.cos(phi)*offset*d;q.y=f.y+Math.sin(phi)*offset*d;angle=phi;}
       if(b.s>=r.path.length-1e-7){mode='pool';angle=0;}
     } else if(b.state==='gather')q=WP.samplePath(b.gatherPath,b.s);
     else q=WP.samplePath(L.pool.path,b.s);

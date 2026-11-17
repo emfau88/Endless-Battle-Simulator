@@ -56,6 +56,34 @@ Bildblätter für `docs/reference/` und das README-Bild mit dem neuen Stand fehl
   Kugelfabrik und Myzel.
 - Eine erste Fassung mit gerader Schnittkante am Rinnenende hat der Nutzer als „zu abgehackt“ abgelehnt.
 
+## Ausschnittsexport
+
+- Der Wasserpark kann jetzt Ausschnitte exportieren (`--clip-start`, `--clip-duration`), zum Beispiel eine Minute aus
+  der Mitte des 10-Minuten-Parktags, ohne die ganze Episode zu rendern.
+- Voraussetzung war die Seek-Regel: Die Stellung der Liftkette hing bisher von der Zahl gezeichneter Bilder ab. Sie
+  kommt jetzt aus der Simulation (`beltTravel`, nicht Teil des Zustands-Hashs).
+- Neuer Test: Ein Bild nach einem Zeitsprung ist pixelgleich mit dem Bild bei durchgehender Wiedergabe.
+
+## Testvideos vom 17.11.2026 (auf Wunsch des Nutzers, lokal in `output/`)
+
+| Datei | Inhalt |
+|---|---|
+| `waterpark_short_test_20s.mp4` | Hochformat 1080×1920, 60 Bilder/s, 20 s aus dem Dauerbetrieb ab 1:05 mit 16 Tieren, ohne Anzeige, fester heller Tag; −23,9 LUFS, Spitze −7,1 dBFS |
+| `waterpark_long_test_60s.mp4` | Querformat 2560×1440, 60 Bilder/s, Minute 4:00 bis 5:00 des 10-Minuten-Parktags mit Zähler; −25,5 LUFS, Spitze −6,6 dBFS; 122 MB, Renderzeit 3:56 |
+
+Der Startmoment des Shorts wurde gesucht: Im gewählten Fenster sind fast durchgehend alle vier Attraktionen belegt,
+neun Fahrten enden in 20 Sekunden.
+
+## Wippe als Kippbrett (18.11.2026)
+
+- **Anlass:** Der Nutzer lehnte ab, dass die Tiere auf der Wippe bergauf rutschen, bis sie kippt.
+- **Jetzt:** Der Drehpunkt sitzt nahe am Einstiegsende, ein Gegengewicht am kurzen Arm hält den langen Arm oben. Das
+  Tier landet knapp hinter dem Drehpunkt und sitzt. Sein Gewicht kippt das Brett bis zum Anschlag, erst dann rutscht es
+  bergab hinaus; danach schwingt das Brett zurück. Auf dem Brett bewegt nur die Schwerkraft das Tier.
+- Das ändert den Ablauf der Wippenfahrt in beiden Formaten (Zustands-Hashes). Der Test prüft: Landung auf dem ruhenden
+  Brett, nie rückwärts, Bewegung nur bei abwärts geneigtem Brett, zwei Anschläge je Fahrt.
+- Nahaufnahmen liegen lokal unter `output/waterpark-dev/wippe/`. Die Abnahme durch den Nutzer steht aus.
+
 ## Kleinigkeiten
 
 - Der Fahrtenzähler hat einen dunklen Rand und bleibt vor einer weißen Wolke lesbar.
@@ -77,12 +105,13 @@ Fahrten beim 10-Minuten-Parktag quer, Seed 42: 212, wie vorher.
 
 ## Prüfungen
 
-- Gelaufen: `node --test test/waterpark-simulation.test.mjs` (22 von 22 bestanden, darunter zwei neue Tests für Show
-  und Einfahrt), `node --check` für alle Wasserpark-Dateien, Standbilder und Nahaufnahmen in beiden Formaten bei 1080p
-  und 720p, Zeitmessung.
-- **Nicht gelaufen:** `test/waterpark-integration.test.mjs`, `test/waterpark-browser.test.mjs`, `npm run golden` und
-  der vollständige `npm test`. Die Sitzung endete vorher. Vor dem Zusammenführen nachholen.
-- Die Abnahme der Vorschau durch den Nutzer steht aus.
+- Gelaufen: `node --test test/waterpark-simulation.test.mjs` (22 von 22, darunter zwei neue Tests für Show und
+  Einfahrt), `node --test test/waterpark-browser.test.mjs` (3 von 3, darunter der neue Test zur Seek-Regel),
+  Standbilder und Nahaufnahmen in beiden Formaten bei 1080p und 720p, Zeitmessung, zwei Testexporte mit Ton.
+- Gelaufen: `node --test test/waterpark-integration.test.mjs` (7 von 7, mit kleinem MP4-Export).
+- **Nicht gelaufen:** `npm run golden` und der vollständige `npm test`. Geändert wurden nur Dateien des Wasserparks;
+  die Referenz-Hashes decken Naval, Kugelfabrik und Myzel ab.
+- Die Abnahme der Vorschau und der Testvideos durch den Nutzer steht aus.
 
 ## Grenzen
 

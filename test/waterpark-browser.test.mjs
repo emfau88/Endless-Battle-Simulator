@@ -16,7 +16,7 @@ test('Waterpark renders both layouts without changing simulation or 30/60 fps be
     const { page, errors, info } = await openExportPage(browser, config(aspect));
     try {
       assert.equal(info.scenario, 'waterpark');
-      assert.equal(info.supportsClips, false);
+      assert.equal(info.supportsClips, true);
       assert.deepEqual([info.width, info.height], aspect === '16:9' ? [1280, 720] : [720, 1280]);
       const result = await page.evaluate(() => {
         const frames = exportAPI.renderFrames(30, .75);
@@ -38,6 +38,26 @@ test('Waterpark renders both layouts without changing simulation or 30/60 fps be
       assert.deepEqual(errors.map(error => error.message), []);
     } finally { await page.close(); }
   }
+});
+
+test('Waterpark seek rule: a frame after a jump in time equals the frame of a continuous run', async () => {
+  // Park day with lift, slides, funnel, water play and guests; the comparison covers the whole picture pixel by pixel.
+  const cfg = { scenario: 'waterpark', seed: 42, params: { mode: 'day', animals: 16, size: 36 },
+    video: { aspect: '16:9', resolution: 720, fps: 30, durationSec: 600, tempo: 1 }, view: { hud: true, camera: false } };
+  const { page, errors } = await openExportPage(browser, cfg);
+  try {
+    const same = await page.evaluate(() => {
+      exportAPI.renderFrames(360, .1);                                   // continuous: every frame drawn
+      const [continuous] = exportAPI.renderFrames(1, 1, 'image/png');
+      const hash = exportAPI.hash();
+      exportAPI.restart(); exportAPI.simulate(12);                       // jump: simulation only, then one frame
+      const [jumped] = exportAPI.renderFrames(1, 1, 'image/png');
+      return { equal: continuous === jumped, sameState: hash === exportAPI.hash(), bytes: jumped.length };
+    });
+    assert.ok(same.sameState, 'both runs must reach the same simulation step');
+    assert.ok(same.bytes > 10000 && same.equal, 'picture after a jump differs from continuous playback');
+    assert.deepEqual(errors.map(error => error.message), []);
+  } finally { await page.close(); }
 });
 
 const range = (page, id, value) => page.locator(id).evaluate((element, next) => {

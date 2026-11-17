@@ -98,7 +98,7 @@ const controls = [
 ];
 EBS.registerScenario({
   id: 'waterpark', title: 'Endless Waterpark', defaults, controls, normalizeParams,
-  supportsCamera: false, supportsClips: false, restartOnDuration: true,
+  supportsCamera: false, supportsClips: true, restartOnDuration: true,   // clips: the renderer keeps no state between frames
   requiresPreflight: cfg => cfg.params.mode !== 'relax',
   videoDefaults: { resolution: 1080, fps: 60, quality: { crf: 18, preset: 'medium' } },
   create: ctx => new WP.Simulation(ctx),
