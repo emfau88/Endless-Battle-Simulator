@@ -10,6 +10,11 @@ const { dot, ellipse, line, roundRect } = WP.artUtil;
 const mix = (a, b, k) => a.map((v, i) => Math.round(v + (b[i] - v) * clamp(k, 0, 1)));
 const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
 const smooth = u => u * u * (3 - 2 * u);
+/** Hue in degrees to RGB (full saturation); l lifts the colour towards white. */
+function hueRgb(h, l = 0.6) {
+  const f = n => { const k = (n + (((h % 360) + 360) % 360) / 30) % 12, c = Math.min(l, 1 - l); return Math.round(255 * (l - c * Math.max(-1, Math.min(k - 3, 9 - k, 1)))); };
+  return [f(0), f(8), f(4)];
+}
 
 // Daylight keys after Endless Pyramid: p, multiply tint, warm light, its strength, night 0..1, sun rays 0..1.
 // Day and morning are identical; sunset and dusk are cooler and weaker, because the bright cream palette of the
@@ -63,13 +68,18 @@ class WaterparkRenderer extends EBS.CanvasScene {
     this.skyL = this.layer(g => WP.paintSky(g, A));
     this.back = this.layer(g => WP.paintBack(g, A, new EBS.RNG(hashSeed('waterpark-back', 7)), this.art));
     this.struct = this.layer(g => this.paintStruct(g));
-    this.funnelL = this.layer(g => WP.paintFunnel(g, A));
+    this.funnelL = this.layer(g => WP.paintFunnel(g, A));   // the bowl, fused with the end of its feed slide
     const tubes = L.routes.flatMap(r => r.drawSegments.filter(s => s.kind === 'tube'));
+    const I = (this.inlet = WP.funnelInlet(A));
     this.front = this.layer(g => {
       g.save(); g.beginPath(); g.rect(0, 0, L.W, A.wallTop + 2); g.clip(); for (const s of tubes) WP.paintTubeFront(g, s, R); g.restore();
       g.globalCompositeOperation = 'destination-out'; WP.funnelCut(g, A); g.globalCompositeOperation = 'source-over';
       WP.paintFunnelFront(g, A);
+      if (I) {   // the feed slide is fused with the rim: the front lip is not drawn again over its rounded end
+        g.globalCompositeOperation = 'destination-out'; line(g, I.pts, WP.troughSize(R).out + 8, '#000'); g.globalCompositeOperation = 'source-over';
+      }
     });
+    if (I) this.setupInlet(I);
     this.fore = this.layer(g => WP.paintFore(g, A, new EBS.RNG(hashSeed('waterpark-fore', 7)), this.art));
     this.refl = this.layer(g => {
       for (const c of [this.skyL]) g.drawImage(c, 0, 0, L.W, L.H);
@@ -78,6 +88,12 @@ class WaterparkRenderer extends EBS.CanvasScene {
     });
     const f = L.funnel, box = pts => { const xs = pts.map(p => p.x), ys = pts.map(p => p.y), m = R + 22; return { x: Math.min(...xs) - m, y: Math.min(...ys) - m, w: Math.max(...xs) - Math.min(...xs) + 2 * m, h: Math.max(...ys) - Math.min(...ys) + 2 * m }; };
     this.funnelBox = { x: f.x - f.rx - 20, y: f.y - f.ry - 16, w: f.rx * 2 + 52, h: f.ry * 3.1 + 60 };
+    if (I) {   // the end of the feed slide belongs to the bowl layer: both are drawn in one go
+      const a = this.funnelBox, b = I.box, x = Math.min(a.x, b.x), y = Math.min(a.y, b.y), x1 = Math.max(a.x + a.w, b.x + b.w), y1 = Math.max(a.y + a.h, b.y + b.h);
+      // The slide crosses the edge of this box: on whole canvas pixels, so no seam shows where the copy begins
+      const x0 = Math.floor(x * sc) / sc, y0 = Math.floor(y * sc) / sc;
+      this.funnelBox = { x: x0, y: y0, w: Math.ceil(x1 * sc) / sc - x0, h: Math.ceil(y1 * sc) / sc - y0 };
+    }
     this.frontBoxes = [{ x: f.x - f.rx - 14, y: f.y, w: f.rx * 2 + 28, h: f.ry + 16 }, ...tubes.map(box)];
     // Route geometry for the moving water film, the belt loop and the return lane
     this.routePaths = L.routes.map(r => { const p = new Path2D(); for (const s of r.drawSegments) if (s.kind !== 'deck') s.forEach((q, i) => (i ? p.lineTo(q.x, q.y) : p.moveTo(q.x, q.y))); return p; });
@@ -106,6 +122,38 @@ class WaterparkRenderer extends EBS.CanvasScene {
     this.moon = L.land ? [L.W * 0.765, L.H * 0.09, 44] : [L.W * 0.87, L.H * 0.118, 40];
     this.moonImg = this.art.moonSprite(sc, this.moon[2]);
     this.beltPos = 0; this.beltT = null; this.ufoCanvas = null;
+    // Water play: nozzles in the open water between the attractions and clear of the swimmers' lanes
+    // (x as a share of the width, y as a share of the lagoon depth, size, group). The last ones only run in the evening show.
+    const hW = L.H - L.waterY, spots = L.land
+      ? [[.409, .152, 1.2, 0], [.440, .178, 1.05, 0], [.471, .152, 1.2, 0], [.732, .152, 1.2, 1], [.762, .178, 1.05, 1], [.792, .178, 1.05, 1], [.822, .152, 1.2, 1],
+        [.136, .31, 1.45, 2], [.582, .337, 1.6, 2], [.892, .305, 1.4, 2]]
+      : [[.300, .566, 1.7, 0], [.433, .590, 1.5, 0], [.567, .590, 1.5, 0], [.700, .566, 1.7, 0], [.170, .437, 1.9, 2], [.830, .437, 1.9, 2]];
+    const count = [0, 0, 0];
+    this.jets = spots.map(([x, y, s, grp], i) => ({ i, x: Math.round(x * L.W), y: Math.round(L.waterY + y * hW), s, g: grp, k: count[grp]++, show: grp === 2 }))
+      .sort((a, b) => a.y - b.y);
+  }
+  /** Feed slide of the funnel: paths for the moving water film on its end (which the bowl layer draws) and the stream that
+   *  runs on from there into the swirl, tapering out. */
+  setupInlet(I) {
+    const { wf } = WP.troughWater(this.L.R);
+    this.inletPath = new Path2D(); this.inletSteep = new Path2D();
+    let on = false;
+    I.pts.forEach(([x, y], i) => {
+      i ? this.inletPath.lineTo(x, y) : this.inletPath.moveTo(x, y);
+      if (!i) return;
+      const [ax, ay] = I.pts[i - 1], dy = y - ay, len = Math.hypot(x - ax, dy) || 1;
+      if (dy / len > 0.5) { if (!on) this.inletSteep.moveTo(ax, ay); this.inletSteep.lineTo(x, y); on = true; } else on = false;
+    });
+    const mid = I.run, acc = [0];
+    for (let i = 1; i < mid.length; i++) acc.push(acc[i - 1] + Math.hypot(mid[i][0] - mid[i - 1][0], mid[i][1] - mid[i - 1][1]));
+    const left = [], right = [];
+    mid.forEach((p, i) => {
+      const p0 = mid[Math.max(0, i - 1)], p1 = mid[Math.min(mid.length - 1, i + 1)], l = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) || 1;
+      const h = wf / 2 * (1 - 0.72 * acc[i] / acc[acc.length - 1]), nx = -(p1[1] - p0[1]) / l, ny = (p1[0] - p0[0]) / l;
+      left.push([p[0] + nx * h, p[1] + ny * h]); right.push([p[0] - nx * h, p[1] - ny * h]);
+    });
+    this.tongue = new Path2D(); [...left, ...right.reverse()].forEach(([x, y], i) => (i ? this.tongue.lineTo(x, y) : this.tongue.moveTo(x, y))); this.tongue.closePath();
+    this.tongueMid = new Path2D(); mid.forEach(([x, y], i) => (i ? this.tongueMid.lineTo(x, y) : this.tongueMid.moveTo(x, y)));
   }
   /** Seamless tile of light lines (cell edges of a wrapped Voronoi net), flattened for the view onto the lagoon. */
   causticTile() {
@@ -165,8 +213,9 @@ class WaterparkRenderer extends EBS.CanvasScene {
     WP.paintFrame(g, A);
     WP.paintTower(g, A);
     WP.paintDeck(g, A, new EBS.RNG(hashSeed('waterpark-deck', 7)), this.art);
-    for (const s of segs) if (s.kind !== 'tube') WP.paintPathShadow(g, s, WP.troughSize(R).out);
-    for (const s of segs) if (s.kind !== 'tube') WP.paintTrough(g, s, R);
+    const inlet = WP.funnelInlet(A), ends = s => (inlet && s === inlet.seg ? inlet.pts : s);   // the funnel's feed slide ends on the bowl rim
+    for (const s of segs) if (s.kind !== 'tube') WP.paintPathShadow(g, ends(s), WP.troughSize(R).out);
+    for (const s of segs) if (s.kind !== 'tube') WP.paintTrough(g, ends(s), R);
     g.save(); g.beginPath(); g.rect(0, 0, L.W, A.wallTop + 2); g.clip(); for (const s of segs) if (s.kind === 'tube') WP.paintTube(g, s, R); g.restore();
     WP.paintBasins(g, A);
     WP.paintSeesawStand(g, A);
@@ -210,10 +259,12 @@ class WaterparkRenderer extends EBS.CanvasScene {
     for (const d of riders) if (d.behindFunnel) this.drawRider(g, d);
     this.blit(g, this.funnelL, this.funnelBox);
     this.drawSwirl(g, vt);
+    this.drawInlet(g, vt);
+    this.drawGates(g, vt);
     for (const d of riders) if (!d.behindFunnel) this.drawRider(g, d);
     for (const b of this.frontBoxes) this.blit(g, this.front, b);
-    const swimmers = this.swimmers();
-    this.drawPool(g, swimmers);
+    const swimmers = this.swimmers(), jets = (this.jetsNow = this.jetState(vt));
+    this.drawPool(g, swimmers, jets, vt);
     this.drawSplashes(g, vt);
     this.drawFish(g, vt);
     g.drawImage(this.fore, 0, 0, L.W, L.H);
@@ -384,21 +435,8 @@ class WaterparkRenderer extends EBS.CanvasScene {
     g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
     L.routes.forEach((r, i) => {
       const P = this.routePaths[i];
-      if (!open[i]) {
-        g.save(); g.translate(0.5, wo); g.strokeStyle = WP.ART_COLORS.innerWall; g.lineWidth = wf + 5; g.stroke(P); g.restore();
-        const [x] = r.launch, y = L.deck.y;
-        for (const sx of [-1, 1]) { line(g, [[x + sx * R * 0.9, y], [x + sx * R * 0.9, y - 36]], 5, '#7a5332'); ellipse(g, x + sx * R * 0.9, y - 37, 4, 4, '#f4d79a'); }
-        g.setLineDash([9, 9]); line(g, [[x - R * 0.9, y - 30], [x + R * 0.9, y - 30]], 5, '#ffffff'); g.lineDashOffset = 9; line(g, [[x - R * 0.9, y - 30], [x + R * 0.9, y - 30]], 5, '#e8484f'); g.setLineDash([]); g.lineDashOffset = 0;
-        return;
-      }
-      g.save(); g.translate(0, wo);
-      g.setLineDash([18, 46, 6, 70]); g.lineDashOffset = -t * 95 * rs - i * 37; g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 2.4; g.stroke(P);
-      g.translate(0, -wf * 0.3); g.setLineDash([10, 64, 4, 50]); g.lineDashOffset = -t * 125 * rs - i * 53; g.strokeStyle = 'rgba(235,255,255,.55)'; g.lineWidth = 1.8; g.stroke(P);
-      g.restore();
-      g.save(); g.translate(0, wo - wf * 0.12);                       // steep stretches: brighter and faster
-      g.setLineDash([30, 40]); g.lineDashOffset = -t * 210 * rs - i * 29; g.strokeStyle = 'rgba(255,255,255,.72)'; g.lineWidth = 3; g.stroke(this.steepPaths[i]);
-      g.translate(0, wf * 0.3); g.setLineDash([14, 52]); g.lineDashOffset = -t * 250 * rs - i * 41; g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.stroke(this.steepPaths[i]);
-      g.restore(); g.setLineDash([]);
+      if (!open[i]) { g.save(); g.translate(0.5, wo); g.strokeStyle = WP.ART_COLORS.innerWall; g.lineWidth = wf + 5; g.stroke(P); g.restore(); return; }
+      this.flowStreaks(g, t, i, P, this.steepPaths[i]);
       if (i < 3) { const [ex, ey] = r.end; this.foam(g, t, ex, ey + 2, R * 1.2, i); }   // outlet into the lagoon
     });
     for (const b of this.A.basins || []) {
@@ -408,7 +446,61 @@ class WaterparkRenderer extends EBS.CanvasScene {
       g.restore(); g.setLineDash([]);
     }
     g.restore();
+  }
+  /** Barrier across every closed slide start and the pennants. Drawn after the bowl layer, which holds the end of the feed slide. */
+  drawGates(g, t) {
+    const L = this.L, R = L.R, open = this.sim.story?.openRoutes || [true, true, true, true];
+    L.routes.forEach((r, i) => {
+      if (open[i]) return;
+      const [x] = r.launch, y = L.deck.y;
+      for (const sx of [-1, 1]) { line(g, [[x + sx * R * 0.9, y], [x + sx * R * 0.9, y - 36]], 5, '#7a5332'); ellipse(g, x + sx * R * 0.9, y - 37, 4, 4, '#f4d79a'); }
+      g.setLineDash([9, 9]); line(g, [[x - R * 0.9, y - 30], [x + R * 0.9, y - 30]], 5, '#ffffff'); g.lineDashOffset = 9; line(g, [[x - R * 0.9, y - 30], [x + R * 0.9, y - 30]], 5, '#e8484f'); g.setLineDash([]); g.lineDashOffset = 0;
+    });
     this.drawFlags(g, t, open);
+  }
+  /** Moving light streaks of the water film on slide i (P: its centre line, S: its steep stretches). */
+  flowStreaks(g, t, i, P, S) {
+    const { wf, wo } = WP.troughWater(this.L.R), rs = this.sim.cfg.rollSpeed || 1;
+    g.save(); g.lineCap = 'round'; g.lineJoin = 'round'; g.translate(0, wo);
+    g.setLineDash([18, 46, 6, 70]); g.lineDashOffset = -t * 95 * rs - i * 37; g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 2.4; g.stroke(P);
+    g.translate(0, -wf * 0.3); g.setLineDash([10, 64, 4, 50]); g.lineDashOffset = -t * 125 * rs - i * 53; g.strokeStyle = 'rgba(235,255,255,.55)'; g.lineWidth = 1.8; g.stroke(P);
+    g.restore();
+    g.save(); g.lineCap = 'round'; g.lineJoin = 'round'; g.translate(0, wo - wf * 0.12);   // steep stretches: brighter and faster
+    g.setLineDash([30, 40]); g.lineDashOffset = -t * 210 * rs - i * 29; g.strokeStyle = 'rgba(255,255,255,.72)'; g.lineWidth = 3; g.stroke(S);
+    g.translate(0, wf * 0.3); g.setLineDash([14, 52]); g.lineDashOffset = -t * 250 * rs - i * 41; g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.stroke(S);
+    g.restore(); g.setLineDash([]);
+  }
+  /** End of the funnel's feed slide (part of the bowl layer): moving water film on it, and the stream running on into the swirl. */
+  drawInlet(g, t) {
+    const I = this.inlet; if (!I) return;
+    const L = this.L, R = L.R, f = L.funnel, b = this.funnelBox, { wf, wo } = WP.troughWater(R);
+    const open = this.sim.story?.openRoutes?.[1] !== false, rs = this.sim.cfg.rollSpeed || 1;
+    const bowl = () => g.ellipse(f.x, f.y + 1, f.rx - 12, f.ry - 7, 0, 0, TAU);
+    g.save(); g.beginPath(); g.rect(b.x, b.y, b.w, b.h);
+    if (open) { g.clip(); this.flowStreaks(g, t, 1, this.inletPath, this.inletSteep); }
+    else {   // closed: the dry channel ends at the still water of the bowl
+      bowl(); g.clip('evenodd');
+      g.translate(0.5, wo); g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = WP.ART_COLORS.innerWall; g.lineWidth = wf + 5; g.stroke(this.inletPath);
+    }
+    g.restore();
+    if (!open) return;
+    const [ex, ey] = I.fade;
+    // Channel water runs on over the bowl water and fades out along the first stretch of the ride
+    const fade = (c, a) => { const gr = g.createLinearGradient(I.x, I.y, ex, ey); gr.addColorStop(0, `rgba(${c},${a})`); gr.addColorStop(0.3, `rgba(${c},${a * 0.8})`); gr.addColorStop(1, `rgba(${c},0)`); return gr; };
+    g.save(); g.beginPath(); bowl(); g.clip();
+    line(g, I.run, wf + 4, fade('26,186,203', 0.9), 0.5, wo + 1.5);
+    line(g, I.run, wf, fade('48,227,236', 1), 0.5, wo);
+    line(g, I.run, wf * 0.5, fade('154,243,243', 1), 0, wo - 1);
+    g.restore();
+    const tg = g.createLinearGradient(I.x, I.y, ex, ey);
+    tg.addColorStop(0, 'rgba(206,250,252,.5)'); tg.addColorStop(0.5, 'rgba(170,246,249,.3)'); tg.addColorStop(1, 'rgba(150,240,246,0)');
+    const sg = g.createLinearGradient(I.x, I.y, ex, ey);
+    sg.addColorStop(0, 'rgba(255,255,255,.75)'); sg.addColorStop(0.6, 'rgba(255,255,255,.5)'); sg.addColorStop(1, 'rgba(255,255,255,0)');
+    g.save(); g.beginPath(); bowl(); g.clip();
+    g.fillStyle = tg; g.fill(this.tongue);
+    g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = sg; g.lineWidth = 2.4;
+    for (const [dash, sp, o] of [[[16, 26], 170, 0], [[7, 31], 215, 9]]) { g.setLineDash(dash); g.lineDashOffset = -t * sp * rs - o; g.save(); g.translate(0, o ? -wf * 0.16 : wf * 0.12); g.stroke(this.tongueMid); g.restore(); }
+    g.setLineDash([]); g.restore();
   }
   /** A pennant on a pole marks every slide start on the deck; grey while the attraction is still closed. */
   drawFlags(g, t, open) {
@@ -592,9 +684,12 @@ class WaterparkRenderer extends EBS.CanvasScene {
     }
     g.restore();
   }
-  drawPool(g, swimmers) {
+  drawPool(g, swimmers, jets = [], vt = 0) {
     const L = this.L, R = L.R, t = this.sim.t, wv = this.sim.cfg.waves ?? 0.7;
+    // Fountains stand in the lagoon: whoever swims behind a nozzle is drawn first
+    let ji = 0; const fountains = y => { while (ji < jets.length && jets[ji].n.y <= y) { const q = jets[ji++]; this.drawJet(g, vt, q.n, q.h, null); } };
     for (const d of swimmers) {
+      fountains(d.y);
       const { b } = d, x = 0, y = 0;
       g.save(); g.translate(d.x, d.y); g.scale(d.k, d.k);
       g.lineWidth = 2.6; g.strokeStyle = 'rgba(255,255,255,.85)';
@@ -619,6 +714,95 @@ class WaterparkRenderer extends EBS.CanvasScene {
       }
       g.restore();
     }
+    fountains(Infinity);
+  }
+
+  // ------------------------------------------------------------- water play
+  /** Fountain show at the end of a park day: 0..1 fade-in from its start, plus the last seconds in which all jets rise together. */
+  showState(t) {
+    const st = this.sim.story || {}, cfg = this.sim.cfg;
+    if (!st.show || cfg.mode === 'relax' || st.showAt == null) return { k: 0, age: 0, last: 0 };
+    const age = t - st.showAt, left = (st.duration || 0) - t;
+    return { k: clamp(age / 1.4, 0, 1), age, last: smooth(clamp((3.2 - left) / 1.6, 0, 1)) };
+  }
+  /** Current height of every running nozzle in pixels. Pure functions of the video time, so a jump lands on the same picture.
+   *  By day each group plays a slow swell, a wave running through it and a burst in turn; in the show every jet keeps its own time. */
+  jetState(t) {
+    const cfg = this.sim.cfg, show = this.showState(t), day = cfg.waterPlay !== false, out = [];
+    if (!day && show.k <= 0) return out;
+    const base = this.L.land ? 130 : 150;
+    for (const n of this.jets) {
+      const j = n.i, k0 = n.show ? show.k : day ? 1 : show.k; if (k0 <= 0) continue;
+      const T = 8.5 + n.g * 1.9, u = (t + n.g * 3.1) % T, turn = Math.exp(-(((u - 1.1 - n.k * 0.34) / 0.36) ** 2));
+      const calm = 0.62 + 0.2 * Math.sin(t * 1.7 - n.k * 0.95 + n.g * 2) + 0.13 * Math.sin(t * 0.63 + j * 2.3) + 0.5 * turn;
+      const Ts = 5.3 + 0.9 * ((j * 7) % 5), us = (t + j * 1.37) % Ts, own = Math.exp(-(((us - 1) / 0.32) ** 2));
+      const wild = 0.66 + 0.22 * Math.sin(t * (1.05 + 0.13 * j) + j * 1.9) + 0.14 * Math.sin(t * (0.47 + 0.05 * j) + j * 0.7) + 0.5 * own;
+      const lvl = (calm * (1 - show.k) + wild * show.k) * (1 + 0.3 * show.k) + 0.03 * Math.sin(t * 11 + j * 1.7);
+      out.push({ n, h: Math.max(8, base * n.s * k0 * (lvl * (1 - show.last) + 1.75 * show.last)) });
+    }
+    return out;
+  }
+  /** One fountain: centre jet that breaks into a crown, two arcs to each side, droplets, rings where the arcs land and foam
+   *  at the nozzle. light = null draws the water itself; light = { hue, a, l } draws coloured light on the same shapes. */
+  drawJet(g, t, n, h, light) {
+    const { x, y, s, i } = n, sway = Math.sin(t * 1.3 + i * 2.1) * 3 * s * Math.min(1, h / 90), xt = x + sway, yt = y - h;
+    const reach = 0.55 + 0.45 * Math.min(1.4, h / (100 * s)), arcs = [];
+    for (const d of [-1, 1]) for (let k = 0; k < 2; k++) arcs.push([d, k, (17 + k * 17) * s * reach, h * (0.74 - k * 0.24)]);
+    const body = w => { g.beginPath(); g.moveTo(x - w, y); g.quadraticCurveTo(x - w * 0.5, y - h * 0.5, xt - w * 0.34, yt); g.lineTo(xt + w * 0.34, yt); g.quadraticCurveTo(x + w * 0.5, y - h * 0.5, x + w, y); g.closePath(); };
+    const arc = ([d, , wk, hk]) => { g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + d * wk * 0.4, y - hk * 2, x + d * wk, y + 2); };
+    g.save(); g.lineCap = 'round';
+    if (light) {
+      const { hue, a, l = 0.6 } = light, col = (dh, al) => rgba(hueRgb(hue + dh, l), Math.min(1, al * a));
+      g.globalCompositeOperation = 'lighter';
+      this.glow(g, x, y + 6, 82 * s, hueRgb(hue, l), 0.4 * a);          // lit water around the nozzle
+      this.glow(g, x, y + 58 * s, 54 * s, hueRgb(hue + 40, l), 0.16 * a);   // its reflection
+      // Colour runs up the jet: four hues from the nozzle to the crown, moving on with time
+      const gr = g.createLinearGradient(0, y, 0, yt - 6);
+      gr.addColorStop(0, col(0, 0.85)); gr.addColorStop(0.35, col(55, 0.8)); gr.addColorStop(0.7, col(110, 0.75)); gr.addColorStop(1, col(165, 0.55));
+      g.strokeStyle = gr;
+      for (const q of arcs) { arc(q); g.lineWidth = (9 - q[1] * 2.5) * s; g.globalAlpha = 0.5; g.stroke(); g.lineWidth = 2.2 * s; g.globalAlpha = 0.8; g.stroke(); }
+      g.globalAlpha = 1; g.fillStyle = gr; body(7.5 * s); g.fill();
+      this.glow(g, xt, yt + 4, 30 * s, hueRgb(hue + 165, l), 0.3 * a);
+      g.fillStyle = col(130, 0.9);
+    } else {
+      ellipse(g, x, y + 2, 9 * s, 3.2 * s, 'rgba(40,104,124,.5)'); ellipse(g, x, y + 1, 6 * s, 2 * s, '#e3ecf2');
+      for (const q of arcs) {
+        arc(q); g.strokeStyle = 'rgba(206,244,250,.5)'; g.lineWidth = (5.5 - q[1] * 1.5) * s; g.stroke();
+        g.strokeStyle = 'rgba(255,255,255,.88)'; g.lineWidth = 1.6 * s; g.stroke();
+        const ph = (t * 1.1 + q[1] / 2 + i * 0.31 + (q[0] > 0 ? 0.4 : 0)) % 1;                      // ring where the arc lands
+        g.strokeStyle = `rgba(255,255,255,${(0.7 * (1 - ph)).toFixed(3)})`; g.lineWidth = 1.6;
+        g.beginPath(); g.ellipse(x + q[0] * q[2], y + 3, (5 + ph * 14) * s, (1.6 + ph * 4) * s, 0, 0, TAU); g.stroke();
+      }
+      // A wide thin veil gives the jet body, a faint dark edge sets it off against the bright pool wall
+      g.fillStyle = 'rgba(206,244,250,.24)'; body(13 * s); g.fill();
+      const jg = g.createLinearGradient(0, y, 0, yt);
+      jg.addColorStop(0, 'rgba(222,249,253,.94)'); jg.addColorStop(0.7, 'rgba(255,255,255,.82)'); jg.addColorStop(1, 'rgba(255,255,255,.34)');
+      body(7 * s); g.strokeStyle = 'rgba(18,120,152,.3)'; g.lineWidth = 2.2; g.stroke(); g.fillStyle = jg; g.fill();
+      line(g, [[x, y - 2], [x + sway * 0.6, y - h * 0.62], [xt, yt + h * 0.1]], 1.6 * s, 'rgba(255,255,255,.92)');
+      this.glow(g, xt, yt + 5, 24 * s, [255, 255, 255], 0.2);            // fine spray around the crown
+      this.foam(g, t, x, y + 1, 11 * s, i + 11, 0.85);
+      g.fillStyle = 'rgba(244,253,255,.95)';
+    }
+    // Droplets: the crown falls back, and some travel along the arcs
+    for (let k = 0; k < 8; k++) {
+      const f = (t * 1.15 + k / 8 + i * 0.17) % 1, dx = ((k % 4) - 1.5) * 7.5 * s * f * (1 + 0.3 * Math.sin(k * 2.4 + i));
+      dot(g, xt + dx, yt - 10 * s * 4 * f * (1 - f) * (k % 2 ? 0.6 : 1) + f * f * h * 0.85, (2.5 - 1.3 * f) * s);
+    }
+    for (let k = 0; k < 8; k++) {
+      const f = (t * 0.95 + k / 8 + i * 0.29) % 1, q = arcs[k % 4];
+      dot(g, x + q[0] * q[2] * (0.8 * f * (1 - f) + f * f), y - 4 * q[3] * f * (1 - f) + 2 * f * f, (2.1 - 0.9 * f) * s);
+    }
+    g.restore();
+  }
+  /** Light on the fountains: a soft pale glow at night, and in the show a colour gradient on every jet that moves at its own pace. */
+  drawJetLights(g, t, day) {
+    const jets = this.jetsNow || []; if (!jets.length) return;
+    const show = this.showState(t), night = clamp(day.night * 1.2 + day.warmK * 0.15, 0, 1) * (1 - show.k) * 0.4;
+    if (show.k <= 0.01 && night <= 0.02) return;
+    for (const { n, h } of jets) {
+      if (night > 0.02) this.drawJet(g, t, n, h, { hue: 186, a: night, l: 0.82 });
+      if (show.k > 0.01) this.drawJet(g, t, n, h, { hue: n.i * 67 + t * (26 + 7 * (n.i % 3)), a: show.k });
+    }
   }
   /** Half-submerged look in the swimmer's own frame: water over the lower third with a moving wavy edge and a bright line on it. */
   waterBand(g, b, t) {
@@ -631,21 +815,24 @@ class WaterparkRenderer extends EBS.CanvasScene {
     g.beginPath(); for (let i = 0; i <= 12; i++) { const u = -0.82 + i * 0.1367; i ? g.lineTo(u * R, top(u)) : g.moveTo(u * R, top(u)); } g.stroke();
   }
   drawSplashes(g, t) {
+    const entry = this.inlet && [this.inlet.x, this.inlet.y];
     for (const e of this.sim.recent || []) {
-      if (e.type !== 'splash') continue;
-      const a = t - e.t; if (a < 0 || a > 1.6) continue;
-      const st = clamp((e.p || 1) * 0.85, 0.45, 1.3);
-      for (let i = 0; i < 3; i++) {
+      // A landing in the lagoon, or a rider shooting from the spout into the funnel (smaller, without wide rings)
+      const dive = e.type === 'splash', ex = dive ? e.x : entry?.[0], ey = dive ? e.y : entry?.[1];
+      if (!dive && !(e.type === 'funnel' && entry)) continue;
+      const a = t - e.t; if (a < 0 || a > (dive ? 1.6 : 0.9)) continue;
+      const st = dive ? clamp((e.p || 1) * 0.85, 0.45, 1.3) : 0.6;
+      if (dive) for (let i = 0; i < 3; i++) {
         const aa = a - i * 0.18; if (aa <= 0) continue;
         g.strokeStyle = `rgba(255,255,255,${0.7 * Math.max(0, 1 - aa / 1.2)})`; g.lineWidth = 2;
-        g.beginPath(); g.ellipse(e.x, e.y + 8, 10 + aa * 90, 3 + aa * 26, 0, 0, TAU); g.stroke();
+        g.beginPath(); g.ellipse(ex, ey + 8, 10 + aa * 90, 3 + aa * 26, 0, 0, TAU); g.stroke();
       }
-      if (a < 0.9) this.foam(g, t, e.x, e.y + 4, 22 * st, e.seq, 1 - a / 0.9);
+      if (a < 0.9) this.foam(g, t, ex, ey + 4, 22 * st, e.seq, 1 - a / 0.9);
       const rng = new EBS.RNG(e.seq * 7919 + 13);
       g.fillStyle = 'rgba(235,252,255,.95)';
       for (let i = 0; i < 16; i++) {
-        const vx = rng.range(-130, 130) * st, vy = -rng.range(160, 330) * st, x = e.x + vx * a, y = e.y + vy * a + 450 * a * a, r = rng.range(1.4, 3.4);
-        if (y <= e.y + 6) dot(g, x, y, r);
+        const vx = rng.range(-130, 130) * st, vy = -rng.range(160, 330) * st, x = ex + vx * a, y = ey + vy * a + 450 * a * a, r = rng.range(1.4, 3.4);
+        if (y <= ey + 6) dot(g, x, y, r);
       }
     }
   }
@@ -882,43 +1069,10 @@ class WaterparkRenderer extends EBS.CanvasScene {
       g.restore();
     }
   }
-  /** Small fountain show and optional fireworks at the end of a park day. */
+  /** Lights of the water play (the fountain show at the end of a park day) and optional fireworks. */
   drawFinale(g, t) {
-    const st = this.sim.story || {}, cfg = this.sim.cfg, L = this.L;
-    if (st.show && cfg.mode !== 'relax') {
-      const age = t - st.finaleAt;
-      if (age >= 0 && age < 8) {
-        const alpha = Math.min(1, age) * Math.min(1, 8 - age);
-        g.save(); g.globalAlpha = alpha; g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
-        for (let j = 0; j < 5; j++) {
-          // Light colour changes every two seconds, neighbours offset; height pulses
-          const x = L.W * (0.18 + j * 0.16), y = L.waterY + 40 + (j % 2) * 30, h = (L.land ? 120 : 190) * (0.75 + 0.25 * Math.sin(age * 1.6 + j));
-          const col = COLORS[(j + Math.floor(age / 2)) % 4], lit = c => rgba(c.map(v => Math.round(v * .55 + 255 * .45)), 1);
-          this.glow(g, x, y + 6, 90, col, 0.42);                       // lit water around the nozzle
-          this.glow(g, x, y + 70, 60, col, 0.18);                      // its reflection
-          // Centre jet with a spray crown
-          const top = y - h * 1.5, jg = g.createLinearGradient(0, y, 0, top);
-          jg.addColorStop(0, rgba(col, 0.75)); jg.addColorStop(0.6, 'rgba(225,250,255,.7)'); jg.addColorStop(1, 'rgba(255,255,255,.15)');
-          g.fillStyle = jg; g.beginPath(); g.moveTo(x - 7, y); g.lineTo(x - 2.5, top); g.lineTo(x + 2.5, top); g.lineTo(x + 7, y); g.closePath(); g.fill();
-          // Three arcs per side: wide coloured glow, white core
-          for (const d of [-1, 1]) for (let k = 0; k < 3; k++) {
-            const hk = h * (2 - k * 0.32), wk = 30 + k * 20;
-            g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + d * wk * 0.35, y - hk, x + d * wk, y);
-            g.strokeStyle = rgba(col, 0.3); g.lineWidth = 9 - k * 2; g.stroke();
-            g.strokeStyle = lit(col); g.globalAlpha = alpha * 0.55; g.lineWidth = 2.2; g.stroke(); g.globalAlpha = alpha;
-          }
-          // Falling droplets along the arcs and from the crown
-          g.fillStyle = 'rgba(240,253,255,.9)';
-          for (let i = 0; i < 12; i++) {
-            const f = (age * 0.8 + i / 12) % 1, k = i % 3, d = (i >> 1) % 2 ? 1 : -1, wk = 30 + k * 20, hk = h * (2 - k * 0.32);
-            const bx = x + d * wk * (2 * f * (1 - f) * 0.35 + f * f), by = y - hk * 2 * f * (1 - f);   // point on the quadratic arc
-            dot(g, bx, by, 2.2 - f);
-          }
-          for (let i = 0; i < 6; i++) { const f = (age * 1.1 + i / 6) % 1; dot(g, x + (i - 2.5) * 6 * f, top + f * f * h * 0.9, 1.8); }
-        }
-        g.restore();
-      }
-    }
+    const cfg = this.sim.cfg, L = this.L;
+    this.drawJetLights(g, t, this.dayState);
     if (cfg.fireworks) for (const e of this.sim.decorations || []) {
       if (e.type !== 'firework') continue;
       const a = t - e.start; if (a < 0 || a > 2.5) continue;
@@ -944,28 +1098,40 @@ class WaterparkRenderer extends EBS.CanvasScene {
     // Everything visible in a video is English (channel rule); the simulator's controls stay German.
     const sub = { short: 'FOUR FRIENDS · ONE WATERPARK', day: 'A DAY AT THE WATERPARK', relax: 'SLIDE. SPLASH. REPEAT.' }[cfg.mode] || '';
     g.save();
-    const sh = land ? 240 : 400, scrim = g.createLinearGradient(0, 0, 0, sh);
-    scrim.addColorStop(0, `rgba(5,30,90,${land ? 0.1 : 0.2})`); scrim.addColorStop(0.65, `rgba(5,30,90,${land ? 0.05 : 0.09})`); scrim.addColorStop(1, 'rgba(5,20,62,0)');
-    g.fillStyle = scrim; g.fillRect(0, 0, L.W, sh);
+    // The title is off unless asked for (cfg.title): a video opens on the park, not on a title card.
+    const title = cfg.title === true, counter = cfg.mode !== 'short';
+    const rides = fmtInt(this.sim.rides || 0), showing = cfg.ending === 'show' && st.show;
+    // With the show as the ending, the line between the last ride and the first fountain stays empty.
+    const banner = cfg.ending === 'show' && cfg.mode !== 'short' ? (st.closing && !st.finished) || showing : (st.closing && cfg.mode !== 'short') || st.finished;
+    if (title || counter || banner) {
+      const sh = land ? 240 : 400, scrim = g.createLinearGradient(0, 0, 0, sh), k = title ? 1 : 0.6;
+      scrim.addColorStop(0, `rgba(5,30,90,${(land ? 0.1 : 0.2) * k})`); scrim.addColorStop(0.65, `rgba(5,30,90,${(land ? 0.05 : 0.09) * k})`); scrim.addColorStop(1, 'rgba(5,20,62,0)');
+      g.fillStyle = scrim; g.fillRect(0, 0, L.W, sh);
+    }
     g.shadowColor = 'rgba(0,25,70,.45)'; g.shadowBlur = 14; g.textBaseline = 'middle'; g.fillStyle = '#ffffff';
-    const rides = fmtInt(this.sim.rides || 0), banner = (st.closing && cfg.mode !== 'short') || st.finished;
+    // The ride counter gets a dark edge, so it stays readable in front of a white cloud
+    const edged = (text, x, y) => { g.save(); g.shadowBlur = 0; g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = 'rgba(8,44,104,.42)'; g.strokeText(text, x, y); g.restore(); g.fillText(text, x, y); };
     if (land) {
-      g.letterSpacing = '4px'; g.textAlign = 'left'; g.font = font(700, 48); g.fillText('ENDLESS WATERPARK', 60, 76);
-      g.letterSpacing = '3px'; g.font = font(600, 20); g.fillStyle = '#d7ecff'; g.fillText(sub, 62, 124);
-      if (cfg.mode !== 'short') {
-        g.textAlign = 'right'; g.fillText('RIDES', L.W - 60, 64);
-        g.letterSpacing = '1px'; g.font = font(700, 48); g.fillStyle = '#ffd25a'; g.fillText(rides, L.W - 60, 108);
+      if (title) {
+        g.letterSpacing = '4px'; g.textAlign = 'left'; g.font = font(700, 48); g.fillText('ENDLESS WATERPARK', 60, 76);
+        g.letterSpacing = '3px'; g.font = font(600, 20); g.fillStyle = '#d7ecff'; g.fillText(sub, 62, 124);
+      }
+      if (counter) {
+        g.textAlign = 'right'; g.letterSpacing = '3px'; g.font = font(600, 20); g.fillStyle = '#eaf5ff'; edged('RIDES', L.W - 60, 64);
+        g.letterSpacing = '1px'; g.font = font(700, 48); g.fillStyle = '#ffd25a'; edged(rides, L.W - 60, 108);
       }
     } else {
-      g.letterSpacing = '5px'; g.textAlign = 'center'; g.font = font(700, 62); g.fillText('ENDLESS WATERPARK', L.W / 2, 108);
-      g.letterSpacing = '3px'; g.font = font(600, 25); g.fillStyle = '#d7ecff'; if (!banner) g.fillText(sub, L.W / 2, 172);
-      if (cfg.mode !== 'short') {   // left of the tower roof, which now stands on the centre axis
-        g.textAlign = 'left'; g.letterSpacing = '2px'; g.font = font(600, 22); g.fillText('RIDES', 60, 214);
-        g.letterSpacing = '1px'; g.font = font(700, 40); g.fillStyle = '#ffd25a'; g.fillText(rides, 60, 256);
+      if (title) {
+        g.letterSpacing = '5px'; g.textAlign = 'center'; g.font = font(700, 62); g.fillText('ENDLESS WATERPARK', L.W / 2, 108);
+        g.letterSpacing = '3px'; g.font = font(600, 25); g.fillStyle = '#d7ecff'; if (!banner) g.fillText(sub, L.W / 2, 172);
+      }
+      if (counter) {   // left of the tower roof, which now stands on the centre axis
+        g.textAlign = 'left'; g.letterSpacing = '2px'; g.font = font(600, 22); g.fillStyle = '#eaf5ff'; edged('RIDES', 60, 214);
+        g.letterSpacing = '1px'; g.font = font(700, 40); g.fillStyle = '#ffd25a'; edged(rides, 60, 256);
       }
     }
     if (banner) {   // landscape: centred in the gap between title and moon; portrait: replaces the subtitle line, clear of the tower roof
-      const text = st.finished ? (cfg.ending === 'show' ? 'WHAT A DAY!' : 'GOOD NIGHT, LITTLE FRIENDS') : 'LAST RIDES OF THE DAY';
+      const text = showing ? 'WHAT A DAY!' : st.finished ? 'GOOD NIGHT, LITTLE FRIENDS' : 'LAST RIDES OF THE DAY';
       g.textAlign = 'center'; g.letterSpacing = '4px'; g.font = font(700, land ? 32 : 36); g.fillStyle = '#fff3c4';
       g.shadowColor = 'rgba(255,170,40,.85)'; g.shadowBlur = 20; g.fillText(text, land ? L.W * .545 : L.W / 2, land ? 66 : 172);
     }

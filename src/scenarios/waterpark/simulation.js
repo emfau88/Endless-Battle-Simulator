@@ -39,6 +39,8 @@ class Simulation {
     this.story.finished=this.finishedAt!=null;
     this.story.settled=all; this.story.finishedAt=this.finishedAt;
     this.story.show=this.story.show&&all;
+    // The show starts once everyone has gathered, at the earliest at finaleAt.
+    this.story.showAt=this.story.show?Math.max(this.story.finaleAt,this.finishedAt??0):null;
     this.story.phase=all&&this.cfg.mode!=='relax'?(this.story.show?'show':'rest'):this.story.phase;
   }
   _routeFree(id) {
@@ -196,7 +198,10 @@ class Simulation {
     const cfg=this.cfg,L=this.L,t=this.videoTime,d=Math.max(0,Number(cfg.decoDensity)||0);
     this.decorations=this.decorations.filter(e=>t<e.start+e.duration);
     if(this.story.show&&!this._showStarted){this._showStarted=true;this._emit('cheer',L.W*.5,L.waterY,-1,.5);}
-    if(this.story.show&&cfg.fireworks){const k=Math.floor((t-this.story.finaleAt)/2);if(k>=0&&k<3&&this._fireworkIndex!==k){this._fireworkIndex=k;const x=L.W*(.3+.2*k),y=L.H*(.16+.03*(k%2));this._emit('launch',x,L.waterY,k,.4);this._addDecoration('firework',2,{x,y});}}
+    if(this.story.show&&cfg.fireworks){
+      // One rocket every three seconds for as long as the show lasts, at least three.
+      const at=this.story.showAt,k=Math.floor((t-at)/3),n=Math.max(3,Math.floor((this.story.duration-at-2.5)/3));
+      if(k>=0&&k<n&&this._fireworkIndex!==k){this._fireworkIndex=k;const x=L.W*(.2+.6*random(this.seed,'firework-x',k)),y=L.H*(.12+.06*random(this.seed,'firework-y',k));this._emit('launch',x,L.waterY,k,.4);this._addDecoration('firework',2,{x,y});}}
     if(!d)return;
     const nearOpening=this.previousOpen.some((v,i)=>v&&this.recent.some(e=>e.type==='open'&&e.c===i&&t-e.t<3));
     const flying=this.animals.some(b=>b.state==='route'&&b.route===3&&b.s>=L.jump.entryS);

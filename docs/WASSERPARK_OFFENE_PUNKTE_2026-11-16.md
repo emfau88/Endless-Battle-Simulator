@@ -5,14 +5,15 @@ in `main`. Diese Datei ist eine Merkliste. **Nichts davon ist beauftragt.**
 
 Grundlage: [Abschlussbericht](WASSERPARK_MOCKUP_2026-11-16.md) mit Messwerten und Bildern.
 
-## 1 · Entscheidungen, die noch beim Nutzer liegen
+## 1 · Entscheidungen (am 17.11.2026 getroffen und umgesetzt)
 
-| Frage | Empfehlung |
+| Frage | Entscheidung |
 |---|---|
-| Wasserspiele tagsüber? | Ja, aber kurz und selten: alle 40–60 Sekunden ein Stoß, als Rhythmus für lange Videos |
-| Ende mit Brunnenshow? | Ja. Sie ist der Lohn für das Zuschauen |
+| Wasserspiele tagsüber? | Ja, durchgehend und bewegt |
+| Ende mit Brunnenshow? | Ja, alle Fontänen mit bunten Farbverläufen und asynchron |
+| Titel im Bild? | Standardmäßig aus |
 
-Die Sprache der Anzeige ist entschieden: im Video immer englisch.
+Umsetzung: [Bericht](WASSERPARK_WASSERSPIELE_2026-11-17.md). Die Sprache der Anzeige ist entschieden: im Video immer englisch.
 
 ## 2 · Noch nicht geprüft
 
@@ -66,7 +67,7 @@ Die Sprache der Anzeige ist entschieden: im Video immer englisch.
 2. **Ton füllen.** „Juhu“ auf steilen Stücken und im Sprung, Rutschgeräusch während der Fahrt, lauterer Platscher,
    Aktionsklänge insgesamt etwa 6 dB lauter.
 3. **Sichtbares Ziel im Langvideo.** Zähler „Rides until the show“ mit Balken, dazu alle 50 Fahrten ein kleines
-   Ereignis.
+   Ereignis. Die Show selbst ist seit dem 17.11. Standard; der Zähler mit Ziel fehlt noch.
 4. **Mehr Ausdruck.** Offene Münder im Fall, größerer Platscher bei der Landung, Sprechblase nach dem Trichter,
    Arme hoch beim Kippen der Wippe. Das geht über die Posenwahl im Renderer, ohne die gemeinsame Tiergrafik zu ändern.
 5. **Lagune beleben.** Schwimmreifen, Wasserball, kleine Wellen.

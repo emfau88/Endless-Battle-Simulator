@@ -59,23 +59,31 @@ function pathShadow(g, pts, width, alpha = .2) {
 /** Water channel of a trough: width and downward shift, so the far inner wall shows as a cream band above it. */
 WP.troughWater = R => ({ wf: TROUGH(R).inner - 18, wo: Math.round(R * .18) });
 /** Open cream half-pipe with a turquoise water film (static part). */
-function trough(g, pts, R) {
+function trough(g, pts, R) { for (const stage of ['under', 'rim', 'bed', 'water']) troughStage(g, pts, R, stage); }
+/** One stage of a trough. Painting two shapes stage by stage (all outlines, then all rims, then all water) fuses them
+ *  into one piece: this is how the funnel's feed slide runs into the bowl without an edge between them. */
+function troughStage(g, pts, R, stage) {
   const { out, inner } = TROUGH(R), { wf, wo } = WP.troughWater(R), D = Math.round(R * .42);
-  // Side wall below the rim: stacked strokes give the slab its thickness (light from the upper left)
-  line(g, pts, out + 5, C.outline, 0, D + 1.5);
-  for (let k = D; k > 0; k -= 2) line(g, pts, out, k > D * .55 ? C.faceDark : C.rimShade, .5, k);
-  line(g, pts, out + 5, C.outline, 0, 1.5);
-  line(g, pts, out, C.rimShade, 1.5, 6);
-  line(g, pts, out, C.rimLight, -1, -2);
-  line(g, pts, out - 5, C.rim, .5, 1);
-  // Channel: far inner wall in light cream, water lower in the channel and brighter in its middle
-  line(g, pts, inner + 4, C.seam, 0, .5);
-  line(g, pts, inner, '#e3d3ba', 0, 0);
-  line(g, pts, inner - 6, C.innerWall, 0, -2);
-  line(g, pts, wf + 4, C.waterDeep, .5, wo + 1.5);
-  line(g, pts, wf, C.water, .5, wo);
-  line(g, pts, wf * .5, C.waterCore, 0, wo - 1);
-  line(g, pts, 2.2, 'rgba(255,255,255,.8)', -.5, wo - wf / 2 + 5);
+  if (stage === 'under') {
+    // Side wall below the rim: stacked strokes give the slab its thickness (light from the upper left)
+    line(g, pts, out + 5, C.outline, 0, D + 1.5);
+    for (let k = D; k > 0; k -= 2) line(g, pts, out, k > D * .55 ? C.faceDark : C.rimShade, .5, k);
+    line(g, pts, out + 5, C.outline, 0, 1.5);
+  } else if (stage === 'rim') {
+    line(g, pts, out, C.rimShade, 1.5, 6);
+    line(g, pts, out, C.rimLight, -1, -2);
+    line(g, pts, out - 5, C.rim, .5, 1);
+  } else if (stage === 'bed') {
+    // Channel: far inner wall in light cream, water lower in the channel and brighter in its middle
+    line(g, pts, inner + 4, C.seam, 0, .5);
+    line(g, pts, inner, '#e3d3ba', 0, 0);
+    line(g, pts, inner - 6, C.innerWall, 0, -2);
+  } else {
+    line(g, pts, wf + 4, C.waterDeep, .5, wo + 1.5);
+    line(g, pts, wf, C.water, .5, wo);
+    line(g, pts, wf * .5, C.waterCore, 0, wo - 1);
+    line(g, pts, 2.2, 'rgba(255,255,255,.8)', -.5, wo - wf / 2 + 5);
+  }
 }
 WP.paintTrough = trough;
 WP.paintPathShadow = pathShadow;
@@ -427,9 +435,9 @@ WP.paintTowerFront = function (g, L) {
 };
 
 /** Thick white lip of the funnel bowl (8 px), shaded on its outer edge. */
-function funnelLip(g, x, y, rx, ry) {
-  ellipse(g, x, y + 4, rx + 9, ry + 8, C.outline); ellipse(g, x, y + 3, rx + 7, ry + 6, C.rimShade);
-  ellipse(g, x, y, rx + 6, ry + 5, '#fefdfc'); ellipse(g, x, y + 2, rx - 2, ry - 2, C.rim); ellipse(g, x, y + 1.5, rx - 3, ry - 3, C.rimLight);
+function funnelLip(g, x, y, rx, ry, stage) {
+  if (stage !== 'top') { ellipse(g, x, y + 4, rx + 9, ry + 8, C.outline); ellipse(g, x, y + 3, rx + 7, ry + 6, C.rimShade); }
+  if (stage !== 'under') { ellipse(g, x, y, rx + 6, ry + 5, '#fefdfc'); ellipse(g, x, y + 2, rx - 2, ry - 2, C.rim); ellipse(g, x, y + 1.5, rx - 3, ry - 3, C.rimLight); }
 }
 /** The open funnel bowl: cone shell, cream rim, water surface with dark drain. */
 WP.paintFunnel = function (g, L) {
@@ -445,16 +453,26 @@ WP.paintFunnel = function (g, L) {
   for (const k of [-.78, -.5, -.22, .06, .34, .62, .86]) { g.beginPath(); g.moveTo(x + rx * k, y + ry * .6); g.quadraticCurveTo(x + rx * k * .78, y + depth * .62, x + neck * k, y + depth); g.stroke(); }
   g.restore();
   line(g, [[x - rx * .55, y + depth * .45], [x - neck * 1.4, y + depth * .9]], 3, 'rgba(255,255,255,.45)');
-  funnelLip(g, x, y, rx, ry);
+  // The feed slide and the bowl are painted stage by stage, so the slide's rim becomes the bowl's rim and its channel opens
+  // into the bowl without a line between them.
+  const I = WP.funnelInlet(L), R = L.R, wr = rx - 12, wry = ry - 7;
+  funnelLip(g, x, y, rx, ry, 'under');
+  if (I) troughStage(g, I.pts, R, 'under');
+  funnelLip(g, x, y, rx, ry, 'top');
+  if (I) { troughStage(g, I.pts, R, 'rim'); troughStage(g, I.pts, R, 'bed'); }
   // Water surface
-  const wr = rx - 12, wry = ry - 7, wg = g.createRadialGradient(x, y + wry * .2, wr * .08, x, y, wr);
+  const wg = g.createRadialGradient(x, y + wry * .2, wr * .08, x, y, wr);
   wg.addColorStop(0, '#11789a'); wg.addColorStop(.18, '#1aaec4'); wg.addColorStop(.55, '#30dbe6'); wg.addColorStop(1, '#8ff1f2');
   g.save(); g.beginPath(); g.ellipse(x, y + 1, wr, wry, 0, 0, TAU); g.clip();
   g.fillStyle = C.innerWall; g.fillRect(x - wr, y - wry, wr * 2, wry * 2.2);
   g.fillStyle = wg; g.beginPath(); g.ellipse(x, y + 4, wr, wry - 2, 0, 0, TAU); g.fill();
   g.restore();
-  ellipse(g, x, y + wry * .22, wr * .14, wry * .16, '#0d5a74');
   g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 3; g.beginPath(); g.ellipse(x, y + 1, wr - 4, wry - 3, 0, Math.PI * 1.05, Math.PI * 1.5); g.stroke();
+  if (I) {   // channel water through the rim; on the bowl water it fades out per frame, while the slide is open (renderer)
+    g.save(); g.beginPath(); g.rect(0, 0, L.W, L.H); g.ellipse(x, y + 1, wr, wry, 0, 0, TAU); g.clip('evenodd');
+    troughStage(g, I.pts, R, 'water'); g.restore();
+  }
+  ellipse(g, x, y + wry * .22, wr * .14, wry * .16, '#0d5a74');
 };
 WP.paintTube = tube;
 /** Bowl silhouette, used to cut the outlet tube's front glints where they would shine through the funnel. */
@@ -471,6 +489,24 @@ WP.paintFunnelFront = function (g, L) {
   g.beginPath(); g.ellipse(x, y + 3, rx + 6, ry + 6, 0, 0, TAU); g.ellipse(x, y + 1, rx - 12, ry - 7, 0, 0, TAU); g.clip('evenodd');
   funnelLip(g, x, y, rx, ry);
   g.restore();
+};
+
+/** Feed slide of the funnel. It does not vanish behind the bowl: its rounded end lies on the rim and is fused with the bowl
+ *  (see paintFunnel). Geometry, cached on L: centre line up to that end (pts), the ride from there into the swirl (run),
+ *  where the channel water has faded out (fade) and the area in which the slide is drawn again on top of the bowl (box). */
+WP.funnelInlet = function (L) {
+  if (L.inlet !== undefined) return L.inlet;
+  const route = L.routes[1], f = L.funnel, R = L.R, { out } = TROUGH(R);
+  const seg = route.drawSegments.find(s => s.kind !== 'deck' && s.kind !== 'tube');
+  const inside = p => ((p.x - f.x) / (f.rx + 6)) ** 2 + ((p.y - f.y) / (f.ry + 5)) ** 2 < 1;
+  const first = seg ? seg.find(inside) : null;
+  if (!first) return (L.inlet = null);
+  const last = seg[seg.length - 1], cutS = Math.min(last.s - 2, first.s + R * .45), m = WP.samplePath(route.path, cutS);
+  const before = seg.filter(p => p.s < cutS), pts = before.map(p => [p.x, p.y]); pts.push([m.x, m.y]);
+  const run = [[m.x, m.y], ...seg.filter(p => p.s > cutS).map(p => [p.x, p.y]), ...f.spiral.slice(1, 12)], h = out / 2 + 10;
+  const tail = [...before.filter(p => p.s > cutS - R * 3.5).map(p => [p.x, p.y]), [m.x, m.y]], xs = tail.map(p => p[0]), ys = tail.map(p => p[1]);
+  return (L.inlet = { seg, pts, run, cutS, x: m.x, y: m.y, dir: [m.tx, m.ty], fade: run[run.length - 1],
+    box: { x: Math.min(...xs) - h, y: Math.min(...ys) - h, w: Math.max(...xs) - Math.min(...xs) + 2 * h, h: Math.max(...ys) - Math.min(...ys) + 2 * h + Math.round(R * .42) } });
 };
 
 /** Seesaw board cross-section: half-height of the top (h), depth of the front face (F), middle of the water (wm). */

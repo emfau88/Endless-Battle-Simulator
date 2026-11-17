@@ -63,7 +63,7 @@ const PLANS = {
   land: {
     waterY: .72, horizon: .30, lift: { x: .34, deck: .19, bottom: .80 }, towerW: .092,
     mouths: [.235, .675, .55, .94],
-    funnel: { x: .67, y: .31, rx: .112, ry: .065 },
+    funnel: { x: .67, y: .31, rx: .112, ry: .065, entry: .45 },   // Einfahrt vorn links, in Verlängerung der Zulaufrinne
     seesaw: { x: .505, y: .52, length: .17 },
     jump: { x: .878, y: .625 },
     panorama: { deckTo: .255, pts: [[.205,.203],[.14,.232],[.103,.28],[.108,.333],[.15,.37],[.215,.393],[.255,.43],[.262,.478],[.225,.52],[.165,.548],[.128,.592],[.135,.64],[.18,.675],[.222,.70]] },
@@ -111,8 +111,11 @@ WP.createLayout = function (world, size = 36) {
 
   const funnel = { x: W * P.funnel.x, y: H * P.funnel.y, rx: W * P.funnel.rx, ry: H * P.funnel.ry };
   const spiralRx = Math.max(R * 2, funnel.rx - R * 1.4), spiralRy = Math.max(R, funnel.ry - R * .7), spiral = [];
-  // Einfahrt links am Rand, gegen den Uhrzeigersinn nach unten weiter, zweieinhalb Runden bis zum Abfluss.
-  for (let j = 0; j <= 160; j++) { const f = j / 160, a = Math.PI - f * Math.PI * 5, r = 1 - .94 * f; spiral.push([funnel.x + Math.cos(a) * spiralRx * r, funnel.y + Math.sin(a) * spiralRy * r]); }
+  // Einfahrt links am Rand, gegen den Uhrzeigersinn nach unten weiter, zweieinhalb Runden bis zum Abfluss. Der Startwinkel
+  // (entry) legt die Einfahrt so, dass die Spirale die Richtung der Zulaufrinne ohne Knick fortsetzt.
+  const spiralA0 = Math.PI - (P.funnel.entry || 0);
+  for (let j = 0; j <= 160; j++) { const f = j / 160, a = spiralA0 - f * Math.PI * 5, r = 1 - .94 * f; spiral.push([funnel.x + Math.cos(a) * spiralRx * r, funnel.y + Math.sin(a) * spiralRy * r]); }
+  funnel.spiral = spiral;
   const seesaw = { x: W * P.seesaw.x, y: H * P.seesaw.y, length: W * P.seesaw.length, maxAngle: .16, hang: !!P.seesaw.hang };
   const dir = P.seesaw.leftward ? -1 : 1;
   const boardStart = [seesaw.x - dir * seesaw.length / 2, seesaw.y], boardEnd = [seesaw.x + dir * seesaw.length / 2, seesaw.y];

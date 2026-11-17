@@ -7,8 +7,8 @@
     "mode": "day",
     "animals": 16,
     "size": 36,
-    "ending": "quiet",
-    "fireworks": false,
+    "ending": "show",
+    "fireworks": true,
     "dayMinutes": 0,
     "decoDensity": 1
   },

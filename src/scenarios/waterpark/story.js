@@ -3,6 +3,8 @@
 const WP = (EBS.Waterpark = EBS.Waterpark || {});
 const clamp = (v,a,b) => Math.max(a, Math.min(b,v));
 const enabled = cfg => [0,1,2,3].filter(i => cfg['route'+i] !== false);
+/** Seconds before the end of the video at which the finale may begin: the fountain show gets more room than the quiet ending. */
+WP.finaleLead = (cfg, D) => (cfg.mode || 'day') === 'short' ? 3 : cfg.ending === 'show' ? clamp(D * .05, 8, 30) : 8;
 WP.storyState = function (cfg, video, step, timing = {}) {
   const mode = cfg.mode || 'day', D = Math.max(1, Number(video && video.durationSec) || (mode === 'short' ? 30 : 600));
   const time = Math.max(0, step/60), progress = clamp(time/D,0,1), selected = mode === 'short' ? [0,1,2,3] : enabled(cfg);
@@ -10,7 +12,7 @@ WP.storyState = function (cfg, video, step, timing = {}) {
   selected.forEach((id,i) => { openRoutes[id] = mode !== 'day' || progress >= thresholds[i]; });
   const closingAt = timing.closingAt == null ? Math.max(0,D-Math.max(32,Math.min(60,D*.12))) : timing.closingAt;
   const closing = mode === 'short' || (mode === 'day' && time >= closingAt);
-  const finaleAt = timing.finaleAt == null ? Math.max(0,D-(mode==='short'?3:8)) : timing.finaleAt;
+  const finaleAt = timing.finaleAt == null ? Math.max(0,D-WP.finaleLead(cfg,D)) : timing.finaleAt;
   const dayD = cfg.dayMinutes > 0 ? cfg.dayMinutes*60 : D;
   let dayPhase;
   if (cfg.dayCycle === false) dayPhase = cfg.dayStart == null ? .35 : cfg.dayStart;
@@ -37,6 +39,6 @@ WP.preflight = function ({params:cfg={},video={},world={w:1920,h:1080},timeScale
   if (mode==='short' && D<25) errors.push('Der Vier-Tiere-Film benötigt mindestens 25 Sekunden.');
   const minDuration = mode==='short' ? 25 : mode==='day' ? Math.ceil(drainSeconds+20) : 1;
   if (mode==='day' && D<minDuration) errors.push('Der Parktag ist für dieses Tempo zu kurz. Bitte die Dauer erhöhen oder den Vier-Tiere-Film wählen.');
-  return {ok:errors.length===0,errors,drainSeconds,minDuration,closingAt:mode==='short'?0:Math.max(0,D-Math.max(drainSeconds,Math.min(60,D*.12))),finaleAt:Math.max(0,D-(mode==='short'?3:8))};
+  return {ok:errors.length===0,errors,drainSeconds,minDuration,closingAt:mode==='short'?0:Math.max(0,D-Math.max(drainSeconds,Math.min(60,D*.12))),finaleAt:Math.max(0,D-WP.finaleLead(cfg,D))};
 };
 })();

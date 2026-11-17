@@ -11,7 +11,7 @@ const defaults = {
   mode: 'relax', animals: 16, size: 36, speed: 1, beltSpeed: 1, rollSpeed: 1, current: 1,
   route0: true, route1: true, route2: true, route3: true,
   dayCycle: true, dayMinutes: 0, dayStart: 0.12, nightDark: 0.7,
-  ending: 'quiet', fireworks: false, decoDensity: 1,
+  ending: 'show', fireworks: false, decoDensity: 1, waterPlay: true, title: false,
   ufo: true, balloon: true, birds: true, shootingStars: true, fish: true, emotes: true,
   fireflies: true, stars: true, sleepy: true,
   clouds: 0.7, rays: 0.7, reflection: 0.65, waves: 0.7, sparkle: 0.55, wiggle: 1,
@@ -66,7 +66,7 @@ function normalizeParams(input) {
   };
   for (let i = 0; i < 4; i++) out[`route${i}`] = mode === 'short' || bool(p[`route${i}`], true);
   if (![0, 1, 2, 3].some(i => out[`route${i}`])) out.route0 = true;
-  for (const key of ['ufo', 'balloon', 'birds', 'shootingStars', 'fish', 'emotes', 'fireflies', 'stars', 'sleepy']) out[key] = bool(p[key], defaults[key]);
+  for (const key of ['ufo', 'balloon', 'birds', 'shootingStars', 'fish', 'emotes', 'fireflies', 'stars', 'sleepy', 'waterPlay', 'title']) out[key] = bool(p[key], defaults[key]);
   return out;
 }
 const controls = [
@@ -78,7 +78,7 @@ const controls = [
   { key: 'size', label: 'Größe der Tierchen', type: 'range', min: 24, max: 44, step: 1, restart: true, format: value => `${value * 2} px` },
   ...[['speed', 'Gesamttempo'], ['beltSpeed', 'Tempo des Aufzugs'], ['rollSpeed', 'Tempo der Rutschen'], ['current', 'Strömung im Rücklauf']]
     .map(([key, label]) => ({ key, label, type: 'range', min: 0.5, max: 1.5, step: 0.05, format: times, restart: true })),
-  { key: 'ending', label: 'Abschluss', type: 'select', restart: true, enabled: finiteMode, options: [['quiet', 'Abendruhe'], ['show', 'Kleine Fontänenshow']] },
+  { key: 'ending', label: 'Abschluss', type: 'select', restart: true, enabled: finiteMode, options: [['show', 'Fontänenshow in bunten Farben'], ['quiet', 'Abendruhe']] },
   { key: 'dayMinutes', label: 'Länge eines Tages', type: 'select', options: [[0, 'Passend zur Videolänge'], [5, '5 Minuten'], [10, '10 Minuten'], [20, '20 Minuten'], [30, '30 Minuten'], [60, '60 Minuten']], restart: true },
   { key: 'dayStart', label: 'Tageszeit beim Start', type: 'range', min: 0, max: 0.95, step: 0.01, format: pct },
   { key: 'nightDark', label: 'Dunkelheit der Nacht', type: 'range', min: 0, max: 1, step: 0.05, format: pct },
@@ -87,6 +87,8 @@ const controls = [
     ['waves', 'Wellengang', 2], ['sparkle', 'Glitzern auf dem Wasser', 2], ['wiggle', 'Gezappel der Tierchen', 2]]
     .map(([key, label, max]) => ({ key, label, type: 'range', min: 0, max, step: 0.05, format: pct })),
   ...['Panoramarutsche', 'Trichterrutsche', 'Wippenbahn', 'Sprungrutsche'].map((label, i) => ({ key: `route${i}`, label, type: 'check', restart: true, enabled: normalMode })),
+  { key: 'waterPlay', label: 'Wasserspiele in der Lagune', type: 'check' },
+  { key: 'title', label: 'Titel „Endless Waterpark“ im Bild', type: 'check' },
   { key: 'dayCycle', label: 'Tageslauf von morgens bis nachts', type: 'check' },
   { key: 'sleepy', label: 'Tierchen werden abends müde', type: 'check' },
   { key: 'fireworks', label: 'Feuerwerk bei der Fontänenshow', type: 'check', restart: true, enabled: p => finiteMode(p) && p.ending === 'show' },
