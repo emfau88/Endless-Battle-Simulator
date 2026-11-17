@@ -75,3 +75,20 @@ test('Short-Modus: ein Team gewinnt innerhalb von zwei Minuten und bleibt Sieger
   assert.equal(s.round, 1);
   await page.close();
 });
+
+// Paket C2: Wolken zeichnen
+test('Seek-Regel: Bild nach Sprung gleich Bild nach durchgehender Wiedergabe (mit Fressen im Bild)', async () => {
+  const frame = (page) => page.evaluate(() => window.exportAPI.renderFrames(1, 1, 'image/png')[0]);
+  const jump = await openMode(42, 'short', '9:16');
+  await jump.evaluate(() => window.exportAPI.simulate(8 - 1 / 30));
+  const a = await frame(jump), ha = await jump.evaluate(() => window.exportAPI.hash());
+  await jump.close();
+  const cont = await openMode(42, 'short', '9:16');
+  await cont.evaluate(() => { window.exportAPI.renderFrames(239, 0.3); });        // 239 gezeichnete Bilder bei 30 fps
+  const b = await frame(cont), hb = await cont.evaluate(() => window.exportAPI.hash());
+  const eats = await cont.evaluate(() => window.exportAPI.events(0).filter((e) => e.type === 'absorb').length);
+  await cont.close();
+  assert.equal(ha, hb);
+  assert.ok(eats > 3, `zu wenig Fressen bis Sekunde 8: ${eats}`);
+  assert.ok(a === b, 'Bild nach Sprung weicht vom Bild nach durchgehender Wiedergabe ab');
+});

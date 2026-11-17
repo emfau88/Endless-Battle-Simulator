@@ -193,7 +193,11 @@ class CloudWarsSimulation {
         if (c.mass > RULES.massCap) c.mass -= (c.mass - RULES.massCap) * 0.2 * dt;
       }
       c.x += c.vx * dt; c.y += c.vy * dt;
-      if (c.team >= 0) { c.x = clamp(c.x, 0, a.w); c.y = clamp(c.y, 0, a.h); }
+      if (c.team >= 0) {
+        // Team-Wolken bleiben großteils im Bild: Mittelpunkt mindestens 0,7 Radien vom Rand (höchstens ein Viertel des Bildes)
+        const m = Math.min(radiusOf(c.mass) * 0.7, a.w / 4, a.h / 4);
+        c.x = clamp(c.x, m, a.w - m); c.y = clamp(c.y, m, a.h - m);
+      }
     }
     // Fressen: nur Team-Wolken fressen
     for (const A of this.clouds) {

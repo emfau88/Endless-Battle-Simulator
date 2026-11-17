@@ -1,9 +1,9 @@
 /*
  * Szenario „Cloud Wars“ (in Arbeit) – Plan: docs/CLOUD_WARS_PLAN_2026-11-18.md
  *
- * Stand Paket C1: Der Seed wählt einen festen Ausschnitt der Landschaft aus dem Prototyp „Wolkenflug“; er wird einmal
- * vorgezeichnet. Darüber treiben Team-Wolken und neutrale Wolken (Simulation: cloudwars/simulation.js). Die Wolken
- * sind bis Paket C2 nur einfache Scheiben.
+ * Stand Paket C2: Der Seed wählt einen festen Ausschnitt der Landschaft aus dem Prototyp „Wolkenflug“; er wird einmal
+ * vorgezeichnet. Darüber treiben Team-Wolken und neutrale Wolken (Simulation: cloudwars/simulation.js). Paket C2:
+ * Wolken im Stil des Prototyps mit Teamfarbe, Augen, Namensschild und fliegenden Puffs (cloudwars/art.js).
  * Maßstab je Format (Wunsch des Nutzers: „auf Handy und PC jeweils passend“): Hochformat näher, 1 GE = 2,0 logische
  * Einheiten (1 080 × 1 920 → 540 × 960 GE); Querformat weiter, 1 GE = 1,4 (1 920 × 1 080 → 1 371 × 771 GE).
  */
@@ -39,6 +39,7 @@ class CloudWarsSim extends EBS.CloudWarsSim.CloudWarsSimulation {
     return {
       t: this.t, step: this.step, area: { ...this.area }, round: this.round, scores: [...this.scores], winner: this.winner,
       ended: this.endAt >= 0, endAt: this.endAt, roundStart: this.roundStart, teams, alive, neutrals, maxMass,
+      geScale: this.geScale, eats: this.eats.map((e) => ({ mass: e.mass, age: this.t - e.t0, x: e.x, y: e.y, team: e.team })),
       summary: `Runde ${this.round} · ${alive} Teams übrig · größte Wolke ${maxMass.toFixed(1)}`
         + (this.winner >= 0 ? ` · Sieger ${S.TEAMS[this.winner].name}` : ''),
     };
@@ -50,6 +51,7 @@ class CloudWarsRenderer extends EBS.CanvasScene {
   constructor({ sim, view, world, renderScale = 1 }) {
     super({ world, renderScale });
     this.sim = sim; this.view = view; this.ground = null;
+    this.art = new EBS.CloudWarsArt.CloudArt({ radiusOf: S.radiusOf, teams: S.TEAMS });
   }
   paint(g) {
     const w = this.world, a = this.sim.area, k = this.sim.geScale;
@@ -57,17 +59,13 @@ class CloudWarsRenderer extends EBS.CanvasScene {
     if (!this.ground) this.ground = T.renderArea(a, k * this.scale);
     g.fillStyle = '#7f9b62'; g.fillRect(0, 0, w.w, w.h);
     g.drawImage(this.ground, 0, 0, a.w * k, a.h * k);
-    // Platzhalter bis Paket C2: einfache Scheiben mit Teamfarbe, damit der Ablauf sichtbar ist
+    // Wolken (Paket C2): auf GE skaliert zeichnen, Namensschilder danach in logischen Einheiten
     g.save(); g.scale(k, k);
-    for (const c of this.sim.clouds) {
-      const r = S.radiusOf(c.mass);
-      g.fillStyle = 'rgba(20,30,40,0.18)'; g.beginPath(); g.arc(c.x + r * 0.25, c.y + r * 0.4, r, 0, Math.PI * 2); g.fill();
-      g.fillStyle = c.team < 0 ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.95)'; g.beginPath(); g.arc(c.x, c.y, r, 0, Math.PI * 2); g.fill();
-      if (c.team >= 0) { g.strokeStyle = S.TEAMS[c.team].color; g.lineWidth = 3; g.stroke(); }
-    }
+    this.art.draw(g, this.sim, k, k * this.scale);
     g.restore();
+    this.art.drawLabels(g, this.sim, k);
   }
-  destroy() { if (this.ground) this.ground.width = this.ground.height = 1; super.destroy(); }
+  destroy() { if (this.ground) this.ground.width = this.ground.height = 1; this.art.destroy(); super.destroy(); }
 }
 
 EBS.registerScenario({
