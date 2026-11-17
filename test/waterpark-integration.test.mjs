@@ -117,7 +117,7 @@ for (const aspect of ['9:16', '16:9']) {
     try {
       assert.equal(info.scenario, 'waterpark');
       assert.equal(info.audio.mixProfile, 'waterpark-water-v1');
-      assert.equal(info.supportsClips, false);
+      assert.equal(info.supportsClips, true);
       assert.equal(info.requiresPreflight, false);
       const proof = await page.evaluate(() => {
         const frames = exportAPI.renderFrames(2, 0.8, 'image/png');

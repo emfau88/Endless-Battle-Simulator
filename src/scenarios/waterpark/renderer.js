@@ -121,7 +121,7 @@ class WaterparkRenderer extends EBS.CanvasScene {
     this.stars = this.visibleStars(Array.from({ length: L.land ? 190 : 170 }, () => [srng.range(0, L.W), Math.pow(srng.next(), 1.4) * (skyBottom - 20), srng.range(1.1, 2.8), srng.range(0, TAU)]));
     this.moon = L.land ? [L.W * 0.765, L.H * 0.09, 44] : [L.W * 0.87, L.H * 0.118, 40];
     this.moonImg = this.art.moonSprite(sc, this.moon[2]);
-    this.beltPos = 0; this.beltT = null; this.ufoCanvas = null;
+    this.ufoCanvas = null;
     // Water play: nozzles in the open water between the attractions and clear of the swimmers' lanes
     // (x as a share of the width, y as a share of the lagoon depth, size, group). The last ones only run in the evening show.
     const hW = L.H - L.waterY, spots = L.land
@@ -526,17 +526,15 @@ class WaterparkRenderer extends EBS.CanvasScene {
   }
   drawLift(g) {
     const L = this.L, R = L.R, E = L.lift, x = E.x, cfg = this.sim.cfg, T = this.A.tower, st = this.sim.t, rp = this.rp, bx = this.bx;
-    // The belt runs while a passenger moves (render-side only; the simulation is untouched)
-    if (this.beltT == null || st < this.beltT) { this.beltT = st; this.beltPos = 0; }
-    if (this.sim.animals.some(b => b.state === 'lift' && b.v > 1)) this.beltPos += (st - this.beltT) * 180 * (cfg.beltSpeed || 1);
-    this.beltT = st;
+    // The belt runs while a passenger moves. Its position comes from the simulation, so a jump in time shows the same picture.
+    const beltPos = this.sim.beltTravel || 0;
     g.fillStyle = 'rgba(6,40,70,.14)'; g.fillRect(x - rp - 16, E.top - rp - 10, 2 * rp + 32, E.bottom - E.top + 2 * rp + 20);
     // Chain loop with two gears; the metal cups hang on it and carry the animals
     g.lineJoin = 'round'; g.lineCap = 'round';
     g.strokeStyle = '#33434b'; g.lineWidth = 7; g.stroke(this.belt);
-    g.setLineDash([5, 6]); g.lineDashOffset = -this.beltPos; g.strokeStyle = '#b8c6cc'; g.lineWidth = 3; g.stroke(this.belt); g.setLineDash([]);
+    g.setLineDash([5, 6]); g.lineDashOffset = -beltPos; g.strokeStyle = '#b8c6cc'; g.lineWidth = 3; g.stroke(this.belt); g.setLineDash([]);
     for (const yc of [E.top, E.bottom]) {
-      const gr0 = rp + 7, a0 = -this.beltPos / rp;
+      const gr0 = rp + 7, a0 = -beltPos / rp;
       g.fillStyle = '#7f9099'; g.beginPath();
       for (let k = 0; k < 24; k++) { const a = a0 + k * TAU / 24, rr = k % 2 ? gr0 : gr0 - 5; k ? g.lineTo(x + Math.cos(a) * rr, yc + Math.sin(a) * rr) : g.moveTo(x + Math.cos(a) * rr, yc + Math.sin(a) * rr); }
       g.closePath(); g.fill(); g.strokeStyle = '#3d4f58'; g.lineWidth = 2.2; g.stroke();
@@ -570,7 +568,15 @@ class WaterparkRenderer extends EBS.CanvasScene {
   drawSeesaw(g, t) {
     const L = this.L, R = L.R, f = L.seesaw, d = f.dir || 1, phi = (this.sim.seesawAngle || 0) * d, half = f.length / 2;
     const open = this.sim.story?.openRoutes?.[2] !== false, at = lx => [f.x + Math.cos(phi) * lx, f.y + Math.sin(phi) * lx];
-    g.save(); g.translate(f.x, f.y); g.rotate(phi); WP.paintBoard(g, half, R, open);
+    g.save(); g.translate(f.x, f.y); g.rotate(phi);
+    {   // counterweight under the short arm: it holds the long arm up while the board is empty
+      const { h, F } = WP.boardSize(R), cx = -d * (f.back - 16), top = h + F - 2, w = Math.min(46, f.back * 1.1), ht = R * 0.95;
+      line(g, [[cx, top], [cx, top + 10]], 6, WP.ART_COLORS.metalDark);
+      roundRect(g, cx - w / 2 - 2.5, top + 7.5, w + 5, ht + 5, 8, WP.ART_COLORS.outline); roundRect(g, cx - w / 2, top + 10, w, ht, 6, WP.ART_COLORS.stoneDark);
+      roundRect(g, cx - w / 2, top + 10, w, ht * 0.4, 6, WP.ART_COLORS.stone); line(g, [[cx - w / 2 + 6, top + 14], [cx + w / 2 - 6, top + 14]], 2, WP.ART_COLORS.stoneLight);
+    }
+    g.translate(d * (f.front - f.back) / 2, 0);   // the board is longer on the exit side of the pivot
+    WP.paintBoard(g, half, R, open);
     if (open) {                                                               // water running towards the lower end
       const k = clamp((this.sim.seesawAngle || 0) / f.maxAngle, -1, 1), wo = WP.boardSize(R).wm, hl = half - 12;
       g.lineCap = 'round'; g.setLineDash([16, 42, 6, 54]);
@@ -581,7 +587,7 @@ class WaterparkRenderer extends EBS.CanvasScene {
     g.restore();
     WP.paintSeesawWheel(g, this.A, phi);
     if (!open) return;
-    const [sx, sy] = f.spout, entry = at(-d * half), exit = at(d * half);
+    const [sx, sy] = f.spout, entry = at(d * f.land), exit = at(d * f.front);
     this.pour(g, t, [sx, sy + R * 0.85], entry, R, 0);
     g.save(); g.globalAlpha = clamp(.55 + .45 * (this.sim.seesawAngle || 0) / f.maxAngle, .2, 1);
     this.pour(g, t, [exit[0] + d * R * 0.6, exit[1] + 4], f.catchTop, R, 1); g.restore();

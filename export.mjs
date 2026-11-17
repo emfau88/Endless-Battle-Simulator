@@ -22,7 +22,7 @@ Konfiguration
 
 Video
   --duration <t>         Länge: 20 | 20s | 5m | 1h                 (Standard 20s ohne Vorlage)
-  --clip-start <s>       Ausschnitt ab dieser Sekunde (derzeit Scrap); --duration bleibt die Episodendauer
+  --clip-start <s>       Ausschnitt ab dieser Sekunde (Scrap, Waterpark); --duration bleibt die Episodendauer
   --clip-duration <s>    nur diesen Ausschnitt rendern (beide Clip-Werte erforderlich)
                          Ton wird aus der vollständigen Episodenmischung ausgeschnitten
   --aspect <a>           9:16 | 16:9 | 1:1   (alternativ --format portrait|landscape|square)
