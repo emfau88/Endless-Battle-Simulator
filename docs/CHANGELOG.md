@@ -2,6 +2,12 @@
 
 Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen in der [ROADMAP](ROADMAP.md).
 
+## 18.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| R30, Waterpark: Wippe als Kippbrett. Die Tiere rutschten bergauf, bis das Brett kippte; das hat der Nutzer abgelehnt. Jetzt landet das Tier knapp hinter dem Drehpunkt, sein Gewicht kippt das Brett gegen ein Gegengewicht, und erst dann rutscht es bergab. | Branch `waterpark/wasserspiele` | [WASSERPARK_WASSERSPIELE_2026-11-17.md](WASSERPARK_WASSERSPIELE_2026-11-17.md) |
+
 ## 17.11.2026
 
 | Was | Commit | Bericht |

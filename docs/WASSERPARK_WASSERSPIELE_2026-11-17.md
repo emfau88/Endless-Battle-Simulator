@@ -74,6 +74,16 @@ Bildblätter für `docs/reference/` und das README-Bild mit dem neuen Stand fehl
 Der Startmoment des Shorts wurde gesucht: Im gewählten Fenster sind fast durchgehend alle vier Attraktionen belegt,
 neun Fahrten enden in 20 Sekunden.
 
+## Wippe als Kippbrett (18.11.2026)
+
+- **Anlass:** Der Nutzer lehnte ab, dass die Tiere auf der Wippe bergauf rutschen, bis sie kippt.
+- **Jetzt:** Der Drehpunkt sitzt nahe am Einstiegsende, ein Gegengewicht am kurzen Arm hält den langen Arm oben. Das
+  Tier landet knapp hinter dem Drehpunkt und sitzt. Sein Gewicht kippt das Brett bis zum Anschlag, erst dann rutscht es
+  bergab hinaus; danach schwingt das Brett zurück. Auf dem Brett bewegt nur die Schwerkraft das Tier.
+- Das ändert den Ablauf der Wippenfahrt in beiden Formaten (Zustands-Hashes). Der Test prüft: Landung auf dem ruhenden
+  Brett, nie rückwärts, Bewegung nur bei abwärts geneigtem Brett, zwei Anschläge je Fahrt.
+- Nahaufnahmen liegen lokal unter `output/waterpark-dev/wippe/`. Die Abnahme durch den Nutzer steht aus.
+
 ## Kleinigkeiten
 
 - Der Fahrtenzähler hat einen dunklen Rand und bleibt vor einer weißen Wolke lesbar.

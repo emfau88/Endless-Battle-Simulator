@@ -568,7 +568,15 @@ class WaterparkRenderer extends EBS.CanvasScene {
   drawSeesaw(g, t) {
     const L = this.L, R = L.R, f = L.seesaw, d = f.dir || 1, phi = (this.sim.seesawAngle || 0) * d, half = f.length / 2;
     const open = this.sim.story?.openRoutes?.[2] !== false, at = lx => [f.x + Math.cos(phi) * lx, f.y + Math.sin(phi) * lx];
-    g.save(); g.translate(f.x, f.y); g.rotate(phi); WP.paintBoard(g, half, R, open);
+    g.save(); g.translate(f.x, f.y); g.rotate(phi);
+    {   // counterweight under the short arm: it holds the long arm up while the board is empty
+      const { h, F } = WP.boardSize(R), cx = -d * (f.back - 16), top = h + F - 2, w = Math.min(46, f.back * 1.1), ht = R * 0.95;
+      line(g, [[cx, top], [cx, top + 10]], 6, WP.ART_COLORS.metalDark);
+      roundRect(g, cx - w / 2 - 2.5, top + 7.5, w + 5, ht + 5, 8, WP.ART_COLORS.outline); roundRect(g, cx - w / 2, top + 10, w, ht, 6, WP.ART_COLORS.stoneDark);
+      roundRect(g, cx - w / 2, top + 10, w, ht * 0.4, 6, WP.ART_COLORS.stone); line(g, [[cx - w / 2 + 6, top + 14], [cx + w / 2 - 6, top + 14]], 2, WP.ART_COLORS.stoneLight);
+    }
+    g.translate(d * (f.front - f.back) / 2, 0);   // the board is longer on the exit side of the pivot
+    WP.paintBoard(g, half, R, open);
     if (open) {                                                               // water running towards the lower end
       const k = clamp((this.sim.seesawAngle || 0) / f.maxAngle, -1, 1), wo = WP.boardSize(R).wm, hl = half - 12;
       g.lineCap = 'round'; g.setLineDash([16, 42, 6, 54]);
@@ -579,7 +587,7 @@ class WaterparkRenderer extends EBS.CanvasScene {
     g.restore();
     WP.paintSeesawWheel(g, this.A, phi);
     if (!open) return;
-    const [sx, sy] = f.spout, entry = at(-d * half), exit = at(d * half);
+    const [sx, sy] = f.spout, entry = at(d * f.land), exit = at(d * f.front);
     this.pour(g, t, [sx, sy + R * 0.85], entry, R, 0);
     g.save(); g.globalAlpha = clamp(.55 + .45 * (this.sim.seesawAngle || 0) / f.maxAngle, .2, 1);
     this.pour(g, t, [exit[0] + d * R * 0.6, exit[1] + 4], f.catchTop, R, 1); g.restore();
