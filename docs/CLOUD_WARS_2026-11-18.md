@@ -431,3 +431,6 @@ nachts (mit Licht).
 `test/presets-export-cloudwars.test.mjs`, Runden-Hash-Vergleich gegen den alten Stand. Vorschau vorher/nachher als
 Bilder an den Nutzer. Referenz-Hashes (`npm run golden`) nicht betroffen: Cloud Wars ist dort nicht enthalten.
 
+**Nachgezogen:** Zwei Tests mit fester Szenario-Liste (`test/config.test.mjs`, `test/marble.test.mjs`) kannten Cloud
+Wars noch nicht; dadurch war die CI-Gruppe „core“ seit Paket C0 rot. Beide Listen ergänzt, beide Tests grün.
+
