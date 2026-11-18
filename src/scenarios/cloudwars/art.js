@@ -165,10 +165,12 @@ class CloudArt {
     });
     for (const id of this.cache.keys()) if (!alive.has(id)) this.cache.delete(id);
     // Schatten am Boden
+    const sh = opts.shadow || { dx: STYLE.shadow[0], dy: STYLE.shadow[1], alpha: STYLE.shadowAlpha };
     for (const it of items) {
-      g.globalAlpha = STYLE.shadowAlpha * (1 - it.u);
-      this.blit(g, it.spr.sh, it.spr, it.c, it.c.x + STYLE.shadow[0], it.c.y + STYLE.shadow[1], it.scl);
+      g.globalAlpha = sh.alpha * (1 - it.u);
+      this.blit(g, it.spr.sh, it.spr, it.c, it.c.x + sh.dx, it.c.y + sh.dy, it.scl);
     }
+    if (opts.beforeClouds) opts.beforeClouds();
     // Wolken
     for (const it of items) {
       g.globalAlpha = (it.c.team < 0 ? STYLE.neutralAlpha : 1) * (1 - smooth(0.4, 1, it.u));
@@ -221,6 +223,11 @@ class CloudArt {
       g.fillStyle = '#fff';
       for (const sd of [-1, 1]) { g.beginPath(); circ(g, fx + sd * ex - er * 0.25, fy - er * 0.45, er * 0.3); g.fill(); }
     }
+    if (c.kind) {
+      // Gewitter und aufgeladen: grimmige Brauen wie im Prototyp
+      g.strokeStyle = c.kind === 1 ? '#e8ecf4' : '#2b3a4f'; g.lineWidth = er * 0.42; g.lineCap = 'round';
+      for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(fx + sd * ex * 1.45, fy - er * 1.9); g.lineTo(fx + sd * ex * 0.55, fy - er * 1.35); g.stroke(); }
+    }
   }
 
   /** Namensschilder in logischen Einheiten (feste Schriftgröße in beiden Formaten). */
@@ -230,7 +237,8 @@ class CloudArt {
     for (const c of sim.clouds) {
       if (c.team < 0 || c.eat) continue;
       const tm = this.teams[c.team], R = this.radiusOf(c.mass) * k;
-      const x = c.x * k, y = c.y * k - lift - R * 0.62 - fs * 0.9;
+      // Schild bleibt im Bild, auch wenn die Wolke am oberen Rand steht
+      const x = c.x * k, y = Math.max(fs * 1.1, c.y * k - lift - R * 0.62 - fs * 0.9);
       const w = g.measureText(tm.name).width + fs * 1.1, h = fs * 1.45;
       g.fillStyle = 'rgba(255,255,255,0.92)'; g.strokeStyle = tm.color; g.lineWidth = 2.5;
       g.beginPath(); g.roundRect(x - w / 2, y - h / 2, w, h, h / 2); g.fill(); g.stroke();

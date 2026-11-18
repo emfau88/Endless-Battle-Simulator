@@ -2,7 +2,7 @@
 // presets/production carry the same values for CLI use; tests check both paths.
 (function () {
   'use strict';
-  const labels = { naval: 'Seeschlacht', marble: 'Kugelfabrik', scrap: 'Scrap Wars', mycelium: 'Myzel', pyramid: 'Pyramide', territory: 'Territory Wars / Hex Dominion', marbleworks: 'Marble Works', waterpark: 'Wasserpark' };
+  const labels = { naval: 'Seeschlacht', marble: 'Kugelfabrik', scrap: 'Scrap Wars', mycelium: 'Myzel', pyramid: 'Pyramide', territory: 'Territory Wars / Hex Dominion', marbleworks: 'Marble Works', waterpark: 'Wasserpark', cloudwars: 'Cloud Wars' };
   EBS.productionPreset = (scenario, kind, seed = 42) => {
     if (!Object.hasOwn(labels, scenario) || !['short', 'long'].includes(kind)) throw new Error('Unbekannte Produktionsvorlage.');
     if (scenario === 'marbleworks') return EBS.MarbleProduction.preset(kind, seed);
@@ -15,6 +15,16 @@
       video: { aspect: short ? '9:16' : '16:9', resolution: 1080, fps: 60, durationSec: short ? 30 : 600,
         tempo: 1, audio: true, volume: { ...EBS.getScenario('waterpark').audio.defaultVolume },
         quality: { crf: 18, preset: 'medium', bitrate: null } },
+      view: { hud: true, camera: false },
+    };
+    // Cloud Wars: Short mit verdeckter Regie auf einem geprüften Seed (Länge aus dem Ablauf, 24–38 s);
+    // Langvideo im Runden-Modus mit Tageslauf und Wetter, feste Übersicht.
+    if (scenario === 'cloudwars') return {
+      version: 1, name: `Cloud Wars – ${short ? 'Short (Which cloud rules the sky?)' : 'Langvideo (10 Minuten, Runden)'}`,
+      scenario, seed: short ? EBS.CloudWars.castSeed(seed) : seed,
+      params: { mode: short ? 'short' : 'rounds', display: 'auto', director: 'on', videoEnd: 'victory' },
+      video: { aspect: short ? '9:16' : '16:9', resolution: 1080, fps: 30, durationSec: short ? 30 : 600, tempo: 1, audio: true,
+        volume: { master: 100 }, quality: { crf: 20, preset: 'medium', bitrate: null } },
       view: { hud: true, camera: false },
     };
     // Territory Short: small map with the hidden story "The last crown"; the video ends three

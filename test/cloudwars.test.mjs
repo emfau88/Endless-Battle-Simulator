@@ -3,6 +3,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { launchBrowser, openExportPage } from '../lib/browser.mjs';
+import { synthSample } from '../lib/audio.mjs';
 
 let browser;
 before(async () => { browser = await launchBrowser({ gpu: false }); });
@@ -91,4 +92,109 @@ test('Seek-Regel: Bild nach Sprung gleich Bild nach durchgehender Wiedergabe (mi
   assert.equal(ha, hb);
   assert.ok(eats > 3, `zu wenig Fressen bis Sekunde 8: ${eats}`);
   assert.ok(a === b, 'Bild nach Sprung weicht vom Bild nach durchgehender Wiedergabe ab');
+});
+
+// Paket C3: Gewitter, Blitze, Feuer, Feuerwehr
+test('Gewitter, Blitze und Brände entstehen; Waldverlust je Runde begrenzt', async () => {
+  const page = await openMode(2, 'rounds', '16:9');
+  const r = await page.evaluate(() => {
+    const api = window.exportAPI, types = {}; let burnMax = 0, fireMax = 0, errors = [];
+    for (let s = 0; s < 300; s += 2) {
+      const sn = api.simulate(2); burnMax = Math.max(burnMax, sn.burned); fireMax = Math.max(fireMax, sn.fires);
+      const c = api.check(); if (!c.ok) errors.push(...c.errors);
+    }
+    for (const e of api.events(0)) types[e.type] = (types[e.type] || 0) + 1;
+    return { types, burnMax, fireMax, errors: errors.slice(0, 3) };
+  });
+  assert.deepEqual(r.errors, []);
+  for (const type of ['storm', 'strike', 'fire']) assert.ok(r.types[type] > 0, `kein Ereignis ${type}: ${JSON.stringify(r.types)}`);
+  assert.ok(r.fireMax <= 40, `zu viele Brände: ${r.fireMax}`);
+  assert.ok(r.burnMax > 0.005 && r.burnMax < 0.2, `Waldverlust ${r.burnMax}`);
+  await page.close();
+});
+
+test('Seek-Regel mitten im Brand: Brandflächen nach Sprung gleich wie nach Wiedergabe', async () => {
+  const frame = (page) => page.evaluate(() => window.exportAPI.renderFrames(1, 1, 'image/png')[0]);
+  const cont = await openMode(2, 'rounds', '16:9');
+  await cont.evaluate(() => { window.exportAPI.simulate(140); window.exportAPI.renderFrames(1, 0.3); window.exportAPI.renderFrames(299, 0.3); });
+  const b = await frame(cont), hb = await cont.evaluate(() => window.exportAPI.hash());
+  const s = await cont.evaluate(() => window.exportAPI.snapshot());
+  await cont.close();
+  const jump = await openMode(2, 'rounds', '16:9');
+  await jump.evaluate(() => window.exportAPI.simulate(150));
+  const a = await frame(jump), ha = await jump.evaluate(() => window.exportAPI.hash());
+  await jump.close();
+  assert.ok(s.burned > 0 || s.fires > 0, 'kein Brand im geprüften Abschnitt');
+  assert.equal(ha, hb);
+  assert.ok(a === b, 'Bild nach Sprung weicht vom Bild nach durchgehender Wiedergabe ab');
+});
+
+test('Tageslauf und Wetter: reine Funktionen, Short immer klar, Runden mit Nebelstart und ohne Wiederholung', async () => {
+  const page = await openMode(5, 'rounds', '16:9');
+  const r = await page.evaluate(() => {
+    const St = EBS.CloudWarsStory, segs = St.weatherChanges(5, 3600, 'rounds');
+    return {
+      short: [0, 100, 300].map((t) => St.weatherAt(5, t, 'short').kind),
+      shortNight: St.light(St.dayAt(300, 'short')).night,
+      first: segs[0].kind, repeat: segs.some((s, i) => i > 0 && s.kind === segs[i - 1].kind),
+      lens: segs.slice(1, -1).map((s) => St.weatherAt(5, s.t0 + 1, 'rounds').t0 === s.t0),
+      night: St.light(St.dayAt(520, 'rounds')).night, noon: St.light(St.dayAt(150, 'rounds')).night,
+      again: JSON.stringify(St.weatherAt(5, 777, 'rounds')) === JSON.stringify(St.weatherAt(5, 777, 'rounds')),
+    };
+  });
+  await page.close();
+  assert.deepEqual(r.short, ['clear', 'clear', 'clear']);
+  assert.equal(r.shortNight, 0);
+  assert.equal(r.first, 'fog');
+  assert.equal(r.repeat, false);
+  assert.ok(r.lens.every(Boolean));
+  assert.ok(r.night > 0.8 && r.noon === 0, `Nacht ${r.night}, Mittag ${r.noon}`);
+  assert.ok(r.again);
+});
+
+test('Seek-Regel bei Nacht: Lichter, Autos und Boote nach Sprung gleich wie nach Wiedergabe', async () => {
+  const frame = (page) => page.evaluate(() => window.exportAPI.renderFrames(1, 1, 'image/png')[0]);
+  const cont = await openMode(2, 'rounds', '16:9');
+  await cont.evaluate(() => { window.exportAPI.simulate(515); window.exportAPI.renderFrames(149, 0.3); });
+  const b = await frame(cont);
+  await cont.close();
+  const jump = await openMode(2, 'rounds', '16:9');
+  await jump.evaluate(() => window.exportAPI.simulate(520 - 1 / 30));
+  const a = await frame(jump);
+  await jump.close();
+  assert.ok(a === b, 'Nachtbild nach Sprung weicht vom Bild nach durchgehender Wiedergabe ab');
+});
+
+test('Einblendungen: Short beginnt mit der Frage und endet mit dem Sieger; Texte englisch', async () => {
+  const page = await openMode(42, 'short', '9:16');
+  const r = await page.evaluate(() => {
+    const api = window.exportAPI, seen = new Set();
+    const first = api.simulate(1).banners.map((b) => b.text);
+    for (let i = 0; i < 1200; i++) { const s = api.simulate(0.1); for (const b of s.banners) seen.add(b.text); if (s.ended && s.t - s.endAt > 3) break; }
+    return { first, seen: [...seen] };
+  });
+  await page.close();
+  assert.deepEqual(r.first, ['WHICH CLOUD RULES THE SKY?']);
+  assert.ok(r.seen.some((t) => / RULES THE SKY!$/.test(t)), r.seen.join(' | '));
+  assert.ok(r.seen.every((t) => /^[A-Z0-9 !?]+$/.test(t)), r.seen.join(' | '));
+});
+
+test('Ton: alle Klänge vorhanden, Mischplan mit höchstens zwei Klängen je 0,6 s und Wind alle 4 s', async () => {
+  const page = await openMode(2, 'rounds', '16:9');
+  const r = await page.evaluate(() => {
+    const api = window.exportAPI, sc = EBS.getScenario('cloudwars'), ev = [];
+    for (let i = 0; i < 12; i++) { api.simulate(10); ev.push(...api.events(ev.length ? ev[ev.length - 1].seq + 1 : 0)); }
+    const plan = sc.createAudioMixPlan(ev, { cfg: { video: { aspect: '16:9', volume: {} } } });
+    const on = plan.events.map((d, i) => ({ d, e: ev[i] })).filter((x) => x.d.gain > 0 && x.e.type !== 'gust').map((x) => x.e.step);
+    let dense = 0;
+    for (let i = 2; i < on.length; i++) if (on[i] - on[i - 2] < 0.3 * 60) dense++;
+    return { samples: [...new Set(Object.values(sc.audio.events).flatMap((d) => d.samples))], dense, sounds: on.length,
+      gusts: ev.filter((e) => e.type === 'gust').length, secs: api.snapshot().t, pansOk: plan.events.every((d) => Math.abs(d.pan) <= 0.4) };
+  });
+  await page.close();
+  for (const s of r.samples) assert.ok(synthSample(s), `Klang fehlt: ${s}`);
+  assert.equal(r.dense, 0);
+  assert.ok(r.pansOk);
+  assert.ok(r.sounds / r.secs < 3, `${r.sounds} Klänge in ${r.secs} s`);
+  assert.ok(Math.abs(r.gusts - Math.floor(r.secs / 4)) <= 1, `Windereignisse ${r.gusts}`);
 });

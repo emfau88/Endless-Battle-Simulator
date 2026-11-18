@@ -60,7 +60,7 @@ for (const kind of ['short', 'long']) {
       assert.equal(await page.isDisabled('#durationText'), true, 'production presets plan a complete order');
       await page.selectOption('#p-exportLength', 'duration');
       assert.equal(await page.isDisabled('#durationText'), false);
-    } else if (scenario === 'territory' && kind === 'short') {
+    } else if ((scenario === 'territory' || scenario === 'cloudwars') && kind === 'short') {
       assert.equal(await page.isDisabled('#durationText'), true, 'the Short preset ends with the victory');
       await page.selectOption('#p-videoEnd', 'free');
       assert.equal(await page.isDisabled('#durationText'), false);
