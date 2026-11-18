@@ -54,6 +54,7 @@ function sampleT(x, y) {
 }
 function isForestAt(x, y) { sampleT(x, y); return T_w < -0.012 && T_f > FOREST + 0.012; }
 function isWaterAt(x, y) { sampleT(x, y); return T_w > 0; }
+function isLakeAt(x, y) { sampleT(x, y); return LAKE - T_h > 0; }
 
 // ---------- Felder (gedrehte Parzellen je Region) ----------
 const FANG = [0.35, -0.52, 1.08, 0.12].map(a => [Math.cos(a), Math.sin(a)]);
@@ -208,6 +209,7 @@ function alongEdge(e, d, rev) {
   return [lerp(ax, bx, t), lerp(ay, by, t), ang];
 }
 const ROOFS = [[184, 84, 62], [199, 110, 80], [118, 122, 134], [152, 98, 74], [171, 72, 60], [176, 96, 70], [132, 134, 142]];
+const CAR_PARK = ['#e9e4da', '#3b5f8f', '#b8423a', '#2f3338', '#8c8f96'];
 function getVillage(i, j) {
   const k = nkey(i, j);
   if (villCache.has(k)) return villCache.get(k);
@@ -246,7 +248,21 @@ function getVillage(i, j) {
         const [px, py, ang] = alongEdge(es[0][0], 6, es[0][1]);
         houses.push({ x: px - Math.sin(ang) * 24, y: py + Math.cos(ang) * 24, w: 28, d: 13, ang, roof: 2, church: true, side: 1 });
       }
-      if (houses.length) v = { x: nx, y: ny, rad, houses };
+      if (houses.length) {
+        v = { x: nx, y: ny, rad, houses, plaza: houses.length >= 12 };
+        // Kleine Zusätze aus festen Hashes (nicht aus rng): die Lage der Häuser und damit die Ausschnitte bleiben gleich
+        houses.forEach((h, q) => {
+          if (h.church) return;
+          h.hip = hash2(k, q, 321) < 0.45;
+          h.chimney = hash2(k, q, 322) < 0.75 ? (hash2(k, q, 323) - 0.5) * 0.55 : null;
+          h.chimSide = hash2(k, q, 324) < 0.5 ? -1 : 1;
+          h.solar = hash2(k, q, 325) < 0.16;
+          h.parked = hash2(k, q, 326) < 0.22 ? CAR_PARK[Math.floor(hash2(k, q, 327) * CAR_PARK.length)] : null;
+          h.fence = hash2(k, q, 328) < 0.7;
+          h.beds = hash2(k, q, 329) < 0.45;
+          h.gtree = hash2(k, q, 330) < 0.4;
+        });
+      }
     }
   }
   villCache.set(k, v);
@@ -268,20 +284,72 @@ function occGet(lx, ly) {
 const rgb = (c, m) => `rgb(${clamp(c[0] * m, 0, 255) | 0},${clamp(c[1] * m, 0, 255) | 0},${clamp(c[2] * m, 0, 255) | 0})`;
 const TREECOL = ['#2e5829', '#376630', '#3e7335', '#2b5025', '#467c3a', '#335f2c', '#52823b'];
 const TS = 7.5;
+/** Helligkeit einer Dachfläche mit lokaler Normalen (nx, ny) im Haus, das um ang gedreht ist; Licht von oben links. */
+function facet(nx, ny, ang) {
+  const c = Math.cos(ang), s = Math.sin(ang), wx = nx * c - ny * s, wy = nx * s + ny * c;
+  return 0.945 - 0.2 * (wx * 0.55 + wy * 0.83);
+}
+function poly(g, pts) { g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.closePath(); g.fill(); }
 function drawHouse(g, h, x0, y0) {
-  const c = ROOFS[h.roof], w = h.w, d = h.d;
-  g.save(); g.translate(h.x - x0, h.y - y0); g.rotate(h.ang);
-  const lit = -0.55 * Math.sin(h.ang) + 0.83 * Math.cos(h.ang) > 0;
-  g.fillStyle = rgb(c, lit ? 1.13 : 0.76); g.fillRect(-w / 2, -d / 2, w, d / 2);
-  g.fillStyle = rgb(c, lit ? 0.76 : 1.13); g.fillRect(-w / 2, 0, w, d / 2);
-  g.fillStyle = rgb(c, 0.58); g.fillRect(-w / 2, -0.35, w, 0.7);
-  if (h.church) {
-    g.fillStyle = '#8d8a86'; g.fillRect(w / 2 - 2, -4.5, 9, 9);
-    g.fillStyle = '#6f6c69'; g.beginPath(); g.moveTo(w / 2 - 2, -4.5); g.lineTo(w / 2 + 2.5, 0); g.lineTo(w / 2 - 2, 4.5); g.fill();
-    g.fillStyle = '#a7a39e'; g.beginPath(); g.moveTo(w / 2 - 2, -4.5); g.lineTo(w / 2 + 2.5, 0); g.lineTo(w / 2 + 7, -4.5); g.fill();
+  const c = ROOFS[h.roof], w = h.w, d = h.d, a = h.ang, hw = w / 2, hd = d / 2;
+  g.save(); g.translate(h.x - x0, h.y - y0); g.rotate(a);
+  if (h.hip) {
+    // Walmdach: vier Flächen, First kürzer als das Haus
+    const r = Math.max(0, hw - hd * 0.9);
+    g.fillStyle = rgb(c, facet(0, -1, a)); poly(g, [-hw, -hd, hw, -hd, r, 0, -r, 0]);
+    g.fillStyle = rgb(c, facet(0, 1, a)); poly(g, [-hw, hd, hw, hd, r, 0, -r, 0]);
+    g.fillStyle = rgb(c, facet(-1, 0, a)); poly(g, [-hw, -hd, -r, 0, -hw, hd]);
+    g.fillStyle = rgb(c, facet(1, 0, a)); poly(g, [hw, -hd, r, 0, hw, hd]);
+    g.strokeStyle = rgb(c, 0.6); g.lineWidth = 0.45;
+    g.beginPath(); g.moveTo(-hw, -hd); g.lineTo(-r, 0); g.lineTo(-hw, hd); g.moveTo(hw, -hd); g.lineTo(r, 0); g.lineTo(hw, hd); g.moveTo(-r, 0); g.lineTo(r, 0); g.stroke();
+  } else {
+    g.fillStyle = rgb(c, facet(0, -1, a)); g.fillRect(-hw, -hd, w, hd);
+    g.fillStyle = rgb(c, facet(0, 1, a)); g.fillRect(-hw, 0, w, hd);
+    g.fillStyle = rgb(c, 0.58); g.fillRect(-hw, -0.35, w, 0.7);
   }
-  g.strokeStyle = 'rgba(30,20,15,0.22)'; g.lineWidth = 0.6; g.strokeRect(-w / 2, -d / 2, w, d);
+  if (h.solar) {
+    // Solarfeld auf der helleren Dachseite
+    const sy = facet(0, -1, a) > facet(0, 1, a) ? -hd + 0.9 : 0.9;
+    g.fillStyle = '#2c3e5c'; g.fillRect(-hw * 0.55, sy, hw * 1.1, hd - 1.8);
+    g.strokeStyle = 'rgba(160,190,230,0.55)'; g.lineWidth = 0.25; g.beginPath();
+    for (let q = 1; q < 4; q++) { const x = -hw * 0.55 + hw * 1.1 * q / 4; g.moveTo(x, sy); g.lineTo(x, sy + hd - 1.8); }
+    g.stroke();
+  }
+  if (h.chimney !== null && h.chimney !== undefined) {
+    const cx = h.chimney * w, cy = h.chimSide * hd * 0.42;
+    g.fillStyle = 'rgba(30,20,15,0.3)'; g.fillRect(cx - 0.6, cy - 0.5, 2.1, 2.1);
+    g.fillStyle = '#86604e'; g.fillRect(cx - 1, cy - 1, 2, 2);
+    g.fillStyle = '#3a2c26'; g.fillRect(cx - 0.5, cy - 0.5, 1, 1);
+  }
+  if (h.church) {
+    // Turm: quadratisch mit Pyramidendach und kleiner goldener Spitze
+    const tx = hw + 2.5, s2 = 5;
+    g.fillStyle = '#8f8a83'; g.fillRect(tx - s2, -s2, s2 * 2, s2 * 2);
+    g.fillStyle = `rgb(${Math.round(150 * facet(0, -1, a))},${Math.round(146 * facet(0, -1, a))},${Math.round(140 * facet(0, -1, a))})`; poly(g, [tx - s2, -s2, tx + s2, -s2, tx, 0]);
+    g.fillStyle = `rgb(${Math.round(150 * facet(0, 1, a))},${Math.round(146 * facet(0, 1, a))},${Math.round(140 * facet(0, 1, a))})`; poly(g, [tx - s2, s2, tx + s2, s2, tx, 0]);
+    g.fillStyle = `rgb(${Math.round(150 * facet(-1, 0, a))},${Math.round(146 * facet(-1, 0, a))},${Math.round(140 * facet(-1, 0, a))})`; poly(g, [tx - s2, -s2, tx - s2, s2, tx, 0]);
+    g.fillStyle = `rgb(${Math.round(150 * facet(1, 0, a))},${Math.round(146 * facet(1, 0, a))},${Math.round(140 * facet(1, 0, a))})`; poly(g, [tx + s2, -s2, tx + s2, s2, tx, 0]);
+    g.fillStyle = '#e2bf4f'; g.beginPath(); g.arc(tx, 0, 0.75, 0, TAU); g.fill();
+    g.strokeStyle = 'rgba(30,20,15,0.25)'; g.lineWidth = 0.5; g.strokeRect(tx - s2, -s2, s2 * 2, s2 * 2);
+  }
+  g.strokeStyle = 'rgba(30,20,15,0.22)'; g.lineWidth = 0.6; g.strokeRect(-hw, -hd, w, d);
   g.restore();
+}
+/** Brückenstellen einer Straße: Abschnitte über Wasser (einmal je Straße berechnet, Länge entlang der Straße). */
+function bridgeSpans(e) {
+  if (e.spans) return e.spans;
+  const out = [];
+  let on = -1;
+  for (let dd = 0; dd <= e.len; dd += 2.5) {
+    const [x, y] = alongEdge(e, dd, false);
+    sampleT(x, y);
+    const wet = T_w > -0.002;
+    if (wet && on < 0) on = dd;
+    if (!wet && on >= 0) { out.push([Math.max(0, on - 4), Math.min(e.len, dd + 2)]); on = -1; }
+  }
+  if (on >= 0) out.push([Math.max(0, on - 4), e.len]);
+  e.spans = out;
+  return out;
 }
 function renderChunk(x0, y0, k, g, tx, ty) {
   fillGrid(x0, y0);
@@ -308,6 +376,14 @@ function renderChunk(x0, y0, k, g, tx, ty) {
       for (let q = 0; q <= n; q++) occMark(lerp(ax, ex, q / n), lerp(ay, ey, q / n), 7);
     }
   }
+  // Dörfer und Häuser in der Nähe (vor den Straßen, weil der Dorfplatz unter den Straßen liegt)
+  const houses = [], plazas = [];
+  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+    const v = getVillage(i, j);
+    if (!v || v.x + v.rad < bx0 || v.x - v.rad > bx1 || v.y + v.rad < by0 || v.y - v.rad > by1) continue;
+    if (v.plaza) plazas.push(v);
+    for (const h of v.houses) if (h.x > bx0 && h.x < bx1 && h.y > by0 && h.y < by1) houses.push(h);
+  }
   g.lineCap = g.lineJoin = 'round';
   const roadPath = (main) => {
     const p = new Path2D();
@@ -319,19 +395,51 @@ function renderChunk(x0, y0, k, g, tx, ty) {
   };
   const minor = roadPath(false), major = roadPath(true);
   g.strokeStyle = 'rgba(88,82,66,0.55)'; g.lineWidth = 6.2; g.stroke(minor); g.lineWidth = 8.4; g.stroke(major);
+  // Dorfplatz: gepflasterte Fläche, wo die Straßen sich treffen, mit einer Linde am Rand
+  const lindens = [];
+  for (const v of plazas) {
+    const px = v.x - x0, py = v.y - y0;
+    g.fillStyle = 'rgba(88,82,66,0.5)'; g.beginPath(); g.arc(px, py, 16.2, 0, TAU); g.fill();
+    g.fillStyle = '#d3cbb6'; g.beginPath(); g.arc(px, py, 15, 0, TAU); g.fill();
+    g.strokeStyle = 'rgba(150,140,120,0.35)'; g.lineWidth = 0.6; g.beginPath(); g.arc(px, py, 10, 0, TAU); g.stroke();
+    // Linde in die Richtung, die am weitesten von allen Straßen weg ist
+    let best = -1, bx = 0, by = 0;
+    for (let q = 0; q < 12; q++) {
+      const ang = q / 12 * TAU + 0.13, cx = v.x + Math.cos(ang) * 11, cy = v.y + Math.sin(ang) * 11;
+      let dmin = Infinity;
+      for (const e of edges) for (let s = 0; s < e.pts.length; s += 2) dmin = Math.min(dmin, Math.hypot(e.pts[s] - cx, e.pts[s + 1] - cy));
+      if (dmin > best) { best = dmin; bx = cx; by = cy; }
+    }
+    lindens.push([bx - x0, by - y0]);
+    occMark(px, py, 15);
+  }
   g.strokeStyle = '#d6cfbb'; g.lineWidth = 4; g.stroke(minor);
   g.strokeStyle = '#c9c3b3'; g.lineWidth = 6; g.stroke(major);
   g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 0.7; g.setLineDash([5, 6]); g.stroke(major); g.setLineDash([]);
-  // Häuser
-  const houses = [];
-  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
-    const v = getVillage(i, j);
-    if (!v || v.x + v.rad < bx0 || v.x - v.rad > bx1 || v.y + v.rad < by0 || v.y - v.rad > by1) continue;
-    for (const h of v.houses) if (h.x > bx0 && h.x < bx1 && h.y > by0 && h.y < by1) houses.push(h);
+  // Brücken: wo eine Straße Wasser quert, Schatten aufs Wasser, Geländer, heller Belag
+  g.lineCap = 'butt';
+  for (const e of edges) for (const [d0, d1] of bridgeSpans(e)) {
+    const p = new Path2D();
+    for (let dd = d0, first = true; dd <= d1 + 0.01; dd += 2, first = false) { const [x, y] = alongEdge(e, Math.min(dd, d1), false); first ? p.moveTo(x - x0, y - y0) : p.lineTo(x - x0, y - y0); }
+    const wd = e.main ? 8.6 : 6.6;
+    g.save(); g.translate(1.6, 2.4); g.strokeStyle = 'rgba(16,36,46,0.3)'; g.lineWidth = wd + 1; g.stroke(p); g.restore();
+    g.strokeStyle = '#6f685d'; g.lineWidth = wd + 1.6; g.stroke(p);
+    g.strokeStyle = '#d9d1bd'; g.lineWidth = wd - 0.6; g.stroke(p);
+    g.strokeStyle = 'rgba(120,110,95,0.5)'; g.lineWidth = 0.4; g.setLineDash([0.4, 3.2]); g.lineWidth = wd + 0.8; g.stroke(p); g.setLineDash([]);
+    g.strokeStyle = '#d9d1bd'; g.lineWidth = wd - 1.2; g.stroke(p);
   }
+  g.lineCap = 'round';
   for (const h of houses) occMark(h.x - x0, h.y - y0, h.church ? 19 : 11);
   // Bäume
   const shadow = new Path2D(), hl = new Path2D(), crowns = TREECOL.map(() => new Path2D());
+  const tree = (lx, ly, rad, ci) => {
+    const sx = lx + rad * 0.9 + 1.2, sy = ly + rad * 1.25 + 1.6;
+    shadow.moveTo(sx + rad * 1.05, sy); shadow.arc(sx, sy, rad * 1.05, 0, TAU);
+    const cp = crowns[ci];
+    cp.moveTo(lx + rad, ly); cp.arc(lx, ly, rad, 0, TAU);
+    const hx = lx - rad * 0.32, hy = ly - rad * 0.36;
+    hl.moveTo(hx + rad * 0.5, hy); hl.arc(hx, hy, rad * 0.5, 0, TAU);
+  };
   const gx0 = Math.floor((x0 - CPAD) / TS), gx1 = Math.floor((x0 + CS + CPAD) / TS);
   const gy0 = Math.floor((y0 - CPAD) / TS), gy1 = Math.floor((y0 + CS + CPAD) / TS);
   for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) {
@@ -350,24 +458,42 @@ function renderChunk(x0, y0, k, g, tx, ty) {
       else { p = 0.012; rad = 3 + hr * 2; }
     }
     if (hash2(gx, gy, 501) > p) continue;
-    const sx = lx + rad * 0.9 + 1.2, sy = ly + rad * 1.25 + 1.6;
-    shadow.moveTo(sx + rad * 1.05, sy); shadow.arc(sx, sy, rad * 1.05, 0, TAU);
-    const cp = crowns[Math.floor(hash2(gx, gy, 505) * TREECOL.length)];
-    cp.moveTo(lx + rad, ly); cp.arc(lx, ly, rad, 0, TAU);
-    const hx = lx - rad * 0.32, hy = ly - rad * 0.36;
-    hl.moveTo(hx + rad * 0.5, hy); hl.arc(hx, hy, rad * 0.5, 0, TAU);
+    tree(lx, ly, rad, Math.floor(hash2(gx, gy, 505) * TREECOL.length));
   }
-  // Gärten
-  for (const h of houses) if (h.garden) {
+  for (const [lx, ly] of lindens) tree(lx, ly, 5.2, 4);
+  // Gärten: Rasen, Zaun oder Hecke, Beete, manchmal ein Obstbaum; vorn am Haus manchmal ein geparktes Auto
+  for (const h of houses) {
+    if (!h.garden && !h.parked) continue;
     g.save(); g.translate(h.x - x0, h.y - y0); g.rotate(h.ang);
-    g.fillStyle = 'rgba(158,196,112,0.9)'; g.fillRect(-h.w / 2 - 1.5, h.side > 0 ? h.d / 2 + 1 : -h.d / 2 - 10, h.w + 3, 9);
-    g.strokeStyle = 'rgba(70,108,52,0.6)'; g.lineWidth = 1; g.strokeRect(-h.w / 2 - 1.5, h.side > 0 ? h.d / 2 + 1 : -h.d / 2 - 10, h.w + 3, 9);
+    if (h.garden) {
+      const gx = -h.w / 2 - 1.5, gy = h.side > 0 ? h.d / 2 + 1 : -h.d / 2 - 10, gw = h.w + 3;
+      g.fillStyle = 'rgba(158,196,112,0.9)'; g.fillRect(gx, gy, gw, 9);
+      if (h.beds) {
+        g.fillStyle = 'rgba(122,92,62,0.55)';
+        for (let q = 0; q < 3; q++) g.fillRect(gx + gw * 0.52, gy + 1.4 + q * 2.4, gw * 0.4, 1.1);
+      }
+      if (h.fence) { g.strokeStyle = 'rgba(238,230,208,0.9)'; g.lineWidth = 0.45; g.strokeRect(gx, gy, gw, 9); }
+      else { g.strokeStyle = 'rgba(62,104,48,0.75)'; g.lineWidth = 1.2; g.strokeRect(gx, gy, gw, 9); }
+      if (h.gtree) {
+        // Obstbaum in der Gartenecke (Weltlage für die Baumschicht zurückrechnen)
+        const lx = gx + 3, ly = gy + 4.5, c = Math.cos(h.ang), s = Math.sin(h.ang);
+        tree(h.x - x0 + lx * c - ly * s, h.y - y0 + lx * s + ly * c, 2.6, 6);
+      }
+    }
+    if (h.parked) {
+      const py = h.side > 0 ? -h.d / 2 - 2 : h.d / 2 + 2, px = h.w * 0.28;
+      g.fillStyle = 'rgba(20,20,20,0.28)'; g.fillRect(px - 2, py - 0.6, 5, 2.4);
+      g.fillStyle = h.parked; g.fillRect(px - 2.4, py - 1.1, 4.8, 2.2);
+      g.fillStyle = 'rgba(40,50,60,0.55)'; g.fillRect(px + 0.4, py - 0.9, 1.2, 1.8);
+    }
     g.restore();
   }
   g.fillStyle = 'rgba(14,30,12,0.34)'; g.fill(shadow);
   g.fillStyle = 'rgba(22,26,20,0.32)';
   for (const h of houses) {
-    g.save(); g.translate(h.x - x0 + 2.4, h.y - y0 + 3.2); g.rotate(h.ang); g.fillRect(-h.w / 2, -h.d / 2, h.w, h.d); g.restore();
+    g.save(); g.translate(h.x - x0 + 2.4, h.y - y0 + 3.2); g.rotate(h.ang); g.fillRect(-h.w / 2, -h.d / 2, h.w, h.d);
+    if (h.church) { g.translate(4, 6); g.fillRect(h.w / 2 - 2.5, -5, 10, 10); }        // Turm wirft einen längeren Schatten
+    g.restore();
   }
   for (const h of houses) drawHouse(g, h, x0, y0);
   for (let i = 0; i < TREECOL.length; i++) { g.fillStyle = TREECOL[i]; g.fill(crowns[i]); }
@@ -448,5 +574,69 @@ function renderArea(area, k) {
   }
   return can;
 }
-EBS.CloudWarsTerrain = { hash2, vnoise, fbm, sampleT, isForestAt, isWaterAt, measure, pickArea, renderArea, edgesIn, villagesIn, CS, RS };
+// =================== Für das Leben am Boden (Darstellung) ===================
+const riverAt = (x, y) => fbm(x * 0.00045 + 31.7, y * 0.00045 - 12.3, 23, 3);
+/** Folgt der Flussmitte (Höhenlinie T_r = 0,5) ab (x, y) in Richtung dir; Punkte x, y, halbe Breite, See (1/0). */
+function traceRiver(x, y, dir, box) {
+  const out = [], sx = x, sy = y;
+  for (let s = 0; s < 1600; s++) {
+    let gx = 0, gy = 0;
+    for (let q = 0; q < 3; q++) {
+      const v = riverAt(x, y) - 0.5;
+      gx = (riverAt(x + 1, y) - riverAt(x - 1, y)) / 2; gy = (riverAt(x, y + 1) - riverAt(x, y - 1)) / 2;
+      const g2 = gx * gx + gy * gy || 1e-12;
+      if (q < 2) { x -= v * gx / g2; y -= v * gy / g2; }
+    }
+    const gl = Math.hypot(gx, gy) || 1e-9;
+    sampleT(x, y);
+    out.push(x, y, RIVW / gl, LAKE - T_h > 0 ? 1 : 0);
+    if (x < box[0] || y < box[1] || x > box[2] || y > box[3]) break;
+    if (s > 30 && Math.hypot(x - sx, y - sy) < 5) { out.closed = true; break; }
+    x += -gy / gl * dir * 4; y += gx / gl * dir * 4;
+  }
+  return out;
+}
+/** Flussmittellinien im Ausschnitt (Ortskoordinaten): [{ pts: [x, y, halbe Breite, See, …] }]. */
+function riverLines(area) {
+  const G = 16, nx = Math.ceil(area.w / G) + 1, ny = Math.ceil(area.h / G) + 1, val = new Float32Array(nx * ny), used = new Uint8Array(nx * ny);
+  const box = [area.x - 70, area.y - 70, area.x + area.w + 70, area.y + area.h + 70];
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) val[j * nx + i] = riverAt(area.x + i * G, area.y + j * G) - 0.5;
+  const lines = [];
+  for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
+    const k = j * nx + i, a = val[k];
+    if (used[k] || lines.length >= 4) continue;
+    let b = val[k + 1], px = 1, py = 0;
+    if (a * b > 0) { b = val[k + nx]; px = 0; py = 1; }
+    if (a * b > 0) continue;
+    const f = a / (a - b), x = area.x + (i + px * f) * G, y = area.y + (j + py * f) * G;
+    const fw = traceRiver(x, y, 1, box), bw = fw.closed ? [] : traceRiver(x, y, -1, box);
+    const pts = [];
+    for (let q = bw.length - 4; q >= 4; q -= 4) pts.push(bw[q], bw[q + 1], bw[q + 2], bw[q + 3]);
+    for (let q = 0; q < fw.length; q++) pts.push(fw[q]);
+    for (let q = 0; q < pts.length; q += 4) {
+      const ci = Math.round((pts[q] - area.x) / G), cj = Math.round((pts[q + 1] - area.y) / G);
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+        const ii = ci + di, jj = cj + dj;
+        if (ii >= 0 && jj >= 0 && ii < nx && jj < ny) used[jj * nx + ii] = 1;
+      }
+      pts[q] -= area.x; pts[q + 1] -= area.y;
+    }
+    if (pts.length >= 40) lines.push({ pts });
+  }
+  return lines;
+}
+/** Bodenart an einem Weltpunkt: water, forest, field (mit Parzelle) oder meadow. */
+function groundAt(x, y) {
+  sampleT(x, y);
+  if (T_w > -0.006) return { kind: 'water' };
+  if (T_f > FOREST - 0.03) return { kind: 'forest' };
+  fieldCell(x, y, vnoise(x * 0.0005 + 5, y * 0.0005 + 9, 41));
+  if (!cellField()) return { kind: 'meadow' };
+  const cs = FANG[F_ri], uc = (F_iu + (F_m ? 1 : 0.5)) * FCU, vc = (F_iv + 0.5) * FCV;
+  let ti = 0; while (F_id > FT[ti][0]) ti++;
+  return { kind: 'field', key: `${F_ri}:${F_iu}:${F_iv}`, cx: uc * cs[0] - vc * cs[1], cy: uc * cs[1] + vc * cs[0],
+    ang: Math.atan2(cs[1], cs[0]), len: (F_m ? 2 : 1) * FCU, wid: FCV, type: ti, color: FT[ti].slice(1, 4), pattern: FT[ti][4] };
+}
+
+EBS.CloudWarsTerrain = { hash2, vnoise, fbm, sampleT, isForestAt, isWaterAt, measure, pickArea, renderArea, edgesIn, villagesIn, riverLines, groundAt, isLakeAt, CS, RS };
 })();

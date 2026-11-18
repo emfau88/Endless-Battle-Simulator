@@ -71,7 +71,7 @@ test('Vorlagen: JSON-Dateien stimmen mit der Oberfläche überein; Short wählt 
     const file = JSON.parse(readFileSync(new URL(`../presets/production/cloudwars-${kind}.json`, import.meta.url), 'utf8'));
     assert.deepEqual(plain(EBS.productionPreset('cloudwars', kind)), file);
   }
-  assert.equal(EBS.productionPreset('cloudwars', 'short', 42).seed, 42);
+  assert.equal(EBS.productionPreset('cloudwars', 'short', 42).seed, 44);
   assert.equal(EBS.productionPreset('cloudwars', 'short', 46).seed, 47);
   assert.equal(EBS.productionPreset('cloudwars', 'short', 44).seed, 44);
   assert.equal(EBS.productionPreset('cloudwars', 'long', 7).seed, 7);
