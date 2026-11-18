@@ -17,7 +17,7 @@
         quality: { crf: 18, preset: 'medium', bitrate: null } },
       view: { hud: true, camera: false },
     };
-    // Cloud Wars: Short mit verdeckter Regie auf einem geprüften Seed (Länge aus dem Ablauf, 24–38 s);
+    // Cloud Wars: Short mit verdeckter Regie auf einem geprüften Seed (Länge aus dem Ablauf, 24–60 s);
     // Langvideo im Runden-Modus mit Tageslauf und Wetter, feste Übersicht.
     if (scenario === 'cloudwars') return {
       version: 1, name: `Cloud Wars – ${short ? 'Short (Which cloud rules the sky?)' : 'Langvideo (10 Minuten, Runden)'}`,

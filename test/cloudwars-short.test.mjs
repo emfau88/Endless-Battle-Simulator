@@ -53,16 +53,16 @@ test('Regie aus: anderer Ablauf, keine Rollen; Runden-Modus ohne Regie', () => {
   assert.equal(rounds.roles, null);
 });
 
-test('Natürliche Länge: geprüfter Seed ergibt 24–38 s, ungeeigneter Seed bricht mit Hinweis ab', () => {
+test('Natürliche Länge: geprüfter Seed ergibt 24–60 s, ungeeigneter Seed bricht mit Hinweis ab', () => {
   const cfg = (seed) => EBS.normalizeConfig({ ...EBS.productionPreset('cloudwars', 'short', seed), seed });
   assert.equal(sc.hasNaturalDuration(cfg(44)), true);
   const finish = (plan) => { let r; do r = plan.advance(); while (!r.done); return r; };
   const r = finish(sc.createExportPlan(cfg(44), world));
-  assert.ok(r.durationSec >= 24 && r.durationSec <= 38, String(r.durationSec));
+  assert.ok(r.durationSec >= 24 && r.durationSec <= 60, String(r.durationSec));
   const bad = [...Array(60).keys()].map((i) => i + 1).find((s) => !EBS.CloudWars.SHORT.seeds.includes(s) && (() => {
-    const { sim } = run(s), end = sim.endAt + 1.5; return sim.endAt >= 0 && (end < 24 || end > 38);
+    const { sim } = run(s), end = sim.endAt + 1.5; return sim.endAt >= 0 && (end < 24 || end > 60);
   })());
-  assert.throws(() => finish(sc.createExportPlan(cfg(bad), world)), /erlaubt 24–38 s/);
+  assert.throws(() => finish(sc.createExportPlan(cfg(bad), world)), /erlaubt 24–60 s/);
   assert.equal(sc.hasNaturalDuration(EBS.normalizeConfig({ ...cfg(44), params: { ...cfg(44).params, videoEnd: 'free' } })), false);
 });
 
@@ -71,7 +71,8 @@ test('Vorlagen: JSON-Dateien stimmen mit der Oberfläche überein; Short wählt 
     const file = JSON.parse(readFileSync(new URL(`../presets/production/cloudwars-${kind}.json`, import.meta.url), 'utf8'));
     assert.deepEqual(plain(EBS.productionPreset('cloudwars', kind)), file);
   }
-  assert.equal(EBS.productionPreset('cloudwars', 'short', 42).seed, 44);
+  assert.equal(EBS.productionPreset('cloudwars', 'short', 42).seed, 42);
+  assert.equal(EBS.productionPreset('cloudwars', 'short', 46).seed, 47);
   assert.equal(EBS.productionPreset('cloudwars', 'short', 44).seed, 44);
   assert.equal(EBS.productionPreset('cloudwars', 'long', 7).seed, 7);
 });

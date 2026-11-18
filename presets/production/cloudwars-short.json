@@ -2,7 +2,7 @@
   "version": 1,
   "name": "Cloud Wars – Short (Which cloud rules the sky?)",
   "scenario": "cloudwars",
-  "seed": 44,
+  "seed": 42,
   "params": {
     "mode": "short",
     "display": "auto",

@@ -6,6 +6,7 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Was | Commit | Bericht |
 |---|---|---|
+| R38, Cloud Wars: Shorts dürfen 24–60 s dauern (Wunsch des Nutzers). Geschichte vollständig bei 61 % statt 42 % der Seeds, neue Liste geprüfter Seeds, Short-Vorlage auf Seed 42. | Branch `cloudwars/short-laenge` | [Bericht](CLOUD_WARS_2026-11-18.md#nachtrag-short-bis-60-sekunden-18112026) |
 | R38, Cloud Wars, Paket C8: Langvideo-Vorlage (16:9, 10 Minuten, Runden), README-Zeile mit Bild, 30-Minuten-Lauf ohne Fehler, Schlussbericht mit zehn gesammelten Fragen für die Abstimmung. | Branch `cloudwars/c3-gewitter` | [Bericht](CLOUD_WARS_2026-11-18.md#c8--langvideo-vorlage-und-abschluss-18112026) |
 | R38, Cloud Wars, Paket C7: Short mit verdeckter Regie (Riese, Außenseiter, Opfer, Mitläufer), Casting-Skript `scripts/cloudwars-short-casting.mjs`, natürliche Länge 24–38 s mit Vorprüfung, Vorlagen Short und Langvideo. Geschichte vollständig bei 42 % der Seeds; die Short-Vorlage nimmt nur geprüfte Seeds. | Branch `cloudwars/c3-gewitter` | [Bericht](CLOUD_WARS_2026-11-18.md#c7--short-mit-verdeckter-regie-18112026) |
 | R38, Cloud Wars, Paket C6: Ton. Weiche erzeugte Klänge mit fester leiser Mischung (−23 LUFS), neues Donnergrollen und Windhauch (`synth:thunder`, `synth:wind`), höchstens zwei Klänge je 0,6 s. Probeclips aus der Mitte möglich. | Branch `cloudwars/c3-gewitter` | [Bericht](CLOUD_WARS_2026-11-18.md#c6--ton-18112026) |
