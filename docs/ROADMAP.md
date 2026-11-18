@@ -42,6 +42,7 @@ R33 bündelt die bisherigen Einzelabnahmen **R18** (Naval), **R20** (Scrap Wars)
 | Nr. | Aufgabe | Hinweis |
 |---|---|---|
 | **R38** | **Neues Szenario Cloud Wars** ([Plan](CLOUD_WARS_PLAN_2026-11-18.md)) | C0 bis C8 sind gebaut: Gelände, Wolken, Gewitter und Feuer, Tag und Wetter, Anzeige, Ton, Short mit verdeckter Regie, Vorlagen für Short und Langvideo ([Bericht](CLOUD_WARS_2026-11-18.md)). Nach der ersten Rückmeldung: mehr kleine Wolken zum Einsammeln und mehr Leben am Boden (Dörfer, strömender Fluss, Boote, Traktor, Tiere). Nach der zweiten: Sog beim Fressen mit Gesichtern, hochkant keine Leisten, Meldungen höher; der Ton ist abgenommen. Offen ist nur die Abstimmung: die übrigen gesammelten Stil- und Abwägungsfragen am Ende des Berichts, danach der Export von Short und Langvideo auf Auftrag. Bis dahin heißt das Szenario „Cloud Wars (in Arbeit)“. | Short und Langvideo-Vorlage vom Nutzer abgenommen |
+| **R39** | **Cloud Wars: Wolkenreise** (Langvideo, rund 5 Minuten, ruhig) ([Plan](CLOUD_WARS_REISE_PLAN_2026-11-18.md)) | Wunsch des Nutzers vom 18.11.: eine Wolke als Hauptfigur, Kamera folgt ihr über eine große, stimmige Landschaft, ohne neuen Ton. Plan mit Paketen J1 bis J4 steht; nächster Schritt J1 (Kamera und Gelände-Kacheln). Checkpoint: 20-Sekunden-Probeclip, danach 5-Minuten-Export auf Auftrag. | Probeclip vom Nutzer abgenommen |
 | **R34** | **Naval-Langvideo „Who survives the night?“** (20 bis 30 Minuten) | Pakete N0 bis N6 im [Gesamtplan, Abschnitt 8](GESAMTPLAN_2026-11-16.md#8--block-4-naval-langvideo-20-bis-30-minuten). N0 schließt zuerst die Prüflücke **R21** (Besitz und Reihenfolge der Kugeln im Zustands-Hash). **R01** und **R05** gehen darin auf. **Läuft seit 16.11.:** Auf Wunsch des Nutzers vorgezogen. Erledigt sind N1a, der Modus „Ruhiges Duell (in Arbeit)“, und N2a, Runden mit Versenkung, Punktestand und schlüssiger Lebensanzeige ([Bericht](NAVAL_RUHIGES_DUELL_2026-11-16.md)). Erledigt ist auch N2b, die Rakete vom Heck (Idee des Nutzers). Erledigt ist auch N2c, der eigene Auftritt der goldenen Kugel (Idee des Nutzers). Erledigt ist auch N2d, die Lesbarkeit (größere Kanonen, längere Leuchtspur); die erhöhte Bugkante wurde gemessen und verworfen. Erledigt ist auch N2e, der Ton als feste Mischung mit Meeresrauschen; damit sind die vier freigegebenen Vorschläge umgesetzt. Als Nächstes offen: Finale am Videoende; N0 steht weiter aus. |
 | **R35** | **Marble XL, weitere Pakete** | Weitere Stationen, Kapitel und Ausbauten, Hochformat, 20-Minuten-Vorlagen (M3 bis M7). |
 | **R36** | **Wichtigste Verbesserungen je Szenario** | Höchstens drei je Szenario, Vorschlag im [Gesamtplan, Abschnitt 7](GESAMTPLAN_2026-11-16.md#7--block-3-die-wichtigsten-verbesserungen-je-szenario); Reihenfolge nach R33. |
@@ -89,7 +90,7 @@ Getroffene Entscheidungen stehen im [CHANGELOG](CHANGELOG.md#entscheidungen).
 
 ## 7 · Pflege
 
-- IDs werden nie wiederverwendet. **Nächste freie ID: R39.**
+- IDs werden nie wiederverwendet. **Nächste freie ID: R40.**
 - Neue offene Punkte nur hier eintragen. Erledigtes mit Datum, Commit und Bericht in den CHANGELOG übertragen.
 - Der Fortschritt der einzelnen Schritte steht in [Abschnitt 0 des Gesamtplans](GESAMTPLAN_2026-11-16.md#0--umsetzungsstand) und wird mit jedem Paket nachgezogen.
 - Diese Datei bleibt kurz. Verlauf, Messwerte und Begründungen gehören in datierte Berichte unter `docs/`.
