@@ -165,9 +165,10 @@ class CloudArt {
     });
     for (const id of this.cache.keys()) if (!alive.has(id)) this.cache.delete(id);
     // Schatten am Boden
+    const sh = opts.shadow || { dx: STYLE.shadow[0], dy: STYLE.shadow[1], alpha: STYLE.shadowAlpha };
     for (const it of items) {
-      g.globalAlpha = STYLE.shadowAlpha * (1 - it.u);
-      this.blit(g, it.spr.sh, it.spr, it.c, it.c.x + STYLE.shadow[0], it.c.y + STYLE.shadow[1], it.scl);
+      g.globalAlpha = sh.alpha * (1 - it.u);
+      this.blit(g, it.spr.sh, it.spr, it.c, it.c.x + sh.dx, it.c.y + sh.dy, it.scl);
     }
     if (opts.beforeClouds) opts.beforeClouds();
     // Wolken

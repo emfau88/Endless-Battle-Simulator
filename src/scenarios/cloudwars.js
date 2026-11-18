@@ -1,7 +1,7 @@
 /*
  * Szenario „Cloud Wars“ (in Arbeit) – Plan: docs/CLOUD_WARS_PLAN_2026-11-18.md
  *
- * Stand Paket C3: Der Seed wählt einen festen Ausschnitt der Landschaft aus dem Prototyp „Wolkenflug“; er wird einmal
+ * Stand Paket C4: Der Seed wählt einen festen Ausschnitt der Landschaft aus dem Prototyp „Wolkenflug“; er wird einmal
  * vorgezeichnet. Darüber treiben Team-Wolken und neutrale Wolken (Simulation: cloudwars/simulation.js). Paket C2:
  * Wolken im Stil des Prototyps mit Teamfarbe, Augen, Namensschild und fliegenden Puffs (cloudwars/art.js).
  * Maßstab je Format (Wunsch des Nutzers: „auf Handy und PC jeweils passend“): Hochformat näher, 1 GE = 2,0 logische
@@ -55,6 +55,7 @@ class CloudWarsRenderer extends EBS.CanvasScene {
     this.sim = sim; this.view = view; this.ground = null;
     this.art = new EBS.CloudWarsArt.CloudArt({ radiusOf: S.radiusOf, teams: S.TEAMS });
     this.fx = new EBS.CloudWarsEffects.Effects({ radiusOf: S.radiusOf, storms: EBS.CloudWarsStorms, lift: EBS.CloudWarsArt.STYLE.lift / sim.geScale });
+    this.atmo = new EBS.CloudWarsAtmosphere.Atmosphere(sim);
   }
   paint(g) {
     const w = this.world, a = this.sim.area, k = this.sim.geScale;
@@ -62,15 +63,30 @@ class CloudWarsRenderer extends EBS.CanvasScene {
     if (!this.ground) this.ground = T.renderArea(a, k * this.scale);
     g.fillStyle = '#7f9b62'; g.fillRect(0, 0, w.w, w.h);
     g.drawImage(this.ground, 0, 0, a.w * k, a.h * k);
-    const sim = this.sim, px = k * this.scale;
+    const sim = this.sim, px = k * this.scale, St = EBS.CloudWarsStory, mode = sim.cfg.mode;
+    const L = St.light(St.dayAt(sim.t, mode)), wx = St.weatherAt(sim.seed, sim.t, mode), night = L.night;
+    // Abendschatten länger, nachts schwach (Paket C4)
+    const eve = Math.max(0, Math.min(1, (L.day - 0.42) / 0.14)) * (L.day < 0.7 ? 1 : 0);
+    const STY = EBS.CloudWarsArt.STYLE, shadow = { dx: STY.shadow[0] * (1 + 1.4 * eve), dy: STY.shadow[1] * (1 + 0.6 * eve), alpha: STY.shadowAlpha * (1 - 0.7 * night) };
     g.save(); g.scale(k, k);
-    // Boden: Brandflächen, Feuer, Feuerwehr, Rauch (Paket C3)
+    // Boden: Brandflächen, Feuer, Feuerwehr, Autos, Boote, Rauch (Pakete C3, C4)
     g.drawImage(this.fx.scarLayer(sim, px), 0, 0, a.w, a.h);
-    this.fx.drawFires(g, sim);
+    if (wx.kind === 'heat') { g.fillStyle = `rgba(255,196,110,${0.08 * wx.fade})`; g.fillRect(0, 0, a.w, a.h); }
+    this.fx.drawFires(g, sim, night);
+    this.atmo.drawCars(g, sim, night);
+    this.atmo.drawBoats(g, sim);
     this.fx.drawTrucks(g, sim);
     this.fx.drawSmoke(g, sim);
+    this.atmo.drawBirds(g, sim);
     // Wolken mit Schatten; Regen zwischen Schatten und Wolken
-    this.art.draw(g, sim, k, px, { beforeClouds: () => this.fx.drawRain(g, sim) });
+    this.art.draw(g, sim, k, px, { shadow, beforeClouds: () => this.fx.drawRain(g, sim) });
+    this.atmo.drawFog(g, sim, wx.kind === 'fog' ? wx.fade : 0);
+    g.restore();
+    // Tageslicht, danach Lichter und Blitze (sie leuchten auch nachts hell)
+    this.atmo.tint(g, w, L);
+    g.save(); g.scale(k, k);
+    this.atmo.drawLights(g, sim, night);
+    if (night > 0.05) { g.globalAlpha = night * 0.6; this.fx.drawFires(g, sim, night); g.globalAlpha = 1; }
     this.fx.drawBolts(g, sim, k);
     g.restore();
     const fl = this.fx.flash(sim);

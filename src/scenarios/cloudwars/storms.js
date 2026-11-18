@@ -10,7 +10,7 @@ const TAU = Math.PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
 const STORM = {
-  on: 30, off: 22, rainLoss: 0.6, boltMin: 4, boltMax: 7, boltRange: 2.2, zapShare: 0.18, groundIgnite: 0.7,
+  on: 30, off: 22, rainLoss: 0.6, boltMin: 4, boltMax: 7, boltRange: 2.2, zapShare: 0.18, groundIgnite: 0.7, burnCap: 0.14,
   neutralStorms: 1, neutralStormsFront: 3, neutralMass: [9, 16], chargedTime: 20, boltLife: 0.35,
   rainReach: 0.8,
 };
@@ -114,6 +114,9 @@ Object.assign(CloudWarsSimulation.prototype, {
       still.push(i);
     }
     f.burning = still;
+    // Bremse: je mehr Wald schon verbrannt ist, desto langsamer breitet sich Feuer aus (ab burnCap, aus bei +6 Punkten)
+    const lost = still.length ? this.burnedShare() + still.length / Math.max(1, this.forestCells) : 0;
+    const brake = Math.max(0, Math.min(1, (STORM.burnCap + 0.06 - lost) / 0.06));
     for (const i of still.slice()) {
       const x = i % nx, y = Math.floor(i / nx);
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
@@ -122,7 +125,7 @@ Object.assign(CloudWarsSimulation.prototype, {
         const j = Y * nx + X;
         if (!f.forest[j] || f.state[j] !== NONE) continue;
         const dot = dx * wx + dy * wy, k = dot > 0.5 ? FIRE.windWith : dot < -0.5 ? FIRE.windAgainst : 1;
-        if (this.rngFlow.next() < FIRE.spread * k * f.int[i] * dt && this.ignite(j)) this.emit('fire', (X + 0.5) * f.c, (Y + 0.5) * f.c, 0.5, -1);
+        if (this.rngFlow.next() < FIRE.spread * k * f.int[i] * dt * brake && this.ignite(j)) this.emit('fire', (X + 0.5) * f.c, (Y + 0.5) * f.c, 0.5, -1);
       }
     }
     // 4) Feuerwehr
@@ -165,7 +168,7 @@ Object.assign(CloudWarsSimulation.prototype, {
       this.bolts.push({ t0: this.t, x0: c.x, y0: c.y, x1: x, y1: y, air: false, seed });
       this.emit('strike', x, y, 1, c.team);
       const i = this.cellAt(x, y);
-      if (i >= 0 && this.fire.forest[i] && this.rngFlow.next() < STORM.groundIgnite && this.ignite(i)) {
+      if (i >= 0 && this.fire.forest[i] && this.rngFlow.next() < STORM.groundIgnite && this.burnedShare() < STORM.burnCap && this.ignite(i)) {
         this.emit('fire', x, y, 1, -1);
         this.dispatchTruck(x, y);
       }

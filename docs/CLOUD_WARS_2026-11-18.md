@@ -187,3 +187,42 @@ Sekunde 146): zwei Team-Gewitter, ein Blitz, Brände mit Brandflächen im Wald r
 - Seek-Test mitten im Brand: Sprung auf Sekunde 150 gegen 300 gezeichnete Bilder ab Sekunde 140
 
 Kein vollständiger `npm test`, kein Export.
+
+## C4 · Tag, Wetter, Leben am Boden (18.11.2026)
+
+**Umfang**
+
+- `src/scenarios/cloudwars/story.js`: Tageslauf und Wetterplan als reine Funktionen aus Seed, Zeit und Modus.
+  - Runden-Modus: ein Tag dauert 12 Minuten, Start am frühen Morgen. Licht nach den Farbstufen des Prototyps.
+  - Wetterabschnitte von 60–120 s, nie zweimal dieselbe Phase hintereinander: klar, Hitzewelle (doppeltes
+    Verdunsten, nur vormittags bis mittags), Sturmfront (Wind ×1,6, zwei neutrale Gewitter mehr), Morgennebel
+    (Wind ×0,7, nur morgens). Das Langvideo beginnt immer mit Morgennebel.
+  - Short: heller Nachmittag, immer klar (das Drehbuch in C7 soll nicht vom Wetter abhängen).
+- `src/scenarios/cloudwars/atmosphere.js` zeichnet, alles nur aus der Zeit berechnet:
+  - Autos auf den Straßen (höchstens 24), Boote auf den Seen mit Kielwasser (höchstens 4), alle 45 s ein
+    Vogelschwarm
+  - Nebelbänke, die mit dem Wind treiben, dazu leichter Dunst
+  - nachts Fenster, Scheinwerfer, Rücklichter, Bootslaternen und Blaulicht der Feuerwehr
+  - Tageslicht als Farbfilter über dem ganzen Bild; Blitze und Feuer leuchten danach noch hell
+- Wolkenschatten werden am Abend länger und nachts schwächer; Hitzewelle als leichter warmer Schleier.
+- **Neue Bremse für Waldbrände:** Mit dem Wetter (Hitze, Sturmfronten) brannten bei einzelnen Seeds bis zu 32 % des
+  Waldes. Jetzt zünden Bodenblitze ab 14 % verbranntem Wald nicht mehr, und die Ausbreitung wird zwischen 14 % und
+  20 % bis auf null gebremst.
+
+**Messwerte (ohne Bilder, 16:9, 8 Seeds, 15 Minuten)**
+
+- Runden im Median **169 s** (vorher 137 s; die Wetterwechsel verlängern die Runden). 9:16 im Runden-Modus: 82 s.
+- Waldverlust je Runde höchstens 20 %, meist 8–16 %.
+- Ein Bild 1080p mit JPEG in Software: Median 91 ms (Short 9:16) und 105 ms (Runden 16:9), vorher etwa 82 ms.
+
+**Vorschau:** [Tageslauf](reference/cloudwars-c4-tageslauf-2026-11-18.jpg) (Seed 2, Runden-Modus): Morgennebel
+(Sekunde 20), Hitzewelle am Vormittag (150), Abendlicht (390), Nacht mit Lichtern (520).
+
+**Geprüft:** `node --test test/cloudwars.test.mjs`, zehn Tests. Neu:
+
+- Tageslauf und Wetter: Short immer klar, Runden beginnen mit Nebel, keine Phase zweimal hintereinander
+- Seek-Test bei Nacht: Sprung auf Sekunde 520 gegen 150 gezeichnete Bilder ab Sekunde 515
+
+Kein vollständiger `npm test`, kein Export, keine Referenz-Hashes (kein anderes Szenario berührt).
+
+**Offene Fragen für später:** Abendlicht kräftig genug oder zu braun? Soll der Short doch Wetter bekommen?

@@ -127,3 +127,39 @@ test('Seek-Regel mitten im Brand: Brandflächen nach Sprung gleich wie nach Wied
   assert.equal(ha, hb);
   assert.ok(a === b, 'Bild nach Sprung weicht vom Bild nach durchgehender Wiedergabe ab');
 });
+
+test('Tageslauf und Wetter: reine Funktionen, Short immer klar, Runden mit Nebelstart und ohne Wiederholung', async () => {
+  const page = await openMode(5, 'rounds', '16:9');
+  const r = await page.evaluate(() => {
+    const St = EBS.CloudWarsStory, segs = St.weatherChanges(5, 3600, 'rounds');
+    return {
+      short: [0, 100, 300].map((t) => St.weatherAt(5, t, 'short').kind),
+      shortNight: St.light(St.dayAt(300, 'short')).night,
+      first: segs[0].kind, repeat: segs.some((s, i) => i > 0 && s.kind === segs[i - 1].kind),
+      lens: segs.slice(1, -1).map((s) => St.weatherAt(5, s.t0 + 1, 'rounds').t0 === s.t0),
+      night: St.light(St.dayAt(520, 'rounds')).night, noon: St.light(St.dayAt(150, 'rounds')).night,
+      again: JSON.stringify(St.weatherAt(5, 777, 'rounds')) === JSON.stringify(St.weatherAt(5, 777, 'rounds')),
+    };
+  });
+  await page.close();
+  assert.deepEqual(r.short, ['clear', 'clear', 'clear']);
+  assert.equal(r.shortNight, 0);
+  assert.equal(r.first, 'fog');
+  assert.equal(r.repeat, false);
+  assert.ok(r.lens.every(Boolean));
+  assert.ok(r.night > 0.8 && r.noon === 0, `Nacht ${r.night}, Mittag ${r.noon}`);
+  assert.ok(r.again);
+});
+
+test('Seek-Regel bei Nacht: Lichter, Autos und Boote nach Sprung gleich wie nach Wiedergabe', async () => {
+  const frame = (page) => page.evaluate(() => window.exportAPI.renderFrames(1, 1, 'image/png')[0]);
+  const cont = await openMode(2, 'rounds', '16:9');
+  await cont.evaluate(() => { window.exportAPI.simulate(515); window.exportAPI.renderFrames(149, 0.3); });
+  const b = await frame(cont);
+  await cont.close();
+  const jump = await openMode(2, 'rounds', '16:9');
+  await jump.evaluate(() => window.exportAPI.simulate(520 - 1 / 30));
+  const a = await frame(jump);
+  await jump.close();
+  assert.ok(a === b, 'Nachtbild nach Sprung weicht vom Bild nach durchgehender Wiedergabe ab');
+});
