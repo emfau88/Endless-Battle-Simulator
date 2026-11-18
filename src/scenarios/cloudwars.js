@@ -1,7 +1,7 @@
 /*
  * Szenario „Cloud Wars“ (in Arbeit) – Plan: docs/CLOUD_WARS_PLAN_2026-11-18.md
  *
- * Stand Paket C2: Der Seed wählt einen festen Ausschnitt der Landschaft aus dem Prototyp „Wolkenflug“; er wird einmal
+ * Stand Paket C3: Der Seed wählt einen festen Ausschnitt der Landschaft aus dem Prototyp „Wolkenflug“; er wird einmal
  * vorgezeichnet. Darüber treiben Team-Wolken und neutrale Wolken (Simulation: cloudwars/simulation.js). Paket C2:
  * Wolken im Stil des Prototyps mit Teamfarbe, Augen, Namensschild und fliegenden Puffs (cloudwars/art.js).
  * Maßstab je Format (Wunsch des Nutzers: „auf Handy und PC jeweils passend“): Hochformat näher, 1 GE = 2,0 logische
@@ -39,6 +39,8 @@ class CloudWarsSim extends EBS.CloudWarsSim.CloudWarsSimulation {
     return {
       t: this.t, step: this.step, area: { ...this.area }, round: this.round, scores: [...this.scores], winner: this.winner,
       ended: this.endAt >= 0, endAt: this.endAt, roundStart: this.roundStart, teams, alive, neutrals, maxMass,
+      fires: this.fire.burning.length, burned: this.burnedShare(), trucks: this.trucks.length,
+      storms: this.clouds.filter((c) => c.kind === 1 && c.team >= 0).length, neutralStorms: this.clouds.filter((c) => c.kind && c.team < 0).length,
       geScale: this.geScale, eats: this.eats.map((e) => ({ mass: e.mass, age: this.t - e.t0, x: e.x, y: e.y, team: e.team })),
       summary: `Runde ${this.round} · ${alive} Teams übrig · größte Wolke ${maxMass.toFixed(1)}`
         + (this.winner >= 0 ? ` · Sieger ${S.TEAMS[this.winner].name}` : ''),
@@ -52,6 +54,7 @@ class CloudWarsRenderer extends EBS.CanvasScene {
     super({ world, renderScale });
     this.sim = sim; this.view = view; this.ground = null;
     this.art = new EBS.CloudWarsArt.CloudArt({ radiusOf: S.radiusOf, teams: S.TEAMS });
+    this.fx = new EBS.CloudWarsEffects.Effects({ radiusOf: S.radiusOf, storms: EBS.CloudWarsStorms, lift: EBS.CloudWarsArt.STYLE.lift / sim.geScale });
   }
   paint(g) {
     const w = this.world, a = this.sim.area, k = this.sim.geScale;
@@ -59,13 +62,22 @@ class CloudWarsRenderer extends EBS.CanvasScene {
     if (!this.ground) this.ground = T.renderArea(a, k * this.scale);
     g.fillStyle = '#7f9b62'; g.fillRect(0, 0, w.w, w.h);
     g.drawImage(this.ground, 0, 0, a.w * k, a.h * k);
-    // Wolken (Paket C2): auf GE skaliert zeichnen, Namensschilder danach in logischen Einheiten
+    const sim = this.sim, px = k * this.scale;
     g.save(); g.scale(k, k);
-    this.art.draw(g, this.sim, k, k * this.scale);
+    // Boden: Brandflächen, Feuer, Feuerwehr, Rauch (Paket C3)
+    g.drawImage(this.fx.scarLayer(sim, px), 0, 0, a.w, a.h);
+    this.fx.drawFires(g, sim);
+    this.fx.drawTrucks(g, sim);
+    this.fx.drawSmoke(g, sim);
+    // Wolken mit Schatten; Regen zwischen Schatten und Wolken
+    this.art.draw(g, sim, k, px, { beforeClouds: () => this.fx.drawRain(g, sim) });
+    this.fx.drawBolts(g, sim, k);
     g.restore();
-    this.art.drawLabels(g, this.sim, k);
+    const fl = this.fx.flash(sim);
+    if (fl > 0) { g.fillStyle = `rgba(235,242,255,${fl})`; g.fillRect(0, 0, w.w, w.h); }
+    this.art.drawLabels(g, sim, k);
   }
-  destroy() { if (this.ground) this.ground.width = this.ground.height = 1; this.art.destroy(); super.destroy(); }
+  destroy() { if (this.ground) this.ground.width = this.ground.height = 1; this.art.destroy(); this.fx.destroy(); super.destroy(); }
 }
 
 EBS.registerScenario({

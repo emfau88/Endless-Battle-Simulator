@@ -169,6 +169,7 @@ class CloudArt {
       g.globalAlpha = STYLE.shadowAlpha * (1 - it.u);
       this.blit(g, it.spr.sh, it.spr, it.c, it.c.x + STYLE.shadow[0], it.c.y + STYLE.shadow[1], it.scl);
     }
+    if (opts.beforeClouds) opts.beforeClouds();
     // Wolken
     for (const it of items) {
       g.globalAlpha = (it.c.team < 0 ? STYLE.neutralAlpha : 1) * (1 - smooth(0.4, 1, it.u));
@@ -220,6 +221,11 @@ class CloudArt {
     if (open === 1) {
       g.fillStyle = '#fff';
       for (const sd of [-1, 1]) { g.beginPath(); circ(g, fx + sd * ex - er * 0.25, fy - er * 0.45, er * 0.3); g.fill(); }
+    }
+    if (c.kind) {
+      // Gewitter und aufgeladen: grimmige Brauen wie im Prototyp
+      g.strokeStyle = c.kind === 1 ? '#e8ecf4' : '#2b3a4f'; g.lineWidth = er * 0.42; g.lineCap = 'round';
+      for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(fx + sd * ex * 1.45, fy - er * 1.9); g.lineTo(fx + sd * ex * 0.55, fy - er * 1.35); g.stroke(); }
     }
   }
 

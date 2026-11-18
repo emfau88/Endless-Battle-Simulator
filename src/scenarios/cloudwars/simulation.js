@@ -17,7 +17,7 @@ const TEAMS = [
 // Startwerte aus dem Plan (Abschnitt 3)
 const RULES = {
   radius: 12, startMass: 4, maxSpeed: 70, speedMass: 0.04,
-  eatRatio: 1.1, teamEatRatio: { short: 1.1, rounds: 1.5 }, fleeRangeMode: { short: 3, rounds: 4 }, eatReach: 0.25, eatTime: 0.7, eatGain: 0.85, gainRef: 25, gainMin: 0.35,
+  eatRatio: 1.1, teamEatRatio: { short: 1.1, rounds: 2.2 }, fleeRangeMode: { short: 3, rounds: 4 }, eatReach: 0.25, eatTime: 0.7, eatGain: 0.85, gainRef: 25, gainMin: 0.35,
   evapFrom: 12, evapRate: 0.006, waterGain: 0.3, waterUpTo: 20, massCap: 120,
   neutralMin: 0.6, neutralMax: 3, neutralPerArea: 18 / (771 * 1371), neutralLo: 10, neutralHi: 22, spawnRate: 1.5,
   wind: 10, windSwing: 0.6, windPeriod: 90,
@@ -42,6 +42,7 @@ class CloudWarsSimulation {
     this.fleeRange = RULES.fleeRangeMode[params.mode] || RULES.fleeRange;
     this.neutralTarget = Math.round(clamp(RULES.neutralPerArea * area.w * area.h, RULES.neutralLo, RULES.neutralHi));
     this.buildWater();
+    this.initStorms();
     this.clouds = []; this.nextId = 1; this.eats = [];
     this.round = 1; this.scores = [0, 0, 0, 0]; this.winner = -1; this.roundStart = 0; this.endAt = -1;
     this.startRound(true);
@@ -62,8 +63,8 @@ class CloudWarsSimulation {
   }
 
   wind() {
-    const ang = this.windBase + RULES.windSwing * Math.sin(this.t / RULES.windPeriod);
-    return { x: Math.cos(ang) * RULES.wind, y: Math.sin(ang) * RULES.wind, ang };
+    const ang = this.windBase + RULES.windSwing * Math.sin(this.t / RULES.windPeriod), v = RULES.wind * (this.weatherNow().wind || 1);
+    return { x: Math.cos(ang) * v, y: Math.sin(ang) * v, ang };
   }
 
   emit(type, x, y, p, c) {
@@ -73,7 +74,7 @@ class CloudWarsSimulation {
 
   addCloud(team, mass, x, y) {
     const c = {
-      id: this.nextId++, team, mass, x, y, vx: 0, vy: 0, hx: 1, hy: 0, wander: this.rngFlow.next() * TAU,
+      id: this.nextId++, team, mass, x, y, vx: 0, vy: 0, kind: 0, charged: 0, boltAt: 0, hx: 1, hy: 0, wander: this.rngFlow.next() * TAU,
       tx: 0, ty: 0, eat: null, dead: false, born: this.t, puffSeed: (this.rngFx.next() * 4294967296) >>> 0,
     };
     this.clouds.push(c);
@@ -82,7 +83,7 @@ class CloudWarsSimulation {
 
   startRound(first) {
     const a = this.area, rng = this.rngFlow;
-    if (!first) { this.round++; this.clouds = []; this.eats = []; }
+    if (!first) { this.round++; this.clouds = []; this.eats = []; this.resetStorms(); }
     this.winner = -1; this.endAt = -1; this.roundStart = this.t;
     // Team-Wolken gleichmäßig nahe dem Rand: vier Ecken, bei zwei je Team zusätzlich die Seitenmitten
     const spots = [[0.2, 0.15], [0.8, 0.85], [0.8, 0.15], [0.2, 0.85], [0.5, 0.08], [0.5, 0.92], [0.08, 0.5], [0.92, 0.5]];
@@ -98,9 +99,9 @@ class CloudWarsSimulation {
     }
   }
 
-  spawnNeutral() {
+  spawnNeutral(massOverride) {
     const a = this.area, rng = this.rngFlow, w = this.wind(), ux = Math.cos(w.ang), uy = Math.sin(w.ang);
-    const mass = RULES.neutralMin + rng.next() * (RULES.neutralMax - RULES.neutralMin), r = radiusOf(mass);
+    const mass = massOverride || RULES.neutralMin + rng.next() * (RULES.neutralMax - RULES.neutralMin), r = radiusOf(mass);
     // Zufälliger Punkt im Bild, dann gegen den Wind bis vor den Rand zurückschieben
     let x = rng.next() * a.w, y = rng.next() * a.h;
     const tx = ux > 1e-6 ? x / ux : ux < -1e-6 ? (x - a.w) / ux : Infinity;
@@ -116,7 +117,9 @@ class CloudWarsSimulation {
     const R = radiusOf(c.mass), a = this.area, w = this.wind();
     let dx = 0, dy = 0, threat = null, td = Infinity;
     for (const o of this.clouds) {
-      if (o.dead || o.eat || o.team < 0 || o.team === c.team || o.mass < c.mass * this.teamRatio) continue;
+      if (o.dead || o.eat || o.team === c.team) continue;
+      // Gefahr: größere Gegner und neutrale Gewitter, die größer sind (sie schießen Blitze)
+      if (o.team >= 0 ? o.mass < c.mass * this.teamRatio : !(o.kind && o.mass > c.mass)) continue;
       const d = Math.hypot(o.x - c.x, o.y - c.y);
       if (d < this.fleeRange * radiusOf(o.mass) && d < td) { td = d; threat = o; }
     }
@@ -188,7 +191,7 @@ class CloudWarsSimulation {
         if ((this.step + c.id * 7) % decideEvery === 0) this.decide(c);
         this.steer(c, dt);
         // Verdunsten, Tanken über Wasser, Obergrenze
-        if (c.mass > RULES.evapFrom) c.mass -= (c.mass - RULES.evapFrom) * RULES.evapRate * dt;
+        if (c.mass > RULES.evapFrom) c.mass -= (c.mass - RULES.evapFrom) * RULES.evapRate * (this.weatherNow().evap || 1) * dt;
         if (c.mass < RULES.waterUpTo && this.overWater(c.x, c.y)) c.mass = Math.min(RULES.waterUpTo, c.mass + RULES.waterGain * dt);
         if (c.mass > RULES.massCap) c.mass -= (c.mass - RULES.massCap) * 0.2 * dt;
       }
@@ -199,6 +202,8 @@ class CloudWarsSimulation {
         c.x = clamp(c.x, m, a.w - m); c.y = clamp(c.y, m, a.h - m);
       }
     }
+    // Gewitter, Blitze, Feuer, Feuerwehr (storms.js)
+    this.stepStorms(dt);
     // Fressen: nur Team-Wolken fressen
     for (const A of this.clouds) {
       if (A.dead || A.eat || A.team < 0) continue;
@@ -226,6 +231,7 @@ class CloudWarsSimulation {
   finishEat(B, A) {
     const gain = RULES.eatGain * B.mass * clamp(RULES.gainRef / A.mass, RULES.gainMin, 1);
     A.mass += gain; B.dead = true;
+    this.chargeFrom(A, B);
     this.emit('absorb', A.x, A.y, B.mass, A.team);
     if (B.team >= 0 && !this.clouds.some((c) => c !== B && !c.dead && c.team === B.team)) this.emit('eliminated', B.x, B.y, 1, B.team);
   }
@@ -259,6 +265,7 @@ class CloudWarsSimulation {
       if (c.team >= 0) perTeam[c.team]++;
     }
     if (perTeam.some((n) => n > this.perTeam)) errors.push(`mehr Team-Wolken als erlaubt: ${perTeam.join('/')}`);
+    this.stormInvariants(errors);
     return { ok: errors.length === 0, errors, bodies: 0 };
   }
 
@@ -266,9 +273,10 @@ class CloudWarsSimulation {
     const parts = [this.step, this.rngFlow.s, this.rngFx.s, this.round, this.scores.join(','), this.winner, this.nextId];
     for (const c of this.clouds) parts.push(`${c.id}:${c.team}:${c.mass}:${c.x}:${c.y}:${c.vx}:${c.vy}:${c.hx}:${c.eat ? c.eat.by + '@' + c.eat.t0 : ''}`);
     for (const e of this.eats) parts.push(`e${e.fromId}>${e.toId}@${e.t0}`);
+    parts.push(...this.stormHashParts());
     return fnv1a(parts.join('|')).toString(16).padStart(8, '0');
   }
 }
 
-EBS.CloudWarsSim = { CloudWarsSimulation, TEAMS, RULES, radiusOf, speedOf };
+EBS.CloudWarsSim = { CloudWarsSimulation, TEAMS, RULES, POOL, radiusOf, speedOf };
 })();

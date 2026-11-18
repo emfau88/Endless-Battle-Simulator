@@ -136,3 +136,54 @@ vollständiger `npm test`, kein Export.
 - Zwei Wolken desselben Teams können sich überdecken (Runden-Modus), dann überlappen auch die Namensschilder.
 - Die Runden sind mit 2,2 Minuten im Median kürzer als geplant. Neu messen mit den Blitzen in C3.
 - **Stopp, Stil-Checkpoint beim Nutzer:** Gesichter an oder aus? Teamfarbe kräftiger oder schwächer? Passen die Namen?
+
+## C3 · Gewitter, Blitze, Feuer, Feuerwehr (18.11.2026)
+
+**Umfang**
+
+- `src/scenarios/cloudwars/storms.js` ergänzt die Simulation:
+  - Gewitterwechsel mit Hysterese; Gewitter regnen und verlieren dabei 0,6 Masse je Sekunde
+  - Blitze alle 4–7 s: auf Gegner in Reichweite (−18 % Masse, die als 2–4 Wölkchen wegfliegt), sonst auf den Boden
+  - neutrale Gewitterwolken, die nur Kleinere treffen; wer eine frisst, ist 20 s „aufgeladen“
+  - Feuerraster mit 16 GE, Ausbreitung mit dem Wind, Löschen durch Regen, Brandprotokoll
+  - Feuerwehr auf den Straßen des Ausschnitts mit Anfahrt, Spritzen und Abfahrt
+  - Ereignisse `storm`, `strike`, `zap`, `fire`, `extinguish`, `charged`, `truck`
+  - Team-Wolken fliehen auch vor größeren neutralen Gewittern
+- `src/scenarios/cloudwars/effects.js` zeichnet:
+  - Regen, Blitze mit Abzweig und kurzem Aufhellen (höchstens 12 %)
+  - Glut, Flammen und Rauch
+  - Brandflächen als Textur aus dem Protokoll
+  - Feuerwehr mit Blaulicht und Wasserstrahl
+- Gewitterwolken haben grimmige Brauen (wie im Prototyp).
+- Neue Runde im Runden-Modus: Feuer aus, Brandflächen weg. Der Plan sah ein Nachwachsen am nächsten Morgen vor; das
+  wird mit dem Tageslauf in C4 nicht gebraucht, weil jede Runde mit frischem Wald beginnt.
+
+**Abweichungen von den Startwerten (gemessen, ohne Bilder)**
+
+- **Gewitter ab Masse 30 statt 45** (weiß unter 22 statt 36). Mit der Bremse aus C1 wurden Wolken kaum größer als 45.
+  Mit 45 gab es im Runden-Modus das erste Gewitter oft erst nach 2–6 Minuten und im Short fast nie.
+- **Bodenblitze schlagen seitlich ein** (0,9–1,6 Radien neben der Wolke). Unter der eigenen Regenwolke gingen die
+  Brände sofort wieder aus. Damit liegt der Waldverlust je Runde bei 4–10 % (6 Seeds), Ziel 2–15 %.
+- **Team gegen Team im Runden-Modus ab 1,7-facher Masse.** Getroffene Wolken schrumpfen und werden leichter gefressen.
+  Gemessen über 12 Seeds und 20 Minuten:
+
+  | Schwelle | Median einer Runde |
+  |---|---|
+  | 1,6 | 101 s |
+  | 1,7 (gewählt) | 137 s |
+  | 1,9 | 126 s |
+  | 2,2 | 159 s |
+
+  Mehr als rund 2,5 Minuten sind über diese Schwelle nicht zu holen. **Offene Frage am Ende:** kürzere Runden so
+  lassen (mehr Abwechslung im Langvideo) oder über andere Regeln verlängern?
+- Die Feuer erreichen oft die Obergrenze von 40 gleichzeitig brennenden Zellen.
+
+**Vorschau:** [Gewitter und Brände](reference/cloudwars-c3-gewitter-2026-11-18.jpg) (Seed 2, Runden-Modus,
+Sekunde 146): zwei Team-Gewitter, ein Blitz, Brände mit Brandflächen im Wald rechts.
+
+**Geprüft:** `node --test test/cloudwars.test.mjs`, acht Tests. Neu:
+
+- Gewitter, Blitze und Brände entstehen, höchstens 40 Brände, Waldverlust zwischen 0,5 und 20 %
+- Seek-Test mitten im Brand: Sprung auf Sekunde 150 gegen 300 gezeichnete Bilder ab Sekunde 140
+
+Kein vollständiger `npm test`, kein Export.

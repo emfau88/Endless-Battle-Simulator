@@ -92,3 +92,38 @@ test('Seek-Regel: Bild nach Sprung gleich Bild nach durchgehender Wiedergabe (mi
   assert.ok(eats > 3, `zu wenig Fressen bis Sekunde 8: ${eats}`);
   assert.ok(a === b, 'Bild nach Sprung weicht vom Bild nach durchgehender Wiedergabe ab');
 });
+
+// Paket C3: Gewitter, Blitze, Feuer, Feuerwehr
+test('Gewitter, Blitze und Brände entstehen; Waldverlust je Runde begrenzt', async () => {
+  const page = await openMode(2, 'rounds', '16:9');
+  const r = await page.evaluate(() => {
+    const api = window.exportAPI, types = {}; let burnMax = 0, fireMax = 0, errors = [];
+    for (let s = 0; s < 300; s += 2) {
+      const sn = api.simulate(2); burnMax = Math.max(burnMax, sn.burned); fireMax = Math.max(fireMax, sn.fires);
+      const c = api.check(); if (!c.ok) errors.push(...c.errors);
+    }
+    for (const e of api.events(0)) types[e.type] = (types[e.type] || 0) + 1;
+    return { types, burnMax, fireMax, errors: errors.slice(0, 3) };
+  });
+  assert.deepEqual(r.errors, []);
+  for (const type of ['storm', 'strike', 'fire']) assert.ok(r.types[type] > 0, `kein Ereignis ${type}: ${JSON.stringify(r.types)}`);
+  assert.ok(r.fireMax <= 40, `zu viele Brände: ${r.fireMax}`);
+  assert.ok(r.burnMax > 0.005 && r.burnMax < 0.2, `Waldverlust ${r.burnMax}`);
+  await page.close();
+});
+
+test('Seek-Regel mitten im Brand: Brandflächen nach Sprung gleich wie nach Wiedergabe', async () => {
+  const frame = (page) => page.evaluate(() => window.exportAPI.renderFrames(1, 1, 'image/png')[0]);
+  const cont = await openMode(2, 'rounds', '16:9');
+  await cont.evaluate(() => { window.exportAPI.simulate(140); window.exportAPI.renderFrames(1, 0.3); window.exportAPI.renderFrames(299, 0.3); });
+  const b = await frame(cont), hb = await cont.evaluate(() => window.exportAPI.hash());
+  const s = await cont.evaluate(() => window.exportAPI.snapshot());
+  await cont.close();
+  const jump = await openMode(2, 'rounds', '16:9');
+  await jump.evaluate(() => window.exportAPI.simulate(150));
+  const a = await frame(jump), ha = await jump.evaluate(() => window.exportAPI.hash());
+  await jump.close();
+  assert.ok(s.burned > 0 || s.fires > 0, 'kein Brand im geprüften Abschnitt');
+  assert.equal(ha, hb);
+  assert.ok(a === b, 'Bild nach Sprung weicht vom Bild nach durchgehender Wiedergabe ab');
+});
