@@ -377,3 +377,10 @@ Nutzers:
 8. **Short-Bildbereich:** Wolken treiben zeitweise in den unteren Textbereich der Plattform.
 9. **Langvideo:** Neue Runde sofort mit frischem Wald (so gebaut) oder erst am nächsten Morgen?
 10. **Freigabe:** ganzes Short (rund 30 s) und Langvideo (10 Minuten) exportieren?
+
+## Nachtrag: Short bis 60 Sekunden (18.11.2026)
+
+Entscheidung des Nutzers: Shorts dürfen 45 oder 60 s dauern, wenn es dem Ergebnis dient. Die erlaubte Länge ist jetzt
+**24–60 s** (vorher 24–38 s). Neues Casting über 300 Seeds: Länge passt bei 87 %, **die ganze Geschichte gelingt
+bei 61 %** (184 Seeds, vorher 42 %), Median 34 s. Die Liste der geprüften Seeds ist neu erzeugt; Seed 42 ist jetzt
+dabei, die Short-Vorlage bleibt also bei 42. Frage 3 der Liste oben ist damit beantwortet.

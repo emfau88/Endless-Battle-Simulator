@@ -2,7 +2,7 @@
 // Casting für Cloud-Wars-Shorts ("Which cloud rules the sky?"). Reine Simulation ohne Bild und Ton.
 // Prüft je Seed, ob die verdeckte Regie ihre Geschichte erzählt:
 //   1. erstes Team-Gewitter vor Sekunde 12   2. ein Team scheidet vor Sekunde 22 aus
-//   3. der Außenseiter gewinnt                4. Videolänge (Sieg + Ausklang) 24–38 s
+//   3. der Außenseiter gewinnt                4. Videolänge (Sieg + Ausklang) 24–60 s
 //   node scripts/cloudwars-short-casting.mjs                      Seeds 1–300
 //   node scripts/cloudwars-short-casting.mjs --from 1 --to 500 --top 20 [--off] [--list]
 //   --off: ohne Regie zum Vergleich · --list: Liste der vollständigen Seeds für die Short-Vorlage
