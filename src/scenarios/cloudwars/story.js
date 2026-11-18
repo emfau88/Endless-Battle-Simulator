@@ -76,6 +76,50 @@ function weatherAt(seed, t, mode) {
   const s = p.segs[lo], fade = clamp(Math.min(t - s.t0, s.t1 - t) / 8, 0, 1);
   return { kind: s.kind, ...WEATHER[s.kind], fade, t0: s.t0 };
 }
+// ---------- Verdeckte Regie für das Short (Paket C7) ----------
+// Vier Rollen aus dem Seed. Die Regie ändert nur Faktoren je Team, nie die Regeln.
+const DIRECT = {
+  giantStart: 2.5,                        // Riese startet größer
+  giantSpawnShare: 0.7,                   // Anteil neuer neutraler Wolken, die dem Gefütterten zutreiben
+  giantCone: 40 * Math.PI / 180,
+  giantGain: 1.8, giantGainUntil: 12,     // Riese wächst anfangs schneller …
+  giantSafe: 12, giantFlee: 1.3,          // … und wird bis Sekunde 12 von den anderen kaum gejagt
+  giantHunt: 4,                           // jagt bevorzugt das Opfer
+  spare: 0,                               // Gewicht 0: wird nicht gejagt (Außenseiter bis zur Schlussphase, Riese anfangs)
+  feed: 18,                               // ab hier werden neue Wolken dem Außenseiter zugetrieben
+  late: 20,                               // Schlussphase
+  giantRainFrom: 18, giantRain: 3, giantLate: 0.8, giantLateGain: 0.5, giantEvap: 15,
+  underdogFlee: 2, underdogTeams: 0.3,   // bis zur Schlussphase meidet der Außenseiter Kämpfe
+  underdogGain: 2, underdogHunt: 3, underdogLate: 1.3,     // in der Schlussphase jagt er Riese und Mitläufer
+  followerLate: 0.4,                      // Mitläufer flieht in der Schlussphase schlechter und wird auch vom Riesen gejagt
+  victimSpeed: 0.85, victimFlee: 0.5,
+};
+function roles(seed) {
+  const rng = mulberry32((seed ^ 0x2545f491) >>> 0), p = [0, 1, 2, 3];
+  for (let i = 3; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [p[i], p[j]] = [p[j], p[i]]; }
+  return { giant: p[0], underdog: p[1], victim: p[2], follower: p[3] };
+}
+/** Faktoren je Team zur Zeit t (seit Rundenbeginn). bonus[k]: Gewicht von Team k als Beute. mass: Masse je Team. */
+function directFactors(R, team, t, mass) {
+  const D = DIRECT, late = t >= D.late;
+  const f = { speed: 1, flee: 1, prey: 1, rain: 1, gain: 1, evap: 1, bonus: [1, 1, 1, 1] };
+  f.bonus[R.underdog] = D.spare;                // niemand jagt den Außenseiter
+  if (t < D.giantSafe) f.bonus[R.giant] = D.spare;
+  if (team === R.giant) {
+    f.bonus[R.victim] = D.giantHunt;
+    if (t < D.giantSafe) f.flee = D.giantFlee;
+    if (t < D.giantGainUntil) f.gain = D.giantGain;
+    if (t >= D.giantRainFrom) { f.rain = D.giantRain; f.speed = D.giantLate; f.gain = D.giantLateGain; f.evap = D.giantEvap; f.bonus[R.follower] = 2; }
+  } else if (team === R.underdog) {
+    f.gain = D.underdogGain;
+    f.flee = late && mass && mass[team] > 1.1 * mass[R.giant] ? 0.7 : D.underdogFlee;   // mutig erst, wenn stärker als der Riese
+    if (late) { f.bonus[R.giant] = D.underdogHunt; f.bonus[R.follower] = D.underdogHunt; f.speed = D.underdogLate; }
+    else for (let k = 0; k < 4; k++) f.bonus[k] = D.underdogTeams;
+  } else if (team === R.victim) { f.speed = D.victimSpeed; f.flee = D.victimFlee; }
+  else if (team === R.follower && late) { f.flee = D.followerLate; f.speed = D.giantLate; }
+  return f;
+}
+
 /** Alle Wetterwechsel bis t (für Einblendungen). */
 function weatherChanges(seed, t, mode) {
   if (mode !== 'rounds') return [];
@@ -83,5 +127,5 @@ function weatherChanges(seed, t, mode) {
   return p.segs.filter((s) => s.t0 <= t);
 }
 
-EBS.CloudWarsStory = { DAY, SKY, WEATHER, dayAt, light, weatherAt, weatherChanges };
+EBS.CloudWarsStory = { DAY, SKY, WEATHER, dayAt, light, weatherAt, weatherChanges, DIRECT, roles, directFactors };
 })();

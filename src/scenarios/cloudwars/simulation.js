@@ -46,6 +46,10 @@ class CloudWarsSimulation {
     this.initStorms();
     this.clouds = []; this.nextId = 1; this.eats = [];
     this.round = 1; this.scores = [0, 0, 0, 0]; this.winner = -1; this.roundStart = 0; this.endAt = -1;
+    // Verdeckte Regie nur im Short (Paket C7); director 'off' schaltet sie für Vergleiche ab
+    const St = EBS.CloudWarsStory;
+    this.roles = params.mode === 'short' && params.director !== 'off' && St ? St.roles(this.seed) : null;
+    this.mods = [0, 1, 2, 3].map(() => ({ speed: 1, flee: 1, prey: 1, rain: 1, gain: 1, evap: 1, bonus: [1, 1, 1, 1] }));
     this.startRound(true);
   }
 
@@ -99,9 +103,14 @@ class CloudWarsSimulation {
     const spots = [[0.2, 0.15], [0.8, 0.85], [0.8, 0.15], [0.2, 0.85], [0.5, 0.08], [0.5, 0.92], [0.08, 0.5], [0.92, 0.5]];
     const order = [0, 1, 2, 3];                                    // Startplätze der Teams aus dem Seed mischen
     for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(rng.next() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+    if (this.roles) {
+      // Regie: Das Opfer startet auf derselben Bildhälfte wie der Riese (Ecken 0/2 oben, 1/3 unten)
+      const gi = order.indexOf(this.roles.giant), pi = [2, 3, 0, 1][gi], vi = order.indexOf(this.roles.victim);
+      [order[pi], order[vi]] = [order[vi], order[pi]];
+    }
     for (let k = 0; k < this.perTeam; k++) for (let ti = 0; ti < this.teamsCount; ti++) {
       const s = spots[k * 4 + ti];
-      this.addCloud(order[ti], RULES.startMass, s[0] * a.w, s[1] * a.h);
+      this.addCloud(order[ti], RULES.startMass * (this.roles && order[ti] === this.roles.giant ? EBS.CloudWarsStory.DIRECT.giantStart : 1), s[0] * a.w, s[1] * a.h);
     }
     // Neutrale Wolken über das ganze Bild verteilt
     for (let i = 0; i < this.neutralTarget; i++) {
@@ -114,6 +123,16 @@ class CloudWarsSimulation {
     const mass = massOverride || RULES.neutralMin + rng.next() * (RULES.neutralMax - RULES.neutralMin), r = radiusOf(mass);
     // Zufälliger Punkt im Bild, dann gegen den Wind bis vor den Rand zurückschieben
     let x = rng.next() * a.w, y = rng.next() * a.h;
+    // Regie: anfangs wird der Riese gefüttert, in der Schlussphase der Außenseiter
+    const D = EBS.CloudWarsStory && EBS.CloudWarsStory.DIRECT;
+    const fed = this.roles && (this.t - this.roundStart >= D.feed ? this.roles.underdog : this.roles.giant);
+    const giant = this.roles && this.clouds.find((c) => c.team === fed && !c.dead && !c.eat);
+    if (giant && rng.next() < D.giantSpawnShare) {
+      // Regie: Startpunkt im Kegel hinter dem Riesen; unten wird er wie sonst gegen den Wind vor den Rand geschoben,
+      // die Wolke treibt ihm also von außen zu und taucht nicht mitten im Bild auf
+      const off = Math.tan((rng.next() - 0.5) * D.giantCone) * 200;
+      x = clamp(giant.x - uy * off, 0, a.w); y = clamp(giant.y + ux * off, 0, a.h);
+    }
     const tx = ux > 1e-6 ? x / ux : ux < -1e-6 ? (x - a.w) / ux : Infinity;
     const ty = uy > 1e-6 ? y / uy : uy < -1e-6 ? (y - a.h) / uy : Infinity;
     const back = Math.min(tx, ty) + r + 20;
@@ -131,7 +150,7 @@ class CloudWarsSimulation {
       // Gefahr: größere Gegner und neutrale Gewitter, die größer sind (sie schießen Blitze)
       if (o.team >= 0 ? o.mass < c.mass * this.teamRatio : !(o.kind && o.mass > c.mass)) continue;
       const d = Math.hypot(o.x - c.x, o.y - c.y);
-      if (d < this.fleeRange * radiusOf(o.mass) && d < td) { td = d; threat = o; }
+      if (d < this.fleeRange * this.mods[c.team].flee * radiusOf(o.mass) && d < td) { td = d; threat = o; }
     }
     if (threat) {
       const d = td || 1, ax = (c.x - threat.x) / d, ay = (c.y - threat.y) / d, side = c.id % 2 ? 1 : -1;
@@ -142,7 +161,9 @@ class CloudWarsSimulation {
       for (const o of this.clouds) {
         if (o === c || o.dead || o.eat || (o.team >= 0 && o.team === c.team) || c.mass < o.mass * this.ratio(o)) continue;
         const d = Math.hypot(o.x - c.x, o.y - c.y);
-        const s = (o.mass / (d + RULES.preyBias)) * (o.team >= 0 ? RULES.enemyBonus : 1);
+        const M = this.mods[c.team];
+        if (o.team >= 0 && M.bonus[o.team] === 0) continue;          // Regie: dieses Team wird gerade nicht gejagt
+        const s = (o.mass / (d + RULES.preyBias / M.prey)) * (o.team >= 0 ? RULES.enemyBonus : 1) * (o.team >= 0 ? M.bonus[o.team] : 1);
         if (s > bs && o.x > -20 && o.y > -20 && o.x < a.w + 20 && o.y < a.h + 20) { bs = s; best = o; }
       }
       const preyNear = best && Math.hypot(best.x - c.x, best.y - c.y) < RULES.tankPreyRange;
@@ -173,7 +194,7 @@ class CloudWarsSimulation {
     let d = want - cur; d -= Math.round(d / TAU) * TAU;
     const lim = RULES.turnRate * dt, ang = cur + clamp(d, -lim, lim);
     c.hx = Math.cos(ang); c.hy = Math.sin(ang);
-    const v = speedOf(c.mass), w = this.wind(), k = Math.min(1, dt * 2);
+    const v = speedOf(c.mass) * (c.team >= 0 ? this.mods[c.team].speed : 1), w = this.wind(), k = Math.min(1, dt * 2);
     c.vx += (c.hx * v + w.x - c.vx) * k; c.vy += (c.hy * v + w.y - c.vy) * k;
   }
 
@@ -181,6 +202,11 @@ class CloudWarsSimulation {
     const dt = this.dt, a = this.area;
     this.step++; this.t = this.step * dt;
     const t = this.t, decideEvery = Math.round(RULES.decide / EBS.DT);
+    if (this.roles) {
+      const mass = this.teamMass();
+      for (let k = 0; k < 4; k++) this.mods[k] = EBS.CloudWarsStory.directFactors(this.roles, k, t - this.roundStart, mass);
+      for (const c of this.clouds) if (c.team >= 0) c.rainFactor = this.mods[c.team].rain;
+    }
     // Windhauch für den Hintergrundklang (Paket C6): alle 4 s, Stärke nach Wetter; nur ein Ereignis, kein Zufall
     if (this.step % Math.round(4 / dt) === 0) this.emit('gust', a.w / 2, a.h / 2, this.weatherNow().wind || 1, -1);
     // Runde zu Ende: kurze Pause, dann neue Runde (nur im Runden-Modus)
@@ -203,7 +229,7 @@ class CloudWarsSimulation {
         if ((this.step + c.id * 7) % decideEvery === 0) this.decide(c);
         this.steer(c, dt);
         // Verdunsten, Tanken über Wasser, Obergrenze
-        if (c.mass > RULES.evapFrom) c.mass -= (c.mass - RULES.evapFrom) * RULES.evapRate * (this.weatherNow().evap || 1) * dt;
+        if (c.mass > RULES.evapFrom) c.mass -= (c.mass - RULES.evapFrom) * RULES.evapRate * (this.weatherNow().evap || 1) * this.mods[c.team].evap * dt;
         if (c.mass < RULES.waterUpTo && this.overWater(c.x, c.y)) c.mass = Math.min(RULES.waterUpTo, c.mass + RULES.waterGain * dt);
         if (c.mass > RULES.massCap) c.mass -= (c.mass - RULES.massCap) * 0.2 * dt;
       }
@@ -241,7 +267,7 @@ class CloudWarsSimulation {
   byId(id) { for (const c of this.clouds) if (c.id === id) return c; return null; }
 
   finishEat(B, A) {
-    const gain = RULES.eatGain * B.mass * clamp(RULES.gainRef / A.mass, RULES.gainMin, 1);
+    const gain = RULES.eatGain * B.mass * clamp(RULES.gainRef / A.mass, RULES.gainMin, 1) * (A.team >= 0 ? this.mods[A.team].gain : 1);
     A.mass += gain; B.dead = true;
     this.chargeFrom(A, B);
     this.emit('absorb', A.x, A.y, B.mass, A.team);

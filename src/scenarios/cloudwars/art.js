@@ -237,7 +237,8 @@ class CloudArt {
     for (const c of sim.clouds) {
       if (c.team < 0 || c.eat) continue;
       const tm = this.teams[c.team], R = this.radiusOf(c.mass) * k;
-      const x = c.x * k, y = c.y * k - lift - R * 0.62 - fs * 0.9;
+      // Schild bleibt im Bild, auch wenn die Wolke am oberen Rand steht
+      const x = c.x * k, y = Math.max(fs * 1.1, c.y * k - lift - R * 0.62 - fs * 0.9);
       const w = g.measureText(tm.name).width + fs * 1.1, h = fs * 1.45;
       g.fillStyle = 'rgba(255,255,255,0.92)'; g.strokeStyle = tm.color; g.lineWidth = 2.5;
       g.beginPath(); g.roundRect(x - w / 2, y - h / 2, w, h, h / 2); g.fill(); g.stroke();

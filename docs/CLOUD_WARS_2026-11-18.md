@@ -291,3 +291,53 @@ alle 4 s), dazu `test/audio.test.mjs` und `test/audio-camera-plan.test.mjs` (20 
 Klänge bekommt). Ein Export von 20 s, kein vollständiger `npm test`.
 
 **Offene Frage für später:** Hörurteil zum Probeclip (Donner, Wind, Lautstärke).
+
+## C7 · Short mit verdeckter Regie (18.11.2026)
+
+**Umfang**
+
+- Rollen aus dem Seed in `story.js`: Riese, Außenseiter, Opfer, Mitläufer. Die Regie ändert nur Faktoren je Team
+  (Tempo, Fluchtabstand, Beutewahl, Zugewinn, Regen, Verdunsten), nie die Regeln. Drei Phasen:
+  - **Bis Sekunde 12:** Der Riese startet 2,5-mal so groß, wächst 1,8-mal so schnell und wird nicht gejagt. Neue
+    neutrale Wolken entstehen zu 70 % außerhalb des Bildes auf seiner Windseite und treiben ihm zu. Er jagt bevorzugt
+    das Opfer, das auf derselben Bildhälfte startet, langsamer ist (×0,85) und schlechter flieht.
+  - **Ab Sekunde 18:** Der Riese regnet sich klein (Regen ×3, Verdunsten ×15, Zugewinn ×0,5, Tempo ×0,8). Die neuen
+    Wolken treiben jetzt dem Außenseiter zu.
+  - **Ab Sekunde 20 (Schlussphase):** Der Außenseiter (Zugewinn ×2) jagt Riese und Mitläufer und ist ×1,3 schneller.
+    Mutig wird er erst, wenn er stärker ist als der Riese. Den ganzen Lauf über jagt ihn niemand.
+- **Gewitterschwelle im Short 18 statt 30** (weiß unter 13). Mit einer Wolke je Team erreichte kaum eine Wolke 30.
+  Das ist eine eigene Schwelle je Modus wie die Fress-Schwelle aus C1; der Runden-Modus bleibt unverändert.
+- Casting-Skript `scripts/cloudwars-short-casting.mjs` (ohne Browser, etwa 0,5 s je Seed). Mit `--off` zum
+  Vergleich ohne Regie, mit `--list` die Liste der vollständigen Seeds.
+- Natürliche Länge: Sieg plus 1,5 s Ausklang. Die Vorprüfung beim Export bricht außerhalb von 24–38 s mit einem
+  Hinweis auf einen passenden Seed ab. Schalter „Short-Ende“ (mit dem Sieg / freie Länge) und „Regie“ (an/aus).
+- Vorlagen „Short“ und „Langvideo“ in `src/production-presets.js` und `presets/production/cloudwars-*.json`. Die
+  Short-Vorlage nimmt den nächsten geprüften Seed ab dem eingestellten (aus 42 wird 44).
+- Namensschilder bleiben am oberen Bildrand im Bild.
+
+**Casting über 300 Seeds** (Seeds 1–300, 9:16):
+
+| Bedingung | ohne Regie | mit Regie |
+|---|---|---|
+| Gewitter vor Sekunde 12 | 0 % | 79 % |
+| Ausscheiden vor Sekunde 22 | 89 % | 98 % |
+| Der Außenseiter gewinnt | 21 % | 85 % |
+| Länge 24–38 s | 25 % | 59 % |
+| **Geschichte vollständig** | **0 %** | **42 % (126 Seeds)** |
+
+Das Ziel von 85 % ist nicht erreicht. Meist wird das Short zu lang (97 von 300 über 38 s), weil sich die letzten
+Wolken lange jagen. Noch stärkere Faktoren machen die Regie sichtbar (Wolken, die einander ignorieren). Deshalb
+nimmt die Vorlage nur geprüfte Seeds; davon gibt es genug. **Offene Frage am Ende:** so lassen, die erlaubte
+Länge auf bis zu 45 s erweitern oder die Regie weiter verschärfen?
+
+**Vorschau:** [Short, drei Seeds](reference/cloudwars-c7-short-2026-11-18.jpg) (44, 2, 5; je Frage, erstes
+Gewitter, Sekunde 21, Sieg).
+
+**Geprüft:**
+
+- neue Datei `test/cloudwars-short.test.mjs` (sechs Tests ohne Browser, darunter 30 Minuten Runden-Modus: Rollen, die ersten fünf geprüften Seeds
+  erzählen die Geschichte, Regie aus, Vorprüfung, Vorlagen gleich den JSON-Dateien)
+- `test/presets-export-cloudwars.test.mjs` (Produktionsweg Short und Langvideo mit je 3 s Export, auch im CI)
+- `test/cloudwars.test.mjs` (12 Tests), `test/presets.test.mjs`, `test/core.test.mjs`, einmal `npm run golden`
+
+Kein ganzes Short exportiert (nur auf ausdrücklichen Auftrag).

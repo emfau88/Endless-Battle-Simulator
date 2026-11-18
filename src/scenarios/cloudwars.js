@@ -1,7 +1,7 @@
 /*
  * Szenario „Cloud Wars“ (in Arbeit) – Plan: docs/CLOUD_WARS_PLAN_2026-11-18.md
  *
- * Stand Paket C6: Der Seed wählt einen festen Ausschnitt der Landschaft aus dem Prototyp „Wolkenflug“; er wird einmal
+ * Stand Paket C7: Der Seed wählt einen festen Ausschnitt der Landschaft aus dem Prototyp „Wolkenflug“; er wird einmal
  * vorgezeichnet. Darüber treiben Team-Wolken und neutrale Wolken (Simulation: cloudwars/simulation.js). Paket C2:
  * Wolken im Stil des Prototyps mit Teamfarbe, Augen, Namensschild und fliegenden Puffs (cloudwars/art.js).
  * Maßstab je Format (Wunsch des Nutzers: „auf Handy und PC jeweils passend“): Hochformat näher, 1 GE = 2,0 logische
@@ -12,7 +12,16 @@
 const T = EBS.CloudWarsTerrain, S = EBS.CloudWarsSim;
 const scaleFor = (world) => (world.h > world.w ? 2.0 : 1.4);
 
-const defaults = { mode: 'short', display: 'auto' };
+const defaults = { mode: 'short', display: 'auto', director: 'on', videoEnd: 'victory' };
+// Short: Ausklang nach dem Sieg, erlaubte Länge (Vorprüfung beim Export) und die Seeds, bei denen die verdeckte Regie
+// ihre ganze Geschichte erzählt (aus `node scripts/cloudwars-short-casting.mjs --list`, Seeds 1–300; Paket C7).
+// Nach jeder Änderung an Simulation oder Regie neu erzeugen; der Test prüft die ersten Einträge.
+const SHORT = {
+  outroSec: 1.5, lengthSec: [24, 38],
+  seeds: [2,4,5,8,12,14,15,16,18,20,28,31,35,36,39,41,44,45,48,52,53,54,58,61,63,66,73,74,75,76,77,80,81,82,83,85,87,88,89,90,93,99,101,102,104,108,109,110,111,116,118,119,129,130,131,132,133,135,136,140,142,143,146,149,150,151,156,158,164,168,169,172,173,174,178,179,183,188,191,192,196,202,204,206,207,208,215,216,217,218,219,222,224,232,233,234,235,237,238,243,246,247,248,249,252,253,261,262,263,265,266,269,273,274,280,281,282,283,284,286,287,288,289,296,297,300],
+};
+/** Nächster geprüfter Short-Seed ab seed (ringsum). */
+const castSeed = (seed) => SHORT.seeds.find((s) => s >= seed) ?? SHORT.seeds[0];
 
 // Ton (Paket C6): weiche Klänge, feste Mischung wie Marble XL (fester Grundpegel, kein Nachnormalisieren).
 const AUDIO_EVENTS = {
@@ -58,6 +67,8 @@ function normalizeParams(input) {
   return {
     mode: ['short', 'rounds'].includes(p.mode) ? p.mode : defaults.mode,
     display: ['auto', 'full', 'slim', 'off'].includes(p.display) ? p.display : defaults.display,
+    director: p.director === 'off' ? 'off' : 'on',
+    videoEnd: p.videoEnd === 'free' ? 'free' : 'victory',
   };
 }
 
@@ -149,11 +160,16 @@ EBS.registerScenario({
   defaults,
   controls: [
     { key: 'mode', label: 'Ablauf', type: 'select', restart: true, options: [['short', 'Short (rund 30 s)'], ['rounds', 'Runden (Langvideo)']] },
+    { key: 'videoEnd', label: 'Short-Ende', type: 'select', affectsDuration: true, options: [['victory', 'Mit dem Sieg (Länge automatisch)'], ['free', 'Freie Länge']] },
+    { key: 'director', label: 'Regie (Short)', type: 'select', restart: true, options: [['on', 'An: verdeckte Rollen'], ['off', 'Aus: freier Ablauf']] },
     { key: 'display', label: 'Anzeige', type: 'select', options: [['auto', 'Automatisch (hochkant schlank, quer voll)'], ['full', 'Voll: Punktestand, Runde, Uhrzeit'], ['slim', 'Schlank: Farbpunkte und Einblendungen'], ['off', 'Aus']] },
   ],
   supportsCamera: false, supportsClips: true,                      // Ausschnitte: der Renderer hält keinen Zustand zwischen Bildern
   audio: { events: AUDIO_EVENTS, mixProfile: 'marbleworks-soft-v1', fixedGainDb: 3, ceilingDb: -6 },
   createAudioMixPlan,
+  hasNaturalDuration: (cfg) => cfg.params.mode === 'short' && cfg.params.videoEnd === 'victory',
+  createExportPlan: (cfg, world) => shortPlan(cfg, world),
+  durationLabel: { pending: 'Ablauf des Shorts wird berechnet …', complete: 'Automatisch: bis zum Sieg plus 1,5 s Ausklang (24–38 s).' },
   normalizeParams,
   create: (ctx) => new CloudWarsSim(ctx),
   createRenderer: (ctx) => new CloudWarsRenderer(ctx),
@@ -168,5 +184,22 @@ EBS.registerScenario({
   },
   panelNote: (sim) => sim.snapshot().summary,
 });
-EBS.CloudWars = { scaleFor };
+/** Short: Länge aus dem Ablauf (Sieg + Ausklang); außerhalb von 24–38 s bricht die Vorprüfung mit einem Hinweis ab. */
+function shortPlan(cfg, world) {
+  if (cfg.params.mode !== 'short' || cfg.params.videoEnd !== 'victory') return null;
+  const sim = new CloudWarsSim({ seed: cfg.seed, params: cfg.params, world, timeScale: cfg.video.tempo });
+  return { advance() {
+    for (let i = 0; i < 1800 && sim.endAt < 0; i++) sim.stepOnce();
+    if (sim.endAt < 0 && sim.t < 90) return { done: false };
+    if (sim.endAt < 0) throw new Error(`Cloud Wars: Seed ${cfg.seed} findet in 90 s keinen Sieger. Passende Seeds: node scripts/cloudwars-short-casting.mjs --list`);
+    const fps = cfg.video.fps, durationSec = Math.ceil((sim.endAt / (cfg.video.tempo || 1) + SHORT.outroSec) * fps) / fps;
+    const [lo, hi] = SHORT.lengthSec;
+    if (durationSec < lo || durationSec > hi) {
+      throw new Error(`Cloud Wars: Seed ${cfg.seed} ergibt ein Short von ${durationSec.toFixed(1)} s (erlaubt ${lo}–${hi} s). Die Short-Vorlage wählt geprüfte Seeds, z. B. ${castSeed(cfg.seed + 1)}.`);
+    }
+    return { done: true, durationSec };
+  } };
+}
+
+EBS.CloudWars = { scaleFor, SHORT, castSeed };
 })();

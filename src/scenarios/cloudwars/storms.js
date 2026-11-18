@@ -10,7 +10,7 @@ const TAU = Math.PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
 const STORM = {
-  on: 30, off: 22, rainLoss: 0.6, boltMin: 4, boltMax: 7, boltRange: 2.2, zapShare: 0.18, groundIgnite: 0.7, burnCap: 0.14,
+  on: 30, off: 22, shortOn: 18, shortOff: 13, rainLoss: 0.6, boltMin: 4, boltMax: 7, boltRange: 2.2, zapShare: 0.18, groundIgnite: 0.7, burnCap: 0.14,
   neutralStorms: 1, neutralStormsFront: 3, neutralMass: [9, 16], chargedTime: 20, boltLife: 0.35,
   rainReach: 0.8,
 };
@@ -24,6 +24,9 @@ const NONE = 0, BURN = 1, SCAR = 2, OUT = 3;
 
 Object.assign(CloudWarsSimulation.prototype, {
   initStorms() {
+    // Schwellen je Modus: Im Short (eine Wolke je Team, 30 s) wird eine Wolke früher zum Gewitter (Paket C7)
+    this.stormOn = this.cfg.mode === 'short' ? STORM.shortOn : STORM.on;
+    this.stormOff = this.cfg.mode === 'short' ? STORM.shortOff : STORM.off;
     const a = this.area, c = FIRE.cell, nx = Math.ceil(a.w / c), ny = Math.ceil(a.h / c);
     const forest = new Uint8Array(nx * ny);
     for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) forest[j * nx + i] = T.isForestAt(a.x + (i + 0.5) * c, a.y + (j + 0.5) * c) ? 1 : 0;
@@ -74,11 +77,11 @@ Object.assign(CloudWarsSimulation.prototype, {
     for (const c of this.clouds) {
       if (c.dead || c.eat) continue;
       if (c.team >= 0) {
-        // Aufladung läuft ab; danach gilt wieder die Hysterese (Gewitter ab 45, weiß unter 36)
-        if (c.charged && t > c.charged) { c.charged = 0; if (c.kind === 2) c.kind = c.mass >= STORM.on ? 1 : 0; }
+        // Aufladung läuft ab; danach gilt wieder die Hysterese (Gewitter ab stormOn, weiß unter stormOff)
+        if (c.charged && t > c.charged) { c.charged = 0; if (c.kind === 2) c.kind = c.mass >= this.stormOn ? 1 : 0; }
         if (!c.charged) {
-          if (c.kind !== 1 && c.mass >= STORM.on) { c.kind = 1; c.boltAt = t + this.boltGap(c); this.emit('storm', c.x, c.y, c.mass, c.team); }
-          else if (c.kind === 1 && c.mass < STORM.off) c.kind = 0;
+          if (c.kind !== 1 && c.mass >= this.stormOn) { c.kind = 1; c.boltAt = t + this.boltGap(c); this.emit('storm', c.x, c.y, c.mass, c.team); }
+          else if (c.kind === 1 && c.mass < this.stormOff) c.kind = 0;
         }
       }
       if (!c.kind) continue;

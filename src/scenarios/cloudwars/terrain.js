@@ -116,10 +116,10 @@ function interp(lx, ly) {
 
 // ---------- Grundfarben pro Pixel (2 Welteinheiten je Pixel) ----------
 const BR = CS / 2 + 2;
-const baseCan = document.createElement('canvas'); baseCan.width = baseCan.height = BR;
-const baseCtx = baseCan.getContext('2d');
-const baseImg = baseCtx.createImageData(BR, BR);
+// Leinwand erst beim ersten Zeichnen anlegen: so laufen Simulation und Casting-Skript auch ohne Browser
+let baseCan = null, baseCtx = null, baseImg = null;
 function renderBase(x0, y0) {
+  if (!baseCan) { baseCan = document.createElement('canvas'); baseCan.width = baseCan.height = BR; baseCtx = baseCan.getContext('2d'); baseImg = baseCtx.createImageData(BR, BR); }
   const D = baseImg.data;
   let p = 0, lastKey = -1, isF = 0;
   for (let py = 0; py < BR; py++) {
