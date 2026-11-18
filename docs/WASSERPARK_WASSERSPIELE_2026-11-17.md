@@ -84,6 +84,12 @@ neun Fahrten enden in 20 Sekunden.
   Brett, nie rückwärts, Bewegung nur bei abwärts geneigtem Brett, zwei Anschläge je Fahrt.
 - Nahaufnahmen liegen lokal unter `output/waterpark-dev/wippe/`. Die Abnahme durch den Nutzer steht aus.
 
+## Nachjustierung nach der 1-Minuten-Probe (18.11.2026)
+
+- **Kippbrett:** eine halbe Figurenbreite weiter zum Einstieg hin. Das Tier landet anderthalb Radien hinter dem Drehpunkt statt direkt daran.
+- **Sprungfeder:** 20 % höher, dazu je Sprung bis zu 30 %. Ein bis drei Drehungen in wechselnder Richtung, eigener Landeplatz in der Bucht (quer bis 55 Pixel zur Feder hin, hoch bis 40 Pixel nach beiden Seiten), größerer Platscher, bei etwa sechs von zehn Sprüngen eine Sprechblase.
+- Ändert den Ablauf von Wippe und Sprung (Zustands-Hashes des Wasserparks). Geprüft: Simulationstests 22 von 22, Browsertest 3 von 3, Nahaufnahmen unter `output/waterpark-dev/wippe-sprung/`.
+
 ## Kleinigkeiten
 
 - Der Fahrtenzähler hat einen dunklen Rand und bleibt vor einer weißen Wolke lesbar.
