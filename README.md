@@ -80,6 +80,10 @@ Weitere Wasserpark-Vorlagen: Parktag mit [5](presets/waterpark-day-5min.json), [
 
 ## Details und Entwicklungsstand
 
+[Lokaler YouTube-Kanalaudit vom 18.11.2026](docs/YOUTUBE_KANALAUDIT_2026-11-18.md):
+Fundstellenhinweis für künftige Agenten. Der vollständige Informationsbericht bleibt außerhalb
+der Git-Versionierung in der Hauptarbeitskopie; keine verbindliche Produktionsanweisung.
+
 [Marble Works](docs/PROGRESSIVE_MARBLE_V1.md) · [Scrap Wars](docs/SCRAP_WARS_INTEGRATION_2026-11-12.md) · [Mycelium](docs/MYCELIUM_2026-11-13.md) · [Pyramid](docs/ENDLESS_PYRAMID_2026-11-13.md) · [Territory Wars](docs/TERRITORY_INTEGRATION_2026-11-13.md) · [Waterpark](docs/WASSERPARK_MOCKUP_2026-11-16.md) · [Integrations- und Exportprüfungen](docs/ALLE_SZENARIEN_INTEGRATION_2026-11-13.md)
 
 Vorhandene Exportoptionen bedeuten keine vollständige Abnahme jeder Kombination und Filmlänge. Den Klang von Marble Works hat der Nutzer am 14.11.2026 anhand der Reviewvideos freigegeben ([Kameraton](docs/MARBLEWORKS_CAMERA_AUDIO.md)).

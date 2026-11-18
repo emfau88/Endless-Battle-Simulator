@@ -7,6 +7,10 @@ Die **einzige aktive Aufgabenliste** des Projekts. Kurz gehalten: Stand, was jet
 - Arbeitsregeln stehen in [AGENTS.md](../AGENTS.md), der Aufbau in [ARCHITEKTUR.md](ARCHITEKTUR.md).
 - Die frühere ausführliche Roadmap liegt unverändert im [Archiv](archiv/ROADMAP_2026-11-16.md).
 
+**Lokale Informationsgrundlage:** Zum [YouTube-Audit vom 18.11.2026](YOUTUBE_KANALAUDIT_2026-11-18.md)
+ist im Repository nur die lokale Fundstelle dokumentiert. Der vollständige Bericht wird nicht
+veröffentlicht; seine Empfehlungen sind nicht als neue Aufgaben oder Veröffentlichungsfrequenz beschlossen.
+
 **Projektziel:** SimCascade veröffentlicht regelmäßig eigenständige, gut lesbare Simulationsvideos mit sauberem Ton:
 Shorts in 9:16 und längere Videos in 16:9. Alle Texte im Video sind englisch.
 
