@@ -20,6 +20,9 @@ const RULES = {
   eatRatio: 1.1, teamEatRatio: { short: 1.1, rounds: 2.2 }, fleeRangeMode: { short: 3, rounds: 4 }, eatReach: 0.25, eatTime: 0.7, eatGain: 0.85, gainRef: 25, gainMin: 0.35,
   evapFrom: 12, evapRate: 0.006, waterGain: 0.3, waterUpTo: 20, massCap: 120,
   neutralMin: 0.6, neutralMax: 3, neutralPerArea: 18 / (771 * 1371), neutralLo: 10, neutralHi: 22, spawnRate: 1.5,
+  // Short (Nutzerwunsch 18.11.: „mehr einsammeln“): mehr und kleinere neutrale Wolken, oft als kleine Gruppe, die eine
+  // Team-Wolke nacheinander aufsammelt. Gesamtmasse am Himmel bleibt ähnlich (26 × rund 0,75 statt 10 × 1,8).
+  shortNeutral: { count: 26, min: 0.3, max: 1.4, spawnRate: 4, group: 0.6, groupSize: [3, 5], groupSpread: 22 },
   wind: 10, windSwing: 0.6, windPeriod: 90,
   decide: 0.25, turnRate: Math.PI / 2, fleeRange: 3, preyBias: 80, enemyBonus: 1.5,
   tankBelow: 8, tankPreyRange: 300, edge: 60, roundLimit: 360, roundPause: 4,
@@ -41,7 +44,10 @@ class CloudWarsSimulation {
     this.perTeam = params.mode === 'rounds' ? 2 : 1;
     this.teamRatio = RULES.teamEatRatio[params.mode] || RULES.eatRatio;
     this.fleeRange = RULES.fleeRangeMode[params.mode] || RULES.fleeRange;
-    this.neutralTarget = Math.round(clamp(RULES.neutralPerArea * area.w * area.h, RULES.neutralLo, RULES.neutralHi));
+    const NS = params.mode === 'short' ? RULES.shortNeutral : null;
+    this.neutral = NS ? { min: NS.min, max: NS.max, rate: NS.spawnRate, group: NS.group }
+      : { min: RULES.neutralMin, max: RULES.neutralMax, rate: RULES.spawnRate, group: 0 };
+    this.neutralTarget = NS ? NS.count : Math.round(clamp(RULES.neutralPerArea * area.w * area.h, RULES.neutralLo, RULES.neutralHi));
     this.buildWater();
     this.initStorms();
     this.clouds = []; this.nextId = 1; this.eats = [];
@@ -112,15 +118,42 @@ class CloudWarsSimulation {
       const s = spots[k * 4 + ti];
       this.addCloud(order[ti], RULES.startMass * (this.roles && order[ti] === this.roles.giant ? EBS.CloudWarsStory.DIRECT.giantStart : 1), s[0] * a.w, s[1] * a.h);
     }
-    // Neutrale Wolken über das ganze Bild verteilt
-    for (let i = 0; i < this.neutralTarget; i++) {
-      this.addCloud(-1, RULES.neutralMin + rng.next() * (RULES.neutralMax - RULES.neutralMin), (0.05 + 0.9 * rng.next()) * a.w, (0.05 + 0.9 * rng.next()) * a.h);
+    // Neutrale Wolken über das ganze Bild verteilt, im Short teils als kleine Gruppen
+    for (let i = 0; i < this.neutralTarget;) {
+      if (!this.neutral.group) {                                   // Runden-Modus: Ablauf wie bisher (gleiche Zufallsfolge)
+        this.addCloud(-1, this.neutralMass(), (0.05 + 0.9 * rng.next()) * a.w, (0.05 + 0.9 * rng.next()) * a.h); i++;
+        continue;
+      }
+      const x = (0.05 + 0.9 * rng.next()) * a.w, y = (0.05 + 0.9 * rng.next()) * a.h;
+      i += this.addNeutralGroup(x, y, this.neutralTarget - i, 0, 0).length;
     }
+  }
+
+  neutralMass() { const N = this.neutral; return N.min + this.rngFlow.next() * (N.max - N.min); }
+
+  /**
+   * Short: eine neutrale Wolke oder (mit Wahrscheinlichkeit group) eine Gruppe von 3–5 kleinen dicht beieinander,
+   * die eine Team-Wolke nacheinander aufsammeln kann. vx, vy: Anfangsgeschwindigkeit.
+   */
+  addNeutralGroup(x, y, room, vx, vy) {
+    const rng = this.rngFlow, N = this.neutral, NS = RULES.shortNeutral;
+    let n = 1;
+    if (rng.next() < N.group) n = Math.max(1, Math.min(room, NS.groupSize[0] + Math.floor(rng.next() * (NS.groupSize[1] - NS.groupSize[0] + 1))));
+    const out = [];
+    for (let k = 0; k < n; k++) {
+      const ang = rng.next() * TAU, d = k ? NS.groupSpread * (0.6 + 0.6 * rng.next()) : 0;
+      const mass = n > 1 ? N.min + rng.next() * (N.max - N.min) * 0.6 : this.neutralMass();
+      const c = this.addCloud(-1, mass, x + Math.cos(ang) * d, y + Math.sin(ang) * d);
+      c.vx = vx; c.vy = vy;
+      out.push(c);
+    }
+    return out;
   }
 
   spawnNeutral(massOverride) {
     const a = this.area, rng = this.rngFlow, w = this.wind(), ux = Math.cos(w.ang), uy = Math.sin(w.ang);
-    const mass = massOverride || RULES.neutralMin + rng.next() * (RULES.neutralMax - RULES.neutralMin), r = radiusOf(mass);
+    const group = !massOverride && this.neutral.group > 0;
+    const mass = massOverride || (group ? this.neutral.max : this.neutralMass()), r = radiusOf(mass) + (group ? RULES.shortNeutral.groupSpread * 1.2 : 0);
     // Zufälliger Punkt im Bild, dann gegen den Wind bis vor den Rand zurückschieben
     let x = rng.next() * a.w, y = rng.next() * a.h;
     // Regie: anfangs wird der Riese gefüttert, in der Schlussphase der Außenseiter
@@ -137,7 +170,8 @@ class CloudWarsSimulation {
     const ty = uy > 1e-6 ? y / uy : uy < -1e-6 ? (y - a.h) / uy : Infinity;
     const back = Math.min(tx, ty) + r + 20;
     x -= ux * back; y -= uy * back;
-    const c = this.addCloud(-1, mass, x, y);
+    if (group) { this.addNeutralGroup(x, y, POOL - this.clouds.length, w.x + (rng.next() - 0.5) * 8, w.y + (rng.next() - 0.5) * 8); return; }
+    const c = this.addCloud(-1, mass, x, y);                       // Runden-Modus: Reihenfolge der Zufallszahlen wie bisher
     c.vx = w.x + (rng.next() - 0.5) * 8; c.vy = w.y + (rng.next() - 0.5) * 8;
   }
 
@@ -214,7 +248,7 @@ class CloudWarsSimulation {
     // Neutrale Wolken nachliefern
     let neutrals = 0;
     for (const c of this.clouds) if (c.team < 0 && !c.dead) neutrals++;
-    if (neutrals < this.neutralTarget && this.clouds.length < POOL && this.rngFlow.next() < RULES.spawnRate * dt) this.spawnNeutral();
+    if (neutrals < this.neutralTarget && this.clouds.length < POOL && this.rngFlow.next() < this.neutral.rate * dt) this.spawnNeutral();
     // Bewegen
     for (const c of this.clouds) {
       if (c.dead) continue;

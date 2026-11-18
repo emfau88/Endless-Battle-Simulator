@@ -6,6 +6,7 @@
  * Wolken im Stil des Prototyps mit Teamfarbe, Augen, Namensschild und fliegenden Puffs (cloudwars/art.js).
  * Maßstab je Format (Wunsch des Nutzers: „auf Handy und PC jeweils passend“): Hochformat näher, 1 GE = 2,0 logische
  * Einheiten (1 080 × 1 920 → 540 × 960 GE); Querformat weiter, 1 GE = 1,4 (1 920 × 1 080 → 1 371 × 771 GE).
+ * Nachtrag 18.11.: im Short mehr und kleinere neutrale Wolken; Leben am Boden in cloudwars/ground-life.js.
  */
 (function () {
 'use strict';
@@ -18,7 +19,7 @@ const defaults = { mode: 'short', display: 'auto', director: 'on', videoEnd: 'vi
 // Nach jeder Änderung an Simulation oder Regie neu erzeugen; der Test prüft die ersten Einträge.
 const SHORT = {
   outroSec: 1.5, lengthSec: [24, 60],
-  seeds: [2,4,5,8,10,12,13,14,15,16,18,20,23,27,28,31,32,33,35,36,38,39,40,41,42,43,44,45,47,48,51,52,53,54,56,57,58,59,61,63,66,67,69,73,74,75,76,77,78,80,81,82,83,85,87,88,89,90,93,95,96,98,99,101,102,103,104,105,106,107,108,109,110,111,116,118,119,121,122,125,126,128,129,130,131,132,133,135,136,140,142,143,146,148,149,150,151,156,158,160,163,164,165,166,167,168,169,172,173,174,176,178,179,180,182,183,187,188,191,192,194,195,196,199,202,204,206,207,208,209,211,212,214,215,216,217,218,219,221,222,223,224,230,231,232,233,234,235,237,238,239,242,243,245,246,247,248,249,252,253,261,262,263,265,266,267,269,271,273,274,277,280,281,282,283,284,286,287,288,289,296,297,299,300],
+  seeds: [1,3,4,6,7,8,9,10,13,14,15,16,17,21,22,23,24,27,28,30,31,32,33,34,35,36,37,44,45,47,48,52,54,58,60,61,62,63,65,66,68,69,70,71,72,73,75,76,77,79,82,84,86,88,91,92,93,95,98,99,101,103,107,109,110,112,114,115,116,117,123,125,126,127,128,130,131,132,133,135,137,139,140,141,142,145,148,152,153,154,155,156,161,163,165,166,169,170,171,173,175,176,177,178,179,180,181,182,184,186,188,189,190,194,195,198,200,202,203,204,205,207,208,210,211,212,213,218,219,221,225,226,227,230,232,234,235,236,237,239,244,245,249,250,251,254,256,261,262,263,264,265,267,268,270,272,273,274,276,278,280,281,282,287,290,291,292,295,296,297,300],
 };
 /** Nächster geprüfter Short-Seed ab seed (ringsum). */
 const castSeed = (seed) => SHORT.seeds.find((s) => s >= seed) ?? SHORT.seeds[0];
@@ -111,6 +112,7 @@ class CloudWarsRenderer extends EBS.CanvasScene {
     this.art = new EBS.CloudWarsArt.CloudArt({ radiusOf: S.radiusOf, teams: S.TEAMS });
     this.fx = new EBS.CloudWarsEffects.Effects({ radiusOf: S.radiusOf, storms: EBS.CloudWarsStorms, lift: EBS.CloudWarsArt.STYLE.lift / sim.geScale });
     this.atmo = new EBS.CloudWarsAtmosphere.Atmosphere(sim);
+    this.life = new EBS.CloudWarsGroundLife.GroundLife(sim);
     this.layout = new EBS.CloudWarsLayout.Layout({ teams: S.TEAMS, world });
   }
   paint(g) {
@@ -125,13 +127,19 @@ class CloudWarsRenderer extends EBS.CanvasScene {
     const eve = Math.max(0, Math.min(1, (L.day - 0.42) / 0.14)) * (L.day < 0.7 ? 1 : 0);
     const STY = EBS.CloudWarsArt.STYLE, shadow = { dx: STY.shadow[0] * (1 + 1.4 * eve), dy: STY.shadow[1] * (1 + 0.6 * eve), alpha: STY.shadowAlpha * (1 - 0.7 * night) };
     g.save(); g.scale(k, k);
-    // Boden: Brandflächen, Feuer, Feuerwehr, Autos, Boote, Rauch (Pakete C3, C4)
+    // Boden: Wasser in Bewegung, Feldarbeit, Brandflächen, Feuer, Feuerwehr, Autos, Boote, Tiere, Rauch (Pakete C3, C4;
+    // Leben am Boden: cloudwars/ground-life.js)
+    this.life.drawWater(g, sim);
+    this.life.drawFields(g, sim);
     g.drawImage(this.fx.scarLayer(sim, px), 0, 0, a.w, a.h);
     if (wx.kind === 'heat') { g.fillStyle = `rgba(255,196,110,${0.08 * wx.fade})`; g.fillRect(0, 0, a.w, a.h); }
     this.fx.drawFires(g, sim, night);
+    this.life.drawAnimals(g, sim);
     this.atmo.drawCars(g, sim, night);
     this.atmo.drawBoats(g, sim);
+    this.life.drawRiverBoats(g, sim);
     this.fx.drawTrucks(g, sim);
+    this.life.drawChimneySmoke(g, sim);
     this.fx.drawSmoke(g, sim);
     this.atmo.drawBirds(g, sim);
     // Wolken mit Schatten; Regen zwischen Schatten und Wolken
@@ -142,6 +150,7 @@ class CloudWarsRenderer extends EBS.CanvasScene {
     this.atmo.tint(g, w, L);
     g.save(); g.scale(k, k);
     this.atmo.drawLights(g, sim, night);
+    this.life.drawLights(g, sim, night, this.atmo.warm, this.atmo.white);
     if (night > 0.05) { g.globalAlpha = night * 0.6; this.fx.drawFires(g, sim, night); g.globalAlpha = 1; }
     this.fx.drawBolts(g, sim, k);
     g.restore();

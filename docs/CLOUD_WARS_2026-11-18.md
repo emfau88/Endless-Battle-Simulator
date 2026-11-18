@@ -384,3 +384,53 @@ Entscheidung des Nutzers: Shorts dürfen 45 oder 60 s dauern, wenn es dem Ergebn
 **24–60 s** (vorher 24–38 s). Neues Casting über 300 Seeds: Länge passt bei 87 %, **die ganze Geschichte gelingt
 bei 61 %** (184 Seeds, vorher 42 %), Median 34 s. Die Liste der geprüften Seeds ist neu erzeugt; Seed 42 ist jetzt
 dabei, die Short-Vorlage bleibt also bei 42. Frage 3 der Liste oben ist damit beantwortet.
+
+## Nachtrag: Mehr Einsammeln und Leben am Boden (18.11.2026)
+
+Rückmeldung des Nutzers zum ersten Short: Es fehlt das Einsammeln kleiner neutraler Wolken und das Wachsen dadurch
+(„jede Wolke sammelt gefühlt nur 3 kleinere“), und am Boden fehlen Liebe und Bewegung: ausgeklügeltere Dörfer, langsame
+Wasserbewegung auf dem Fluss, kleine Boote, liebevolle Details ohne Übermaß.
+
+**Einsammeln (nur Short, Simulation):** Im Short schweben jetzt 26 statt 10 neutrale Wolken, dafür kleiner
+(Masse 0,3–1,4 statt 0,6–3; die Gesamtmasse am Himmel bleibt ähnlich). 60 % davon kommen als kleine Gruppe von 3–5
+Wölkchen, die eine Team-Wolke nacheinander aufsammelt. Nachschub 4 je Sekunde statt 1,5. Werte in
+`RULES.shortNeutral` (`src/scenarios/cloudwars/simulation.js`). Der Runden-Modus (Langvideo) ist unverändert:
+gleiche Zustands-Hashes wie vorher über 100 s für Seed 42 und 7 in 16:9 und Seed 42 in 9:16.
+
+| Messung (je die ersten 40 geprüften Seeds der alten und der neuen Liste) | vorher | nachher |
+|---|---|---|
+| Außenseiter frisst kleine Wolken (Median) | 5 | 12 |
+| erstes Team raus (Median) | 5,8 s | 7,3 s |
+| zweites Team raus (Median) | 13,4 s | 17,3 s |
+| Sieg (Median) | 33,7 s | 32,0 s |
+
+Neues Casting über 300 Seeds: **die ganze Geschichte gelingt bei 57 %** (171 Seeds, vorher 61 %), Länge 24–60 s bei
+82 %, Median 33,4 s. Die Liste der geprüften Seeds ist neu; Seed 42 ist nicht mehr dabei, die Short-Vorlage nimmt
+jetzt Seed 44.
+
+**Leben am Boden (nur Darstellung):**
+
+- Dörfer (fest im Geländebild): Walmdächer bei rund der Hälfte der Häuser, Schornsteine, einzelne Solardächer,
+  geparkte Autos vor der Tür, Gärten mit Zaun oder Hecke, Beeten und Obstbaum, Dorfplatz mit Linde, wo sich in größeren
+  Dörfern die Straßen treffen, Kirchturm mit Pyramidendach und längerem Schatten, Brücken, wo eine Straße Wasser quert.
+  Die Zusätze kommen aus festen Hashes; Lage der Häuser und Auswahl der Ausschnitte bleiben gleich.
+- Bewegung (neue Datei `src/scenarios/cloudwars/ground-life.js`, alles aus der Zeit berechnet): Der Fluss strömt
+  (weiche helle Schlieren entlang der Flussmitte), auf Seen kommen und gehen kleine Wellen, auf dem Fluss fahren
+  Lastkahn, Motorboot oder Ruderboot (vor Brücken blenden sie aus, als führen sie darunter durch), ein Traktor pflügt
+  oder ein Mähdrescher erntet ein Feld Bahn für Bahn (die bearbeitete Fläche wächst sichtbar), Schafe und Kühe grasen
+  auf Weiden, aus manchen Schornsteinen steigt Rauch. Nachts haben Flussboote Laternen und Landmaschinen Scheinwerfer.
+- Rechenzeit je Bild (1080p, Software-Chromium, inklusive JPEG, Seed 44, Median): Hochformat 93 → 103 ms (mehr Wolken
+  und Bodenleben), Querformat rund 105 → 113 ms (nur Bodenleben). Probeclip 20 s Hochformat:
+  `output/cloudwars-probe-details.mp4` (nur lokal), −20,7 LUFS, Prüfung OK.
+
+**Grenzen:** Nicht jeder Ausschnitt hat einen Fluss, ein freies Feld oder eine Weide; dann fehlen Flussboote, Traktor
+oder Tiere. Flussmitte und gezeichnetes Wasser stimmen auf wenige Geländeeinheiten überein. Der Traktor arbeitet auch
+nachts (mit Licht).
+
+**Geprüft:** `test/cloudwars-short.test.mjs` (6 Tests), `test/cloudwars.test.mjs` (Seek-Regel und Bildvergleich),
+`test/presets-export-cloudwars.test.mjs`, Runden-Hash-Vergleich gegen den alten Stand. Vorschau vorher/nachher als
+Bilder an den Nutzer. Referenz-Hashes (`npm run golden`) nicht betroffen: Cloud Wars ist dort nicht enthalten.
+
+**Nachgezogen:** Zwei Tests mit fester Szenario-Liste (`test/config.test.mjs`, `test/marble.test.mjs`) kannten Cloud
+Wars noch nicht; dadurch war die CI-Gruppe „core“ seit Paket C0 rot. Beide Listen ergänzt, beide Tests grün.
+
