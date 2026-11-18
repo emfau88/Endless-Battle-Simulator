@@ -45,7 +45,7 @@ test('Ruhiges Duell: Grundwerte des Modus (2 Kanonen je Schiff, halbe Feuerrate,
   assert.equal(c.params.mode, 'calm');
   // feste Mischung des Modus: 100 % = Standard, eigener Regler für das Meeresrauschen, Klänge für Segel und Versenkung
   assert.deepEqual(c.video.volume, { master: 100, shot: 100, hit: 100, bounce: 100, rocket: 100, burst: 100, gold: 100, sail: 100, sink: 100,
-    splash: 100, land: 100, reload: 100, sea: 100 });
+    firework: 100, win: 100, splash: 100, land: 100, reload: 100, sea: 100 });
   const audio = (await page.evaluate(() => window.exportAPI.info())).audio;
   assert.equal(audio.mixProfile, 'naval-sea-v1');
   assert.equal(audio.background.file, 'pyramid-water-loop.wav');
@@ -117,6 +117,38 @@ test('Ruhiges Duell: Runde endet mit Versenkung, Punkt, Feuerpause mit Reparatur
   assert.equal(s.shots - s.recycled, s.inFlight + s.inRecycle, 'Bilanz Schüsse/Recycling stimmt nicht');
   assert.equal(s.splashes, s.shots - s.inFlight, 'Kugel hat die Flugphase ohne Wasserkontakt verlassen');
   await page.close();
+});
+
+test('Ruhiges Duell: Finale am Videoende – Schlusspfiff, Sieger, Feuerwerk; kurze Videos bleiben ohne Finale', async () => {
+  // 2-Minuten-Video: das Finale dauert 10 Sekunden und beginnt bei 1:50
+  const video = { aspect: '16:9', durationSec: 120 }, runs = [];
+  for (let k = 0; k < 2; k++) {
+    const page = await open({ params: { mode: 'calm' }, video });
+    let s = await run(page, 109);
+    assert.equal(s.final, null, 'Finale hat zu früh begonnen');
+    s = await run(page, 2);                                    // Schlusspfiff bei 110 s
+    assert.ok(s.final, 'kein Finale am Videoende');
+    const shots = s.shots, score = [...s.score];
+    assert.ok(s.final.draw ? s.final.winner === -1 : s.final.winner === 0 || s.final.winner === 1);
+    if (!s.final.draw) {
+      const w = s.final.winner, l = 1 - w;
+      assert.ok(score[w] > score[l] || (score[w] === score[l] && s.ships[w].damage <= s.ships[l].damage), 'falscher Sieger');
+    }
+    s = await run(page, 9);                                    // bis zum Videoende
+    const c = await check(page);
+    assert.ok(c.ok, c.errors.join('; '));
+    assert.equal(s.shots, shots, 'im Finale ist geschossen worden');
+    assert.deepEqual(s.score, score, 'im Finale hat sich der Spielstand geändert');
+    assert.ok(s.final.fireworks >= 5, `zu wenig Feuerwerk: ${s.final.fireworks}`);
+    assert.equal(s.ballsTotal, s.ballsExpected);
+    runs.push([await hash(page), s.final.winner, s.final.fireworks]);
+    await page.close();
+  }
+  assert.deepEqual(runs[0], runs[1], 'zwei Läufe mit gleichem Seed weichen im Finale ab');
+  // Videos unter 90 Sekunden (hier der Standard von 45 s) haben kein Finale
+  const short = await open(CALM), s = await run(short, 60);
+  assert.equal(s.final, null);
+  await short.close();
 });
 
 test('Ruhiges Duell: Zeichnen verändert den Zustand nicht (Segel mit Löchern im Bild)', async () => {
