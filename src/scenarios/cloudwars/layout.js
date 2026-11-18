@@ -1,7 +1,7 @@
 /*
  * Cloud Wars – Anzeige und Einblendungen je Format (Paket C5). Reine Darstellung in logischen Einheiten.
- * Hochformat (Short): kein Rahmen und keine Leisten, nur Einblendungen auf einer festen Zeile bei 17 % der Höhe, knapp
- * unter den Symbolen der Plattform (Nachtrag 18.11.); die rechten 14 % bleiben frei (Bedienung der Plattform). Die
+ * Hochformat (Short): kein Rahmen und keine Leisten, nur Einblendungen auf einer festen Zeile am oberen Rand (6,5 % der Höhe),
+ * zwischen den Symbolen der Plattform in den Ecken (Nachtrag 18.11.); die rechten 14 % bleiben frei (Bedienung der Plattform). Die
  * schlanke Anzeige (Farbpunkte mit Massebalken) bleibt wählbar.
  * Querformat: Punktestand oben links (Name, Siege, Massebalken), Runde und Uhrzeit oben rechts; Einblendungen bei 18 %.
  * Einblendungen kommen aus sim.notes (Gewitter, raus, Sieg, Runde) und dem Wetterplan; alles nur aus t berechnet.
@@ -11,7 +11,7 @@
 'use strict';
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const FONT = '"Segoe UI", Roboto, Arial, sans-serif';
-const BANNER = { show: 2.6, fadeIn: 0.25, fadeOut: 0.5, stale: 4, portraitY: 0.17 };
+const BANNER = { show: 2.6, fadeIn: 0.25, fadeOut: 0.5, stale: 4, portraitY: 0.065 };
 const INK = '#2b3a4f';
 
 function displayMode(params, world) {
