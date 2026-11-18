@@ -3,6 +3,9 @@
  * Übernommen aus dem Prototyp (puffLayout, blurCircles, PAL, buildSprite, ballSprite, eatPuffPos, drawFace) und für
  * den Simulator angepasst: kein Math.random, alles aus dem Seed der Wolke und der Simulationszeit (Seek-Regel).
  * Längen in Geländeeinheiten (GE), solange nichts anderes dasteht.
+ * Sog (Nachtrag 18.11.): Kommt eine Wolke einem Gegner nahe, den sie nach den Regeln fressen darf, ziehen Dunstfäden in
+ * ihrer Teamfarbe vom Opfer zu ihr, das Opfer wird zu ihr hin gedehnt. Der Fresser öffnet den Mund, das Opfer schaut
+ * erschrocken. Alles nur aus Abständen, Massen und Zeit der Simulation berechnet (Seek-Regel), die Simulation bleibt gleich.
  */
 (function () {
 'use strict';
@@ -118,6 +121,17 @@ const STYLE = {
   label: 19,                // logische Einheiten Schriftgröße der Namensschilder
 };
 
+/**
+ * Sog vor dem Biss. start: Abstand der Ränder, ab dem der Sog beginnt, in Radien des Fressers. Gefressen wird erst bei
+ * Berührung (Simulation: Abstand < R_A + 0,25 R_B); bis dahin wächst die Stärke s von 0 auf 1.
+ */
+const PULL = {
+  start: 0.9, wisps: 4, dots: 6, flow: 1.1,       // Fäden je Paar, Tropfen je Faden, Durchläufe je Sekunde
+  stretch: 0.16, squeeze: 0.08, shift: 0.14,      // Opfer: Dehnung längs, Stauchung quer, Versatz zum Fresser (in R_B)
+  tint: 0.45, line: 0.16, dot: 0.17,              // Fadenfarbe (Deckkraft), Fadenbreite und Tropfengröße in R_B
+  face: 0.12, gulpNeutral: 0.6,                   // ab dieser Stärke zeigt das Gesicht Gefühl; Mund beim Einsammeln
+};
+
 class CloudArt {
   constructor({ radiusOf, teams }) {
     this.radiusOf = radiusOf; this.teams = teams;
@@ -140,6 +154,85 @@ class CloudArt {
     return e.spr;
   }
 
+  /**
+   * Sog-Paare und Gefühle der Gesichter für den aktuellen Zeitpunkt. Nur aus dem Zustand der Simulation abgeleitet; der
+   * Zwischenspeicher gilt nur für denselben Zeitpunkt (Wolken und Namensschilder werden getrennt gezeichnet).
+   */
+  pulls(sim) {
+    if (this._pull && this._pull.sim === sim && this._pull.t === sim.t && this._pull.n === sim.clouds.length) return this._pull;
+    const pairs = [], mood = new Map(), t = sim.t, R = this.radiusOf;
+    const feel = (c) => { let m = mood.get(c.id); if (!m) mood.set(c.id, (m = { mouth: 0, fear: 0, lx: 0, ly: 0, w: 0, tr: null })); return m; };
+    const look = (m, from, to, s) => {
+      if (s <= m.w) return;
+      const d = Math.hypot(to.x - from.x, to.y - from.y) || 1;
+      m.w = s; m.lx = (to.x - from.x) / d; m.ly = (to.y - from.y) / d;
+    };
+    for (const A of sim.clouds) {
+      if (A.dead || A.eat || A.team < 0) continue;
+      const RA = R(A.mass);
+      for (const B of sim.clouds) {
+        if (B === A || B.dead || B.team < 0 || B.team === A.team) continue;
+        let s;
+        if (B.eat) {
+          if (B.eat.by !== A.id) continue;
+          s = 1 - clamp((t - B.eat.t0) / STYLE.eatTime, 0, 1);   // beim Schlucken ausklingen
+        } else {
+          if (A.mass < B.mass * sim.ratio(B)) continue;
+          const RB = R(B.mass), d = Math.hypot(A.x - B.x, A.y - B.y);
+          s = smooth(RA + RB + PULL.start * RA, RA + 0.25 * RB, d);
+        }
+        if (s <= 0) continue;
+        pairs.push({ A, B, s });
+        const ma = feel(A), mb = feel(B);
+        ma.mouth = Math.max(ma.mouth, s); look(ma, A, B, s);
+        if (!B.eat) {
+          mb.fear = Math.max(mb.fear, s); look(mb, B, A, s);
+          if (!mb.tr || s > mb.tr.s) {
+            const d = Math.hypot(A.x - B.x, A.y - B.y) || 1, RB = R(B.mass);
+            mb.tr = { s, ang: Math.atan2(A.y - B.y, A.x - B.x), sx: 1 + PULL.stretch * s, sy: 1 - PULL.squeeze * s,
+              ox: (A.x - B.x) / d * PULL.shift * s * RB, oy: (A.y - B.y) / d * PULL.shift * s * RB };
+          }
+        }
+      }
+    }
+    // Mund auf beim Einsammeln kleiner neutraler Wolken (Schlucken dauert eatTime)
+    for (const B of sim.clouds) {
+      if (!B.eat || B.team >= 0 || B.dead) continue;
+      const A = sim.clouds.find((c) => c.id === B.eat.by);
+      if (!A || A.team < 0) continue;
+      const u = clamp((t - B.eat.t0) / STYLE.eatTime, 0, 1), m = feel(A);
+      m.mouth = Math.max(m.mouth, PULL.gulpNeutral * smooth(0, 0.18, u) * (1 - smooth(0.7, 1, u)));
+    }
+    this._pull = { sim, t: sim.t, n: sim.clouds.length, pairs, mood };
+    return this._pull;
+  }
+
+  /** Dunstfäden vom Opfer zum Fresser: getönte Fäden, darauf weiße Tropfen, die zum Fresser hin fließen und kleiner werden. */
+  drawPull(g, sim, lift) {
+    const { pairs } = this.pulls(sim), t = sim.t;
+    for (const { A, B, s } of pairs) {
+      const RA = this.radiusOf(A.mass), RB = this.radiusOf(B.mass) * (B.eat ? 1 - 0.55 * (1 - s) : 1);
+      const dx = A.x - B.x, dy = A.y - B.y, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d, nx = -uy, ny = ux;
+      const color = this.teams[A.team].color;
+      for (let i = 0; i < PULL.wisps; i++) {
+        const o = (i / (PULL.wisps - 1) - 0.5) * 1.25 * RB, swirl = (h01(B.id, i, 11) - 0.5) * 0.5 * RB;
+        const x0 = B.x + ux * RB * 0.45 + nx * o, y0 = B.y + uy * RB * 0.45 + ny * o - lift;
+        const x2 = A.x - ux * RA * 0.5 + nx * o * 0.18, y2 = A.y - uy * RA * 0.5 + ny * o * 0.18 - lift;
+        const x1 = (x0 + x2) / 2 + nx * (o * 0.45 + swirl), y1 = (y0 + y2) / 2 + ny * (o * 0.45 + swirl);
+        g.globalAlpha = PULL.tint * s; g.strokeStyle = color; g.lineWidth = PULL.line * RB * (0.6 + 0.4 * s); g.lineCap = 'round';
+        g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(x1, y1, x2, y2); g.stroke();
+        for (let j = 0; j < PULL.dots; j++) {
+          const q = (t * PULL.flow + j / PULL.dots + h01(B.id, i, 12)) % 1, p = 1 - q;
+          const x = p * p * x0 + 2 * p * q * x1 + q * q * x2, y = p * p * y0 + 2 * p * q * y1 + q * q * y2;
+          const r = PULL.dot * RB * (1 - 0.6 * q) * (0.6 + 0.4 * s);
+          g.globalAlpha = 0.9 * s * Math.sin(Math.PI * q);
+          g.drawImage(this.ballW, x - r, y - r, r * 2, r * 2);
+        }
+      }
+    }
+    g.globalAlpha = 1;
+  }
+
   /** Federn nach dem Fressen: aus den Fress-Aufzeichnungen und der Zeit, ohne eigenen Zustand. */
   wobble(sim, c) {
     let w = 0;
@@ -156,34 +249,40 @@ class CloudArt {
    * px = Pixel je GE im Ausgabebild.
    */
   draw(g, sim, k, px, opts = {}) {
-    const lift = STYLE.lift / k, t = sim.t, alive = new Set();
+    const lift = STYLE.lift / k, t = sim.t, alive = new Set(), { mood } = this.pulls(sim);
     const list = sim.clouds.slice().sort((a, b) => (a.team >= 0) - (b.team >= 0) || a.mass - b.mass || a.id - b.id);
     const items = list.map((c) => {
       alive.add(c.id);
       const u = c.eat ? clamp((t - c.eat.t0) / STYLE.eatTime, 0, 1) : 0;
-      return { c, spr: this.sprite(c, px), u, scl: (1 - 0.55 * u) * this.wobble(sim, c) };
+      const m = mood.get(c.id);
+      return { c, spr: this.sprite(c, px), u, scl: (1 - 0.55 * u) * this.wobble(sim, c), m, tr: m && m.tr };
     });
     for (const id of this.cache.keys()) if (!alive.has(id)) this.cache.delete(id);
     // Schatten am Boden
     const sh = opts.shadow || { dx: STYLE.shadow[0], dy: STYLE.shadow[1], alpha: STYLE.shadowAlpha };
     for (const it of items) {
       g.globalAlpha = sh.alpha * (1 - it.u);
-      this.blit(g, it.spr.sh, it.spr, it.c, it.c.x + sh.dx, it.c.y + sh.dy, it.scl);
+      this.blit(g, it.spr.sh, it.spr, it.c, it.c.x + sh.dx, it.c.y + sh.dy, it.scl, it.tr);
     }
     if (opts.beforeClouds) opts.beforeClouds();
     // Wolken
     for (const it of items) {
       g.globalAlpha = (it.c.team < 0 ? STYLE.neutralAlpha : 1) * (1 - smooth(0.4, 1, it.u));
-      this.blit(g, it.spr.can, it.spr, it.c, it.c.x, it.c.y - lift, it.scl);
+      this.blit(g, it.spr.can, it.spr, it.c, it.c.x, it.c.y - lift, it.scl, it.tr);
     }
     g.globalAlpha = 1;
     this.drawEatPuffs(g, sim, lift);
-    if (opts.faces !== false) for (const it of items) if (it.c.team >= 0 && it.u < 0.3) this.drawFace(g, sim, it.c, lift, it.scl);
+    this.drawPull(g, sim, lift);
+    if (opts.faces !== false) for (const it of items) if (it.c.team >= 0 && it.u < 0.3) this.drawFace(g, sim, it.c, lift, it.scl, it.m);
   }
 
-  blit(g, img, spr, c, x, y, scl) {
-    const f = (this.radiusOf(c.mass) / spr.R) * scl;
-    g.drawImage(img, x - spr.ox * f, y - spr.oy * f, (img.width / spr.sc) * f, (img.height / spr.sc) * f);
+  /** tr: Dehnung und Versatz durch den Sog (Richtung ang, Faktoren sx längs und sy quer). */
+  blit(g, img, spr, c, x, y, scl, tr) {
+    const f = (this.radiusOf(c.mass) / spr.R) * scl, w = (img.width / spr.sc) * f, h = (img.height / spr.sc) * f;
+    if (!tr) { g.drawImage(img, x - spr.ox * f, y - spr.oy * f, w, h); return; }
+    g.save(); g.translate(x + tr.ox, y + tr.oy); g.rotate(tr.ang); g.scale(tr.sx, tr.sy); g.rotate(-tr.ang);
+    g.drawImage(img, -spr.ox * f, -spr.oy * f, w, h);
+    g.restore();
   }
 
   /** Fliegende Puffs: Ort aus Fress-Aufzeichnung und Alter (Prototyp: eatPuffPos). */
@@ -210,10 +309,16 @@ class CloudArt {
     g.globalAlpha = 1;
   }
 
-  /** Augen wie im Prototyp; Blick in Fahrtrichtung, Blinzeln aus Zeit und Kennung. */
-  drawFace(g, sim, c, lift, scl) {
-    const R = this.radiusOf(c.mass) * scl, fx = c.x + c.hx * R * 0.16, fy = c.y - lift + c.hy * R * 0.12 - R * 0.06;
+  /**
+   * Augen wie im Prototyp; Blick in Fahrtrichtung, Blinzeln aus Zeit und Kennung. m (Sog): Fresser öffnet den Mund und
+   * schaut zum Opfer, das Opfer reißt die Augen auf und schaut zum Fresser.
+   */
+  drawFace(g, sim, c, lift, scl, m) {
+    const R = this.radiusOf(c.mass) * scl, mood = m && m.w > PULL.face ? m : null;
+    const hx = mood ? mood.lx : c.hx, hy = mood ? mood.ly : c.hy, ox = m && m.tr ? m.tr.ox : 0, oy = m && m.tr ? m.tr.oy : 0;
+    const fx = c.x + ox + hx * R * 0.16, fy = c.y + oy - lift + hy * R * 0.12 - R * 0.06;
     const ex = R * 0.17, er = R * 0.07;
+    if (mood && mood.fear > PULL.face) { this.drawScared(g, fx, fy, ex, er, hx, hy, mood.fear); return; }
     g.fillStyle = 'rgba(255,140,155,0.26)';
     for (const sd of [-1, 1]) { g.beginPath(); g.ellipse(fx + sd * ex * 1.6, fy + er * 1.6, er * 1.05, er * 0.6, 0, 0, TAU); g.fill(); }
     const phase = (sim.t / 3.7 + h01(c.id, 3, 5)) % 1, open = phase < 0.035 ? 0.12 : 1;
@@ -228,17 +333,40 @@ class CloudArt {
       g.strokeStyle = c.kind === 1 ? '#e8ecf4' : '#2b3a4f'; g.lineWidth = er * 0.42; g.lineCap = 'round';
       for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(fx + sd * ex * 1.45, fy - er * 1.9); g.lineTo(fx + sd * ex * 0.55, fy - er * 1.35); g.stroke(); }
     }
+    const mouth = m ? m.mouth : 0;
+    if (mouth > PULL.face) {
+      // Offener Mund, wächst mit dem Sog; leicht in Blickrichtung
+      const mo = smooth(PULL.face, 1, mouth), mx = fx + hx * er * 0.6, my = fy + er * 2.3 + hy * er * 0.3;
+      const rx = er * (0.75 + 0.55 * mo), ry = er * (0.35 + 1.05 * mo);
+      g.fillStyle = '#2b3a4f'; g.beginPath(); g.ellipse(mx, my, rx, ry, 0, 0, TAU); g.fill();
+      g.fillStyle = 'rgba(255,128,140,0.85)'; g.beginPath(); g.ellipse(mx, my + ry * 0.45, rx * 0.62, ry * 0.4, 0, 0, TAU); g.fill();
+    }
+  }
+
+  /** Erschrocken: weiße, aufgerissene Augen mit kleinen Pupillen zum Fresser, besorgte Brauen, kleiner runder Mund. */
+  drawScared(g, fx, fy, ex, er, hx, hy, fear) {
+    const f = smooth(PULL.face, 0.6, fear), ew = er * (0.95 + 0.3 * f), eh = er * (1.15 + 0.35 * f);
+    for (const sd of [-1, 1]) {
+      const x = fx + sd * ex * 1.05;
+      g.fillStyle = '#fff'; g.beginPath(); g.ellipse(x, fy, ew, eh, 0, 0, TAU); g.fill();
+      g.lineWidth = er * 0.28; g.strokeStyle = '#2b3a4f'; g.stroke();
+      g.fillStyle = '#2b3a4f'; g.beginPath(); circ(g, x + hx * ew * 0.42, fy + hy * eh * 0.42, er * 0.42); g.fill();
+    }
+    g.strokeStyle = '#2b3a4f'; g.lineWidth = er * 0.38; g.lineCap = 'round';
+    for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(fx + sd * ex * 0.45, fy - eh - er * 0.9); g.lineTo(fx + sd * ex * 1.45, fy - eh - er * 0.45); g.stroke(); }
+    g.fillStyle = '#2b3a4f'; g.beginPath(); g.ellipse(fx + hx * er * 0.4, fy + er * 2.3, er * 0.42 * (0.7 + 0.3 * f), er * 0.55 * (0.7 + 0.3 * f), 0, 0, TAU); g.fill();
   }
 
   /** Namensschilder in logischen Einheiten (feste Schriftgröße in beiden Formaten). */
   drawLabels(g, sim, k) {
     const lift = STYLE.lift, fs = STYLE.label;
     g.font = `800 ${fs}px "Segoe UI", Roboto, Arial, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    const { mood } = this.pulls(sim);
     for (const c of sim.clouds) {
       if (c.team < 0 || c.eat) continue;
-      const tm = this.teams[c.team], R = this.radiusOf(c.mass) * k;
-      // Schild bleibt im Bild, auch wenn die Wolke am oberen Rand steht
-      const x = c.x * k, y = Math.max(fs * 1.1, c.y * k - lift - R * 0.62 - fs * 0.9);
+      const tm = this.teams[c.team], R = this.radiusOf(c.mass) * k, tr = mood.get(c.id)?.tr;
+      // Schild bleibt im Bild, auch wenn die Wolke am oberen Rand steht; folgt dem Versatz durch den Sog
+      const x = (c.x + (tr ? tr.ox : 0)) * k, y = Math.max(fs * 1.1, (c.y + (tr ? tr.oy : 0)) * k - lift - R * 0.62 - fs * 0.9);
       const w = g.measureText(tm.name).width + fs * 1.1, h = fs * 1.45;
       g.fillStyle = 'rgba(255,255,255,0.92)'; g.strokeStyle = tm.color; g.lineWidth = 2.5;
       g.beginPath(); g.roundRect(x - w / 2, y - h / 2, w, h, h / 2); g.fill(); g.stroke();
@@ -247,5 +375,5 @@ class CloudArt {
   }
 }
 
-EBS.CloudWarsArt = { CloudArt, STYLE, puffLayout, puffCount };
+EBS.CloudWarsArt = { CloudArt, STYLE, PULL, puffLayout, puffCount };
 })();

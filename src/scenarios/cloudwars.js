@@ -67,7 +67,7 @@ function normalizeParams(input) {
   const p = { ...defaults, ...input };
   return {
     mode: ['short', 'rounds'].includes(p.mode) ? p.mode : defaults.mode,
-    display: ['auto', 'full', 'slim', 'off'].includes(p.display) ? p.display : defaults.display,
+    display: ['auto', 'full', 'slim', 'clean', 'off'].includes(p.display) ? p.display : defaults.display,
     director: p.director === 'off' ? 'off' : 'on',
     videoEnd: p.videoEnd === 'free' ? 'free' : 'victory',
   };
@@ -171,7 +171,7 @@ EBS.registerScenario({
     { key: 'mode', label: 'Ablauf', type: 'select', restart: true, options: [['short', 'Short (rund 30 s)'], ['rounds', 'Runden (Langvideo)']] },
     { key: 'videoEnd', label: 'Short-Ende', type: 'select', affectsDuration: true, options: [['victory', 'Mit dem Sieg (Länge automatisch)'], ['free', 'Freie Länge']] },
     { key: 'director', label: 'Regie (Short)', type: 'select', restart: true, options: [['on', 'An: verdeckte Rollen'], ['off', 'Aus: freier Ablauf']] },
-    { key: 'display', label: 'Anzeige', type: 'select', options: [['auto', 'Automatisch (hochkant schlank, quer voll)'], ['full', 'Voll: Punktestand, Runde, Uhrzeit'], ['slim', 'Schlank: Farbpunkte und Einblendungen'], ['off', 'Aus']] },
+    { key: 'display', label: 'Anzeige', type: 'select', options: [['auto', 'Automatisch (hochkant nur Einblendungen, quer voll)'], ['full', 'Voll: Punktestand, Runde, Uhrzeit'], ['slim', 'Schlank: Farbpunkte und Einblendungen'], ['clean', 'Nur Einblendungen'], ['off', 'Aus']] },
   ],
   supportsCamera: false, supportsClips: true,                      // Ausschnitte: der Renderer hält keinen Zustand zwischen Bildern
   audio: { events: AUDIO_EVENTS, mixProfile: 'marbleworks-soft-v1', fixedGainDb: 3, ceilingDb: -6 },

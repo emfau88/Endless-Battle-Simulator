@@ -373,6 +373,7 @@ Nutzers:
 4. **Abendlicht:** kräftig genug oder zu braun? Soll das Short auch Wetter bekommen (jetzt immer klar)?
 5. **Einblendungen:** bei jedem Gewitter (höchstens alle 25 s je Team) oder seltener?
 6. **Ton:** Hörurteil zum Probeclip (`output/cloudwars-c6-probe.mp4`, nur lokal): Donner, Wind, Lautstärke.
+   **Beantwortet am 18.11.:** gefällt so.
 7. **Überlappungen:** Wolken desselben Teams und Namensschilder überdecken sich manchmal.
 8. **Short-Bildbereich:** Wolken treiben zeitweise in den unteren Textbereich der Plattform.
 9. **Langvideo:** Neue Runde sofort mit frischem Wald (so gebaut) oder erst am nächsten Morgen?
@@ -434,3 +435,41 @@ Bilder an den Nutzer. Referenz-Hashes (`npm run golden`) nicht betroffen: Cloud 
 **Nachgezogen:** Zwei Tests mit fester Szenario-Liste (`test/config.test.mjs`, `test/marble.test.mjs`) kannten Cloud
 Wars noch nicht; dadurch war die CI-Gruppe „core“ seit Paket C0 rot. Beide Listen ergänzt, beide Tests grün.
 
+## Nachtrag: Sog beim Fressen und Short ohne Leisten (18.11.2026)
+
+**Anlass:** Rückmeldung des Nutzers zum Short: Wer wen frisst, ist schwer zu lesen (wer ist stärker, ab welchem
+Abstand passiert es); die Massebalken oben braucht es nicht; Meldungen sollen höher und immer auf derselben Zeile
+stehen. Der Ton gefällt. Umgesetzt nach meiner Empfehlung, vorher und nachher als Bilder an den Nutzer.
+
+**Sog (nur Darstellung, `cloudwars/art.js`, Werte in `PULL`):**
+
+- Darf eine Team-Wolke einen Gegner nach den Regeln fressen (Short: 10 % schwerer, Langvideo: 2,2-mal so schwer),
+  beginnt der Sog, sobald der Rand des Gegners näher als 0,9 Radien des Fressers ist. Die Stärke wächst bis zur
+  Berührung, bei der die Simulation das Fressen auslöst, von 0 auf 1.
+- Vier Dunstfäden in der Teamfarbe des Fressers (Deckkraft 0,45) laufen vom Opfer zum Fresser, darauf fließen weiße
+  Tröpfchen zum Fresser und werden dabei kleiner. Beim Schlucken klingen die Fäden aus.
+- Das Opfer wird zum Fresser hin gedehnt (bis 16 % länger, 8 % schmaler) und leicht versetzt; Schatten und
+  Namensschild folgen.
+- Gesichter: Der Fresser öffnet den Mund und schaut zum Opfer; das Opfer reißt die Augen auf, schaut zum Fresser und
+  zieht besorgt die Brauen hoch. Beim Einsammeln kleiner neutraler Wolken öffnet die Wolke kurz den Mund.
+- Gleich starke Wolken (unter der Fress-Schwelle) zeigen keinen Sog. Neutrale Wolken bekommen keinen Sog, nur den
+  Mund beim Schlucken; sonst wäre das Bild bei 26 kleinen Wolken zu unruhig.
+- Alles wird nur aus Abständen, Massen und Zeit der Simulation berechnet (Seek-Regel). Die Simulation ist unverändert,
+  Seeds und Casting bleiben gültig.
+
+**Anzeige im Hochformat (`cloudwars/layout.js`):** Automatisch heißt hochkant jetzt „nur Einblendungen“: keine
+Farbpunkte und Massebalken mehr. Alle Meldungen (Titel, Gewitter, „… IS GONE“, Sieg, Wetter) stehen nacheinander auf
+einer festen Zeile bei 17 % der Bildhöhe statt 30 %, knapp unter den Symbolen der Plattform; Schrift 58 statt 68
+(Sieg 70 statt 80). Die schlanke Anzeige bleibt im Schalter „Anzeige“ wählbar, neu ist dort „Nur Einblendungen“. Das
+Querformat ist unverändert.
+
+**Nachweise:** Vorher-nachher-Bilder aus dem Short (Seed 44): Titelzeile bei 2 s, Sog bei 4,05 s, 14,7 s und 30,75 s
+(an den Nutzer geschickt, nicht im Repository).
+
+**Grenzen:** Hält sich ein Opfer lange knapp außerhalb der Reichweite, bleibt der Sog sichtbar, ohne dass gefressen
+wird (Seed 44: etwa 5 s bei 13–18 s). Das wirkt wie ein Tauziehen und ist gewollt. Bei zwei weißen Wolken sind die
+weißen Tröpfchen kaum zu sehen; dort tragen die getönten Fäden und die Gesichter die Aussage. Meldungen können eine
+Wolke am oberen Rand kurz verdecken. Rechenaufwand nicht eigens gemessen; es sind nur wenige Paare je Bild.
+
+**Geprüft:** `test/cloudwars.test.mjs` (12 Tests, darunter Seek-Regel und Bildvergleich). Die Simulation ist nicht
+berührt, darum keine Referenz-Hashes und kein neues Casting.
