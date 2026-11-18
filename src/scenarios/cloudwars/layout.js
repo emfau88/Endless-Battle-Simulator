@@ -1,7 +1,8 @@
 /*
  * Cloud Wars – Anzeige und Einblendungen je Format (Paket C5). Reine Darstellung in logischen Einheiten.
- * Hochformat (Short): kein Rahmen, oben vier kleine Farbpunkte mit Massebalken; Einblendungen bei 30 % der Höhe;
- * die rechten 14 % bleiben frei (Bedienung der Plattform).
+ * Hochformat (Short): kein Rahmen und keine Leisten, nur Einblendungen auf einer festen Zeile bei 17 % der Höhe, knapp
+ * unter den Symbolen der Plattform (Nachtrag 18.11.); die rechten 14 % bleiben frei (Bedienung der Plattform). Die
+ * schlanke Anzeige (Farbpunkte mit Massebalken) bleibt wählbar.
  * Querformat: Punktestand oben links (Name, Siege, Massebalken), Runde und Uhrzeit oben rechts; Einblendungen bei 18 %.
  * Einblendungen kommen aus sim.notes (Gewitter, raus, Sieg, Runde) und dem Wetterplan; alles nur aus t berechnet.
  * Alle Texte im Video englisch.
@@ -10,12 +11,12 @@
 'use strict';
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const FONT = '"Segoe UI", Roboto, Arial, sans-serif';
-const BANNER = { show: 2.6, fadeIn: 0.25, fadeOut: 0.5, stale: 4 };
+const BANNER = { show: 2.6, fadeIn: 0.25, fadeOut: 0.5, stale: 4, portraitY: 0.17 };
 const INK = '#2b3a4f';
 
 function displayMode(params, world) {
   const d = params.display || 'auto';
-  return d === 'auto' ? (world.h > world.w ? 'slim' : 'full') : d;
+  return d === 'auto' ? (world.h > world.w ? 'clean' : 'full') : d;
 }
 
 /** Texte der Einblendungen in zeitlicher Reihenfolge; überlappende rücken nach, zu alte fallen weg. */
@@ -55,7 +56,7 @@ class Layout {
   draw(g, sim, world, params, view) {
     const mode = displayMode(params, world);
     if (mode === 'off') return;
-    if (view.hud !== false) {
+    if (view.hud !== false && mode !== 'clean') {
       if (mode === 'full') this.full(g, sim, world);
       else this.slim(g, sim, world);
     }
@@ -120,8 +121,8 @@ class Layout {
     const a = clamp(age / BANNER.fadeIn, 0, 1) * clamp((len - age) / BANNER.fadeOut, 0, 1);
     if (a <= 0) return;
     const pop = 0.82 + 0.18 * (1 - Math.pow(1 - clamp(age / BANNER.fadeIn, 0, 1), 3));
-    const portrait = this.portrait, fs0 = portrait ? (b.big ? 80 : 68) : (b.big ? 64 : 56);
-    const cx = portrait ? world.w * 0.43 : world.w / 2, cy = world.h * (portrait ? 0.30 : 0.18), maxW = world.w * (portrait ? 0.8 : 0.7);
+    const portrait = this.portrait, fs0 = portrait ? (b.big ? 70 : 58) : (b.big ? 64 : 56);
+    const cx = portrait ? world.w * 0.43 : world.w / 2, cy = world.h * (portrait ? BANNER.portraitY : 0.18), maxW = world.w * (portrait ? 0.8 : 0.7);
     g.save(); g.translate(cx, cy); g.scale(pop, pop); g.globalAlpha = a;
     let fs = fs0; g.font = `900 ${fs}px ${FONT}`;
     let tw = g.measureText(b.text).width;
