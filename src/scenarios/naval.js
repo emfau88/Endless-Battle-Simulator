@@ -2124,7 +2124,8 @@ class NavalRenderer {
         ? `${fmtTime(sim.step * DT)}  ·  ${sim.calm.final ? 'FINAL' : 'Round ' + sim.calm.round}  ·  Shots ${fmtIntEn(st.shots)}  ·  Hits ${fmtIntEn(st.hits)}`
         : `${fmtTime(sim.step * DT)}  ·  Shots ${fmtIntEn(st.shots)}  ·  Hits ${fmtIntEn(st.hits)}`;
       for (const b of this.hBars) {
-        b.pct.text = `${Math.round(b.hp * 100)}%`;
+        // ein schwimmendes Schiff zeigt nie 0 %: knapp überlebt heißt mindestens 1 %
+        b.pct.text = `${b.hp > 0 ? Math.max(1, Math.round(b.hp * 100)) : 0}%`;
         b.ammo.text = sim.beute ? `Ammo ${b.s.ammo}` : `Ammo ${b.s.ammo}/${b.s.totalBalls}`;
       }
       if (this.hGold.visible) {
