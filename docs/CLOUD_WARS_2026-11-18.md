@@ -226,3 +226,33 @@ Kein vollständiger `npm test`, kein Export.
 Kein vollständiger `npm test`, kein Export, keine Referenz-Hashes (kein anderes Szenario berührt).
 
 **Offene Fragen für später:** Abendlicht kräftig genug oder zu braun? Soll der Short doch Wetter bekommen?
+
+## C5 · Anzeige und Einblendungen (18.11.2026)
+
+**Umfang**
+
+- `src/scenarios/cloudwars/layout.js` mit eigenem Layout je Format:
+  - Hochformat (schlank): kein Rahmen, oben vier Farbpunkte mit Massebalken, die rechten 14 % bleiben frei.
+  - Querformat (voll): Punktestand oben links (Name, Siege als Punkte, Anteil an der Gesamtmasse), oben rechts Runde
+    und Uhrzeit (Tag von 06:00 bis 06:00).
+- Einblendungen, alle englisch, mit kurzem Aufpoppen und Ausblenden:
+  - Short: `WHICH CLOUD RULES THE SKY?` zu Beginn
+  - `NIMBUS IS A STORM!` (je Team höchstens alle 25 s), `NIMBUS IS GONE`, `NIMBUS RULES THE SKY!`
+  - Langvideo: `ROUND 2`, `MORNING FOG`, `HEAT WAVE`, `STORM FRONT`
+  - Treffen zwei gleichzeitig ein, rückt die zweite nach; wer über 4 s warten müsste, fällt weg (außer dem Sieger).
+- Die Simulation merkt sich die Anlässe in `sim.notes`; das ändert keinen Ablauf und keinen Hash. Die Einblendungen
+  werden in jedem Bild aus `t` und dieser Liste berechnet, also seek-fest.
+- Schalter „Anzeige“: automatisch (hochkant schlank, quer voll), voll, schlank, aus. Die Namensschilder an den
+  Wolken bleiben immer.
+- Momentaufnahme mit `banners` (Text und Alter), für Tests und Vorschau.
+
+**Vorschau:** [Anzeige](reference/cloudwars-c5-anzeige-2026-11-18.jpg): links Short mit Eingangsfrage und mit
+eingezeichneter Plattform-Bedienung (rot: Knöpfe rechts und Textbereich unten, gelb: 12 % von oben), rechts
+Langvideo mit `CUMULUS IS A STORM!` im Morgennebel und `CUMULUS RULES THE SKY!` nach Runde 2.
+
+**Geprüft:** neuer Test „Einblendungen“ (Short beginnt mit der Frage, endet mit dem Sieger, nur Großbuchstaben
+englisch), dazu die Seek- und Gleichheitstests. Kein vollständiger `npm test`, kein Export. Den 20-Sekunden-Clip
+aus dem Plan liefere ich mit Ton nach C6 zusammen.
+
+**Offene Fragen für später:** Im Short treiben Wolken zeitweise in den unteren Textbereich der Plattform (unter 78 %
+der Höhe); das löst die Regie in C7. Einblendung pro Gewitter oder seltener?

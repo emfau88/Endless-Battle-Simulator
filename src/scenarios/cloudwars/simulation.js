@@ -35,6 +35,7 @@ class CloudWarsSimulation {
     this.rngFlow = new EBS.RNG((this.seed ^ 0x9e3779b9) >>> 0);
     this.rngFx = new EBS.RNG((Math.imul(this.seed, 31) + 7) >>> 0);
     this.events = new Array(1024); this.eventSeq = 0;
+    this.notes = [];                                               // Einblendungen (Paket C5), nur gelesen vom Renderer
     this.windBase = this.rngFlow.next() * TAU;
     this.teamsCount = 4;
     this.perTeam = params.mode === 'rounds' ? 2 : 1;
@@ -70,6 +71,14 @@ class CloudWarsSimulation {
   emit(type, x, y, p, c) {
     this.events[this.eventSeq % this.events.length] = { seq: this.eventSeq, step: this.step, t: this.t, type, x, y, p, c };
     this.eventSeq++;
+    if (c >= 0 && (type === 'storm' || type === 'eliminated' || type === 'win')) this.note(type, c);
+  }
+
+  /** Einblendung merken. Gewitter je Team höchstens alle 25 s, damit der Wechsel an der Schwelle nicht flackert. */
+  note(type, team) {
+    if (type === 'storm' && this.notes.some((n) => n.type === 'storm' && n.team === team && this.t - n.t < 25)) return;
+    this.notes.push({ t: this.t, type, team, round: this.round });
+    if (this.notes.length > 40) this.notes.shift();
   }
 
   addCloud(team, mass, x, y) {
@@ -84,6 +93,7 @@ class CloudWarsSimulation {
   startRound(first) {
     const a = this.area, rng = this.rngFlow;
     if (!first) { this.round++; this.clouds = []; this.eats = []; this.resetStorms(); }
+    if (this.cfg.mode === 'rounds') this.note('round', -1);
     this.winner = -1; this.endAt = -1; this.roundStart = this.t;
     // Team-Wolken gleichmäßig nahe dem Rand: vier Ecken, bei zwei je Team zusätzlich die Seitenmitten
     const spots = [[0.2, 0.15], [0.8, 0.85], [0.8, 0.15], [0.2, 0.85], [0.5, 0.08], [0.5, 0.92], [0.08, 0.5], [0.92, 0.5]];

@@ -163,3 +163,17 @@ test('Seek-Regel bei Nacht: Lichter, Autos und Boote nach Sprung gleich wie nach
   await jump.close();
   assert.ok(a === b, 'Nachtbild nach Sprung weicht vom Bild nach durchgehender Wiedergabe ab');
 });
+
+test('Einblendungen: Short beginnt mit der Frage und endet mit dem Sieger; Texte englisch', async () => {
+  const page = await openMode(42, 'short', '9:16');
+  const r = await page.evaluate(() => {
+    const api = window.exportAPI, seen = new Set();
+    const first = api.simulate(1).banners.map((b) => b.text);
+    for (let i = 0; i < 1200; i++) { const s = api.simulate(0.1); for (const b of s.banners) seen.add(b.text); if (s.ended && s.t - s.endAt > 3) break; }
+    return { first, seen: [...seen] };
+  });
+  await page.close();
+  assert.deepEqual(r.first, ['WHICH CLOUD RULES THE SKY?']);
+  assert.ok(r.seen.some((t) => / RULES THE SKY!$/.test(t)), r.seen.join(' | '));
+  assert.ok(r.seen.every((t) => /^[A-Z0-9 !?]+$/.test(t)), r.seen.join(' | '));
+});

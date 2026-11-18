@@ -1,7 +1,7 @@
 /*
  * Szenario „Cloud Wars“ (in Arbeit) – Plan: docs/CLOUD_WARS_PLAN_2026-11-18.md
  *
- * Stand Paket C4: Der Seed wählt einen festen Ausschnitt der Landschaft aus dem Prototyp „Wolkenflug“; er wird einmal
+ * Stand Paket C5: Der Seed wählt einen festen Ausschnitt der Landschaft aus dem Prototyp „Wolkenflug“; er wird einmal
  * vorgezeichnet. Darüber treiben Team-Wolken und neutrale Wolken (Simulation: cloudwars/simulation.js). Paket C2:
  * Wolken im Stil des Prototyps mit Teamfarbe, Augen, Namensschild und fliegenden Puffs (cloudwars/art.js).
  * Maßstab je Format (Wunsch des Nutzers: „auf Handy und PC jeweils passend“): Hochformat näher, 1 GE = 2,0 logische
@@ -12,10 +12,13 @@
 const T = EBS.CloudWarsTerrain, S = EBS.CloudWarsSim;
 const scaleFor = (world) => (world.h > world.w ? 2.0 : 1.4);
 
-const defaults = { mode: 'short' };
+const defaults = { mode: 'short', display: 'auto' };
 function normalizeParams(input) {
   const p = { ...defaults, ...input };
-  return { mode: ['short', 'rounds'].includes(p.mode) ? p.mode : defaults.mode };
+  return {
+    mode: ['short', 'rounds'].includes(p.mode) ? p.mode : defaults.mode,
+    display: ['auto', 'full', 'slim', 'off'].includes(p.display) ? p.display : defaults.display,
+  };
 }
 
 class CloudWarsSim extends EBS.CloudWarsSim.CloudWarsSimulation {
@@ -41,6 +44,7 @@ class CloudWarsSim extends EBS.CloudWarsSim.CloudWarsSimulation {
       ended: this.endAt >= 0, endAt: this.endAt, roundStart: this.roundStart, teams, alive, neutrals, maxMass,
       fires: this.fire.burning.length, burned: this.burnedShare(), trucks: this.trucks.length,
       storms: this.clouds.filter((c) => c.kind === 1 && c.team >= 0).length, neutralStorms: this.clouds.filter((c) => c.kind && c.team < 0).length,
+      banners: EBS.CloudWarsLayout ? EBS.CloudWarsLayout.banners(this, S.TEAMS).map((x) => ({ text: x.text, age: this.t - x.start })) : [],
       geScale: this.geScale, eats: this.eats.map((e) => ({ mass: e.mass, age: this.t - e.t0, x: e.x, y: e.y, team: e.team })),
       summary: `Runde ${this.round} · ${alive} Teams übrig · größte Wolke ${maxMass.toFixed(1)}`
         + (this.winner >= 0 ? ` · Sieger ${S.TEAMS[this.winner].name}` : ''),
@@ -56,6 +60,7 @@ class CloudWarsRenderer extends EBS.CanvasScene {
     this.art = new EBS.CloudWarsArt.CloudArt({ radiusOf: S.radiusOf, teams: S.TEAMS });
     this.fx = new EBS.CloudWarsEffects.Effects({ radiusOf: S.radiusOf, storms: EBS.CloudWarsStorms, lift: EBS.CloudWarsArt.STYLE.lift / sim.geScale });
     this.atmo = new EBS.CloudWarsAtmosphere.Atmosphere(sim);
+    this.layout = new EBS.CloudWarsLayout.Layout({ teams: S.TEAMS, world });
   }
   paint(g) {
     const w = this.world, a = this.sim.area, k = this.sim.geScale;
@@ -92,6 +97,8 @@ class CloudWarsRenderer extends EBS.CanvasScene {
     const fl = this.fx.flash(sim);
     if (fl > 0) { g.fillStyle = `rgba(235,242,255,${fl})`; g.fillRect(0, 0, w.w, w.h); }
     this.art.drawLabels(g, sim, k);
+    // Anzeige und Einblendungen (Paket C5)
+    this.layout.draw(g, sim, w, sim.cfg, this.view || {});
   }
   destroy() { if (this.ground) this.ground.width = this.ground.height = 1; this.art.destroy(); this.fx.destroy(); super.destroy(); }
 }
@@ -102,6 +109,7 @@ EBS.registerScenario({
   defaults,
   controls: [
     { key: 'mode', label: 'Ablauf', type: 'select', restart: true, options: [['short', 'Short (rund 30 s)'], ['rounds', 'Runden (Langvideo)']] },
+    { key: 'display', label: 'Anzeige', type: 'select', options: [['auto', 'Automatisch (hochkant schlank, quer voll)'], ['full', 'Voll: Punktestand, Runde, Uhrzeit'], ['slim', 'Schlank: Farbpunkte und Einblendungen'], ['off', 'Aus']] },
   ],
   normalizeParams,
   create: (ctx) => new CloudWarsSim(ctx),
