@@ -3,6 +3,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { launchBrowser, openExportPage } from '../lib/browser.mjs';
+import { synthSample } from '../lib/audio.mjs';
 
 let browser;
 before(async () => { browser = await launchBrowser({ gpu: false }); });
@@ -176,4 +177,24 @@ test('Einblendungen: Short beginnt mit der Frage und endet mit dem Sieger; Texte
   assert.deepEqual(r.first, ['WHICH CLOUD RULES THE SKY?']);
   assert.ok(r.seen.some((t) => / RULES THE SKY!$/.test(t)), r.seen.join(' | '));
   assert.ok(r.seen.every((t) => /^[A-Z0-9 !?]+$/.test(t)), r.seen.join(' | '));
+});
+
+test('Ton: alle Klänge vorhanden, Mischplan mit höchstens zwei Klängen je 0,6 s und Wind alle 4 s', async () => {
+  const page = await openMode(2, 'rounds', '16:9');
+  const r = await page.evaluate(() => {
+    const api = window.exportAPI, sc = EBS.getScenario('cloudwars'), ev = [];
+    for (let i = 0; i < 12; i++) { api.simulate(10); ev.push(...api.events(ev.length ? ev[ev.length - 1].seq + 1 : 0)); }
+    const plan = sc.createAudioMixPlan(ev, { cfg: { video: { aspect: '16:9', volume: {} } } });
+    const on = plan.events.map((d, i) => ({ d, e: ev[i] })).filter((x) => x.d.gain > 0 && x.e.type !== 'gust').map((x) => x.e.step);
+    let dense = 0;
+    for (let i = 2; i < on.length; i++) if (on[i] - on[i - 2] < 0.3 * 60) dense++;
+    return { samples: [...new Set(Object.values(sc.audio.events).flatMap((d) => d.samples))], dense, sounds: on.length,
+      gusts: ev.filter((e) => e.type === 'gust').length, secs: api.snapshot().t, pansOk: plan.events.every((d) => Math.abs(d.pan) <= 0.4) };
+  });
+  await page.close();
+  for (const s of r.samples) assert.ok(synthSample(s), `Klang fehlt: ${s}`);
+  assert.equal(r.dense, 0);
+  assert.ok(r.pansOk);
+  assert.ok(r.sounds / r.secs < 3, `${r.sounds} Klänge in ${r.secs} s`);
+  assert.ok(Math.abs(r.gusts - Math.floor(r.secs / 4)) <= 1, `Windereignisse ${r.gusts}`);
 });

@@ -1,7 +1,7 @@
 /*
  * Szenario „Cloud Wars“ (in Arbeit) – Plan: docs/CLOUD_WARS_PLAN_2026-11-18.md
  *
- * Stand Paket C5: Der Seed wählt einen festen Ausschnitt der Landschaft aus dem Prototyp „Wolkenflug“; er wird einmal
+ * Stand Paket C6: Der Seed wählt einen festen Ausschnitt der Landschaft aus dem Prototyp „Wolkenflug“; er wird einmal
  * vorgezeichnet. Darüber treiben Team-Wolken und neutrale Wolken (Simulation: cloudwars/simulation.js). Paket C2:
  * Wolken im Stil des Prototyps mit Teamfarbe, Augen, Namensschild und fliegenden Puffs (cloudwars/art.js).
  * Maßstab je Format (Wunsch des Nutzers: „auf Handy und PC jeweils passend“): Hochformat näher, 1 GE = 2,0 logische
@@ -13,6 +13,46 @@ const T = EBS.CloudWarsTerrain, S = EBS.CloudWarsSim;
 const scaleFor = (world) => (world.h > world.w ? 2.0 : 1.4);
 
 const defaults = { mode: 'short', display: 'auto' };
+
+// Ton (Paket C6): weiche Klänge, feste Mischung wie Marble XL (fester Grundpegel, kein Nachnormalisieren).
+const AUDIO_EVENTS = {
+  win: { label: 'Sieg', samples: ['synth:fanfare'], gain: 0.22, semis: -3, detune: 0, minGap: 2 },
+  eliminated: { label: 'Team scheidet aus', samples: ['synth:chime'], gain: 0.2, semis: -7, detune: 0.2, minGap: 1 },
+  storm: { label: 'Wird Gewitter', samples: ['synth:myco-night'], gain: 0.26, semis: -5, detune: 0.3, minGap: 2 },
+  strike: { label: 'Donner (Bodenblitz)', samples: ['synth:thunder'], gain: 0.5, ref: 1, detune: 1.5, minGap: 1.2 },
+  zap: { label: 'Donner (Treffer)', samples: ['synth:thunder'], gain: 0.55, semis: 1, detune: 1.5, minGap: 1.2 },
+  absorb: { label: 'Wolke frisst', samples: ['synth:myco-pop'], gain: 0.16, semis: 2, detune: 2, minGap: 0.25, scale: [0, 2, 4, 7] },
+  charged: { label: 'Aufgeladen', samples: ['synth:myco-pling'], gain: 0.1, semis: -5, detune: 0.3, minGap: 2 },
+  fire: { label: 'Feuer knistert', samples: ['synth:scrap-pickup'], gain: 0.05, semis: -14, detune: 2, minGap: 1.5 },
+  extinguish: { label: 'Feuer gelöscht', samples: ['synth:splash'], gain: 0.06, semis: -4, detune: 2, minGap: 1.5 },
+  truck: { label: 'Feuerwehr', samples: ['synth:squeak'], gain: 0.05, semis: -9, detune: 0.5, minGap: 4 },
+  gust: { label: 'Wind', samples: ['synth:wind'], gain: 0.2, ref: 1, detune: 1, minGap: 3 },
+};
+const AUDIO_ORDER = Object.keys(AUDIO_EVENTS), AUDIO_KEY = 6;     // die ersten sechs haben Vorrang
+/** Fester Mischplan: höchstens zwei Klänge je 0,6 s (Wind zählt nicht mit), Stereo nach Ort im Ausschnitt. */
+function createAudioMixPlan(events, { cfg }) {
+  const volume = (cfg.video && cfg.video.volume) || {}, decisions = new Map(), cand = [];
+  const W = ({ '9:16': 540, '1:1': 771 })[cfg.video && cfg.video.aspect] || 1371;     // Ausschnittbreite in GE je Format
+  for (const e of events) {
+    const d = { seq: e.seq, gain: 0, pan: Math.max(-0.35, Math.min(0.35, ((e.x || 0) / W - 0.5) * 0.7)) }; decisions.set(e.seq, d);
+    const def = AUDIO_EVENTS[e.type];
+    if (!def || volume[e.type] === 0 || volume.master === 0) continue;
+    if (e.type === 'gust') { d.gain = 1; d.pan = 0; continue; }
+    cand.push({ e, d, minGap: def.minGap || 0, rank: AUDIO_ORDER.indexOf(e.type) });
+  }
+  cand.sort((a, b) => a.e.step - b.e.step || a.rank - b.rank || a.e.seq - b.e.seq);
+  const taken = [], free = (step) => { let n = 0; for (let i = taken.length - 1; i >= 0 && n < 2; i--) if (Math.abs(taken[i] - step) < 0.3 * 60) n++; return n < 2; };
+  for (const pass of [0, 1]) {
+    const last = new Map();
+    for (const { e, d, minGap, rank } of cand) {
+      if ((rank < AUDIO_KEY) !== (pass === 0)) continue;
+      const prev = last.get(e.type);
+      if ((prev !== undefined && e.step - prev < minGap * 60) || !free(e.step)) continue;
+      d.gain = 0.8; last.set(e.type, e.step); taken.push(e.step);
+    }
+  }
+  return { version: 1, profile: 'marbleworks-soft-v1', events: events.map((e) => decisions.get(e.seq)) };
+}
 function normalizeParams(input) {
   const p = { ...defaults, ...input };
   return {
@@ -111,6 +151,9 @@ EBS.registerScenario({
     { key: 'mode', label: 'Ablauf', type: 'select', restart: true, options: [['short', 'Short (rund 30 s)'], ['rounds', 'Runden (Langvideo)']] },
     { key: 'display', label: 'Anzeige', type: 'select', options: [['auto', 'Automatisch (hochkant schlank, quer voll)'], ['full', 'Voll: Punktestand, Runde, Uhrzeit'], ['slim', 'Schlank: Farbpunkte und Einblendungen'], ['off', 'Aus']] },
   ],
+  supportsCamera: false, supportsClips: true,                      // Ausschnitte: der Renderer hält keinen Zustand zwischen Bildern
+  audio: { events: AUDIO_EVENTS, mixProfile: 'marbleworks-soft-v1', fixedGainDb: 3, ceilingDb: -6 },
+  createAudioMixPlan,
   normalizeParams,
   create: (ctx) => new CloudWarsSim(ctx),
   createRenderer: (ctx) => new CloudWarsRenderer(ctx),

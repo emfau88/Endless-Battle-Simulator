@@ -181,6 +181,8 @@ class CloudWarsSimulation {
     const dt = this.dt, a = this.area;
     this.step++; this.t = this.step * dt;
     const t = this.t, decideEvery = Math.round(RULES.decide / EBS.DT);
+    // Windhauch für den Hintergrundklang (Paket C6): alle 4 s, Stärke nach Wetter; nur ein Ereignis, kein Zufall
+    if (this.step % Math.round(4 / dt) === 0) this.emit('gust', a.w / 2, a.h / 2, this.weatherNow().wind || 1, -1);
     // Runde zu Ende: kurze Pause, dann neue Runde (nur im Runden-Modus)
     if (this.endAt >= 0 && this.cfg.mode === 'rounds' && t - this.endAt >= RULES.roundPause) this.startRound(false);
     // Neutrale Wolken nachliefern

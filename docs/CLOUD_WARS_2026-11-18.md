@@ -256,3 +256,38 @@ aus dem Plan liefere ich mit Ton nach C6 zusammen.
 
 **Offene Fragen für später:** Im Short treiben Wolken zeitweise in den unteren Textbereich der Plattform (unter 78 %
 der Höhe); das löst die Regie in C7. Einblendung pro Gewitter oder seltener?
+
+## C6 · Ton (18.11.2026)
+
+**Umfang**
+
+- Klangtabelle in `src/scenarios/cloudwars.js`, nur im Code erzeugte Klänge (keine neuen Dateien, kein
+  Lizenznachweis nötig):
+
+  | Ereignis | Klang | Hinweis |
+  |---|---|---|
+  | `win` | `synth:fanfare`, 3 Halbtöne tiefer | leise |
+  | `eliminated` | `synth:chime`, tief | |
+  | `storm` | `synth:myco-night`, tief | höchstens alle 2 s |
+  | `strike`, `zap` | **neu** `synth:thunder`: weiches, fernes Grollen ohne Knall | höchstens alle 1,2 s |
+  | `absorb` | `synth:myco-pop`, Tonhöhe je Team | höchstens alle 0,25 s |
+  | `charged` | `synth:myco-pling`, tief | |
+  | `fire`, `extinguish`, `truck` | Knistern, Platscher, Hupe, alle sehr leise | höchstens alle 1,5–4 s |
+  | `gust` | **neu** `synth:wind`: 6 s Windhauch | alle 4 s, überlappend = Windteppich |
+
+- Hintergrundwind: Die Simulation meldet alle 4 s einen Windstoß (`gust`, Stärke nach Wetter). Es gibt keine
+  Wind-Aufnahme im Repository; so bleibt der Wind ohne neue Datei und folgt der Sturmfront.
+- Feste Mischung wie Marble XL (`marbleworks-soft-v1`, fester Grundpegel 3 dB, Decke −6 dB, kein
+  Nachnormalisieren). Eigener Mischplan: höchstens zwei Klänge je 0,6 s, der Wind zählt nicht mit; Stereo nach Ort
+  im Ausschnitt.
+- `supportsClips` ist an (der Renderer hält keinen Zustand), damit Probeclips aus der Mitte möglich sind.
+
+**Messwerte:** Probeclip Seed 2, Runden-Modus, 16:9, Sekunde 22–42 (Episode 45 s): −22,8 LUFS, Spitze −6 dBFS,
+Begrenzer greift höchstens 0,7 dB ein. Etwa 1,5 Klänge je Sekunde einschließlich Wind (Ziel unter 3). Der Clip liegt
+nur lokal unter `output/cloudwars-c6-probe.mp4`.
+
+**Geprüft:** neuer Test „Ton“ (alle Klänge vorhanden, nie mehr als zwei Klänge je 0,6 s, unter 3 je Sekunde, Wind
+alle 4 s), dazu `test/audio.test.mjs` und `test/audio-camera-plan.test.mjs` (20 Tests, weil `lib/audio.mjs` zwei neue
+Klänge bekommt). Ein Export von 20 s, kein vollständiger `npm test`.
+
+**Offene Frage für später:** Hörurteil zum Probeclip (Donner, Wind, Lautstärke).
