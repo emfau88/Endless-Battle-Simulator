@@ -341,3 +341,39 @@ Gewitter, Sekunde 21, Sieg).
 - `test/cloudwars.test.mjs` (12 Tests), `test/presets.test.mjs`, `test/core.test.mjs`, einmal `npm run golden`
 
 Kein ganzes Short exportiert (nur auf ausdrücklichen Auftrag).
+
+## C8 · Langvideo-Vorlage und Abschluss (18.11.2026)
+
+**Umfang**
+
+- Vorlage „Langvideo“: 16:9, 1080p30, 10 Minuten, Runden-Modus mit Punktestand, Tageslauf und Wetter, feste
+  Übersicht ohne Kamerafahrt (`presets/production/cloudwars-long.json`, seit C7 auch in der Oberfläche).
+- Neue Runde 4 s nach dem Sieg, mit frischem Wald. Abweichung vom Plan: kein Warten auf den nächsten Morgen und kein
+  sichtbares Nachwachsen. Mit Runden von rund 2,8 Minuten und einem Tag von 12 Minuten müsste man sonst oft minutenlang
+  auf verbrannte Flächen schauen.
+- README: Zeile in der Szenariotabelle, Bild, Vorlagen, Clip-Export.
+- **Korrektur zu C3:** Im Code steht seit C3 die Fress-Schwelle Team gegen Team **2,2** (nicht 1,7 wie oben in der
+  Tabelle als „gewählt“ markiert). Alle Messwerte ab C4 gelten für 2,2.
+
+**Messwerte Langvideo (16:9, ohne Bilder):** Runden im Median 169 s (8 Seeds, 15 Minuten), Waldverlust je Runde
+höchstens 20 %, größte Wolke höchstens 76. 30 Minuten Seed 42 ohne Verletzung der Invarianten.
+
+**Geprüft:** 30-Minuten-Lauf als Test in `test/cloudwars-short.test.mjs`, Produktionsweg Langvideo in
+`test/presets-export-cloudwars.test.mjs`. Kein Export über 20 s.
+
+## Gesammelte Fragen für die Abstimmung am Ende
+
+Alles ist nach den Empfehlungen gebaut. Diese Punkte sind Geschmack oder Abwägung und warten auf das Urteil des
+Nutzers:
+
+1. **Gesichter, Teamtönung und Namen:** Augen an, Tönung wie jetzt, Namen NIMBUS, CIRRUS, CUMULUS, STRATUS?
+2. **Rundenlänge im Langvideo:** im Mittel rund 2,8 Minuten (Plan: 3–5). So lassen oder länger?
+3. **Short-Regie:** Die ganze Geschichte gelingt bei 42 % der Seeds, die Vorlage nimmt nur diese. Erlaubte Länge
+   auf 45 s erweitern oder die Regie weiter verschärfen?
+4. **Abendlicht:** kräftig genug oder zu braun? Soll das Short auch Wetter bekommen (jetzt immer klar)?
+5. **Einblendungen:** bei jedem Gewitter (höchstens alle 25 s je Team) oder seltener?
+6. **Ton:** Hörurteil zum Probeclip (`output/cloudwars-c6-probe.mp4`, nur lokal): Donner, Wind, Lautstärke.
+7. **Überlappungen:** Wolken desselben Teams und Namensschilder überdecken sich manchmal.
+8. **Short-Bildbereich:** Wolken treiben zeitweise in den unteren Textbereich der Plattform.
+9. **Langvideo:** Neue Runde sofort mit frischem Wald (so gebaut) oder erst am nächsten Morgen?
+10. **Freigabe:** ganzes Short (rund 30 s) und Langvideo (10 Minuten) exportieren?

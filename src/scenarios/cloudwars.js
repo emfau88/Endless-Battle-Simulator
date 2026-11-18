@@ -1,7 +1,7 @@
 /*
  * Szenario „Cloud Wars“ (in Arbeit) – Plan: docs/CLOUD_WARS_PLAN_2026-11-18.md
  *
- * Stand Paket C7: Der Seed wählt einen festen Ausschnitt der Landschaft aus dem Prototyp „Wolkenflug“; er wird einmal
+ * Stand Paket C8: Der Seed wählt einen festen Ausschnitt der Landschaft aus dem Prototyp „Wolkenflug“; er wird einmal
  * vorgezeichnet. Darüber treiben Team-Wolken und neutrale Wolken (Simulation: cloudwars/simulation.js). Paket C2:
  * Wolken im Stil des Prototyps mit Teamfarbe, Augen, Namensschild und fliegenden Puffs (cloudwars/art.js).
  * Maßstab je Format (Wunsch des Nutzers: „auf Handy und PC jeweils passend“): Hochformat näher, 1 GE = 2,0 logische
