@@ -1,6 +1,6 @@
 # Gesamtplan: ein Main, sichere Architektur, Ausbau je Szenario
 
-**Zuletzt aktualisiert:** 18.11.2026 (Plan Wolkenreise, R39). **Status:** vom Nutzer am 16.11.2026 freigegeben („freie Hand“),
+**Zuletzt aktualisiert:** 18.11.2026 (Plan Wolkenreise, R39; lokale Audit-Fundstelle dokumentiert). **Status:** vom Nutzer am 16.11.2026 freigegeben („freie Hand“),
 Umsetzung läuft.
 
 Die [ROADMAP](ROADMAP.md) bleibt die einzige aktive Aufgabenliste; die Vorhaben dieses Plans stehen dort als
@@ -12,6 +12,10 @@ R31 bis R36. Dieser Plan liefert Begründung, Reihenfolge und Paketbeschreibunge
 ## 0 · Umsetzungsstand
 
 Drei Zustände: **Erledigt**, **Läuft**, **Offen**. Dazu **Entfällt** für gestrichene Schritte.
+
+**Erledigt – Dokumentation:** [Lokale Fundstelle des YouTube-Kanalaudits vom 18.11.2026](YOUTUBE_KANALAUDIT_2026-11-18.md)
+für künftige Agenten dokumentiert. Der vollständige Informationsbericht bleibt lokal und von Git
+ausgeschlossen. Keine Änderung an Kanal, Code oder freigegebener Umsetzungsreihenfolge.
 
 ### Block 0 · Sichern und aufräumen (R31)
 
