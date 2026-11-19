@@ -27,14 +27,15 @@
   // K1 · Startkisten: Schatten 0–1,2 s, Aufschlag 1,2 s, Ausbruch ab 1,6 s + Seed 0–2,4 s, mindestens 0,4 s Abstand.
   const CRATE = { size: 64, land: 1.2, open: 1.6, spread: 2.4, gap: .4, grid: 20, cover: 60, wall: 60, supply: 90,
     pair: 260, pairPortrait: 240, tries: 200, fair: [.6, 1.6] };
-  // K2 · Zielwahl, Schusslinie, Kampftempo. Startwerte aus dem Plan, Abstimmung in K5.
-  const FIGHT = { blaster: 6, rocket: 30, turn: 5, aimTol: .08, woodRange: 300, splash: .8, range: 690,
+  // K2 · Zielwahl, Schusslinie, Kampftempo. Startwerte aus dem Plan, in K5 abgestimmt (Rakete 30 → 26).
+  const FIGHT = { blaster: 6, rocket: 26, turn: 5, aimTol: .08, woodRange: 300, splash: .8, range: 690,
     score: { distance: 600, sight: .35, weak: .25, revenge: .30, revengeSec: 4, loyal: .20, loyalSec: 1.5, noise: .10 } };
-  // K4 · Charaktere, fest je Roboter (Ember, Azure, Amber, Moss)
+  // K4 · Charaktere, fest je Roboter (Ember, Azure, Amber, Moss). K5: Ember −15 % statt −30 % Abstand und Deckung
+  // ab 25 % Leben, Amber Raketen 15 % statt 25 % günstiger (sonst gewannen Ember zu selten, Amber zu oft).
   const CHARACTERS = [
-    { key: 'rusher', range: .7, coverHp: .20, aimTol: .08, rocketCost: 1, flankAfter: 2 },
+    { key: 'rusher', range: .85, coverHp: .25, aimTol: .08, rocketCost: 1, flankAfter: 2 },
     { key: 'sniper', range: 1.25, coverHp: .35, aimTol: .04, rocketCost: 1, flankAfter: 2 },
-    { key: 'collector', range: 1, coverHp: .35, aimTol: .08, rocketCost: .75, flankAfter: 2 },
+    { key: 'collector', range: 1, coverHp: .35, aimTol: .08, rocketCost: .85, flankAfter: 2 },
     { key: 'flanker', range: 1, coverHp: .35, aimTol: .08, rocketCost: 1, flankAfter: 1 },
   ];
   const WEAPONS = ScrapArena.WEAPONS, angleDiff = EBS.util.angleDiff, ROBOT_R = 24;
