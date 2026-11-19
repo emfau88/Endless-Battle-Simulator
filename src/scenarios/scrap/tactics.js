@@ -45,6 +45,14 @@
   // K4 · Panzerfahren und Verhalten
   const DRIVE = { turn: 3.2, spinAngle: Math.PI / 3, spinSpeed: .3, accel: 260, brake: 420, reverse: .5 };
   const BEHAVIOUR = { range: { blaster: [220, 340], rocket: [260, 420] }, coverNear: 60, coverSec: 3, coverMax: 6, coverPause: 4, claimed: 300 };
+  // S1 · Short-Karte (nur v4 hochkant, layout short): 540 × 700 statt 540 × 1040, 12 Deckungen (6 Holz, 3 Stein,
+  // 3 Beton), gleiche Waffen und Stationen. Entworfen in Hochformat-Bildkoordinaten, punktsymmetrisch um die Mitte;
+  // die Mittelinsel ist halb Stein, halb Beton. Umrechnung in die Motorkoordinaten wie bei den Hochformatkarten.
+  const SHORT = { w: 540, h: 700,
+    half: [[222, 104, 96, 36, 'concrete'], [96, 200, 60, 44, 'wood'], [384, 200, 60, 44, 'wood'], [186, 236, 56, 40, 'wood'], [330, 270, 60, 44, 'stone']],
+    centre: [[230, 330, 40, 40, 'stone'], [270, 330, 40, 40, 'concrete']],
+    pads: [[100, 350], [440, 350]], weapons: [[270, 190], [270, 510], [130, 300], [410, 400]],
+    starts: [[100, 90], [440, 90], [440, 610], [100, 610]] };
   // Zwischenspeicher außerhalb des Simulationszustands (Raster, Suchpuffer, Hindernisliste)
   const NAV = new WeakMap(), OBSTACLES = new WeakMap();
   class TacticalRound extends M.Round {
@@ -52,6 +60,7 @@
       super(options);
       this.rulesVersion = 'v4';
       this.portraitView = !!options.portrait;
+      if (options.short && this.portraitView) this._shortMap();
       this.fire = { clear: 0, wood: 0, splash: 0, blocked: 0 };
       for (const r of this.robots) {
         r.targetId = null; r.targetSince = 0; r.hitBy = this.robots.map(() => -99);
@@ -61,6 +70,21 @@
       }
       this._placeCrates();
       for (const r of this.robots) r.heading = r.angle;
+    }
+
+    // ---- S1 · Short-Karte -------------------------------------------------
+    _shortMap() {
+      const { w: W, h: H } = SHORT, point = ([x, y]) => [y, W - x];
+      const pieces = [...SHORT.half, ...SHORT.half.map(([x, y, w, h, m]) => [W - x - w, H - y - h, w, h, m]), ...SHORT.centre];
+      this.shortMap = true; this.bounds = { w: H, h: W, edge: M.edge };
+      this.blocks = pieces.map(([x, y, w, h, material], id) => {
+        const hp = M.materials[material].hp;
+        return { id, x: y, y: W - x - w, w: h, h: w, material, hp, maxHp: hp, alive: true };
+      });
+      SHORT.pads.forEach((p, i) => { [this.pads[i].x, this.pads[i].y] = point(p); });
+      SHORT.weapons.forEach((p, i) => { [this.pickups[i].x, this.pickups[i].y] = point(p); });
+      // Ersatz-Startplätze, falls keine Kistenaufstellung passt
+      for (const r of this.robots) { [r.x, r.y] = point(SHORT.starts[r.id]); r.lastX = r.x; r.lastY = r.y; }
     }
 
     // ---- K1 · Startkisten ------------------------------------------------
@@ -618,5 +642,5 @@
     }
   }
 
-  EBS.ScrapTactics = { Round: TacticalRound, CRATE, FIGHT, CHARACTERS, PATH, DRIVE, BEHAVIOUR };
+  EBS.ScrapTactics = { Round: TacticalRound, CRATE, FIGHT, CHARACTERS, PATH, DRIVE, BEHAVIOUR, SHORT };
 })();

@@ -146,3 +146,33 @@ test('Scrap v4: drei Seeds je Format gültig, mit K.o. und Sieger, Ereignisbeoba
     assert.equal(JSON.stringify(raw), JSON.stringify(r));
   }
 });
+
+test('Scrap v4 Short (S1, Simulation): eigene Karte nur hochkant, 2,5 s Abspann, Video endet von selbst', () => {
+  const { normalizeParams, hasNaturalEnd, createExportPlan, SHORT_END_SEC } = EBS.Scrap;
+  const short = { rulesVersion: 'v4', arena: 'sunshine', layout: 'short' };
+  // Ohne Short fehlt der Schlüssel (gleiche Zustands-Hashes); auf anderen Regeln/Karten wird er verworfen
+  assert.equal('layout' in normalizeParams({ rulesVersion: 'v4', arena: 'sunshine' }), false);
+  assert.equal('layout' in normalizeParams({ ...short, rulesVersion: 'v3' }), false);
+  assert.equal('layout' in normalizeParams({ ...short, arena: 'yard' }), false);
+  const video = aspect => ({ aspect, fps: 30, tempo: 1 });
+  assert.equal(hasNaturalEnd({ params: short, video: video('9:16') }), true);
+  assert.equal(hasNaturalEnd({ params: short, video: video('16:9') }), false);
+  assert.equal(hasNaturalEnd({ params: { ...short, rulesVersion: 'v3' }, video: video('9:16') }), false);
+  const wide = new EBS.Scrap.Episode({ seed: 1, params: short, world: { w: 1920, h: 1080 }, view: { camera: false } });
+  assert.equal(wide.short, false); assert.equal(wide.roundSim.shortMap, undefined);
+  for (const seed of [1, 2, 3]) {
+    const s = new EBS.Scrap.Episode({ seed, params: short, world: { w: 1080, h: 1920 }, view: { camera: false } }), r = s.roundSim;
+    assert.equal(s.short, true); assert.equal(r.shortMap, true);
+    assert.deepEqual([r.bounds.w, r.bounds.h], [700, 540]); assert.equal(r.crates.length, 4); assert.equal(r.crateFallback, false);
+    while (s.phase === 'running') s.stepOnce();
+    const end = s.step;
+    assert.equal(s.phase, 'outro'); assert.ok(r.winner !== null, `Seed ${seed}: kein Sieger`);
+    while (s.phase !== 'ended' && s.step < end + 400) s.stepOnce();
+    assert.equal(s.phase, 'ended'); assert.equal(s.step - end, SHORT_END_SEC * 60);
+    assert.ok(s.checkInvariants().ok); assert.equal(s.roundNumber, 1);
+    // Exportplan rechnet dieselbe Länge vorab
+    const plan = createExportPlan({ seed, params: short, video: video('9:16') }, { w: 1080, h: 1920 });
+    let step; do step = plan.advance(); while (!step.done);
+    assert.equal(step.durationSec, Math.ceil(s.step / 60 * 30) / 30);
+  }
+});

@@ -1130,7 +1130,7 @@
     normalizeParams: p => ({ ...normalizeParams(p), soundMix: soundMixOf(p) }),
     audioForParams(p) { return soundMixOf(p) === 'soft-v1' ? SOFT_AUDIO : this.audio; },
     createAudioMixPlan: softMixPlan,
-    hasNaturalDuration: cfg => cfg.params.episodeMode === 'tournament',
+    hasNaturalDuration: cfg => EBS.Scrap.hasNaturalEnd(cfg),
     createExportPlan: EBS.Scrap.createExportPlan,
     create: ctx => new Episode(ctx),
     createRenderer: ctx => new ScrapRenderer(ctx),

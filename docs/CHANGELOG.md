@@ -2,11 +2,17 @@
 
 Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen in der [ROADMAP](ROADMAP.md).
 
+## 20.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| R40, Scrap Wars, S1 Teil 1 (in Arbeit, noch nicht wählbar): Short-Karte 540 × 700 AE mit 12 Deckungen für `layout: 'short'` (nur `v4`, Sunny Yard, hochkant), 2,5 s Abspann nach dem Sieg, Video endet von selbst. Statistik-Skript mit `--layout short`, neuer Short-Test. `classic` bis `v4` ohne Short unverändert. Danach auf Wunsch gestoppt; alles Offene in einer Datei. | Branch `scrap/s1-short` | [Bericht](SCRAP_AUSBAU_2026-11-19.md#s1-teil-1--short-karte-und-ablauf-in-arbeit), [offene Punkte](SCRAP_OFFENE_PUNKTE_2026-11-20.md) |
+
 ## 19.11.2026
 
 | Was | Commit | Bericht |
 |---|---|---|
-| R40, Scrap Wars, T2: Ton `soft-v1` nach der gewählten Hörprobe B2 „sauber“. 21 gebackene Klänge und eine Windschleife aus Kenney-Quellen (CC0) mit Bauskript `scripts/build-scrap-audio.mjs` und Prüfsummen; Schalter `soundMix` („Ton“), fester Pegel mit Mischplan (Rangfolge, Dichte, Ducking, Stereo), Wind bei −48 LUFS; Vorlagen Short und Langvideo nutzen ihn. 20-s-Proben: −23,8 / −24,7 LUFS, Spitze −6 dBTP. Neuer Test `test/audio-scrap-soft.test.mjs`. Bisheriger Ton und Simulation unverändert. | Branch `scrap/t2-ton` | [Bericht](SCRAP_AUSBAU_2026-11-19.md#t2--ton-soft-v1-stopp-hörurteil) |
+| R40, Scrap Wars, T2: Ton `soft-v1` nach der gewählten Hörprobe B2 „sauber“. 21 gebackene Klänge und eine Windschleife aus Kenney-Quellen (CC0) mit Bauskript `scripts/build-scrap-audio.mjs` und Prüfsummen; Schalter `soundMix` („Ton“), fester Pegel mit Mischplan (Rangfolge, Dichte, Ducking, Stereo), Wind bei −48 LUFS; Vorlagen Short und Langvideo nutzen ihn. 20-s-Proben: −23,8 / −24,7 LUFS, Spitze −6 dBTP. Neuer Test `test/audio-scrap-soft.test.mjs`. Bisheriger Ton und Simulation unverändert. Vom Nutzer angenommen („Passt“). | PR #46 | [Bericht](SCRAP_AUSBAU_2026-11-19.md#t2--ton-soft-v1-stopp-hörurteil) |
 | R40, Scrap Wars: Waffen auf Sunny Yard als weiße Symbol-Marken (Rakete, Blitz) statt dunkler Felder mit Zahlen; Waffenstation als heller Ring, der sich beim Aufladen füllt. Vorlagen Short und Langvideo auf `v4`. Nur Darstellung und Vorlagen, Simulation unverändert; Seek-Bildtest bestanden. | Branch `scrap/v4-taktik` | [Bericht](SCRAP_AUSBAU_2026-11-19.md#nachtrag-waffen-als-symbol-marken-vorlagen-auf-v4) |
 | R40, Scrap Wars, K1–K5: Taktik-Arena `v4` (in Arbeit). Startkisten an Seed-gewählten Stellen mit gestaffeltem Ausbruch, Zielwahl nach Sicht und Lage, Schuss nur bei freier Linie, A*-Wegfindung, Panzerfahren, vier Charaktere. Gemessen über 100 Seeds je Format (Sunny Yard): häufigstes Trefferpaar der ersten 15 s 20 % statt 40 %, erster K.o. 15,5 / 16,2 s statt 18,9 / 25,1 s, festgefahren 0,9 %, Rechenzeit −18 % / +6 %. Neue Testdatei `test/scrap-v4.test.mjs`, Messskript `scripts/scrap-v4-stats.mjs`, Seek-Test um `v4` erweitert. `classic` bis `v3` unverändert, Referenz-Hashes gleich. Zwei 20-s-Testclips warten auf das Urteil des Nutzers. | Branch `scrap/v4-taktik` | [Bericht](SCRAP_AUSBAU_2026-11-19.md#k1k5--regelversion-v4-taktik-arena-stopp-testclip) |
 | R40, Scrap Wars, E1–E5 als Entwurf zur Stilfreigabe: Mündungsfeuer in Teamfarbe mit Rückstoß, Blaster-Kapsel mit Nachziehern, Treffer mit weißem Aufblitzen, Funken und liegenden Blechsplittern, Deckungstreffer je Material, Explosion in Stufen mit Rauch und Trümmern, K.o. mit abgesprengtem Turm und rauchendem Wrack. Neue Datei `effects-art.js`. Seek 4/4 pixelgleich, Ereignisse unverändert, Renderzeit +3,8 % bzw. ±0. | Branch `scrap/e0-kopfzeile` | [Bericht](SCRAP_AUSBAU_2026-11-19.md#e1e5--entwurf-der-neuen-effekte-stopp-stilfreigabe) |
