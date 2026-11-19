@@ -6,6 +6,9 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Was | Commit | Bericht |
 |---|---|---|
+| R40, Scrap Wars, E1–E5 als Entwurf zur Stilfreigabe: Mündungsfeuer in Teamfarbe mit Rückstoß, Blaster-Kapsel mit Nachziehern, Treffer mit weißem Aufblitzen, Funken und liegenden Blechsplittern, Deckungstreffer je Material, Explosion in Stufen mit Rauch und Trümmern, K.o. mit abgesprengtem Turm und rauchendem Wrack. Neue Datei `effects-art.js`. Seek 4/4 pixelgleich, Ereignisse unverändert, Renderzeit +3,8 % bzw. ±0. | Branch `scrap/e0-kopfzeile` | [Bericht](SCRAP_AUSBAU_2026-11-19.md#e1e5--entwurf-der-neuen-effekte-stopp-stilfreigabe) |
+| R40, Scrap Wars, E0: Sunny-Kopfzeile englisch („WOOD · STONE · CONCRETE“), Waffensymbol und Munitionszahl statt „BLST“/„RKT“; Vorschau-Skript `scripts/scrap-effects-preview.mjs` mit Vorher/Nachher-Blättern für Sunny Yard und Scrapyard. | Branch `scrap/e0-kopfzeile` | [Bericht](SCRAP_AUSBAU_2026-11-19.md#e0--sofortkorrektur-und-vorschau) |
+| R40, Scrap Wars, T1: Hörprobe in zwei Runden (lokal). Runde 1: B „Sci-Fi-Spielzeug“ am besten, aber nicht sauber und comichaft genug; heutiger Ton und Marble-Klänge unpassend. Runde 2: B2–B4 auf −23 LUFS ohne Eingriff des Begrenzers, Wahl offen. | – | [Bericht](SCRAP_AUSBAU_2026-11-19.md#t1--hörprobe-lokal-nicht-im-repository) |
 | R40, Scrap Wars: Ausbau-Plan nach Rückmeldung des Nutzers zu Ton, Wegfindung, Startaufstellung und Effekten. Gemessen am aktuellen Stand: 20 s hochkant mit 166 hörbaren Klängen auf −14 LUFS, Begrenzer bis −10,9 dB; im Querformat 78 % der Treffer der ersten 15 s auf dieselben zwei Nachbarpaare (40 Seeds); erster K.o. hochkant im Median nach 26 s (30 Seeds). Pakete T (Ton mit Hörprobe), E (Effekte, nur Darstellung), K (Regelversion `v4`: fallende Startkisten, Zielwahl mit Schusslinie, A*-Wegfindung, Panzerfahren, Charaktere) und S (Short-Modus, Turnier-Vorlage) mit Startwerten und Zielwerten. Dabei gefunden: Sunny-Kopfzeile zeigt „HOLZ · STEIN · BETON“, Korrektur als E0 geplant. Kein Code geändert. | Branch `scrap/ausbau-plan` | [Plan](SCRAP_AUSBAU_PLAN_2026-11-19.md) |
 
 ## 18.11.2026
@@ -152,6 +155,7 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Datum | Entscheidung |
 |---|---|
+| 19.11.2026 | Scrap Wars (R40): Kenney „Sci-Fi Sounds“ (CC0) darf für die Hörprobe geladen werden. Für Scrap keine Marble-Klänge und keine hellen, klirrenden Aufschläge; Richtung „Sci-Fi-Spielzeug“, sauberer und comichafter. Am Ton nicht weiter feilen, erst die anderen Punkte (Effekte, Startkisten, Wegfindung). |
 | 17.11.2026 | Waterpark: Wasserspiele sind am Tag an und bewegt. Der Parktag endet mit der Brunnenshow, alle Fontänen mit bunten Farbverläufen und asynchron. Der Titel „Endless Waterpark“ ist standardmäßig aus. Rutsche und Trichter sollen organisch ineinander übergehen; eine gerade Schnittkante am Rinnenende wurde als „zu abgehackt“ abgelehnt. |
 | 16.11.2026 | Marble XL: ein durchlaufendes 10-Minuten-Video in 1440p mit 60 Bildern pro Sekunde wird ganz gerendert (keine wiederholte Schleife). Dafür wird zuerst das Leeren der vollen Röhren gebaut. |
 | 16.11.2026 | Marble XL darf als „in Arbeit“ auf `main` („du kannst mergen, wenn nichts dagegen spricht“). Zum langen Video liegt nur eine Empfehlung des Assistenten vor (ganz rendern in 1440p mit 60 Bildern pro Sekunde statt einer wiederholten Schleife); entschieden ist das noch nicht. |

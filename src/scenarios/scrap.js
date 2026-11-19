@@ -315,12 +315,19 @@
       const chassisAngle = speed > 8 ? Math.atan2(robot.vy, robot.vx) : finite(robot.angle);
       const aim = finite(robot.angle), radius = Math.max(12, finite(robot.r, 24)), bodyScale = radius / 24;
       const stage = dead ? 2 : damageStage(robot), body = this._bodyTexture(color, dead, stage);
-      g.save(); g.translate(finite(robot.x), finite(robot.y));
+      // E1/E2: Rückstoß aus der Schusszeit (flashUntil = Schuss + 0,11 s), Schubs aus dem letzten Treffer (nudgeX/Y)
+      const fx = EBS.ScrapEffectsArt, shotAge = t - (finite(robot.flashUntil, -1) - .11), kick = dead ? 0 : fx.recoil(shotAge);
+      g.save(); g.translate(finite(robot.x) - Math.cos(aim) * 1.5 * kick * bodyScale + finite(robot.nudgeX),
+        finite(robot.y) - Math.sin(aim) * 1.5 * kick * bodyScale + finite(robot.nudgeY));
       if (!dead) glow(g, 0, 5, 40 * bodyScale, color, .10);
       g.save(); g.translate(5 * bodyScale, 8 * bodyScale); g.rotate(chassisAngle); g.scale(bodyScale, bodyScale);
       g.drawImage(body.scrapShadow, -52, -52, 104, 104); g.restore();
       g.save(); g.rotate(chassisAngle); g.scale(bodyScale, bodyScale);
       g.drawImage(body, -52, -52, 104, 104);
+      const hurtAge = t - (finite(robot.hurtUntil) - .22);
+      if (!dead && hurtAge >= 0 && hurtAge < .06) {
+        g.globalAlpha = .7 * (1 - hurtAge / .06); g.drawImage(fx.whiteOf(body), -52, -52, 104, 104); g.globalAlpha = 1;
+      }
       if (!dead && speed > 8) {
         const travel = (((finite(robot.x) + finite(robot.y)) * .28) % 5 + 5) % 5;
         for (const y of [-28, 20]) for (let x = -22; x < 17; x += 5)
@@ -347,18 +354,11 @@
         const mount = g.createLinearGradient(-4, -12, 16, 12);
         mount.addColorStop(0, '#93a6af'); mount.addColorStop(.32, '#536c7b'); mount.addColorStop(1, '#1a303f');
         g.fillStyle = mount; g.fill(); g.strokeStyle = '#122431'; g.lineWidth = 1.3; g.stroke();
-        const recoil = clamp((finite(robot.flashUntil) - t) * 32, 0, 4); g.translate(-recoil, 0);
+        g.translate(-6 * kick, 0);
         this._weapon(g, robot.weapon.kind, robot.weapon.ammo > 0, color);
         circle(g, 6, 0, 5.5); g.fillStyle = '#293f4c'; g.fill();
         circle(g, 6, 0, 2.1); g.fillStyle = '#7e9098'; g.fill(); stroke(g, 4.9, 0, 7.1, 0, '#1c2c36', .8);
-        if (robot.flashUntil > t) {
-          const rocket = robot.weapon.kind === 'rocket', muzzle = rocket ? 40 : 47;
-          const length = 9 + clamp((robot.flashUntil - t) * 100, 0, 14);
-          g.globalCompositeOperation = 'screen';
-          path(g, [[muzzle,-3],[muzzle+8,-6],[muzzle+5+length,0],[muzzle+8,6],[muzzle,3]]);
-          g.fillStyle = rocket ? '#ffd0a0' : '#d8f6ff'; g.fill();
-          glow(g, muzzle + 2, 0, 23, rocket ? '#ffb15c' : '#81d9ee', .34);
-        }
+        fx.muzzle(g, robot.weapon.kind === 'rocket' ? 40 : 47, shotAge, color, this.sunny);
         g.restore();
       } else {
         g.save(); g.rotate(aim); g.scale(bodyScale, bodyScale);
@@ -384,7 +384,8 @@
           if (e.type === 'ko' && e.round === episode.roundNumber && e.team === robot.id) { ko = e; break; }
         }
         const age = ko ? Math.max(0, (episode.step - ko.step) / 60) : Infinity;
-        if (age < 6) for (let i = 0; i < 2; i++) {
+        // In der Material-Arena raucht das Wrack über die Rauchebene (E5), hier nur in den älteren Arenen.
+        if (!robot.wreckSmoke && age < 6) for (let i = 0; i < 2; i++) {
           const phase = (age * .38 + i * .47) % 1, height = (16 + phase * 22) * bodyScale;
           const drift = Math.sin(age * 1.6 + i * 2.4) * 5 * bodyScale;
           const x = rearX + (i * 5 - 2.5) * bodyScale;
@@ -414,10 +415,6 @@
           g.restore();
         }
       }
-      if (robot.hurtUntil > t) {
-        circle(g, 0, 0, radius + 7); g.strokeStyle = rgba('#ffe6cf', clamp((robot.hurtUntil - t) * 5, 0, .8));
-        g.lineWidth = 2; g.stroke();
-      }
       g.restore();
     }
     _projectile(g, p) {
@@ -428,7 +425,7 @@
         for (let k = 8; k > 0; k--) {
           const dist = 10 + k * 6, jitter = noise(p.id, k) * Math.PI * 2;
           circle(g, p.x - ux * dist + Math.sin(jitter) * k * .9, p.y - uy * dist + Math.cos(jitter) * k * .9, 2 + k * 1.3);
-          g.fillStyle = `rgba(144,144,130,${(9 - k) * .016 * 1.6})`; g.fill();
+          g.fillStyle = this.sunny ? `rgba(109,106,98,${(9 - k) * .016 * 2})` : `rgba(144,144,130,${(9 - k) * .016 * 1.6})`; g.fill();
         }
         glow(g, p.x - ux * 9, p.y - uy * 9, 19, '#ffb25b', .29);
         g.translate(p.x, p.y); g.rotate(a);
@@ -439,33 +436,28 @@
         metal.addColorStop(0, '#d1d1b9'); metal.addColorStop(.5, '#8e9e9c'); metal.addColorStop(1, '#465e69');
         g.fillStyle = metal; g.fill(); path(g, [[6,-3],[11,0],[6,3]]); g.fillStyle = '#d88459'; g.fill();
         stroke(g, -4, -2, 5, -2, '#eff3da', .8);
-      } else {
-        const len = 26 + noise(p.id, 0) * 8;
-        g.globalCompositeOperation = 'screen'; g.lineCap = 'round';
-        stroke(g, p.x - ux * len, p.y - uy * len, p.x, p.y, '#6fd3ef40', 7);
-        const beam = g.createLinearGradient(p.x - ux * len, p.y - uy * len, p.x, p.y);
-        beam.addColorStop(0, '#f2fdff00'); beam.addColorStop(.25, '#f2fdffbb'); beam.addColorStop(1, '#f2fdff');
-        stroke(g, p.x - ux * len, p.y - uy * len, p.x, p.y, beam, 3);
-        glow(g, p.x, p.y, 10, '#6fd3ef', .35);
-      }
+      } else EBS.ScrapEffectsArt.bolt(g, p, palette[(p.owner ?? 0) % 4], this.sunny);
       g.restore();
     }
     _effect(g, e, under = false) {
       if (e.type === 'break' && e.material) { EBS.ScrapMaterialArt.breakEffect(g, e, under, this.sunny); return; }
       if (e.type === 'shot') return; // The weapon supplies its muzzle flash.
       if (!['hit', 'blast', 'ko'].includes(e.type)) { super._effect(g, e, under); return; }
-      if (under || e.age >= e.ttl) return;
+      const fx = EBS.ScrapEffectsArt;
+      if (e.age >= e.ttl) return;
+      if (e.type === 'hit') {
+        // Größe 24 = Treffer am Roboter (E2); Größe 17 = Einschlag des Blasters, an Deckung je Material (E3)
+        if (under) return;
+        if (e.size >= 20) fx.robotHit(g, e, this.sunny);
+        else if (e.cover) fx.coverHit(g, e, this.sunny);
+        else if (!e.onRobot) fx.impact(g, e);
+        return;
+      }
+      if (this.materialArena) { fx.blast(g, e, under, this.sunny, e.type === 'ko'); return; }
+      if (under) return;
       const u = Math.max(0, e.age / e.ttl), seed = e.seed >>> 0, tau = Math.PI * 2;
       g.save(); g.translate(e.x, e.y);
-      if (e.type === 'hit') {
-        g.globalCompositeOperation = 'screen';
-        if (u < .25) { circle(g, 0, 0, 6); g.fillStyle = rgba('#ffffff', .7 * (1 - u / .25)); g.fill(); }
-        glow(g, 0, 0, 10, '#ffe5aa', .3 * (1 - u));
-        for (let i = 0; i < 6; i++) {
-          const a = noise(seed, i) * tau, d = 2 + u * 13, len = (6 + noise(seed, i + 10) * 4) * (1 - u);
-          stroke(g, Math.cos(a) * d, Math.sin(a) * d, Math.cos(a) * (d + len), Math.sin(a) * (d + len), rgba('#ffe5aa', (1 - u) ** 2), 1.5);
-        }
-      } else {
+      {
         const s = Math.min(150, Math.max(4, e.size || 60)) * (e.type === 'ko' ? 1.25 : 1);
         for (let i = 0; i < 6; i++) {
           const a = noise(seed, i) * tau, d = s * (.12 + noise(seed, i + 10) * .18 + u * .15);
@@ -682,6 +674,10 @@
         ...('px' in p?{px:r.bounds.h-p.py,py:p.px}:{})}:p;
       const robots=r.robots.map(mapPoint),effects=r.effects.slice(-100).map(e=>({...mapPoint(e),age:e.age+elapsed}));
       const blocks=portrait?r.blocks.map(b=>({...b,x:r.bounds.h-b.y-b.h,y:b.x,w:b.h,h:b.w})):r.blocks;
+      const fx=EBS.ScrapEffectsArt,scene=this._fxScene(mapPoint,robots);
+      // Quer liefert mapPoint die Simulationsobjekte selbst: Zusatzfelder nur auf Kopien, nie auf der Simulation
+      const shown=robots.map(robot=>{const n=scene.nudge.get(robot.id);return {...robot,nudgeX:n?n.x:0,nudgeY:n?n.y:0,wreckSmoke:true};});
+      for(const e of effects)if(e.type==='hit'&&e.size<20)this._annotateImpact(e,blocks,robots);
       const c=this.view.camera?s.camera:{x:r.bounds.w/2,y:r.bounds.h/2,zoom:1};
       const cx=portrait?r.bounds.h-c.y:c.x,cy=portrait?c.x:c.y;
       g.fillStyle='#10191f';g.fillRect(0,0,this.world.w,this.world.h);
@@ -701,13 +697,16 @@
         if(sunny)art.sunnyPad(g,mapPoint(pad));else art.pad(g,mapPoint(pad),occupied);
       }
       for(const e of effects)this.arena._effect(g,e,true);
+      fx.debris(g,scene.debris,sunny);
       for(const p of r.pickups)this.arena._pickup(g,mapPoint(p),r.t);
       for(const b of blocks)if(b.alive) {
         const t=art.block(b,this.arena._blocks,sunny);g.drawImage(t.canvas,b.x-t.pad,b.y-t.pad,t.width,t.height);
       }
-      for(const robot of [...robots.filter(p=>!p.alive),...robots.filter(p=>p.alive)])this.arena._robot(g,robot,r.t);
+      for(const robot of [...shown.filter(p=>!p.alive),...shown.filter(p=>p.alive)])this.arena._robot(g,robot,r.t);
+      for(const t of scene.turrets)fx.turret(g,t,sunny);
       for(const p of r.projectiles)this.arena._projectile(g,mapPoint(p));
       for(const e of effects)this.arena._effect(g,e);
+      fx.puffs(g,scene.smoke);
       this.arena._labels(g,robots,l.arenaW,l.arenaH);
       g.restore();
       if(final)this.finale(g);
@@ -722,6 +721,88 @@
         this.workshopPanel(g);
       }
       if(this.view.hud)this.materialHud(g,final);
+    }
+    // E1–E5: liegende Splitter und Trümmer, abgesprengte Türme, Rauch und Treffer-Schubs aus dem Ereignisprotokoll
+    // der laufenden Runde. Zustandslos und seek-fest: Alter = Episodenschritt minus Ereignisschritt.
+    _fxScene(mapPoint, robots) {
+      const s = this.sim, ev = s.events || [], scene = { debris: [], turrets: [], smoke: [], nudge: new Map() };
+      const fx = EBS.ScrapEffectsArt, n = fx.noise, TAU = Math.PI * 2, sunny = this.arena.sunny, ts = s.timeScale || 1;
+      const smokeColor = sunny ? '#3a3936' : '#5d5b57', puffColor = sunny ? '#8d8a82' : '#9a9890';
+      const rubble = sunny ? ['#7d766a', '#5f5a52'] : ['#4e5559', '#3a4044'];
+      let columns = 0;
+      for (let i = ev.length - 1; i >= 0; i--) {
+        const e = ev[i];
+        if (e.round < s.roundNumber) break;
+        if (e.round !== s.roundNumber || !Number.isFinite(e.arenaX)) continue;
+        const age = Math.max(0, (s.step - e.step) / 60) * ts, p = mapPoint({ x: e.arenaX, y: e.arenaY }), seq = e.seq;
+        const robot = e.team != null ? robots.find(r => r.id === e.team) : null, scale = Math.max(.5, (robot?.r || 24) / 24);
+        if (e.type === 'hit') {
+          if (age < .1 && robot && !scene.nudge.has(e.team)) {
+            const dx = robot.x - p.x, dy = robot.y - p.y, d = Math.hypot(dx, dy) || 1, k = 2 * Math.sin(Math.PI * age / .1);
+            scene.nudge.set(e.team, { x: dx / d * k, y: dy / d * k });
+          }
+          const count = 2 + (n(seq, 1) < .5 ? 1 : 0);
+          for (let k = 0; k < count && scene.debris.length < 40; k++) scene.debris.push({ kind: 'splinter', x: p.x, y: p.y, age, flight: .35,
+            dir: n(seq, k + 2) * TAU, dist: 12 + 8 * n(seq, k + 6), hop: 5, rot: n(seq, k + 10) * TAU, spin: 6 * (n(seq, k + 14) - .5),
+            size: 2.2 + n(seq, k + 18), color: fx.shade(palette[e.team % 4], .7) });
+        } else if (e.type === 'blast' || e.type === 'ko') {
+          const big = e.type === 'ko' ? 1.25 : 1, count = 6 + Math.floor(n(seq, 1) * 5);
+          for (let k = 0; k < count && scene.debris.length < 40; k++) scene.debris.push({ kind: 'chunk', x: p.x, y: p.y, age, flight: .5,
+            dir: n(seq, k + 20) * TAU, dist: (30 + 30 * n(seq, k + 40)) * big, hop: 14, rot: n(seq, k + 60) * TAU, spin: 8 * (n(seq, k + 80) - .5),
+            size: 2.4 + 2.2 * n(seq, k + 100), color: rubble[k % 2] });
+          if (age >= .1 && age < 2.5 && columns < 6) {
+            columns++;
+            const u = (age - .1) / 2.4, clouds = 6 + Math.floor(n(seq, 3) * 3);
+            for (let k = 0; k < clouds; k++) {
+              const a = n(seq, k + 120) * TAU, d = (8 + 22 * n(seq, k + 140)) * big;
+              scene.smoke.push({ x: p.x + Math.cos(a) * d + 8 * u, y: p.y + Math.sin(a) * d * .7 - 25 * u,
+                r: (9 + 7 * n(seq, k + 160)) * big * (1 + .7 * u), alpha: .5 * (1 - u) * Math.min(1, (age - .1) / .15), color: smokeColor });
+            }
+          }
+          if (e.type === 'ko') {
+            scene.turrets.push({ x: p.x, y: p.y, age, dir: n(seq, 7) * TAU, dist: 30 + 20 * n(seq, 8), rot: robot?.angle || 0,
+              spin: (n(seq, 9) < .5 ? -1 : 1) * (7 + 5 * n(seq, 10)), scale, color: palette[e.team % 4] });
+            // Wrack raucht bis Rundenende: drei Wölkchen je Sekunde, steigen 40 AE
+            if (columns < 6) {
+              columns++;
+              const base = robot || p, life = 1.4, start = .25;
+              for (let k = Math.max(0, Math.floor((age - start - life) * 3)); k <= Math.floor((age - start) * 3); k++) {
+                const a = age - start - k / 3; if (a < 0 || a >= life) continue;
+                const u = a / life;
+                scene.smoke.push({ x: base.x - 3 * scale + (n(seq, k + 200) - .5) * 8 + 6 * u, y: base.y - 4 * scale - 40 * u,
+                  r: (4 + 8 * u) * scale, alpha: .35 * (1 - u) * Math.min(1, a / .15), color: smokeColor });
+              }
+            }
+          }
+        } else if ((e.type === 'blaster' || e.type === 'rocket') && robot) {
+          const aim = robot.angle || 0;
+          if (age < .5) {
+            const u = age / .5;
+            scene.smoke.push({ x: p.x + Math.cos(aim) * 40 * scale, y: p.y + Math.sin(aim) * 40 * scale - 6 * u, r: 4 + 6 * u, alpha: .35 * (1 - u), color: puffColor });
+          }
+          if (e.type === 'rocket' && age < .7) {
+            const u = age / .7;
+            for (let k = 0; k < 3; k++) {
+              const side = (k - 1) * .7 + (n(seq, k + 30) - .5) * .4, d = (16 + 5 * k + 10 * u) * scale;
+              scene.smoke.push({ x: p.x + Math.cos(aim + Math.PI + side) * d, y: p.y + Math.sin(aim + Math.PI + side) * d - 4 * u,
+                r: 6 + 10 * u, alpha: .4 * (1 - u), color: puffColor });
+            }
+          }
+        }
+      }
+      return scene;
+    }
+    // Ordnet einen Blaster-Einschlag (Effekt der Größe 17) einem Roboter oder einer Deckung zu, mit Richtung weg von der Deckung.
+    _annotateImpact(e, blocks, robots) {
+      for (const r of robots) if (Math.hypot(e.x - r.x, e.y - r.y) < (r.r || 24) + 8) { e.onRobot = true; return; }
+      let best = null, bestD = 7;
+      for (const b of blocks) {
+        const dx = Math.max(b.x - e.x, 0, e.x - b.x - b.w), dy = Math.max(b.y - e.y, 0, e.y - b.y - b.h), d = Math.hypot(dx, dy);
+        if (d < bestD) { best = b; bestD = d; }
+      }
+      if (!best) return;
+      const cx = (e.x - best.x - best.w / 2) / (best.w / 2), cy = (e.y - best.y - best.h / 2) / (best.h / 2), side = Math.abs(cx) > Math.abs(cy);
+      e.cover = best.material; e.nx = side ? Math.sign(cx) || 1 : 0; e.ny = side ? 0 : Math.sign(cy) || 1;
     }
     _usesDarkMaterialArt() {
       return this.sim.cfg.rulesVersion === 'v3' && this.sim.cfg.arena !== 'sunshine';
