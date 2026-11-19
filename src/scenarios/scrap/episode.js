@@ -7,7 +7,7 @@
   const { clamp, num, bool, hashSeed, fnv1a } = EBS.util;
   const EVENT_LIMIT = 4096;
   const normalizeParams = (p = {}) => ({
-    rulesVersion: p.arena === 'sunshine' ? 'v3' : ['v2','v3'].includes(p.rulesVersion) ? p.rulesVersion : 'classic',
+    rulesVersion: p.rulesVersion === 'v4' ? 'v4' : p.arena === 'sunshine' ? 'v3' : ['v2','v3'].includes(p.rulesVersion) ? p.rulesVersion : 'classic',
     episodeMode: p.episodeMode === 'tournament' ? 'tournament' : 'endless',
     arena: Object.hasOwn(EBS.ScrapRules.arenas, p.arena) ? p.arena : 'yard',
     workshop: p.episodeMode === 'tournament' && bool(p.workshop, false),
@@ -15,7 +15,7 @@
     endPauseSec: clamp(Math.round(num(p.endPauseSec, 3)), 2, 8),
   });
   function layout({ w, h }, params = {}) {
-    if (params.rulesVersion === 'v3') {
+    if (params.rulesVersion === 'v3' || params.rulesVersion === 'v4') {
       const portrait=h>w, aw=portrait?EBS.ScrapMaterials.height:EBS.ScrapMaterials.width;
       const ah=portrait?EBS.ScrapMaterials.width:EBS.ScrapMaterials.height, top=portrait?132:80;
       const scale=Math.min((w-24)/aw,(h-top-12)/ah),width=aw*scale,height=ah*scale;
@@ -67,7 +67,8 @@
       return p;
     }
   };
-  const ObservedRound = observe(ScrapArena.Sim), ImprovedRound = observe(EBS.ScrapRules.Round), MaterialRound = observe(EBS.ScrapMaterials.Round);
+  const ObservedRound = observe(ScrapArena.Sim), ImprovedRound = observe(EBS.ScrapRules.Round), MaterialRound = observe(EBS.ScrapMaterials.Round),
+    TacticalRound = observe(EBS.ScrapTactics.Round);
 
   class Episode {
     constructor({ seed, params, world, view = { camera: true }, timeScale = 1 }) {
@@ -100,7 +101,7 @@
     _startRound() {
       this.roundNumber++;
       this.roundSeed = this.roundNumber === 1 ? this.seed : hashSeed('scrap-round-v1', this.seed, this.roundNumber);
-      const Round = this.cfg.rulesVersion === 'v3' ? MaterialRound : this.cfg.rulesVersion === 'classic' && this.cfg.arena === 'yard' && !this.cfg.workshop ? ObservedRound : ImprovedRound;
+      const Round = this.cfg.rulesVersion === 'v4' ? TacticalRound : this.cfg.rulesVersion === 'v3' ? MaterialRound : this.cfg.rulesVersion === 'classic' && this.cfg.arena === 'yard' && !this.cfg.workshop ? ObservedRound : ImprovedRound;
       this.roundSim = new Round({ seed: this.roundSeed, rulesVersion: this.cfg.rulesVersion, arena: this.cfg.arena,
         portrait: this.world.h > this.world.w, upgrades: this.workshop.modules });
       // Non-enumerable: JSON of the round stays byte-identical to the source.
@@ -192,7 +193,7 @@
     stateHash() {
       // Full round state (AI targets/cooldowns, both RNGs, objects, effects, UI
       // feed) plus episode scheduling and a rolling digest of ALL past events.
-      const state = { version: this.cfg.rulesVersion==='v3'?'scrap-episode-v3':'scrap-episode-v2', seed: this.seed, cfg: this.cfg, world: this.world,
+      const state = { version: this.cfg.rulesVersion==='v4'?'scrap-episode-v4':this.cfg.rulesVersion==='v3'?'scrap-episode-v3':'scrap-episode-v2', seed: this.seed, cfg: this.cfg, world: this.world,
         timeScale: this.timeScale, unitsPerStep: this.unitsPerStep, step: this.step, simTicks: this.simTicks,
         accumulator: this.accumulator, round: this.roundNumber, roundSeed: this.roundSeed,
         phase: this.phase, pauseUntil: this.pauseUntil, completed: this.completedRounds,
