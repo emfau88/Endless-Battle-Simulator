@@ -1050,11 +1050,72 @@
     }
     destroy() { this.materialFloor=null;this.arena.destroy(); this.arenaCanvas.width = this.arenaCanvas.height = 1; super.destroy(); }
   }
+  /* Ton „soft-v1“ (R40, T2): die gewählte Hörprobe B2 „sauber“ mit leisem Wind. Fester Pegel ohne Lautheits-
+   * Einmessung; der Mischplan lässt nur die wichtigen Klänge durch. Die Dateien baut scripts/build-scrap-audio.mjs,
+   * Pegel als Dezibel-Stufen auf lautheitsgleichen Klängen. Fehlt der Schalter, bleibt der bisherige Ton. */
+  const softDb = d => 10 ** (d / 20), b2 = (...keys) => keys.map(k => 'scrap-b2-' + k);
+  const byMaterial = (wood, stone, concrete) => ({ variant: 'material', variants: { wood: { samples: b2(wood) }, stone: { samples: b2(stone) }, concrete: { samples: b2(concrete) } } });
+  // Fester Pegel +4,5 dB: Sunny Yard v4, je fünf Seeds hoch und quer à 60 s ergeben −21,6 bis −24,2 LUFS mit Wind
+  // (Median um −23). Nur K.o.- und Explosionsspitzen erreichen den Begrenzer.
+  const SOFT_AUDIO = { ceilingDb: -6, mixProfile: 'marbleworks-soft-v1', fixedGainDb: 4.5,
+    background: { file: 'scrap-wind-loop.ogg', label: 'Wind', volumeKey: 'wind', gainDb: -27.7, referenceMaster: 100,
+      loopStartSec: 1, loopEndSec: 31, fadeSec: .05 },
+    events: {
+      // Jeder Roboter feuert in seiner festen Tonlage (Ember, Azure, Amber, Moss).
+      blaster: { label: 'Blaster', samples: b2('blaster-0', 'blaster-1', 'blaster-2'), gain: softDb(-15), detune: .3,
+        variant: 'team', variants: { 0: { semis: -2 }, 1: { semis: 2 }, 2: { semis: 0 }, 3: { semis: -1 } } },
+      rocket: { label: 'Raketenstart', samples: b2('rocket-0', 'rocket-1'), gain: softDb(-16), detune: .5 },
+      hit: { label: 'Robotertreffer', samples: b2('hit-0', 'hit-1', 'hit-2'), gain: softDb(-10), detune: .6 },
+      cover_hit: { label: 'Deckungstreffer', samples: b2('wood'), gain: softDb(-16), detune: .6, ...byMaterial('wood', 'stone', 'concrete') },
+      blast: { label: 'Explosion', samples: b2('blast-0', 'blast-1'), gain: softDb(-3), detune: .5 },
+      break: { label: 'Deckung zerstört', samples: b2('break-wood'), gain: softDb(-11), detune: .5, ...byMaterial('break-wood', 'break-stone', 'break-concrete') },
+      pickup: { label: 'Waffenaufnahme', samples: b2('pickup'), gain: softDb(-15) },
+      upgrade: { label: 'Werkstattmodul', samples: b2('pickup'), gain: softDb(-15), semis: -2 },
+      drop: { label: 'Waffenabwurf', samples: b2('drop'), gain: softDb(-19) },
+      ko: { label: 'Roboter ausgeschaltet', samples: b2('ko'), gain: 1 },
+      crate_land: { label: 'Kiste landet', samples: b2('crate-land'), gain: softDb(-11) },
+      crate_break: { label: 'Kiste bricht auf', samples: b2('crate-break'), gain: softDb(-11) },
+    } };
+  // Rangfolge bei gleichem Zeitpunkt; ko und blast sind immer hörbar. Schritte = 1/60 s.
+  const SOFT_RANK = { ko: 0, blast: 2, break: 3, hit: 4, rocket: 5, blaster: 6, cover_hit: 7, pickup: 8, upgrade: 8, drop: 9, crate_land: 9, crate_break: 9 };
+  const SOFT_MIX = { minorWindow: 30, minorMax: 2, blasterWindow: 60, blasterMax: 3, blasterGap: 14, duckSteps: 18, duck: .5, pan: .35 };
+  // Vollständige Entscheidungen in Zeitfolge: Nichts Späteres ändert eine frühere Entscheidung.
+  function softMixPlan(events, { cfg, world }) {
+    if (cfg.params.soundMix !== 'soft-v1') return null;
+    const clamp = EBS.util.clamp, volume = cfg.video.volume || {}, decisions = new Map(), candidates = [], M = SOFT_MIX;
+    const stats = { total: events.length, audible: 0, unmapped: 0, muted: 0, densitySuppressed: 0, blasterSuppressed: 0, ducked: 0 };
+    for (const e of events) {
+      if (!Number.isInteger(e.seq) || !Number.isFinite(e.step) || decisions.has(e.seq)) throw new Error('Scrap: ungültiges Tonereignis.');
+      const x = Number.isFinite(e.x) ? e.x : world.w / 2, decision = { seq: e.seq, gain: 0, pan: clamp((x / world.w - .5) * 2 * M.pan, -M.pan, M.pan) };
+      decisions.set(e.seq, decision);
+      if (!Object.hasOwn(SOFT_AUDIO.events, e.type)) { stats.unmapped++; continue; }
+      if (volume[e.type] === 0 || volume.master === 0) { stats.muted++; continue; }
+      candidates.push(e);
+    }
+    candidates.sort((a, b) => a.step - b.step || SOFT_RANK[a.type] - SOFT_RANK[b.type] || a.seq - b.seq);
+    const minor = [], blasters = [], lastBlaster = new Map(); let duckUntil = -1;
+    for (const e of candidates) {
+      const decision = decisions.get(e.seq);
+      if (e.type === 'ko' || e.type === 'blast') { decision.gain = 1; duckUntil = e.step + M.duckSteps; stats.audible++; continue; }
+      while (minor.length && e.step - minor[0] >= M.minorWindow) minor.shift();
+      while (blasters.length && e.step - blasters[0] >= M.blasterWindow) blasters.shift();
+      if (minor.length >= M.minorMax) { stats.densitySuppressed++; continue; }
+      if (e.type === 'blaster') {
+        if (blasters.length >= M.blasterMax || (lastBlaster.has(e.team) && e.step - lastBlaster.get(e.team) < M.blasterGap)) { stats.blasterSuppressed++; continue; }
+        blasters.push(e.step); lastBlaster.set(e.team, e.step);
+      }
+      let gain = e.type === 'hit' ? clamp((e.p || 3) / 6, .5, 1) : e.type === 'cover_hit' ? .7 : 1;
+      if (e.step < duckUntil && (e.type === 'blaster' || e.type === 'hit' || e.type === 'cover_hit')) { gain *= M.duck; stats.ducked++; }
+      decision.gain = gain; minor.push(e.step); stats.audible++;
+    }
+    return { version: 1, profile: SOFT_AUDIO.mixProfile, events: events.map(e => decisions.get(e.seq)), stats };
+  }
+  const soundMixOf = p => p && p.soundMix === 'soft-v1' ? 'soft-v1' : 'classic';
   EBS.registerScenario({
     id: 'scrap', title: 'Scrap Wars',
     supportsClips: true,
     supportsCamera: false,
-    defaults: { rulesVersion: 'v3', episodeMode: 'endless', arena: 'yard', workshop: false, repeatRounds: true, endPauseSec: 3 },
+    defaults: { rulesVersion: 'v3', episodeMode: 'endless', arena: 'yard', workshop: false, repeatRounds: true, endPauseSec: 3, soundMix: 'classic' },
     controls: [
       { key: 'episodeMode', label: 'Format', type: 'select', options: [['endless', 'Freie Videolänge'], ['tournament', 'Turnier · 8 Runden + Finale']], restart: true },
       { key: 'rulesVersion', label: 'Arena / Kampfregeln', type: 'select', enabled: p => p.arena !== 'sunshine' || p.rulesVersion === 'v4', options: [['v4', 'Taktik-Arena · Startkisten, Zielwahl, Wegfindung'], ['v3', 'Große Arena · Holz, Stein, Beton'], ['v2', 'Bisherige Arena · flüssiger Kampf'], ['classic', 'Originalprototyp']], restart: true },
@@ -1062,8 +1123,13 @@
       { key: 'workshop', label: 'Werkstatt (experimentell, ein Modul je Roboter)', type: 'check', enabled: p => p.episodeMode === 'tournament', restart: true },
       { key: 'repeatRounds', label: 'Weitere Runden spielen', type: 'check', enabled: p => p.episodeMode !== 'tournament', restart: true },
       { key: 'endPauseSec', label: 'Ergebnis zeigen', type: 'range', min: 2, max: 8, step: 1, restart: true, format: v => `${v} s` },
+      // Nur Ton im Export; der Neustart baut die Lautstärkeregler für die gewählte Klangtabelle neu auf.
+      { key: 'soundMix', label: 'Ton', type: 'select', options: [['soft-v1', 'Weich · klare Klänge, leiser Wind, feste Mischung'], ['classic', 'Bisheriger Ton · auf −14 LUFS eingemessen']], restart: true, resetMix: true },
     ],
-    normalizeParams,
+    // Die Simulation sieht soundMix nicht (eigene Normalisierung in der Episode), ihre Hashes bleiben gleich.
+    normalizeParams: p => ({ ...normalizeParams(p), soundMix: soundMixOf(p) }),
+    audioForParams(p) { return soundMixOf(p) === 'soft-v1' ? SOFT_AUDIO : this.audio; },
+    createAudioMixPlan: softMixPlan,
     hasNaturalDuration: cfg => cfg.params.episodeMode === 'tournament',
     createExportPlan: EBS.Scrap.createExportPlan,
     create: ctx => new Episode(ctx),
