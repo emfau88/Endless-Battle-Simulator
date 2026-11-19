@@ -2,7 +2,8 @@
 
 **Bezug:** [Ausbau-Plan](SCRAP_AUSBAU_PLAN_2026-11-19.md). **Stand:** T1 Hörprobe abgeschlossen (B2 gewählt), E0–E5 auf `main` (PR #44), K1–K5 Taktik-Arena `v4` gebaut,
 gemessen und vom Nutzer angenommen („soweit ganz ok“); Waffen auf Sunny Yard als Symbol-Marken, Vorlagen auf `v4`
-(PR #45 auf `main`). T2 Ton `soft-v1` gebaut, wartet auf das Hörurteil (Branch `scrap/t2-ton`).
+(PR #45 auf `main`). T2 Ton `soft-v1` vom Nutzer angenommen („Passt“, PR #46). S1 Teil 1 (Short-Karte und Ablauf)
+gebaut, danach auf Wunsch des Nutzers gestoppt; alles Offene steht in [SCRAP_OFFENE_PUNKTE_2026-11-20.md](SCRAP_OFFENE_PUNKTE_2026-11-20.md).
 
 **Kurz:** Die Sunny-Kopfzeile ist englisch und zeigt Waffensymbole. Neue Treffer-, Schuss- und Explosionseffekte
 stehen als Vorher/Nachher-Blätter bereit. Beim Ton ist Variante B2 „sauber“ gewählt und als Schalter `soundMix: 'soft-v1'` eingebaut; die Vorlagen nutzen ihn. Die Taktik-Arena `v4` ist
@@ -309,4 +310,48 @@ Zustands-Hash nachgewiesen).
   Testclips hatten bis −6,7 dB).
 - Bitgleiches Neubauen der OGG-Dateien gilt nur mit der dokumentierten FFmpeg-Version.
 
-**Stopp:** Hörurteil des Nutzers zu den zwei Proben. Danach S1–S3 (Short) und L1.
+**Stopp:** Hörurteil des Nutzers zu den zwei Proben. **Ergebnis (19.11.):** „Passt, mergen“, PR #46 auf `main`.
+
+---
+
+## S1, Teil 1 · Short-Karte und Ablauf (in Arbeit)
+
+**Umfang:** der Simulationsteil des Short-Layouts. In der Oberfläche ist er noch nicht wählbar und deshalb unsichtbar;
+die Darstellung (keine Kopfleiste, große Namensschilder, Einstiegstext, Sieger groß) folgt. Die offenen Schritte
+stehen in [SCRAP_OFFENE_PUNKTE_2026-11-20.md](SCRAP_OFFENE_PUNKTE_2026-11-20.md).
+
+- **Parameter `layout: 'short'`:** gilt nur mit `v4` auf Sunny Yard und nur hochkant. Ohne ihn fehlt der Schlüssel in
+  den Parametern, die Zustands-Hashes bleiben gleich.
+- **Short-Karte** 540 × 700 AE (hochkant gesehen) statt 540 × 1040: 12 Deckungen (6 Holz, 3 Stein, 3 Beton),
+  punktsymmetrisch, gleiche Waffen und Stationen, Startkisten wie in `v4`. Die Arena füllt die Bildbreite (2 Pixel
+  je AE bei 1080) und liegt zwischen 8 % und 81 % der Bildhöhe.
+- **Ablauf:** nach dem Sieg 2,5 s Abspann, dann Schluss, keine zweite Runde. Das Video endet von selbst; die
+  Export-Vorplanung rechnet die Länge vorab wie beim Turnier.
+- Die Material-Arena liest Breite und Höhe jetzt aus `this.bounds` statt aus festen Zahlen; in `v3` und `v4` sind das
+  dieselben Werte.
+- Statistik: `node scripts/scrap-v4-stats.mjs --layout short`.
+
+| Messung (100 Seeds, hochkant, Node) | Wert |
+|---|---|
+| erster K.o. | Median 14,4 s |
+| Rundenlänge | Median 27,0 s, längste 46,4 s |
+| häufigstes Paar in den ersten 15 s | 19,4 % |
+| festgefahren | 0,6 % der Roboterzeit |
+| Siege EMBER / AZURE / AMBER / MOSS | 27 / 31 / 18 / 24 %, kein Unentschieden |
+| Kisten-Ersatzaufstellung | 0 |
+| Rechenzeit | 6,5 ms je Simulationssekunde |
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-v4.test.mjs test/scrap.test.mjs` | 25 von 25, neu: Short-Test (Karte, Abspann 150 Schritte, Exportlänge, Parameter) |
+| `node scripts/scrap-map-hashes.mjs` | 6 Fälle × 4 Prüfpunkte gleich |
+| `npm run golden` | 36 Fälle × 2 Prüfpunkte identisch mit der Referenz |
+| `node --test test/presets.test.mjs` | 4 von 4 |
+| `v3` und `v4` ohne Short gegen `main`, 24 Fälle über 45 s | kein Unterschied |
+
+**Nicht gelaufen:** kein vollständiger `npm test`, keine Bilder, kein Export.
+
+**Grenzen:** Der erste K.o. liegt über dem Ziel aus S2 (5–10 s); das soll die Short-Balance in S2 lösen. Die Werte
+sind in Node gemessen; im Browser laufen `v4`-Runden wegen leicht anderer `sin`/`cos`-Werte etwas anders.
+
+**Stopp** am 20.11. auf Wunsch des Nutzers nach diesem Teil.

@@ -3,6 +3,7 @@
 // Je Format eine Runde für jeden Seed; Zielwerte aus dem Ausbau-Plan, Abschnitt K5.
 //   node scripts/scrap-v4-stats.mjs                      100 Seeds, Sunny Yard, quer und hochkant
 //   node scripts/scrap-v4-stats.mjs --seeds 30 --arena yard --rules v3   Vergleich mit der Material-Arena
+//   node scripts/scrap-v4-stats.mjs --layout short                       Short-Karte (nur hochkant)
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
@@ -10,7 +11,7 @@ import vm from 'node:vm';
 
 const arg = (name, def) => { const i = process.argv.indexOf('--' + name); return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : def; };
 const root = fileURLToPath(new URL('../', import.meta.url));
-const seeds = Number(arg('seeds', 100)), arena = arg('arena', 'sunshine'), rulesVersion = arg('rules', 'v4'), first = Number(arg('first', 1));
+const seeds = Number(arg('seeds', 100)), arena = arg('arena', 'sunshine'), rulesVersion = arg('rules', 'v4'), first = Number(arg('first', 1)), layout = arg('layout', '');
 const context = vm.createContext({}); context.window = context;
 for (const path of ['core.js', 'scenarios/scrap/simulation.js', 'scenarios/scrap/rules.js', 'scenarios/scrap/materials.js',
   'scenarios/scrap/tactics.js', 'scenarios/scrap/episode.js']) vm.runInContext(readFileSync(join(root, 'src', path), 'utf8'), context, { filename: path });
@@ -18,12 +19,12 @@ export const { EBS } = context; const NAMES = ['EMBER', 'AZURE', 'AMBER', 'MOSS'
 const median = list => { const s = [...list].sort((a, b) => a - b), n = s.length; return n ? n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2 : NaN; };
 const pct = v => `${(v * 100).toFixed(1)} %`;
 
-export function measure({ seeds, arena, rulesVersion, portrait, first = 1 }) {
+export function measure({ seeds, arena, rulesVersion, portrait, first = 1, layout = '' }) {
   const world = portrait ? { w: 1080, h: 1920 } : { w: 1920, h: 1080 };
   const out = { firstKo: [], duration: [], pairs: new Map(), hits15: 0, wins: [0, 0, 0, 0], draws: 0, invalid: 0,
     fire: { clear: 0, wood: 0, splash: 0, blocked: 0 }, stuck: 0, robotTime: 0, ms: 0, simSec: 0 };
   for (let seed = first; seed < first + seeds; seed++) {
-    const sim = new EBS.Scrap.Episode({ seed, params: { rulesVersion, arena, repeatRounds: false }, world, view: { camera: false } });
+    const sim = new EBS.Scrap.Episode({ seed, params: { rulesVersion, arena, repeatRounds: false, ...(layout ? { layout } : {}) }, world, view: { camera: false } });
     const t0 = performance.now(), round = sim.roundSim, moved = round.robots.map(r => ({ x: r.x, y: r.y, t: 0 }));
     while (sim.phase === 'running') {
       sim.stepOnce();
@@ -65,5 +66,6 @@ function report(label, o, n) {
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  for (const portrait of [false, true]) report(`${rulesVersion} · ${arena} · ${portrait ? 'hochkant' : 'quer'}`, measure({ seeds, arena, rulesVersion, portrait, first }), seeds);
+  for (const portrait of layout === 'short' ? [true] : [false, true])
+    report(`${rulesVersion} · ${arena}${layout ? ' · ' + layout : ''} · ${portrait ? 'hochkant' : 'quer'}`, measure({ seeds, arena, rulesVersion, portrait, first, layout }), seeds);
 }

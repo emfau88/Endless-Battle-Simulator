@@ -6,7 +6,7 @@
   'use strict';
   const { clamp, num, bool, hashSeed, fnv1a } = EBS.util;
   const EVENT_LIMIT = 4096;
-  const normalizeParams = (p = {}) => ({
+  const normalizeParams = (p = {}) => withShort(p, {
     rulesVersion: p.rulesVersion === 'v4' ? 'v4' : p.arena === 'sunshine' ? 'v3' : ['v2','v3'].includes(p.rulesVersion) ? p.rulesVersion : 'classic',
     episodeMode: p.episodeMode === 'tournament' ? 'tournament' : 'endless',
     arena: Object.hasOwn(EBS.ScrapRules.arenas, p.arena) ? p.arena : 'yard',
@@ -14,7 +14,19 @@
     repeatRounds: bool(p.repeatRounds, true),
     endPauseSec: clamp(Math.round(num(p.endPauseSec, 3)), 2, 8),
   });
+  // S1 · Short: nur Taktik-Arena auf Sunny Yard. Ohne Short fehlt der Schlüssel, damit Zustands-Hashes gleich bleiben.
+  function withShort(p, out) {
+    if (p.layout === 'short' && out.rulesVersion === 'v4' && out.arena === 'sunshine') out.layout = 'short';
+    return out;
+  }
+  const SHORT_END_SEC = 2.5;
   function layout({ w, h }, params = {}) {
+    // Short: Arena füllt die Bildbreite (2 Pixel je Einheit bei 1080) und liegt zwischen 8 % und 81 % der Bildhöhe.
+    if (params.layout === 'short' && params.rulesVersion === 'v4' && h > w) {
+      const S = EBS.ScrapTactics.SHORT, scale = Math.min(w / S.w, h * .73 / S.h), width = S.w * scale, height = S.h * scale;
+      return { x: (w - width) / 2, y: h * .08, width, height, size: Math.min(width, height), scale, arenaW: S.w, arenaH: S.h,
+        full: true, kind: 'portrait', short: true };
+    }
     if (params.rulesVersion === 'v3' || params.rulesVersion === 'v4') {
       const portrait=h>w, aw=portrait?EBS.ScrapMaterials.height:EBS.ScrapMaterials.width;
       const ah=portrait?EBS.ScrapMaterials.width:EBS.ScrapMaterials.height, top=portrait?132:80;
@@ -75,6 +87,7 @@
   class Episode {
     constructor({ seed, params, world, view = { camera: true }, timeScale = 1 }) {
       this.seed = seed >>> 0; this.cfg = normalizeParams(params); this.world = world;
+      this.short = this.cfg.layout === 'short' && world.h > world.w;
       this.view = view; this.camera = { x: 450, y: 450, zoom: 1 };
       this.timeScale = timeScale; this.unitsPerStep = Math.round(timeScale * 200);
       this.step = 0; this.t = 0; this.simTicks = 0; this.accumulator = 0;
@@ -105,7 +118,7 @@
       this.roundSeed = this.roundNumber === 1 ? this.seed : hashSeed('scrap-round-v1', this.seed, this.roundNumber);
       const Round = this.cfg.rulesVersion === 'v4' ? TacticalRound : this.cfg.rulesVersion === 'v3' ? MaterialRound : this.cfg.rulesVersion === 'classic' && this.cfg.arena === 'yard' && !this.cfg.workshop ? ObservedRound : ImprovedRound;
       this.roundSim = new Round({ seed: this.roundSeed, rulesVersion: this.cfg.rulesVersion, arena: this.cfg.arena,
-        portrait: this.world.h > this.world.w, upgrades: this.workshop.modules });
+        portrait: this.world.h > this.world.w, short: this.short, upgrades: this.workshop.modules });
       // Non-enumerable: JSON of the round stays byte-identical to the source.
       Object.defineProperty(this.roundSim, 'emit', { value: (...args) => this._event(...args) });
       this.phase = 'running'; this.pauseUntil = 0; this.accumulator = 0;
@@ -139,7 +152,10 @@
           this._event('round_end', undefined, undefined, { winner });
           if (this.cfg.workshop && this.completedRounds < 8) this._awardModules();
           const tournament = this.cfg.episodeMode === 'tournament';
-          if (tournament && this.completedRounds === 8) {
+          if (this.short) {
+            // Short: Sieger 2,5 s groß zeigen, danach Schluss
+            this.phase = 'outro'; this.outroUntil = this.step + SHORT_END_SEC * 60;
+          } else if (tournament && this.completedRounds === 8) {
             this.phase = 'outro'; this.outroUntil = this.step + 5 * 60;
             this._event('tournament_end', undefined, undefined, { champions: this.champions(), wins: [...this.wins] });
           } else {
@@ -241,16 +257,24 @@
   // Same pure simulation in live UI and export preflight. Bounded chunks allow
   // UI updates/cancellation; no images or audio are created during planning.
   function createExportPlan(cfg, world) {
-    if (cfg.params.episodeMode !== 'tournament') return null;
+    if (!hasNaturalEnd(cfg, world)) return null;
     const sim = new Episode({ seed: cfg.seed, params: cfg.params, world, timeScale: cfg.video.tempo });
     return { advance() {
       for (let i = 0; i < 1200 && sim.phase !== 'ended'; i++) sim.stepOnce();
-      if (sim.step > 1200 * 60) throw new Error('Turnier überschreitet die maximale Laufzeit.');
+      if (sim.step > 1200 * 60) throw new Error('Ablauf überschreitet die maximale Laufzeit.');
       const done = sim.phase === 'ended';
       if (done && !sim.checkInvariants().ok) throw new Error('Turnierprüfung fehlgeschlagen.');
       return { done, round: sim.roundNumber,
         durationSec: done ? Math.ceil(sim.step / 60 * cfg.video.fps) / cfg.video.fps : null };
     } };
   }
-  EBS.Scrap = { Episode, normalizeParams, layout, EVENT_LIMIT, createExportPlan };
+  // Turnier und Short enden von selbst; die Videolänge folgt aus der Simulation.
+  function hasNaturalEnd(cfg, world) {
+    const p = normalizeParams(cfg.params);
+    if (p.episodeMode === 'tournament') return true;
+    if (p.layout !== 'short') return false;
+    const size = world || (cfg.video ? EBS.videoSize(cfg.video) : null);
+    return !size || (size.h ?? size.logicalHeight) > (size.w ?? size.logicalWidth);
+  }
+  EBS.Scrap = { Episode, normalizeParams, layout, EVENT_LIMIT, createExportPlan, hasNaturalEnd, SHORT_END_SEC };
 })();
