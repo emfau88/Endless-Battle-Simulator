@@ -1,11 +1,11 @@
 # Scrap Wars: Ausbau – Bericht vom 19.11.2026 (R40)
 
 **Bezug:** [Ausbau-Plan](SCRAP_AUSBAU_PLAN_2026-11-19.md). **Stand:** T1 Hörprobe abgeschlossen (B2 gewählt), E0–E5 auf `main` (PR #44), K1–K5 Taktik-Arena `v4` gebaut,
-gemessen und vom Nutzer angenommen („soweit ganz ok“); Waffen auf Sunny Yard als Symbol-Marken, Vorlagen auf `v4`.
-Branch `scrap/v4-taktik`.
+gemessen und vom Nutzer angenommen („soweit ganz ok“); Waffen auf Sunny Yard als Symbol-Marken, Vorlagen auf `v4`
+(PR #45 auf `main`). T2 Ton `soft-v1` gebaut, wartet auf das Hörurteil (Branch `scrap/t2-ton`).
 
 **Kurz:** Die Sunny-Kopfzeile ist englisch und zeigt Waffensymbole. Neue Treffer-, Schuss- und Explosionseffekte
-stehen als Vorher/Nachher-Blätter bereit. Beim Ton ist Variante B2 „sauber“ gewählt. Die Taktik-Arena `v4` ist
+stehen als Vorher/Nachher-Blätter bereit. Beim Ton ist Variante B2 „sauber“ gewählt und als Schalter `soundMix: 'soft-v1'` eingebaut; die Vorlagen nutzen ihn. Die Taktik-Arena `v4` ist
 gebaut: Roboter starten aus fallenden Kisten, wählen Ziele nach Sicht und Lage, finden Wege mit A* und fahren wie
 Panzer. Im Querformat treffen sich in den ersten 15 s nicht mehr immer dieselben Nachbarn (häufigstes Paar 20 % statt 40 %).
 
@@ -247,3 +247,66 @@ jetzt `v4`. In der Auswahl heißt die Regelversion „Taktik-Arena · Startkiste
 
 **Offen:** Die Kopfzeile zeigt noch die alte Waffenform mit Munitionszahl. Sie könnte dieselben Symbole bekommen;
 das kommt erst nach einer Vorschau. Ebenfalls offen: die farbigen Startecken im Boden.
+
+---
+
+## T2 · Ton „soft-v1“ (Stopp: Hörurteil)
+
+**Umfang:** Die gewählte Hörprobe B2 „sauber“ ist fest im Repository, genau nach dem Rezept der angenommenen
+v4-Testclips (B2 mit Kistenklängen und Fauch-Rakete).
+
+- **Klänge:** 21 gebackene Dateien `assets/audio/scrap-b2-*.ogg` (zusammen 196 KB) und die Windschleife
+  `scrap-wind-loop.ogg` (Stereo, 1 s Vorlauf und 30 s Schleife, 278 KB). Quellen: 17 unveränderte Kenney-Dateien
+  (CC0) in `assets/audio/scrap-source/` mit beiden Lizenztexten. Bau und Prüfung: `scripts/build-scrap-audio.mjs`
+  (`--check` baut im Speicher nach und vergleicht alle Prüfsummen), Nachweis in `assets/audio/SCRAP_AUDIO.json`.
+- **Schalter `soundMix`** in der Oberfläche „Ton“: „Weich · klare Klänge, leiser Wind, feste Mischung“ (`soft-v1`) oder
+  „Bisheriger Ton“ (`classic`). Fehlt er, gilt `classic`; der bisherige Ton ist unverändert. Die Simulation sieht den
+  Schalter nicht, ihre Hashes bleiben gleich.
+- **Mischung:** Profil `marbleworks-soft-v1` mit festem Pegel +4,5 dB, Grenze −6 dBFS. Der Mischplan entscheidet für
+  jedes Ereignis: K.o. und Explosion immer hörbar, sonst höchstens zwei Klänge je halbe Sekunde in der Rangfolge
+  Zerstörung > Treffer > Rakete > Blaster > Deckungstreffer > Rest; höchstens drei Blaster je Sekunde, je Roboter
+  0,23 s Abstand; nach K.o. oder Explosion 0,3 s lang Blaster und Treffer halb so laut; Stereo ±0,35 nach Bildposition.
+  Jeder Roboter feuert in seiner eigenen Tonlage.
+- **Wind:** über den vorhandenen Hintergrund-Weg (wie Wasser bei Pyramid und Naval), bei −48 LUFS, mit eigenem
+  Regler „Wind“. Die Regler der Klänge behalten ihre deutschen Namen.
+- **Vorlagen:** Short und Langvideo (`presets/production/scrap-*.json` und Oberfläche) nutzen `soft-v1`.
+
+**Abweichungen vom Plan:** höchstens drei statt vier Blaster je Sekunde und 0,23 s statt 0,18 s Abstand je Roboter,
+weil die gewählte Hörprobe so klang. Kein eigener Klang für Rundenende und Anfahren; die dunklen Karten bekommen
+ebenfalls den Wind statt eines Hallenbrummens.
+
+**Einmessen des Pegels** (Simulation im Browser, Mischung wie im Export, Sunny Yard `v4`, je 60 s, Seeds 1–4 und 42):
+
+| Format | Lautheit mit Wind bei +5,5 dB | Begrenzer, stärkster Eingriff |
+|---|---|---|
+| quer | −22,0 bis −24,2 LUFS | −2,9 bis −8,4 dB |
+| hochkant | −21,6 bis −22,9 LUFS | −3,7 bis −6,1 dB |
+
+Gewählt ist 1 dB weniger, also +4,5 dB: Median etwa −23 LUFS, und die Spitzen werden weniger stark begrenzt.
+
+**20-s-Proben** (lokal unter `output/scrap-t2/`, Vorlagen Short und Langvideo mit den Seeds der Testclips):
+
+| Probe | Klänge hörbar | Mischung | fertige AAC-Spur | echte Spitze | Begrenzer |
+|---|---|---|---|---|---|
+| hochkant, Seed 7 | 58 von 148 (2,9 je s) | −23,6 LUFS | −23,8 LUFS | −6,0 dBTP | −1,6 dB |
+| quer, Seed 13 | 46 von 121 (2,3 je s) | −22,2 LUFS | −24,7 LUFS | −5,9 dBTP | −3,7 dB |
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node scripts/build-scrap-audio.mjs --check` | alle Prüfsummen gleich |
+| `node --test test/audio-scrap-soft.test.mjs` (neu) | 4 von 4: Schalter, Dateien, Rangfolge, Dichte, Ducking, Stereo, Stummschalten, Pegel, Wind −48 LUFS |
+| `node --test test/scrap.test.mjs test/audio-materials.test.mjs test/presets.test.mjs test/scrap-labels.test.mjs` | 30 von 30 |
+| `node --test test/presets-export-scrap.test.mjs` | 2 von 2, beide Vorlagen exportieren mit `soft-v1` und Wind |
+
+**Nicht gelaufen:** kein vollständiger `npm test`, keine Referenz-Hashes (Simulation unverändert, im Test über den
+Zustands-Hash nachgewiesen).
+
+**Grenzen:**
+
+- Die Lautheit misst mit Wind niedriger als ohne: Der Wind füllt die Pausen, und die Messung zählt sie dann mit.
+  In den ersten 20 s ist es wegen der Kistenphase noch leiser, über eine Minute liegt der Median bei −23 LUFS.
+- Der Begrenzer fängt dichte K.o.- und Explosionsmomente ab, in der Messung bis etwa −7 dB (die angenommenen
+  Testclips hatten bis −6,7 dB).
+- Bitgleiches Neubauen der OGG-Dateien gilt nur mit der dokumentierten FFmpeg-Version.
+
+**Stopp:** Hörurteil des Nutzers zu den zwei Proben. Danach S1–S3 (Short) und L1.

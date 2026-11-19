@@ -110,6 +110,40 @@ ohne eine lange Pegelabsenkung auf folgende Klänge zu übertragen. Die PCM-Gren
 Ein 15-Minuten-Audiolauf zeigte seltene AAC-Spitzen, die in den kurzen Clips nicht vorkamen. Das Ziel −14 LUFS
 und die gemeinsame AAC-Spitzengrenze −1 dBTP bleiben erhalten. Messnachweise: `docs/SCRAP_AUDIO_PRODUKTION_2026-11-13.md`.
 
+### Scrap Wars · Ton „soft-v1“ (B2 „sauber“, mit Wind)
+
+Mit dem Schalter `soundMix: 'soft-v1'` (Vorlagen Short und Langvideo) nutzt Scrap 21 gebackene Klänge
+`scrap-b2-*.ogg` und die Windschleife `scrap-wind-loop.ogg`. Ohne Schalter bleibt der Ton oben unverändert.
+
+Quellen sind 17 unveränderte Kenney-Dateien in `scrap-source/`: 14 aus „Sci-Fi Sounds“ (Laser, Kraftfeld,
+tiefe Explosionen, Metallschläge) und 3 aus „Impact Sounds“ (schweres und mittleres Holz). Beide Pakete stehen
+unter CC0; die originalen Lizenztexte liegen daneben (`KENNEY_SCIFI_LICENSE.txt`, `KENNEY_IMPACT_LICENSE.txt`).
+Dazu kommt eigene Synthese ohne Zufall: Einrasten beim Aufheben, „Strom aus“ beim K.o., Fauchen der Rakete,
+Bröseln der Kiste und der Wind.
+
+| Gruppe | Dateien | Quelle und Bearbeitung |
+|---|---|---|
+| Blaster | `scrap-b2-blaster-0/1/2` | `laserSmall_000/004/003`, tiefer, dunkel gefiltert, gekürzt; je Roboter eigene Tonlage |
+| Raketenstart | `scrap-b2-rocket-0/1` | `forceField_001`; Fauchen mit `forceField_003` |
+| Explosion | `scrap-b2-blast-0/1` | `lowFrequency_explosion_001` mit gefiltertem `explosionCrunch_000/003` |
+| Robotertreffer | `scrap-b2-hit-0/1/2` | `impactMetal_001/002`, gekürzt |
+| Deckungstreffer | `scrap-b2-wood`, `-stone`, `-concrete` | `impactWood_heavy_000`, `impactMetal_004/000` gefiltert |
+| Deckung zerstört | `scrap-b2-break-wood`, `-stone`, `-concrete` | `impactWood_heavy_002`, `explosionCrunch_002` gefiltert |
+| K.o. | `scrap-b2-ko` | `lowFrequency_explosion_000` + `impactMetal_001` + „Strom aus“ |
+| Aufnahme, Abwurf | `scrap-b2-pickup`, `scrap-b2-drop` | Einrasten (Synthese); `impactMetal_004` tief und gedämpft |
+| Kisten | `scrap-b2-crate-land`, `scrap-b2-crate-break` | `impactWood_heavy_000` tief; `impactWood_medium_001` mit Bröseln |
+| Wind | `scrap-wind-loop.ogg` | Synthese, Stereo, 1 s Vorlauf und 30 s nahtlose Schleife (4 s Überblendung) |
+
+Jeder Klang wird lautheitsgleich gemacht und dann mit einem gemeinsamen Speicherfaktor abgelegt; die Pegel
+stehen als Dezibel-Stufen in der Klangtabelle. Der Wind ist Stereo, weil FFmpeg sonst die ganze Mischung auf
+Mono bringt. `SCRAP_AUDIO.json` verzeichnet Quellen-, PCM- und OGG-Prüfsummen, Längen, Spitzen und den
+Exportpegel des Windes (−48 LUFS).
+
+```sh
+node scripts/build-scrap-audio.mjs
+node scripts/build-scrap-audio.mjs --check
+```
+
 ## Endless Mycelium
 
 Die Klangtabelle in `src/scenarios/mycelium.js` nutzt aus dem Kenney-Paket nur `impactSoft_medium_000` (Blatt landet,
