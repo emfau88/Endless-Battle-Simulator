@@ -164,7 +164,8 @@
     for (const d of items) {
       const u = Math.min(1, d.age / d.flight), k = easeOut(u), x = d.x + Math.cos(d.dir) * d.dist * k, y = d.y + Math.sin(d.dir) * d.dist * k;
       const hop = Math.sin(Math.PI * u) * d.hop, rot = d.rot + d.spin * k, s = d.size;
-      const shape = () => d.kind === 'splinter' ? poly(g, [[-s, -s * .45], [s * .7, -s * .6], [s, s * .35], [-s * .6, s * .55]])
+      const shape = () => d.kind === 'plank' ? poly(g, [[-s, -s * .2], [s * .9, -s * .26], [s, s * .2], [-s * .85, s * .24]])
+        : d.kind === 'splinter' ? poly(g, [[-s, -s * .45], [s * .7, -s * .6], [s, s * .35], [-s * .6, s * .55]])
         : poly(g, [[-s, -s * .6], [-s * .1, -s], [s * .9, -s * .5], [s, s * .5], [0, s], [-s * .8, s * .7]]);
       g.save(); g.translate(x + 1.2, y + 1.8); g.rotate(rot); shape(); g.fillStyle = rgba(OUTLINE, sunny ? .22 : .35); g.fill(); g.restore();
       g.save(); g.translate(x, y - hop); g.rotate(rot); shape(); outlined(g, d.color, true, sunny ? 1 : .8, sunny ? .7 : .5); g.restore();

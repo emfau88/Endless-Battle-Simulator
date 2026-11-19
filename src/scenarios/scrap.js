@@ -92,7 +92,7 @@
       return c;
     }
     _pickup(g, p, t) {
-      if (this.sunny) { EBS.ScrapDaylightArt.pickup(g, p, t, this); return; }
+      if (this.sunny) { EBS.ScrapDaylightArt.pickup(g, p, t); return; }
       if (!this.materialArena) { super._pickup(g, p, t); return; }
       const empty = !!p.empty || p.ammo <= 0, color = p.kind === 'rocket' ? '#eeb779' : '#7cdbef';
       const { sprite, shadow } = this._pickupTexture(p.kind, empty), angle = (noise(p.id, 13) - .5) * 1.5;
@@ -312,7 +312,8 @@
       const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
       const color = colorOf(robot), dead = robot.alive === false || finite(robot.hp, 1) <= 0;
       const speed = Math.hypot(finite(robot.vx), finite(robot.vy));
-      const chassisAngle = speed > 8 ? Math.atan2(robot.vy, robot.vx) : finite(robot.angle);
+      // v4 fährt wie ein Panzer: das Chassis zeigt die eigene Fahrtrichtung, der Turm wie bisher das Ziel
+      const chassisAngle = Number.isFinite(robot.heading) ? robot.heading : speed > 8 ? Math.atan2(robot.vy, robot.vx) : finite(robot.angle);
       const aim = finite(robot.angle), radius = Math.max(12, finite(robot.r, 24)), bodyScale = radius / 24;
       const stage = dead ? 2 : damageStage(robot), body = this._bodyTexture(color, dead, stage);
       // E1/E2: Rückstoß aus der Schusszeit (flashUntil = Schuss + 0,11 s), Schubs aus dem letzten Treffer (nudgeX/Y)
@@ -670,7 +671,7 @@
       const final=s.cfg.episodeMode==='tournament'&&s.completedRounds===8;
       const elapsed=s.phase==='pause'?s.cfg.endPauseSec-(s.pauseUntil-s.step)/60:final?Math.max(0,5-(s.outroUntil-s.step)/60):0;
       const mapPoint=p=>portrait?{...p,x:r.bounds.h-p.y,y:p.x,
-        ...('vx' in p?{vx:-p.vy,vy:p.vx}:{}),...('angle' in p?{angle:p.angle+Math.PI/2}:{}),
+        ...('vx' in p?{vx:-p.vy,vy:p.vx}:{}),...('angle' in p?{angle:p.angle+Math.PI/2}:{}),...('heading' in p?{heading:p.heading+Math.PI/2}:{}),
         ...('px' in p?{px:r.bounds.h-p.py,py:p.px}:{})}:p;
       const robots=r.robots.map(mapPoint),effects=r.effects.slice(-100).map(e=>({...mapPoint(e),age:e.age+elapsed}));
       const blocks=portrait?r.blocks.map(b=>({...b,x:r.bounds.h-b.y-b.h,y:b.x,w:b.h,h:b.w})):r.blocks;
@@ -692,9 +693,10 @@
         const t=art.block(b,this.arena._blocks,true);g.drawImage(t.shadow,b.x-t.pad,b.y-t.pad,t.width,t.height);
       }
       for(const b of blocks)if(!b.alive)art.rubble(g,b,sunny);
+      this._paintCrates(g,r,portrait,sunny,'under');
       for(const pad of r.pads) {
         const occupied=r.pickups.some(p=>!p.empty&&p.ammo>0&&Math.hypot(p.x-pad.x,p.y-pad.y)<40);
-        if(sunny)art.sunnyPad(g,mapPoint(pad));else art.pad(g,mapPoint(pad),occupied);
+        if(sunny)art.sunnyPad(g,mapPoint(pad),occupied);else art.pad(g,mapPoint(pad),occupied);
       }
       for(const e of effects)this.arena._effect(g,e,true);
       fx.debris(g,scene.debris,sunny);
@@ -702,7 +704,9 @@
       for(const b of blocks)if(b.alive) {
         const t=art.block(b,this.arena._blocks,sunny);g.drawImage(t.canvas,b.x-t.pad,b.y-t.pad,t.width,t.height);
       }
-      for(const robot of [...shown.filter(p=>!p.alive),...shown.filter(p=>p.alive)])this.arena._robot(g,robot,r.t);
+      this._paintCrates(g,r,portrait,sunny,'top');
+      for(const robot of [...shown.filter(p=>!p.alive),...shown.filter(p=>p.alive&&!p.caged)])this.arena._robot(g,robot,r.t);
+      this._paintCrates(g,r,portrait,sunny,'burst');
       for(const t of scene.turrets)fx.turret(g,t,sunny);
       for(const p of r.projectiles)this.arena._projectile(g,mapPoint(p));
       for(const e of effects)this.arena._effect(g,e);
@@ -774,6 +778,19 @@
               }
             }
           }
+        } else if (e.type === 'crate_break') {
+          const planks = ['#a8743f', '#7b532c', '#c08b52'];
+          // Bretter zählen nicht gegen die Grenze von 40 Teilen: höchstens vier Kisten je Runde
+          for (let k = 0; k < 9; k++) { const dir = (k + n(seq, k + 2)) / 9 * TAU; scene.debris.push({ kind: 'plank', x: p.x + Math.cos(dir) * 22, y: p.y + Math.sin(dir) * 22, age, flight: .45,
+            dir, dist: 30 + 26 * n(seq, k + 6), hop: 12, rot: n(seq, k + 10) * TAU, spin: 9 * (n(seq, k + 14) - .5),
+            size: 7 + 4 * n(seq, k + 18), color: planks[k % 3] }); }
+          if (age < .8) {
+            const u = age / .8;
+            for (let k = 0; k < 7; k++) {
+              const a = (k + n(seq, k + 30)) / 7 * TAU, d = 18 + 34 * fx.easeOut(u);
+              scene.smoke.push({ x: p.x + Math.cos(a) * d, y: p.y + Math.sin(a) * d * .8 - 6 * u, r: 9 + 9 * u, alpha: .45 * (1 - u), color: puffColor });
+            }
+          }
         } else if ((e.type === 'blaster' || e.type === 'rocket') && robot) {
           const aim = robot.angle || 0;
           if (age < .5) {
@@ -792,6 +809,68 @@
       }
       return scene;
     }
+    // K1 · Startkisten (nur v4): Schatten wächst bis zum Aufschlag, Kiste mit Teamband, Staubring, Wackeln vor dem Ausbruch.
+    // Alles folgt aus der Rundenzeit und den Kistenzeiten der Simulation; kein Zustand im Renderer.
+    _paintCrates(g, r, portrait, sunny, layer) {
+      if (!Array.isArray(r.crates)) return;
+      const art = EBS.ScrapMaterialArt, fx = EBS.ScrapEffectsArt, t = r.t, TAU = Math.PI * 2;
+      const dust = sunny ? '#c9b48c' : '#8c8274', ink = '#0a1218';
+      for (const c0 of r.crates) {
+        if (layer === 'burst') {
+          // Ausbruch: vier Seitenwände fliegen 0,35 s nach außen, über dem Roboter
+          const u = (t - c0.openAt) / .35;
+          if (!c0.open || u < 0 || u >= 1) continue;
+          const c = portrait ? { ...c0, x: r.bounds.h - c0.y - c0.h, y: c0.x, w: c0.h, h: c0.w } : c0, cx = c.x + c.w / 2, cy = c.y + c.h / 2, k = fx.easeOut(u);
+          g.save();
+          g.beginPath(); g.arc(cx, cy, 26 + 30 * k, 0, TAU); g.fillStyle = fx.rgba(dust, .5 * (1 - u)); g.fill();
+          for (let i = 0; i < 4; i++) {
+            const a = i * Math.PI / 2, len = i % 2 ? c.h : c.w, out = c.w / 2 - 5 + 44 * k, spin = (fx.noise(c.id + 11, i) - .5) * 1.6 * k;
+            g.save(); g.translate(cx + Math.cos(a) * out, cy + Math.sin(a) * out); g.rotate(a + Math.PI / 2 + spin);
+            g.globalAlpha = 1 - u * u; g.beginPath(); g.roundRect(-len / 2, -5, len, 10, 2);
+            g.fillStyle = i % 2 ? '#a8743f' : '#c08b52'; g.fill(); g.strokeStyle = fx.rgba(ink, .6); g.lineWidth = 1.2; g.stroke();
+            g.restore();
+          }
+          g.restore();
+          continue;
+        }
+        if (c0.open) continue;
+        const c = portrait ? { ...c0, x: r.bounds.h - c0.y - c0.h, y: c0.x, w: c0.h, h: c0.w } : c0;
+        const cx = c.x + c.w / 2, cy = c.y + c.h / 2, block = { id: 40 + c.id, x: c.x, y: c.y, w: c.w, h: c.h, material: 'wood', hp: 38, maxHp: 38, alive: true };
+        const tex = art.block(block, this.arena._blocks, sunny), fall = .22, age = t - c.landAt;
+        if (layer === 'under') {
+          if (age < 0) {
+            const u = Math.max(0, Math.min(1, t / c.landAt)), k = u ** 1.5;
+            g.save(); g.beginPath(); g.ellipse(cx + 4 * k, cy + 6 * k, 10 + 38 * k, (10 + 38 * k) * .92, 0, 0, TAU);
+            g.fillStyle = fx.rgba(ink, .35 * k); g.fill(); g.restore();
+          } else if (sunny) g.drawImage(tex.shadow, c.x - tex.pad, c.y - tex.pad, tex.width, tex.height);
+          // Staubring beim Aufschlag, 0,5 s
+          if (age >= 0 && age < .5) {
+            const u = age / .5, k = fx.easeOut(u);
+            g.save(); g.beginPath(); g.ellipse(cx, cy + 4, 36 + 46 * k, (36 + 46 * k) * .85, 0, 0, TAU);
+            g.strokeStyle = fx.rgba(dust, .45 * (1 - u)); g.lineWidth = 10 * (1 - u) + 2; g.stroke();
+            for (let i = 0; i < 8; i++) {
+              const a = i / 8 * TAU + fx.noise(c.id + 3, i) * .6, d = 30 + 40 * k;
+              g.beginPath(); g.arc(cx + Math.cos(a) * d, cy + 4 + Math.sin(a) * d * .85, 6 + 8 * k, 0, TAU);
+              g.fillStyle = fx.rgba(dust, .4 * (1 - u)); g.fill();
+            }
+            g.restore();
+          }
+          continue;
+        }
+        if (age < -fall) continue;
+        g.save(); g.translate(cx, cy);
+        if (age < 0) { const u = 1 + age / fall; g.globalAlpha = Math.min(1, u * 1.6); g.scale(1.6 - .6 * u * u, 1.6 - .6 * u * u); }
+        else if (age < .12) { const s = 1 + .07 * Math.sin(Math.PI * age / .12); g.scale(s * 1.03, s * .97); }
+        const left = c0.openAt - t;
+        if (left < .45 && age >= 0) g.rotate(.06 * (1 - left / .45) * Math.sin(t * 52 + c.id));
+        g.drawImage(tex.canvas, -c.w / 2 - tex.pad, -c.h / 2 - tex.pad, tex.width, tex.height);
+        // Teamband quer über den Deckel, damit man sieht, wer in welcher Kiste steckt
+        const color = palette[c.id % 4], vertical = c.w < c.h;
+        g.beginPath(); g.roundRect(vertical ? -6 : -c.w / 2 + 3, vertical ? -c.h / 2 + 3 : -10, vertical ? 12 : c.w - 6, vertical ? c.h - 14 : 12, 2);
+        g.fillStyle = fx.rgba(color, .9); g.fill(); g.strokeStyle = fx.rgba(ink, .55); g.lineWidth = 1.2; g.stroke();
+        g.restore();
+      }
+    }
     // Ordnet einen Blaster-Einschlag (Effekt der Größe 17) einem Roboter oder einer Deckung zu, mit Richtung weg von der Deckung.
     _annotateImpact(e, blocks, robots) {
       for (const r of robots) if (Math.hypot(e.x - r.x, e.y - r.y) < (r.r || 24) + 8) { e.onRobot = true; return; }
@@ -805,7 +884,7 @@
       e.cover = best.material; e.nx = side ? Math.sign(cx) || 1 : 0; e.ny = side ? 0 : Math.sign(cy) || 1;
     }
     _usesDarkMaterialArt() {
-      return this.sim.cfg.rulesVersion === 'v3' && this.sim.cfg.arena !== 'sunshine';
+      return ['v3','v4'].includes(this.sim.cfg.rulesVersion) && this.sim.cfg.arena !== 'sunshine';
     }
     _materialResultProgress(final = false) {
       const s = this.sim;
@@ -978,7 +1057,7 @@
     defaults: { rulesVersion: 'v3', episodeMode: 'endless', arena: 'yard', workshop: false, repeatRounds: true, endPauseSec: 3 },
     controls: [
       { key: 'episodeMode', label: 'Format', type: 'select', options: [['endless', 'Freie Videolänge'], ['tournament', 'Turnier · 8 Runden + Finale']], restart: true },
-      { key: 'rulesVersion', label: 'Arena / Kampfregeln', type: 'select', enabled: p => p.arena !== 'sunshine', options: [['v3', 'Große Arena · Holz, Stein, Beton'], ['v2', 'Bisherige Arena · flüssiger Kampf'], ['classic', 'Originalprototyp']], restart: true },
+      { key: 'rulesVersion', label: 'Arena / Kampfregeln', type: 'select', enabled: p => p.arena !== 'sunshine' || p.rulesVersion === 'v4', options: [['v4', 'Taktik-Arena · Startkisten, Zielwahl, Wegfindung'], ['v3', 'Große Arena · Holz, Stein, Beton'], ['v2', 'Bisherige Arena · flüssiger Kampf'], ['classic', 'Originalprototyp']], restart: true },
       { key: 'arena', label: 'Arena', type: 'select', options: [['yard', 'Scrapyard · ausgewogen'], ['foundry', 'Foundry · Deckungsgassen'], ['crossroads', 'Crossroads · offenes Zentrum'], ['sunshine', 'Sunny Yard · Tageslicht / Deckungsgassen']], restart: true },
       { key: 'workshop', label: 'Werkstatt (experimentell, ein Modul je Roboter)', type: 'check', enabled: p => p.episodeMode === 'tournament', restart: true },
       { key: 'repeatRounds', label: 'Weitere Runden spielen', type: 'check', enabled: p => p.episodeMode !== 'tournament', restart: true },
@@ -1023,6 +1102,9 @@
       upgrade: { label: 'Werkstattmodul', samples: ['synth:scrap-pickup'], gain: .28, semis: -2, minGap: .12 },
       drop: { label: 'Waffenabwurf', samples: ['impactTin_medium_000'], gain: .08, detune: .8 },
       ko: { label: 'Roboter ausgeschaltet', samples: ['impactMetal_light_003'], gain: .18, semis: -5 },
+      // Nur v4: Startkisten schlagen auf und brechen auf
+      crate_land: { label: 'Kiste landet', samples: ['impactWood_heavy_000'], gain: .16, semis: -5, minGap: .04 },
+      crate_break: { label: 'Kiste bricht auf', samples: ['impactWood_medium_000', 'impactWood_medium_001'], gain: .12, semis: -2, detune: .6 },
     } },
   });
 })();

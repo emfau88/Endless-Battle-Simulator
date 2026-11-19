@@ -5,7 +5,7 @@
   "seed": 42,
   "params": {
     "arena": "sunshine",
-    "rulesVersion": "v3",
+    "rulesVersion": "v4",
     "episodeMode": "endless",
     "repeatRounds": true
   },
