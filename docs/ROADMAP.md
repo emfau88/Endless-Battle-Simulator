@@ -63,6 +63,7 @@ R33 bündelt die bisherigen Einzelabnahmen **R18** (Naval), **R20** (Scrap Wars)
 | R13 | Hinweistext im Bedienfeld nennt bei allen Szenarien „Schiffe, Kanonen“ |
 | R16 | Factory Wars / Robot Wars (Konzept) |
 | R24 | Pyramid-Melodie aus Lichtimpulsen; die Idee lebt in der Klangtreppe von Marble XL weiter |
+| R41 | Scrap-Idee des Nutzers (19.11.): Ein zerstörter Roboter zerfällt in zwei etwas kleinere; wird einer davon zerstört, springen zwei witzige Puscheltiere heraus, die mit Keulen kämpfen. Soll das Ganze witziger und chaotischer machen. Passt als eigener Modus nach dem Scrap-Ausbau (R40), nicht in `v4`. |
 | R29 | [Tierchen-Videoideen](TIERCHEN_VIDEOIDEEN_2026-11-15.md): Rennen, Plinko, Waschstraße, Dorfaufbau, Olympiade |
 | – | [Abriss-Karten und Burrow](OPTIONALER_PLAN_ABRISS_BURROW_2026-11-14.md): Recherche gesichert, nicht beauftragt |
 
@@ -93,7 +94,7 @@ Getroffene Entscheidungen stehen im [CHANGELOG](CHANGELOG.md#entscheidungen).
 
 ## 7 · Pflege
 
-- IDs werden nie wiederverwendet. **Nächste freie ID: R41.**
+- IDs werden nie wiederverwendet. **Nächste freie ID: R42.**
 - Neue offene Punkte nur hier eintragen. Erledigtes mit Datum, Commit und Bericht in den CHANGELOG übertragen.
 - Der Fortschritt der einzelnen Schritte steht in [Abschnitt 0 des Gesamtplans](GESAMTPLAN_2026-11-16.md#0--umsetzungsstand) und wird mit jedem Paket nachgezogen.
 - Diese Datei bleibt kurz. Verlauf, Messwerte und Begründungen gehören in datierte Berichte unter `docs/`.
