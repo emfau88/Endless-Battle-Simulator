@@ -1,10 +1,10 @@
 # Scrap Wars: Ausbau – Bericht vom 19.11.2026 (R40)
 
-**Bezug:** [Ausbau-Plan](SCRAP_AUSBAU_PLAN_2026-11-19.md). **Stand:** T1 Hörprobe in zwei Runden, E0 erledigt,
+**Bezug:** [Ausbau-Plan](SCRAP_AUSBAU_PLAN_2026-11-19.md). **Stand:** T1 Hörprobe abgeschlossen (B2 gewählt), E0 erledigt,
 E1–E5 als Entwurf zur Stilfreigabe. Branch `scrap/e0-kopfzeile`.
 
 **Kurz:** Die Sunny-Kopfzeile ist englisch und zeigt Waffensymbole. Neue Treffer-, Schuss- und Explosionseffekte
-stehen als Vorher/Nachher-Blätter bereit. Der Ton wartet auf die Wahl des Nutzers; daran wird nicht weiter gefeilt.
+stehen als Vorher/Nachher-Blätter bereit. Beim Ton ist Variante B2 „sauber“ gewählt.
 
 ---
 
@@ -20,13 +20,13 @@ Erzeugt mit einem Skript unter `output/scrap-hoerprobe/` (von Git ignoriert). Qu
 | 1 | A weich-comic (Marble-Klänge) | −23,0 | – | 3,5 | −2,8 dB | wie oben, „Murmel-Geräusche … total unpassend“ |
 | 1 | B Sci-Fi-Spielzeug | −22,9 | – | 3,5 | −0,9 dB | am besten, aber „nicht clean genug“, „zu wenig comic“ |
 | 1 | C mechanisch | −23,1 | – | 3,5 | −2,5 dB | – |
-| 2 | B2 sauber (B gekürzt, dunkler) | −22,9 | −6,8 | 3,5 | 0 | offen |
+| 2 | B2 sauber (B gekürzt, dunkler) | −22,9 | −6,8 | 3,5 | 0 | **gewählt** |
 | 2 | B3 comic (Bonk, Puff, Wah-Wah beim K.o.) | −23,0 | −6,6 | 3,5 | 0 | offen |
 | 2 | B4 comic mit „Piu“-Blastern | −23,0 | −7,0 | 3,5 | 0 | offen |
 
 Runde 2 nutzt Pegel nach Lautheit statt Spitze (lautestes 50-ms-Fenster), höchstens drei Blaster je Sekunde und ein
 leiseres Grundgeräusch (−48 statt −40 LUFS). Keine `mw-soft-*`-Klänge, keine hellen Metall- oder Plattenaufschläge.
-**Weiter:** Der Nutzer wählt bei Gelegenheit; T2 (Umsetzung mit Schalter `soundMix`) folgt danach.
+**Gewählt:** B2 „sauber“ (Rückmeldung am 19.11.). T2 setzt sie mit Schalter `soundMix` im Repository um; bis dahin klingt Scrap wie bisher.
 
 ---
 
@@ -76,6 +76,17 @@ die älteren Arenen behalten die bisherige Explosion, bekommen aber Geschoss, M�
 - Deckungstreffer leben nur 0,28 s statt 0,6 s: Unter `v3` kennt das Ereignis `cover_hit` nur die Blockmitte, die
   Trefferstelle steht nur im kurzlebigen Effekt der Simulation. Mit `hitX`/`hitY` in `v4` (K2) geht mehr. Einschusslöcher
   entfallen bis dahin, wie im Plan vorgesehen.
+
+### Vergleichsclips (lokal)
+
+Der Nutzer kann den Stil an Einzelbildern schwer beurteilen. Deshalb gibt es zwei Clips mit derselben Szene vorher (oben bzw.
+links, Stand `main`) und nachher, je 15 s mit dem gewählten Ton B2 (−23 LUFS, Spitze ≤ −6 dBFS):
+
+- quer: Produktionsvorlage `scrap-long`, Sekunde 7–22 (Raketen, Explosionen, K.o. bei 19,1 s)
+- hochkant: Produktionsvorlage `scrap-short`, Sekunde 10–25 (Explosionen, K.o. bei 22,5 s)
+
+Vorher und nachher haben denselben Zustands-Hash (quer `a5c8ebbc`, hochkant `1b70e6c2`); der Export hat beide
+geprüft. Die Clips liegen unter `output/scrap-effekte-clips/` und sind nicht im Repository.
 
 ### Messwerte
 
