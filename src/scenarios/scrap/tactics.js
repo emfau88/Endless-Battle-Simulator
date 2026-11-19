@@ -7,12 +7,14 @@
   const { clamp } = EBS.util;
   const M = EBS.ScrapMaterials;
   const distanceToBox = (x, y, b) => Math.hypot(x - clamp(x, b.x, b.x + b.w), y - clamp(y, b.y, b.y + b.h));
+  // Wie in der Material-Arena, aber ohne Hilfsfelder je Aufruf (wird in v4 sehr oft gerufen)
   function segmentBox(x0, y0, x1, y1, b, pad) {
     let near = 0, far = 1;
-    for (const [p, d, lo, hi] of [[x0, x1 - x0, b.x - pad, b.x + b.w + pad], [y0, y1 - y0, b.y - pad, b.y + b.h + pad]]) {
-      if (Math.abs(d) < 1e-9) { if (p < lo || p > hi) return null; }
-      else { let a = (lo - p) / d, z = (hi - p) / d; if (a > z) [a, z] = [z, a]; near = Math.max(near, a); far = Math.min(far, z); if (near > far) return null; }
-    }
+    const dx = x1 - x0, dy = y1 - y0, lx = b.x - pad, hx = b.x + b.w + pad, ly = b.y - pad, hy = b.y + b.h + pad;
+    if (Math.abs(dx) < 1e-9) { if (x0 < lx || x0 > hx) return null; }
+    else { let a = (lx - x0) / dx, z = (hx - x0) / dx; if (a > z) { const t = a; a = z; z = t; } if (a > near) near = a; if (z < far) far = z; if (near > far) return null; }
+    if (Math.abs(dy) < 1e-9) { if (y0 < ly || y0 > hy) return null; }
+    else { let a = (ly - y0) / dy, z = (hy - y0) / dy; if (a > z) { const t = a; a = z; z = t; } if (a > near) near = a; if (z < far) far = z; if (near > far) return null; }
     return near >= 0 && near <= 1 ? near : null;
   }
   function segmentCircle(x0, y0, x1, y1, r, pad) {
@@ -35,15 +37,23 @@
     { key: 'collector', range: 1, coverHp: .35, aimTol: .08, rocketCost: .75, flankAfter: 2 },
     { key: 'flanker', range: 1, coverHp: .35, aimTol: .08, rocketCost: 1, flankAfter: 1 },
   ];
-  const WEAPONS = ScrapArena.WEAPONS, angleDiff = EBS.util.angleDiff;
-
+  const WEAPONS = ScrapArena.WEAPONS, angleDiff = EBS.util.angleDiff, ROBOT_R = 24;
+  // K3 · Wegfindung
+  const PATH = { cell: 8, margin: 1, walk: 0, reach: 20, replanDistance: 40, replanSec: .6, repel: 70, slideLoss: .3,
+    stuckSec: 1, stuckMove: 6, stuckGoal: 40, reverseSec: .4 };
+  // Zwischenspeicher außerhalb des Simulationszustands (Raster, Suchpuffer, Hindernisliste)
+  const NAV = new WeakMap(), OBSTACLES = new WeakMap();
   class TacticalRound extends M.Round {
     constructor(options) {
       super(options);
       this.rulesVersion = 'v4';
       this.portraitView = !!options.portrait;
       this.fire = { clear: 0, wood: 0, splash: 0, blocked: 0 };
-      for (const r of this.robots) { r.targetId = null; r.targetSince = 0; r.hitBy = this.robots.map(() => -99); }
+      for (const r of this.robots) {
+        r.targetId = null; r.targetSince = 0; r.hitBy = this.robots.map(() => -99);
+        r.path = null; r.pathIndex = 0; r.planX = r.planY = r.planAt = 0; r.planKey = -1;
+        r.stuck = { x: 0, y: 0, t: 0 }; r.stuckCount = 0; r.reverseUntil = 0;
+      }
       this._placeCrates();
     }
 
@@ -93,9 +103,15 @@
       const sorted = [...d].sort((a, b) => a - b), median = (sorted[1] + sorted[2]) / 2;
       return d.every(v => v >= CRATE.fair[0] * median && v <= CRATE.fair[1] * median);
     }
-    _travel(x0, y0, x1, y1) { return Math.hypot(x1 - x0, y1 - y0); }
-    _closedCrates() { return (this.crates || []).filter(c => c.landed && !c.open); }
-    _obstacles() { return this.blocks.filter(b => b.alive).concat(this._closedCrates()); }
+    _obstacleCache() {
+      const key = this._navKey(), cached = OBSTACLES.get(this);
+      if (cached && cached.key === key) return cached;
+      const crates = (this.crates || []).filter(c => c.landed && !c.open), entry = { key, crates, list: this.blocks.filter(b => b.alive).concat(crates) };
+      OBSTACLES.set(this, entry);
+      return entry;
+    }
+    _closedCrates() { return this._obstacleCache().crates; }
+    _obstacles() { return this._obstacleCache().list; }
     _updateCrates() {
       for (const c of this.crates) {
         if (!c.landed && this.t >= c.landAt - 1e-9) {
@@ -105,20 +121,21 @@
         if (!c.open && this.t >= c.openAt - 1e-9) {
           c.open = true;
           const r = this.robots[c.id];
-          r.caged = false; r.thinkIn = 0;
+          r.caged = false; r.thinkIn = 0; r.stuck = { x: r.x, y: r.y, t: this.t };
           this.emit?.('crate_break', c.x + c.w / 2, c.y + c.h / 2, { team: c.id });
         }
       }
     }
-    _steer(r, dt) { if (!r.caged) super._steer(r, dt); }
     _takePickup(r) { if (!r.caged) super._takePickup(r); }
     _blocked(x0, y0, x1, y1, pad = 0) {
-      return this._obstacles().some(b => segmentBox(x0, y0, x1, y1, b, pad) !== null);
+      for (const b of this._obstacles()) if (segmentBox(x0, y0, x1, y1, b, pad) !== null) return true;
+      return false;
     }
     // Wie die Material-Arena, aber geschlossene Kisten sind ebenfalls Hindernisse
     _resolveRobot(r) {
       super._resolveRobot(r);
-      for (let pass = 0; pass < 2; pass++) for (const b of this._closedCrates()) {
+      const crates = this._closedCrates();
+      if (crates.length) for (let pass = 0; pass < 2; pass++) for (const b of crates) {
         let dx = r.x - clamp(r.x, b.x, b.x + b.w), dy = r.y - clamp(r.y, b.y, b.y + b.h), d = Math.hypot(dx, dy), push;
         if (d >= r.r) continue;
         if (d < .0001) {
@@ -152,9 +169,7 @@
       const t = r.targetId === null ? null : this.robots[r.targetId];
       return t && t.alive && !t.caged ? t : this._chooseTarget(r, true);
     }
-    // Die bisherige Bewegung (bis K4) folgt dem gewählten Ziel statt dem nächsten Gegner
     _nearestEnemy(r) { return this._target(r); }
-    _think(r) { this._chooseTarget(r); super._think(r); }
     // Freie Linie, absichtlicher Schuss durch Holz (Ziel unter 300 AE) oder Rakete auf Deckung neben dem Ziel
     _fireLine(r, target, ax, ay, kind) {
       const pad = WEAPONS[kind].radius, hits = [];
@@ -255,6 +270,246 @@
         if (d < spec.blastRadius || b.id === directBlock)
           this._hurtBlock(b, spec.blockDamage * (b.id === directBlock ? 1 : 1 - d / spec.blastRadius), color, { x: clamp(p.x, b.x, b.x + b.w), y: clamp(p.y, b.y, b.y + b.h) });
       }
+    }
+    // ---- K3 · Wegfindung ----------------------------------------------------
+    // Raster 8 AE; frei ist eine Zelle mit Roboterradius + 1 AE Abstand zu Wand, lebenden Blöcken und geschlossenen Kisten
+    // (mit 16 AE und + 4 AE fielen 60 AE breite Gassen der Karten weg). A* mit 8 Nachbarn, Diagonale √2, ohne Ecken zu
+    // schneiden; Gleichstand fest nach f, dann h, dann Zellnummer. Bei freier Fahrt entfällt die Suche (Luftlinie).
+    _navKey() {
+      let landed = 0, open = 0;
+      for (const c of this.crates || []) { landed += c.landed; open += c.open; }
+      return this.stats.destroyed * 64 + landed * 8 + open;
+    }
+    _nav() {
+      let cache = NAV.get(this);
+      const key = this._navKey();
+      if (cache && cache.key === key) return cache;
+      const { w, h, edge } = this.bounds, size = PATH.cell, cols = Math.ceil(w / size), rows = Math.ceil(h / size), n = cols * rows;
+      const free = new Uint8Array(n), clear = ROBOT_R + PATH.margin;
+      for (let row = 0; row < rows; row++) for (let col = 0; col < cols; col++) {
+        const x = (col + .5) * size, y = (row + .5) * size;
+        free[row * cols + col] = x >= edge + clear && x <= w - edge - clear && y >= edge + clear && y <= h - edge - clear ? 1 : 0;
+      }
+      for (const b of this._obstacles()) {
+        const c0 = Math.max(0, Math.floor((b.x - clear) / size)), c1 = Math.min(cols - 1, Math.floor((b.x + b.w + clear) / size));
+        const r0 = Math.max(0, Math.floor((b.y - clear) / size)), r1 = Math.min(rows - 1, Math.floor((b.y + b.h + clear) / size));
+        for (let row = r0; row <= r1; row++) for (let col = c0; col <= c1; col++)
+          if (distanceToBox((col + .5) * size, (row + .5) * size, b) < clear) free[row * cols + col] = 0;
+      }
+      // Suchpuffer werden über Stempel wiederverwendet statt je Suche neu angelegt
+      const old = cache && cache.n === n ? cache : null;
+      cache = { key, cols, rows, n, free, stamp: old ? old.stamp : 0,
+        g: old ? old.g : new Float64Array(n), heapCell: old ? old.heapCell : new Int32Array(1024),
+        heapF: old ? old.heapF : new Float64Array(1024), heapH: old ? old.heapH : new Float64Array(1024),
+        prev: old ? old.prev : new Int32Array(n), seen: old ? old.seen : new Int32Array(n), closed: old ? old.closed : new Int32Array(n),
+        searches: new Map(), tick: -1 };
+      NAV.set(this, cache);
+      return cache;
+    }
+    _cellOf(nav, x, y) {
+      const col = clamp(Math.floor(x / PATH.cell), 0, nav.cols - 1), row = clamp(Math.floor(y / PATH.cell), 0, nav.rows - 1);
+      return row * nav.cols + col;
+    }
+    _center(nav, cell) { return [(cell % nav.cols + .5) * PATH.cell, (Math.floor(cell / nav.cols) + .5) * PATH.cell]; }
+    // Nächste freie Zelle, Ringe nach außen in fester Reihenfolge
+    _nearestFree(nav, x, y) {
+      const home = this._cellOf(nav, x, y);
+      if (nav.free[home]) return home;
+      const c0 = home % nav.cols, r0 = Math.floor(home / nav.cols);
+      let best = -1, bestD = Infinity;
+      for (let ring = 1; ring <= 12 && best < 0; ring++) for (let dr = -ring; dr <= ring; dr++) for (let dc = -ring; dc <= ring; dc++) {
+        if (Math.max(Math.abs(dr), Math.abs(dc)) !== ring) continue;
+        const col = c0 + dc, row = r0 + dr;
+        if (col < 0 || row < 0 || col >= nav.cols || row >= nav.rows) continue;
+        const cell = row * nav.cols + col; if (!nav.free[cell]) continue;
+        const [cx, cy] = this._center(nav, cell), d = Math.hypot(cx - x, cy - y);
+        if (d < bestD - 1e-9 || (Math.abs(d - bestD) <= 1e-9 && cell < best)) { bestD = d; best = cell; }
+      }
+      return best;
+    }
+    // A* zwischen zwei freien Zellen; Ergebnis (Länge und Zellfolge) je Simulationsschritt zwischengespeichert
+    _search(nav, start, goal) {
+      if (nav.tick !== this.ticks) { nav.searches.clear(); nav.tick = this.ticks; }
+      const key = start * nav.n + goal, cached = nav.searches.get(key);
+      if (cached) return cached;
+      const result = { dist: Infinity, cells: null };
+      nav.searches.set(key, result);
+      if (start < 0 || goal < 0) return result;
+      this.navSearches = (this.navSearches || 0) + 1;
+      const { cols, rows, free, g, prev, seen, closed } = nav, size = PATH.cell, stamp = ++nav.stamp;
+      const gc = goal % cols, gr = (goal - gc) / cols, D = Math.SQRT2 - 1, diag = Math.SQRT2 * size;
+      // Binärer Heap in festen Puffern: Schlüssel f, dann h, dann Zellnummer
+      let hc = nav.heapCell, hf = nav.heapF, hh = nav.heapH, len = 0;
+      const push = (cell, fv, hv) => {
+        if (len === hc.length) {
+          const c = new Int32Array(len * 2), a = new Float64Array(len * 2), b = new Float64Array(len * 2);
+          c.set(hc); a.set(hf); b.set(hh); hc = nav.heapCell = c; hf = nav.heapF = a; hh = nav.heapH = b;
+        }
+        let i = len++;
+        while (i > 0) {
+          const p = (i - 1) >> 1, pf = hf[p], ph = hh[p];
+          if (fv > pf + 1e-9 || (fv >= pf - 1e-9 && (hv > ph + 1e-9 || (hv >= ph - 1e-9 && cell > hc[p])))) break;
+          hc[i] = hc[p]; hf[i] = pf; hh[i] = ph; i = p;
+        }
+        hc[i] = cell; hf[i] = fv; hh[i] = hv;
+      };
+      const pop = () => {
+        const top = hc[0]; len--;
+        if (len > 0) {
+          const cell = hc[len], fv = hf[len], hv = hh[len];
+          let i = 0;
+          for (;;) {
+            const l = 2 * i + 1; if (l >= len) break;
+            let m = l;
+            const r = l + 1;
+            if (r < len) {
+              const df = hf[r] - hf[l];
+              if (df < -1e-9 || (df <= 1e-9 && (hh[r] < hh[l] - 1e-9 || (hh[r] <= hh[l] + 1e-9 && hc[r] < hc[l])))) m = r;
+            }
+            const df = hf[m] - fv;
+            if (df > 1e-9 || (df >= -1e-9 && (hh[m] > hv + 1e-9 || (hh[m] >= hv - 1e-9 && hc[m] > cell)))) break;
+            hc[i] = hc[m]; hf[i] = hf[m]; hh[i] = hh[m]; i = m;
+          }
+          hc[i] = cell; hf[i] = fv; hh[i] = hv;
+        }
+        return top;
+      };
+      const heur = cell => { const c = cell % cols, dx = c > gc ? c - gc : gc - c, rr = (cell - c) / cols, dy = rr > gr ? rr - gr : gr - rr; return size * (dx > dy ? dx + D * dy : dy + D * dx); };
+      g[start] = 0; prev[start] = -1; seen[start] = stamp; { const h0 = heur(start); push(start, h0, h0); }
+      while (len > 0) {
+        const cell = pop();
+        if (closed[cell] === stamp) continue;
+        closed[cell] = stamp;
+        if (cell === goal) break;
+        const col = cell % cols, row = (cell - col) / cols, base = g[cell];
+        const left = col > 0, right = col < cols - 1, up = row > 0, down = row < rows - 1;
+        const fl = left && free[cell - 1], fr = right && free[cell + 1], fu = up && free[cell - cols], fd = down && free[cell + cols];
+        for (let k = 0; k < 8; k++) {
+          let next, cost;
+          switch (k) {
+            case 0: if (!fr) continue; next = cell + 1; cost = size; break;
+            case 1: if (!fl) continue; next = cell - 1; cost = size; break;
+            case 2: if (!fd) continue; next = cell + cols; cost = size; break;
+            case 3: if (!fu) continue; next = cell - cols; cost = size; break;
+            case 4: if (!fr || !fd) continue; next = cell + cols + 1; cost = diag; break;
+            case 5: if (!fl || !fd) continue; next = cell + cols - 1; cost = diag; break;
+            case 6: if (!fr || !fu) continue; next = cell - cols + 1; cost = diag; break;
+            default: if (!fl || !fu) continue; next = cell - cols - 1; cost = diag;
+          }
+          if (!free[next] || closed[next] === stamp) continue;
+          const ng = base + cost;
+          if (seen[next] !== stamp || ng < g[next] - 1e-9) {
+            g[next] = ng; prev[next] = cell; seen[next] = stamp; const hv = heur(next); push(next, ng + hv, hv);
+          }
+        }
+      }
+      if (closed[goal] === stamp) {
+        result.dist = g[goal]; result.cells = [];
+        for (let c = goal; c >= 0; c = prev[c]) { result.cells.push(c); if (c === start) break; }
+        result.cells.reverse();
+      }
+      return result;
+    }
+    // Weglänge zwischen zwei Punkten: Luftlinie bei freier Fahrt, sonst A*; unerreichbar = Luftlinie + 600
+    _travel(x0, y0, x1, y1) {
+      const straight = Math.hypot(x1 - x0, y1 - y0);
+      if (this._walkable(x0, y0, x1, y1)) return straight;
+      const nav = this._nav(), a = this._nearestFree(nav, x0, y0), b = this._nearestFree(nav, x1, y1);
+      const d = this._search(nav, a, b).dist;
+      if (!Number.isFinite(d)) return straight + 600;
+      const [ax, ay] = this._center(nav, a), [bx, by] = this._center(nav, b);
+      return d + Math.hypot(ax - x0, ay - y0) + Math.hypot(x1 - bx, y1 - by);
+    }
+    _walkable(x0, y0, x1, y1) {
+      for (const b of this._obstacles()) if (segmentBox(x0, y0, x1, y1, b, ROBOT_R + PATH.walk) !== null) return false;
+      return true;
+    }
+    // Neuer Weg nur bei gewandertem Ziel (über 40 AE), nach 0,6 s oder wenn sich Hindernisse geändert haben.
+    // Liegt das Ziel nicht frei (z. B. in Deckung), wird der nächste erreichbare Punkt zum Ziel.
+    _plan(r, force = false) {
+      const key = this._navKey();
+      if (!force && r.path && r.planKey === key && Math.hypot(r.goalX - r.planX, r.goalY - r.planY) <= PATH.replanDistance && this.t - r.planAt < PATH.replanSec) return;
+      r.planX = r.goalX; r.planY = r.goalY; r.planAt = this.t; r.planKey = key; r.pathIndex = 0;
+      if (this._walkable(r.x, r.y, r.goalX, r.goalY)) { r.path = [[r.goalX, r.goalY]]; return; }
+      const nav = this._nav(), start = this._nearestFree(nav, r.x, r.y), goal = this._nearestFree(nav, r.goalX, r.goalY);
+      const found = this._search(nav, start, goal);
+      if (!found.cells) { r.path = [[r.goalX, r.goalY]]; return; }
+      const points = found.cells.map(c => this._center(nav, c)), last = points.at(-1);
+      if (this._walkable(last[0], last[1], r.goalX, r.goalY)) points.push([r.goalX, r.goalY]);
+      else { r.goalX = last[0]; r.goalY = last[1]; }
+      // Glätten: Abkürzung, sobald freie Fahrt besteht
+      const path = []; let ax = r.x, ay = r.y, i = 0;
+      while (i < points.length) {
+        let j = i;
+        while (j + 1 < points.length && this._walkable(ax, ay, points[j + 1][0], points[j + 1][1])) j++;
+        path.push([Number(points[j][0].toFixed(2)), Number(points[j][1].toFixed(2))]);
+        [ax, ay] = points[j]; i = j + 1;
+      }
+      r.path = path;
+    }
+    // Richtung zum nächsten Wegpunkt plus sanfte Abstoßung von Robotern unter 70 AE; Tempo 0 am Ziel
+    _desired(r) {
+      let dx = 0, dy = 0, speed = 0;
+      if (r.path && r.path.length) {
+        while (r.pathIndex < r.path.length - 1 && Math.hypot(r.path[r.pathIndex][0] - r.x, r.path[r.pathIndex][1] - r.y) < PATH.reach) r.pathIndex++;
+        const [wx, wy] = r.path[r.pathIndex], d = Math.hypot(wx - r.x, wy - r.y), final = r.pathIndex === r.path.length - 1;
+        if (!(final && d < PATH.reach)) { dx = (wx - r.x) / d; dy = (wy - r.y) / d; speed = final ? Math.min(1, d / 60) : 1; }
+      }
+      for (const o of this.robots) if (o !== r && o.alive && !o.caged) {
+        const ox = r.x - o.x, oy = r.y - o.y, d = Math.hypot(ox, oy);
+        if (d > 1e-6 && d < PATH.repel) { const k = (PATH.repel - d) / PATH.repel; dx += ox / d * k; dy += oy / d * k; speed = Math.max(speed, .5 * k); }
+      }
+      const len = Math.hypot(dx, dy);
+      return len > 1e-6 ? { dx: dx / len, dy: dy / len, speed } : { dx: 0, dy: 0, speed: 0 };
+    }
+    // Gleiten statt Abprallen: Geschwindigkeit entlang der Kante, 30 % Verlust
+    _reflect(r, nx, ny) {
+      const along = r.vx * nx + r.vy * ny;
+      if (along < 0) { r.vx = (r.vx - along * nx) * (1 - PATH.slideLoss); r.vy = (r.vy - along * ny) * (1 - PATH.slideLoss); }
+    }
+    // Festgefahren: unter 6 AE in 1 s bei Ziel über 40 AE → 0,4 s zurücksetzen, dann neuer Weg
+    _checkStuck(r) {
+      const s = r.stuck;
+      if (this.t - s.t < PATH.stuckSec) return;
+      if (Math.hypot(r.goalX - r.x, r.goalY - r.y) > PATH.stuckGoal && Math.hypot(r.x - s.x, r.y - s.y) < PATH.stuckMove) {
+        r.reverseUntil = this.t + PATH.reverseSec; r.stuckCount++; r.path = null; r.thinkIn = PATH.reverseSec;
+      }
+      s.x = r.x; s.y = r.y; s.t = this.t;
+    }
+    _weaponGoal(r) {
+      let best = null, cost = Infinity;
+      for (const p of this.pickups.filter(p => !p.empty && p.ammo > 0).concat(this.pads)) {
+        const c = this._travel(r.x, r.y, p.x, p.y) + Math.max(0, p.readyIn || 0) * r.speed;
+        if (c < cost) { cost = c; best = p; }
+      }
+      return best;
+    }
+    _think(r) {
+      r.thinkIn = .38 + this.rng.next() * .22;
+      const target = this._chooseTarget(r), { w, h, edge } = this.bounds;
+      if (!r.weapon) { const g = this._weaponGoal(r); if (g) { r.goalX = g.x; r.goalY = g.y; } }
+      else if (target) {
+        const dx = target.x - r.x, dy = target.y - r.y, d = Math.hypot(dx, dy) || 1;
+        const chase = d > 350 ? .85 : d < 165 ? -.8 : .18, side = .65 * r.turnBias;
+        r.goalX = r.x + (dx * chase - dy * side) / d * 160; r.goalY = r.y + (dy * chase + dx * side) / d * 160;
+      }
+      r.goalX = clamp(r.goalX, edge + r.r + 5, w - edge - r.r - 5); r.goalY = clamp(r.goalY, edge + r.r + 5, h - edge - r.r - 5);
+      this._plan(r, !r.path);
+    }
+    _steer(r, dt) {
+      if (r.caged) return;
+      if (r.thinkIn <= 0) this._think(r);
+      r.thinkIn -= dt;
+      let { dx, dy, speed } = this._desired(r);
+      if (this.t < r.reverseUntil) {
+        if (speed > 0) { dx = -dx; dy = -dy; } else { const v = Math.hypot(r.vx, r.vy) || 1; dx = -r.vx / v; dy = -r.vy / v; }
+        speed = .5;
+      }
+      const blend = 1 - Math.exp(-dt * 4.2);
+      r.vx += (dx * r.speed * speed - r.vx) * blend; r.vy += (dy * r.speed * speed - r.vy) * blend;
+      r.x += r.vx * dt; r.y += r.vy * dt;
+      this._resolveRobot(r);
+      this._checkStuck(r);
     }
     checkInvariants() {
       const result = super.checkInvariants();
