@@ -386,5 +386,5 @@
     }
     g.restore();
   }
-  EBS.ScrapMaterialArt={floor,block,pad,rubble,breakEffect,sunnyPad:(g,pad)=>EBS.ScrapDaylightArt.pad(g,pad),sunnyColors};
+  EBS.ScrapMaterialArt={floor,block,pad,rubble,breakEffect,sunnyPad:(g,pad,occupied)=>EBS.ScrapDaylightArt.pad(g,pad,occupied),sunnyColors};
 })();

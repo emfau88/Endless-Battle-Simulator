@@ -1,7 +1,8 @@
 # Scrap Wars: Ausbau – Bericht vom 19.11.2026 (R40)
 
-**Bezug:** [Ausbau-Plan](SCRAP_AUSBAU_PLAN_2026-11-19.md). **Stand:** T1 Hörprobe abgeschlossen (B2 gewählt), E0–E5 auf `main` (PR #44), K1–K5 Taktik-Arena `v4` gebaut
-und gemessen; die zwei Testclips warten auf das Urteil des Nutzers. Branch `scrap/v4-taktik`.
+**Bezug:** [Ausbau-Plan](SCRAP_AUSBAU_PLAN_2026-11-19.md). **Stand:** T1 Hörprobe abgeschlossen (B2 gewählt), E0–E5 auf `main` (PR #44), K1–K5 Taktik-Arena `v4` gebaut,
+gemessen und vom Nutzer angenommen („soweit ganz ok“); Waffen auf Sunny Yard als Symbol-Marken, Vorlagen auf `v4`.
+Branch `scrap/v4-taktik`.
 
 **Kurz:** Die Sunny-Kopfzeile ist englisch und zeigt Waffensymbole. Neue Treffer-, Schuss- und Explosionseffekte
 stehen als Vorher/Nachher-Blätter bereit. Beim Ton ist Variante B2 „sauber“ gewählt. Die Taktik-Arena `v4` ist
@@ -209,3 +210,40 @@ Die Clips liegen nicht im Repository. Der Nutzer beurteilt Fahrgefühl und Spann
   Sekunden vom Export. Maßgeblich ist der Browser: Export, Seek-Test und Referenz-Hashes laufen dort und sind
   reproduzierbar. Die Kennzahlen aus Node sind statistisch gleichwertig.
 - Die Kistenklänge im Repository sind noch Kenney-Holzklänge; die B2-Fassung kommt mit T2.
+
+---
+
+## Nachtrag: Waffen als Symbol-Marken, Vorlagen auf v4
+
+**Rückmeldung des Nutzers zu den Testclips:** „soweit ganz ok“. Gestört haben die Waffen am Boden: Die dunklen
+Felder mit Zahlen sind schwer lesbar, wenn man nicht weiß, was sie bedeuten.
+
+**Vorschau:** Drei Varianten als gerenderte Bilder, quer im Nahbild und hochkant als ganzes Bild (lokal unter
+`output/scrap-v4/vorschau-waffen-*.png`): A Symbol, B Symbol mit Wort, C leuchtende Waffe. Der Nutzer wählt **A**.
+
+**Umgesetzt (nur Sunny Yard, `v3` und `v4`, nur Darstellung):**
+
+- Eine Waffe am Boden ist eine weiße runde Marke mit dunklem Rand und großem Symbol: Rakete für Raketen, Blitz für
+  den Blaster. Sie schwebt leicht. Das Schweben hängt nur an der Rundenzeit, ein Sprung liefert also dasselbe Bild.
+  Leere Waffen bleiben als blasse graue Marke liegen und verblassen.
+- Die Waffenstation ist ein heller Ring. Beim Aufladen füllt er sich, und das kommende Symbol steht blass in der
+  Mitte. Liegt eine Waffe darauf, sieht man nur die Marke.
+- Munitionszahl, Countdown („02“, „READY“) und das Wort auf der Station entfallen.
+- Die anderen Karten behalten ihre bisherigen Waffen.
+
+**Vorlagen:** `presets/production/scrap-short.json` und `scrap-long.json` sowie die Vorlagen der Oberfläche nutzen
+jetzt `v4`. In der Auswahl heißt die Regelversion „Taktik-Arena · Startkisten, Zielwahl, Wegfindung“, ohne
+„in Arbeit“.
+
+| Prüfung | Ergebnis |
+|---|---|
+| Bild aus dem Code gegen Vorschau A (quer, 9 s) | gleich |
+| `node --test --test-name-pattern=Seek test/scrap-optics.test.mjs` | bestanden (Sunny `v3` und `v4`, quer und hochkant) |
+| `node --test test/scrap-material-art.test.mjs test/scrap-labels.test.mjs` | 5 von 5 |
+| `node --test test/presets.test.mjs test/presets-export-scrap.test.mjs` | 6 von 6, Short und Langvideo exportieren mit `v4` |
+| Renderzeit je Bild (wie oben gemessen) | quer `v3` 127,2 ms, `v4` 130,2 ms; hochkant `v3` 141,9 ms, `v4` 136,0 ms; nicht langsamer als vorher |
+
+**Nicht gelaufen:** kein vollständiger `npm test`, kein neuer Export mit Ton. Die Simulation ist unverändert.
+
+**Offen:** Die Kopfzeile zeigt noch die alte Waffenform mit Munitionszahl. Sie könnte dieselben Symbole bekommen;
+das kommt erst nach einer Vorschau. Ebenfalls offen: die farbigen Startecken im Boden.

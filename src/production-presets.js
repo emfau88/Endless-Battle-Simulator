@@ -41,7 +41,7 @@
       version: 1,
       name: `${labels[scenario]} – ${short ? 'Short (1 Minute)' : 'Langvideo (10 Minuten)'}`,
       scenario, seed,
-      params: scenario === 'scrap' ? { arena: 'sunshine', rulesVersion: 'v3', episodeMode: 'endless', repeatRounds: true }
+      params: scenario === 'scrap' ? { arena: 'sunshine', rulesVersion: 'v4', episodeMode: 'endless', repeatRounds: true }
         // Pyramide: Tierchen; hochkant so groß wie möglich, quer die größte Größe, bei der die Bahn fünf Schienen behält
         : scenario === 'pyramid' ? { dayMinutes: short ? 1 : 0, figure: 1, size: short ? 24 : 18, wiggle: 1.2 }
         : scenario === 'territory' ? { layout: short ? 'portrait' : 'landscape', repeatRounds: true } : {},

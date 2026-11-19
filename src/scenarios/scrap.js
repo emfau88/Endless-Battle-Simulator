@@ -92,7 +92,7 @@
       return c;
     }
     _pickup(g, p, t) {
-      if (this.sunny) { EBS.ScrapDaylightArt.pickup(g, p, t, this); return; }
+      if (this.sunny) { EBS.ScrapDaylightArt.pickup(g, p, t); return; }
       if (!this.materialArena) { super._pickup(g, p, t); return; }
       const empty = !!p.empty || p.ammo <= 0, color = p.kind === 'rocket' ? '#eeb779' : '#7cdbef';
       const { sprite, shadow } = this._pickupTexture(p.kind, empty), angle = (noise(p.id, 13) - .5) * 1.5;
@@ -696,7 +696,7 @@
       this._paintCrates(g,r,portrait,sunny,'under');
       for(const pad of r.pads) {
         const occupied=r.pickups.some(p=>!p.empty&&p.ammo>0&&Math.hypot(p.x-pad.x,p.y-pad.y)<40);
-        if(sunny)art.sunnyPad(g,mapPoint(pad));else art.pad(g,mapPoint(pad),occupied);
+        if(sunny)art.sunnyPad(g,mapPoint(pad),occupied);else art.pad(g,mapPoint(pad),occupied);
       }
       for(const e of effects)this.arena._effect(g,e,true);
       fx.debris(g,scene.debris,sunny);
@@ -1057,7 +1057,7 @@
     defaults: { rulesVersion: 'v3', episodeMode: 'endless', arena: 'yard', workshop: false, repeatRounds: true, endPauseSec: 3 },
     controls: [
       { key: 'episodeMode', label: 'Format', type: 'select', options: [['endless', 'Freie Videolänge'], ['tournament', 'Turnier · 8 Runden + Finale']], restart: true },
-      { key: 'rulesVersion', label: 'Arena / Kampfregeln', type: 'select', enabled: p => p.arena !== 'sunshine' || p.rulesVersion === 'v4', options: [['v4', 'Taktik-Arena (v4, in Arbeit)'], ['v3', 'Große Arena · Holz, Stein, Beton'], ['v2', 'Bisherige Arena · flüssiger Kampf'], ['classic', 'Originalprototyp']], restart: true },
+      { key: 'rulesVersion', label: 'Arena / Kampfregeln', type: 'select', enabled: p => p.arena !== 'sunshine' || p.rulesVersion === 'v4', options: [['v4', 'Taktik-Arena · Startkisten, Zielwahl, Wegfindung'], ['v3', 'Große Arena · Holz, Stein, Beton'], ['v2', 'Bisherige Arena · flüssiger Kampf'], ['classic', 'Originalprototyp']], restart: true },
       { key: 'arena', label: 'Arena', type: 'select', options: [['yard', 'Scrapyard · ausgewogen'], ['foundry', 'Foundry · Deckungsgassen'], ['crossroads', 'Crossroads · offenes Zentrum'], ['sunshine', 'Sunny Yard · Tageslicht / Deckungsgassen']], restart: true },
       { key: 'workshop', label: 'Werkstatt (experimentell, ein Modul je Roboter)', type: 'check', enabled: p => p.episodeMode === 'tournament', restart: true },
       { key: 'repeatRounds', label: 'Weitere Runden spielen', type: 'check', enabled: p => p.episodeMode !== 'tournament', restart: true },
