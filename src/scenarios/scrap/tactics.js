@@ -39,8 +39,11 @@
   ];
   const WEAPONS = ScrapArena.WEAPONS, angleDiff = EBS.util.angleDiff, ROBOT_R = 24;
   // K3 · Wegfindung
-  const PATH = { cell: 8, margin: 1, walk: 0, reach: 20, replanDistance: 40, replanSec: .6, repel: 70, slideLoss: .3,
-    stuckSec: 1, stuckMove: 6, stuckGoal: 40, reverseSec: .4 };
+  const PATH = { cell: 8, margin: 1, reach: 20, replanDistance: 40, replanSec: .6, repel: 70, slideLoss: .3,
+    stuckSec: 1, stuckMove: 6, stuckGoal: 40, reverseSec: .4, jam: 80, yieldSec: .5, smooth: 6, close: 8, around: 1.2 };
+  // K4 · Panzerfahren und Verhalten
+  const DRIVE = { turn: 3.2, spinAngle: Math.PI / 3, spinSpeed: .3, accel: 260, brake: 420, reverse: .5 };
+  const BEHAVIOUR = { range: { blaster: [220, 340], rocket: [260, 420] }, coverNear: 60, coverSec: 3, coverMax: 6, coverPause: 4, claimed: 300 };
   // Zwischenspeicher außerhalb des Simulationszustands (Raster, Suchpuffer, Hindernisliste)
   const NAV = new WeakMap(), OBSTACLES = new WeakMap();
   class TacticalRound extends M.Round {
@@ -53,8 +56,10 @@
         r.targetId = null; r.targetSince = 0; r.hitBy = this.robots.map(() => -99);
         r.path = null; r.pathIndex = 0; r.planX = r.planY = r.planAt = 0; r.planKey = -1;
         r.stuck = { x: 0, y: 0, t: 0 }; r.stuckCount = 0; r.reverseUntil = 0;
+        r.mode = 'search'; r.hiddenSince = null; r.coverSince = 0; r.coverUntil = null; r.coverBlock = 0;
       }
       this._placeCrates();
+      for (const r of this.robots) r.heading = r.angle;
     }
 
     // ---- K1 · Startkisten ------------------------------------------------
@@ -420,8 +425,9 @@
       const [ax, ay] = this._center(nav, a), [bx, by] = this._center(nav, b);
       return d + Math.hypot(ax - x0, ay - y0) + Math.hypot(x1 - bx, y1 - by);
     }
-    _walkable(x0, y0, x1, y1) {
-      for (const b of this._obstacles()) if (segmentBox(x0, y0, x1, y1, b, ROBOT_R + PATH.walk) !== null) return false;
+    // Freie Fahrt für einen Roboterkörper; extra = zusätzlicher Abstand (Wege halten an Ecken etwas mehr Luft)
+    _walkable(x0, y0, x1, y1, extra = 0) {
+      for (const b of this._obstacles()) if (segmentBox(x0, y0, x1, y1, b, ROBOT_R + extra) !== null) return false;
       return true;
     }
     // Neuer Weg nur bei gewandertem Ziel (über 40 AE), nach 0,6 s oder wenn sich Hindernisse geändert haben.
@@ -430,7 +436,7 @@
       const key = this._navKey();
       if (!force && r.path && r.planKey === key && Math.hypot(r.goalX - r.planX, r.goalY - r.planY) <= PATH.replanDistance && this.t - r.planAt < PATH.replanSec) return;
       r.planX = r.goalX; r.planY = r.goalY; r.planAt = this.t; r.planKey = key; r.pathIndex = 0;
-      if (this._walkable(r.x, r.y, r.goalX, r.goalY)) { r.path = [[r.goalX, r.goalY]]; return; }
+      if (this._walkable(r.x, r.y, r.goalX, r.goalY, PATH.smooth)) { r.path = [[r.goalX, r.goalY]]; return; }
       const nav = this._nav(), start = this._nearestFree(nav, r.x, r.y), goal = this._nearestFree(nav, r.goalX, r.goalY);
       const found = this._search(nav, start, goal);
       if (!found.cells) { r.path = [[r.goalX, r.goalY]]; return; }
@@ -441,23 +447,33 @@
       const path = []; let ax = r.x, ay = r.y, i = 0;
       while (i < points.length) {
         let j = i;
-        while (j + 1 < points.length && this._walkable(ax, ay, points[j + 1][0], points[j + 1][1])) j++;
+        while (j + 1 < points.length && this._walkable(ax, ay, points[j + 1][0], points[j + 1][1], PATH.smooth)) j++;
         path.push([Number(points[j][0].toFixed(2)), Number(points[j][1].toFixed(2))]);
         [ax, ay] = points[j]; i = j + 1;
       }
       r.path = path;
     }
-    // Richtung zum nächsten Wegpunkt plus sanfte Abstoßung von Robotern unter 70 AE; Tempo 0 am Ziel
+    // Richtung zum nächsten Wegpunkt plus sanfte Abstoßung von Robotern unter 70 AE; steht einer im Weg, seitlich
+    // vorbei (weg von seiner Seite). Tempo 0 am Ziel.
     _desired(r) {
       let dx = 0, dy = 0, speed = 0;
       if (r.path && r.path.length) {
-        while (r.pathIndex < r.path.length - 1 && Math.hypot(r.path[r.pathIndex][0] - r.x, r.path[r.pathIndex][1] - r.y) < PATH.reach) r.pathIndex++;
+        // Wegpunkt erreicht unter 20 AE, aber weiter erst, wenn der nächste frei anzufahren ist (sonst bis auf 8 AE heran)
+        while (r.pathIndex < r.path.length - 1) {
+          const [px, py] = r.path[r.pathIndex], d = Math.hypot(px - r.x, py - r.y), [nx, ny] = r.path[r.pathIndex + 1];
+          if (d < PATH.close || (d < PATH.reach && this._walkable(r.x, r.y, nx, ny))) r.pathIndex++; else break;
+        }
         const [wx, wy] = r.path[r.pathIndex], d = Math.hypot(wx - r.x, wy - r.y), final = r.pathIndex === r.path.length - 1;
         if (!(final && d < PATH.reach)) { dx = (wx - r.x) / d; dy = (wy - r.y) / d; speed = final ? Math.min(1, d / 60) : 1; }
       }
+      const px = dx, py = dy;
       for (const o of this.robots) if (o !== r && o.alive && !o.caged) {
         const ox = r.x - o.x, oy = r.y - o.y, d = Math.hypot(ox, oy);
-        if (d > 1e-6 && d < PATH.repel) { const k = (PATH.repel - d) / PATH.repel; dx += ox / d * k; dy += oy / d * k; speed = Math.max(speed, .5 * k); }
+        if (d > 1e-6 && d < PATH.repel) {
+          const k = (PATH.repel - d) / PATH.repel, ax = ox / d, ay = oy / d;
+          dx += ax * k; dy += ay * k; speed = Math.max(speed, .5 * k);
+          if (-(ax * px + ay * py) > .3) { const side = -py * ax + px * ay >= 0 ? 1 : -1; dx += -py * side * PATH.around * k; dy += px * side * PATH.around * k; }
+        }
       }
       const len = Math.hypot(dx, dy);
       return len > 1e-6 ? { dx: dx / len, dy: dy / len, speed } : { dx: 0, dy: 0, speed: 0 };
@@ -472,41 +488,119 @@
       const s = r.stuck;
       if (this.t - s.t < PATH.stuckSec) return;
       if (Math.hypot(r.goalX - r.x, r.goalY - r.y) > PATH.stuckGoal && Math.hypot(r.x - s.x, r.y - s.y) < PATH.stuckMove) {
-        r.reverseUntil = this.t + PATH.reverseSec; r.stuckCount++; r.path = null; r.thinkIn = PATH.reverseSec;
+        // Stau zweier Roboter: der mit der höheren Nummer setzt länger zurück und macht Platz
+        const jam = this.robots.some(o => o !== r && o.alive && !o.caged && o.id < r.id && Math.hypot(o.x - r.x, o.y - r.y) < PATH.jam);
+        const back = PATH.reverseSec + (jam ? PATH.yieldSec : 0);
+        r.reverseUntil = this.t + back; r.stuckCount++; r.path = null; r.thinkIn = back;
       }
       s.x = r.x; s.y = r.y; s.t = this.t;
     }
+    // ---- K4 · Fahren und Kampfverhalten ------------------------------------
+    // Suchen: Waffe mit den geringsten Kosten (Weg + Wartezeit), Amber zahlt für Raketen 25 % weniger
     _weaponGoal(r) {
       let best = null, cost = Infinity;
+      const discount = CHARACTERS[r.id % 4].rocketCost;
       for (const p of this.pickups.filter(p => !p.empty && p.ammo > 0).concat(this.pads)) {
-        const c = this._travel(r.x, r.y, p.x, p.y) + Math.max(0, p.readyIn || 0) * r.speed;
+        let c = this._travel(r.x, r.y, p.x, p.y) + Math.max(0, p.readyIn || 0) * r.speed;
+        if (p.kind === 'rocket') c *= discount;
+        // Schon beansprucht: ein anderer suchender Roboter will dorthin und ist näher dran
+        const mine = Math.hypot(p.x - r.x, p.y - r.y);
+        if (this.robots.some(o => o !== r && o.alive && !o.caged && !o.weapon && Math.hypot(o.goalX - p.x, o.goalY - p.y) < 30 && Math.hypot(p.x - o.x, p.y - o.y) < mine)) c += BEHAVIOUR.claimed;
         if (c < cost) { cost = c; best = p; }
+      }
+      return best;
+    }
+    _freeAt(x, y) {
+      const { w, h, edge } = this.bounds, m = ROBOT_R + 6;
+      if (x < edge + m || x > w - edge - m || y < edge + m || y > h - edge - m) return false;
+      const nav = this._nav();
+      return !!nav.free[this._cellOf(nav, x, y)];
+    }
+    // Angreifen: einer von 12 Punkten auf einem Kreis um das Ziel, nach freier Sicht, Deckung in der Nähe und Weg.
+    // Flanke: bevorzugt Punkte seitlich der bisherigen Linie. Ohne Sicht von keinem Punkt (auch auf zwei engeren
+    // Kreisen) fährt der Roboter auf das Ziel zu, bis sich eine Schusslinie öffnet.
+    _attackGoal(r, target, flank) {
+      const band = BEHAVIOUR.range[r.weapon.kind], scale = CHARACTERS[r.id % 4].range;
+      const lo = band[0] * scale, hi = band[1] * scale, now = Math.hypot(r.x - target.x, r.y - target.y);
+      const radius = clamp(now, lo, hi), bearing = Math.atan2(r.y - target.y, r.x - target.x), blocks = this.blocks.filter(b => b.alive);
+      let best = null, score = Infinity, seen = false;
+      for (const [ring, extra] of [[radius, 0], [radius * .65, .25], [Math.max(90, lo * .45), .5]]) for (let k = 0; k < 12; k++) {
+        const off = k <= 6 ? k : k - 12, a = bearing + off * Math.PI / 6, x = target.x + Math.cos(a) * ring, y = target.y + Math.sin(a) * ring;
+        if (!this._freeAt(x, y)) continue;
+        const hidden = this._blocked(x, y, target.x, target.y, WEAPONS.blaster.radius);
+        let v = Math.hypot(x - r.x, y - r.y) / 300 + extra;
+        if (hidden) v += flank ? 1.6 : 1; else seen = true;
+        if (blocks.some(b => distanceToBox(x, y, b) < BEHAVIOUR.coverNear)) v -= .2;
+        if (flank) v += .5 * Math.abs(Math.cos(off * Math.PI / 6));
+        if (off * r.turnBias > 0 && Math.abs(off) <= 2) v -= .1;
+        if (Math.hypot(x - r.goalX, y - r.goalY) < 40) v -= .15;
+        if (v < score - 1e-9) { score = v; best = [x, y]; }
+      }
+      return seen && best ? best : [target.x, target.y];
+    }
+    // Deckung: Punkt hinter einem Block, vom stärksten Gegner aus gesehen
+    _coverGoal(r) {
+      let threat = null;
+      for (const e of this.robots) if (e.alive && !e.caged && e.id !== r.id && (!threat || (!!e.weapon - !!threat.weapon || e.hp - threat.hp) > 0)) threat = e;
+      if (!threat) return null;
+      let best = null, cost = Infinity;
+      for (const b of this.blocks) if (b.alive) {
+        const cx = b.x + b.w / 2, cy = b.y + b.h / 2, dx = cx - threat.x, dy = cy - threat.y, d = Math.hypot(dx, dy) || 1;
+        const reach = Math.hypot(b.w, b.h) / 2 + ROBOT_R + 10, x = cx + dx / d * reach, y = cy + dy / d * reach;
+        if (!this._freeAt(x, y) || !this._blocked(threat.x, threat.y, x, y, WEAPONS.blaster.radius)) continue;
+        const c = Math.hypot(x - r.x, y - r.y) - b.hp * .3;
+        if (c < cost) { cost = c; best = [x, y]; }
       }
       return best;
     }
     _think(r) {
       r.thinkIn = .38 + this.rng.next() * .22;
-      const target = this._chooseTarget(r), { w, h, edge } = this.bounds;
-      if (!r.weapon) { const g = this._weaponGoal(r); if (g) { r.goalX = g.x; r.goalY = g.y; } }
+      const target = this._chooseTarget(r), { w, h, edge } = this.bounds, now = this.t, character = CHARACTERS[r.id % 4];
+      let goal = null;
+      if (!r.weapon) { r.mode = 'search'; const g = this._weaponGoal(r); if (g) goal = [g.x, g.y]; }
       else if (target) {
-        const dx = target.x - r.x, dy = target.y - r.y, d = Math.hypot(dx, dy) || 1;
-        const chase = d > 350 ? .85 : d < 165 ? -.8 : .18, side = .65 * r.turnBias;
-        r.goalX = r.x + (dx * chase - dy * side) / d * 160; r.goalY = r.y + (dy * chase + dx * side) / d * 160;
-      }
+        const hidden = this._blocked(r.x, r.y, target.x, target.y, WEAPONS.blaster.radius);
+        r.hiddenSince = hidden ? (r.hiddenSince ?? now) : null;
+        const low = r.hp / r.maxHp < character.coverHp || r.weapon.ammo <= 2;
+        if (r.mode === 'cover') {
+          if (r.coverUntil === null && Math.hypot(r.goalX - r.x, r.goalY - r.y) < 30) r.coverUntil = now + BEHAVIOUR.coverSec;
+          if ((r.coverUntil !== null && now >= r.coverUntil) || now - r.coverSince > BEHAVIOUR.coverMax) { r.mode = 'attack'; r.coverBlock = now + BEHAVIOUR.coverPause; }
+          else goal = [r.goalX, r.goalY];
+        } else if (low && now >= r.coverBlock) {
+          const c = this._coverGoal(r);
+          if (c) { r.mode = 'cover'; r.coverSince = now; r.coverUntil = null; goal = c; }
+        }
+        if (!goal) {
+          const flank = r.hiddenSince !== null && now - r.hiddenSince >= character.flankAfter;
+          r.mode = flank ? 'flank' : 'attack';
+          goal = this._attackGoal(r, target, flank);
+        }
+      } else r.mode = 'idle';
+      if (goal) { r.goalX = goal[0]; r.goalY = goal[1]; }
       r.goalX = clamp(r.goalX, edge + r.r + 5, w - edge - r.r - 5); r.goalY = clamp(r.goalY, edge + r.r + 5, h - edge - r.r - 5);
       this._plan(r, !r.path);
     }
+    // Fahren wie ein Panzer: Fahrtrichtung dreht höchstens 3,2 rad/s, über 60° Abweichung erst drehen (30 % Tempo),
+    // beschleunigen 260 AE/s², bremsen 420 AE/s², Anhalten erlaubt. Beim Befreien rückwärts mit halbem Tempo.
     _steer(r, dt) {
       if (r.caged) return;
       if (r.thinkIn <= 0) this._think(r);
       r.thinkIn -= dt;
-      let { dx, dy, speed } = this._desired(r);
-      if (this.t < r.reverseUntil) {
-        if (speed > 0) { dx = -dx; dy = -dy; } else { const v = Math.hypot(r.vx, r.vy) || 1; dx = -r.vx / v; dy = -r.vy / v; }
-        speed = .5;
+      const want = this._desired(r);
+      // Wer anhalten will (am Ziel), gilt nicht als festgefahren
+      if (want.speed <= 0 && this.t >= r.reverseUntil) { r.stuck.x = r.x; r.stuck.y = r.y; r.stuck.t = this.t; }
+      const along = r.vx * Math.cos(r.heading) + r.vy * Math.sin(r.heading);
+      // Tempo = Betrag mit Vorzeichen der Fahrtrichtung: Gleiten an einer Kante bremst, wird aber nicht zum Kriechen
+      let drive = (along < 0 ? -1 : 1) * Math.hypot(r.vx, r.vy), target = 0;
+      if (this.t < r.reverseUntil) target = -DRIVE.reverse * r.speed;
+      else if (want.speed > 0) {
+        const diff = angleDiff(Math.atan2(want.dy, want.dx), r.heading), turn = DRIVE.turn * dt;
+        r.heading += clamp(diff, -turn, turn);
+        if (r.heading > Math.PI) r.heading -= 2 * Math.PI; else if (r.heading < -Math.PI) r.heading += 2 * Math.PI;
+        target = r.speed * want.speed * (Math.abs(diff) > DRIVE.spinAngle ? DRIVE.spinSpeed : 1);
       }
-      const blend = 1 - Math.exp(-dt * 4.2);
-      r.vx += (dx * r.speed * speed - r.vx) * blend; r.vy += (dy * r.speed * speed - r.vy) * blend;
+      drive = drive < target ? Math.min(target, drive + DRIVE.accel * dt) : Math.max(target, drive - DRIVE.brake * dt);
+      r.vx = Math.cos(r.heading) * drive; r.vy = Math.sin(r.heading) * drive;
       r.x += r.vx * dt; r.y += r.vy * dt;
       this._resolveRobot(r);
       this._checkStuck(r);
@@ -523,5 +617,5 @@
     }
   }
 
-  EBS.ScrapTactics = { Round: TacticalRound, CRATE, FIGHT, CHARACTERS };
+  EBS.ScrapTactics = { Round: TacticalRound, CRATE, FIGHT, CHARACTERS, PATH, DRIVE, BEHAVIOUR };
 })();

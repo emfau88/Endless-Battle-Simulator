@@ -312,7 +312,8 @@
       const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
       const color = colorOf(robot), dead = robot.alive === false || finite(robot.hp, 1) <= 0;
       const speed = Math.hypot(finite(robot.vx), finite(robot.vy));
-      const chassisAngle = speed > 8 ? Math.atan2(robot.vy, robot.vx) : finite(robot.angle);
+      // v4 fährt wie ein Panzer: das Chassis zeigt die eigene Fahrtrichtung, der Turm wie bisher das Ziel
+      const chassisAngle = Number.isFinite(robot.heading) ? robot.heading : speed > 8 ? Math.atan2(robot.vy, robot.vx) : finite(robot.angle);
       const aim = finite(robot.angle), radius = Math.max(12, finite(robot.r, 24)), bodyScale = radius / 24;
       const stage = dead ? 2 : damageStage(robot), body = this._bodyTexture(color, dead, stage);
       // E1/E2: Rückstoß aus der Schusszeit (flashUntil = Schuss + 0,11 s), Schubs aus dem letzten Treffer (nudgeX/Y)
@@ -670,7 +671,7 @@
       const final=s.cfg.episodeMode==='tournament'&&s.completedRounds===8;
       const elapsed=s.phase==='pause'?s.cfg.endPauseSec-(s.pauseUntil-s.step)/60:final?Math.max(0,5-(s.outroUntil-s.step)/60):0;
       const mapPoint=p=>portrait?{...p,x:r.bounds.h-p.y,y:p.x,
-        ...('vx' in p?{vx:-p.vy,vy:p.vx}:{}),...('angle' in p?{angle:p.angle+Math.PI/2}:{}),
+        ...('vx' in p?{vx:-p.vy,vy:p.vx}:{}),...('angle' in p?{angle:p.angle+Math.PI/2}:{}),...('heading' in p?{heading:p.heading+Math.PI/2}:{}),
         ...('px' in p?{px:r.bounds.h-p.py,py:p.px}:{})}:p;
       const robots=r.robots.map(mapPoint),effects=r.effects.slice(-100).map(e=>({...mapPoint(e),age:e.age+elapsed}));
       const blocks=portrait?r.blocks.map(b=>({...b,x:r.bounds.h-b.y-b.h,y:b.x,w:b.h,h:b.w})):r.blocks;
