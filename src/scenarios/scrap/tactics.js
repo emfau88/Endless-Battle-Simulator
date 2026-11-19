@@ -25,12 +25,25 @@
   // K1 · Startkisten: Schatten 0–1,2 s, Aufschlag 1,2 s, Ausbruch ab 1,6 s + Seed 0–2,4 s, mindestens 0,4 s Abstand.
   const CRATE = { size: 64, land: 1.2, open: 1.6, spread: 2.4, gap: .4, grid: 20, cover: 60, wall: 60, supply: 90,
     pair: 260, pairPortrait: 240, tries: 200, fair: [.6, 1.6] };
+  // K2 · Zielwahl, Schusslinie, Kampftempo. Startwerte aus dem Plan, Abstimmung in K5.
+  const FIGHT = { blaster: 6, rocket: 30, turn: 5, aimTol: .08, woodRange: 300, splash: .8, range: 690,
+    score: { distance: 600, sight: .35, weak: .25, revenge: .30, revengeSec: 4, loyal: .20, loyalSec: 1.5, noise: .10 } };
+  // K4 · Charaktere, fest je Roboter (Ember, Azure, Amber, Moss)
+  const CHARACTERS = [
+    { key: 'rusher', range: .7, coverHp: .20, aimTol: .08, rocketCost: 1, flankAfter: 2 },
+    { key: 'sniper', range: 1.25, coverHp: .35, aimTol: .04, rocketCost: 1, flankAfter: 2 },
+    { key: 'collector', range: 1, coverHp: .35, aimTol: .08, rocketCost: .75, flankAfter: 2 },
+    { key: 'flanker', range: 1, coverHp: .35, aimTol: .08, rocketCost: 1, flankAfter: 1 },
+  ];
+  const WEAPONS = ScrapArena.WEAPONS, angleDiff = EBS.util.angleDiff;
 
   class TacticalRound extends M.Round {
     constructor(options) {
       super(options);
       this.rulesVersion = 'v4';
       this.portraitView = !!options.portrait;
+      this.fire = { clear: 0, wood: 0, splash: 0, blocked: 0 };
+      for (const r of this.robots) { r.targetId = null; r.targetSince = 0; r.hitBy = this.robots.map(() => -99); }
       this._placeCrates();
     }
 
@@ -97,14 +110,8 @@
         }
       }
     }
-    _tick(dt) {
-      super._tick(dt);
-      if (this.phase === 'running') this._updateCrates();
-    }
     _steer(r, dt) { if (!r.caged) super._steer(r, dt); }
-    _shoot(r) { if (!r.caged) super._shoot(r); }
     _takePickup(r) { if (!r.caged) super._takePickup(r); }
-    _hurtRobot(r, amount, owner, x, y) { if (!r.caged) super._hurtRobot(r, amount, owner, x, y); }
     _blocked(x0, y0, x1, y1, pad = 0) {
       return this._obstacles().some(b => segmentBox(x0, y0, x1, y1, b, pad) !== null);
     }
@@ -121,34 +128,133 @@
         r.x += dx * push; r.y += dy * push; this._reflect(r, dx, dy);
       }
     }
+    // ---- K2 · Zielwahl und Schusslinie ---------------------------------------
+    // Kleinster Wert gewinnt: Weg, freie Sicht, geschwächter Gegner, Rache, Treue, Seed-Rauschen.
+    _chooseTarget(r, force = false) {
+      const now = this.t, S = FIGHT.score, current = r.targetId === null ? null : this.robots[r.targetId];
+      const valid = e => e && e.alive && !e.caged && e.id !== r.id;
+      if (!force && valid(current) && now - r.targetSince < S.loyalSec) return current;
+      let best = null, score = Infinity;
+      for (const e of this.robots) if (valid(e)) {
+        let v = this._travel(r.x, r.y, e.x, e.y) / S.distance;
+        if (!this._blocked(r.x, r.y, e.x, e.y, WEAPONS.blaster.radius)) v -= S.sight;
+        v -= S.weak * (1 - e.hp / e.maxHp);
+        if (now - r.hitBy[e.id] < S.revengeSec) v -= S.revenge;
+        if (e === current) v -= S.loyal;
+        v += this.rng.range(-S.noise, S.noise);
+        if (v < score) { score = v; best = e; }
+      }
+      const id = best ? best.id : null;
+      if (id !== r.targetId) { r.targetId = id; r.targetSince = now; }
+      return best;
+    }
+    _target(r) {
+      const t = r.targetId === null ? null : this.robots[r.targetId];
+      return t && t.alive && !t.caged ? t : this._chooseTarget(r, true);
+    }
+    // Die bisherige Bewegung (bis K4) folgt dem gewählten Ziel statt dem nächsten Gegner
+    _nearestEnemy(r) { return this._target(r); }
+    _think(r) { this._chooseTarget(r); super._think(r); }
+    // Freie Linie, absichtlicher Schuss durch Holz (Ziel unter 300 AE) oder Rakete auf Deckung neben dem Ziel
+    _fireLine(r, target, ax, ay, kind) {
+      const pad = WEAPONS[kind].radius, hits = [];
+      for (const b of this._obstacles()) { const t = segmentBox(r.x, r.y, ax, ay, b, pad); if (t !== null) hits.push([t, b]); }
+      if (!hits.length) return 'clear';
+      const distance = Math.hypot(target.x - r.x, target.y - r.y);
+      if (kind === 'blaster' && distance < FIGHT.woodRange && hits.every(([, b]) => b.material === 'wood')) return 'wood';
+      if (kind === 'rocket') {
+        hits.sort((p, q) => p[0] - q[0]);
+        if (hits[0][1].material && distanceToBox(target.x, target.y, hits[0][1]) < FIGHT.splash * WEAPONS.rocket.blastRadius) return 'splash';
+      }
+      return null;
+    }
+    _tick(dt) {
+      this.tickDt = dt;
+      super._tick(dt);
+      if (this.phase === 'running') this._updateCrates();
+    }
+    // Der Turm dreht höchstens 5 rad/s; geschossen wird erst, wenn er auf den Vorhaltepunkt zeigt.
+    _shoot(r) {
+      if (r.caged) return;
+      const dt = this.tickDt || 1 / 120, character = CHARACTERS[r.id % 4];
+      const target = r.weapon ? this._target(r) : null;
+      let desired = r.angle, ax = 0, ay = 0, distance = Infinity;
+      if (target) {
+        const spec = WEAPONS[r.weapon.kind];
+        distance = Math.hypot(target.x - r.x, target.y - r.y);
+        const lead = Math.min(.6, distance / spec.speed) * .58;
+        ax = target.x + target.vx * lead; ay = target.y + target.vy * lead;
+        desired = Math.atan2(ay - r.y, ax - r.x);
+      } else if (Number.isFinite(r.heading)) desired = r.heading;
+      else if (Math.hypot(r.vx, r.vy) > 1) desired = Math.atan2(r.vy, r.vx);
+      const off = angleDiff(desired, r.angle), step = FIGHT.turn * dt;
+      r.angle = Math.abs(off) <= step ? desired : r.angle + Math.sign(off) * step;
+      if (!target || r.cooldown > 0 || distance > FIGHT.range || Math.abs(angleDiff(desired, r.angle)) > character.aimTol) return;
+      const kind = r.weapon.kind, line = this._fireLine(r, target, ax, ay, kind);
+      if (!line) return;
+      const spec = WEAPONS[kind], angle = r.angle + this.rng.range(-.025, .025);
+      this.projectiles.push({ id: this.nextId++, x: r.x, y: r.y, px: r.x, py: r.y,
+        vx: Math.cos(angle) * spec.speed, vy: Math.sin(angle) * spec.speed,
+        kind, owner: r.id, life: spec.life, radius: spec.radius, line });
+      r.weapon.ammo--; r.cooldown = spec.cooldown; r.flashUntil = this.t + .11;
+      if (r.module) r.cooldown *= EBS.ScrapRules.modules[r.module].cooldown;
+      this.stats.shots++; this.fire[line]++;
+      this._effect('shot', r.x + Math.cos(angle) * 31, r.y + Math.sin(angle) * 31, r.color, kind === 'rocket' ? 30 : 19, .16, angle);
+      if (r.weapon.ammo <= 0) this._drop(r, true);
+    }
+    _hurtRobot(r, amount, owner, x, y) {
+      if (r.caged) return;
+      if (r.alive && amount > 0 && owner !== r.id && this.robots[owner]) r.hitBy[owner] = this.t;
+      super._hurtRobot(r, amount, owner, x, y);
+    }
+    // Kampftempo v4: Blaster 6, Rakete 30. Kisten halten Geschosse auf, nehmen aber keinen Schaden.
     _moveProjectiles(dt) {
-      const crates = this._closedCrates();
-      if (!crates.length) { super._moveProjectiles(dt); return; }
-      // Geschosse prallen an geschlossenen Kisten ab, die Kiste nimmt keinen Schaden.
-      const { w: W, h: H, edge } = this.bounds, keep = [];
+      const keep = [], { w: W, h: H, edge } = this.bounds, crates = this._closedCrates();
       for (const p of this.projectiles) {
-        const nx = p.x + p.vx * dt, ny = p.y + p.vy * dt;
-        let crateT = null;
-        for (const c of crates) { const t = segmentBox(p.x, p.y, nx, ny, c, p.radius); if (t !== null && (crateT === null || t < crateT)) crateT = t; }
-        if (crateT === null) { keep.push(p); continue; }
-        let first = crateT;
-        for (const b of this.blocks) if (b.alive) { const t = segmentBox(p.x, p.y, nx, ny, b, p.radius); if (t !== null && t < first) first = null; if (first === null) break; }
-        if (first !== null) for (const r of this.robots) if (r.alive && !r.caged && r.id !== p.owner) {
-          const t = segmentCircle(p.x, p.y, nx, ny, r, p.radius); if (t !== null && t < first) { first = null; break; }
+        p.px = p.x; p.py = p.y;
+        const nx = p.x + p.vx * dt, ny = p.y + p.vy * dt, lo = edge + p.radius, hiX = W - lo, hiY = H - lo;
+        let hitT = 1.00001, robot = null, block = null, hit = false;
+        if (nx < lo || nx > hiX || ny < lo || ny > hiY) {
+          const candidates = [];
+          if (nx < lo) candidates.push((lo - p.x) / (nx - p.x)); if (nx > hiX) candidates.push((hiX - p.x) / (nx - p.x));
+          if (ny < lo) candidates.push((lo - p.y) / (ny - p.y)); if (ny > hiY) candidates.push((hiY - p.y) / (ny - p.y));
+          hitT = Math.max(0, Math.min(...candidates)); hit = true;
         }
-        const lo = edge + p.radius;
-        if (first !== null && (nx < lo || nx > W - lo || ny < lo || ny > H - lo)) {
-          const wall = Math.min(...[nx < lo ? (lo - p.x) / (nx - p.x) : 2, nx > W - lo ? (W - lo - p.x) / (nx - p.x) : 2,
-            ny < lo ? (lo - p.y) / (ny - p.y) : 2, ny > H - lo ? (H - lo - p.y) / (ny - p.y) : 2]);
-          if (wall < first) first = null;
+        for (const b of this.blocks) if (b.alive) { const t = segmentBox(p.x, p.y, nx, ny, b, p.radius); if (t !== null && t < hitT) { hitT = t; block = b; robot = null; hit = true; } }
+        for (const c of crates) { const t = segmentBox(p.x, p.y, nx, ny, c, p.radius); if (t !== null && t < hitT) { hitT = t; block = null; robot = null; hit = true; } }
+        for (const r of this.robots) if (r.alive && !r.caged && r.id !== p.owner) {
+          const t = segmentCircle(p.x, p.y, nx, ny, r, p.radius); if (t !== null && t < hitT) { hitT = t; robot = r; block = null; hit = true; }
         }
-        if (first === null) { keep.push(p); continue; }
-        p.px = p.x; p.py = p.y; p.x += (nx - p.x) * first; p.y += (ny - p.y) * first; p.life -= dt;
-        if (p.kind === 'rocket') this._explode(p, null, null);
-        else this._effect('hit', p.x, p.y, this.robots[p.owner].color, 17, .28);
+        p.life -= dt;
+        if (hit) {
+          p.x += (nx - p.x) * hitT; p.y += (ny - p.y) * hitT;
+          if (block && p.line === 'clear') this.fire.blocked++;
+          if (p.kind === 'rocket') this._explode(p, robot?.id ?? null, block?.id ?? null);
+          else {
+            const color = this.robots[p.owner].color;
+            if (robot) this._hurtRobot(robot, FIGHT.blaster, p.owner, p.x, p.y);
+            if (block) this._hurtBlock(block, WEAPONS.blaster.blockDamage, color, { x: p.x, y: p.y });
+            this._effect('hit', p.x, p.y, color, 17, .28);
+          }
+        } else {
+          p.x = nx; p.y = ny;
+          if (p.life <= 0 && p.kind === 'rocket') this._explode(p); else if (p.life > 0) keep.push(p);
+        }
       }
       this.projectiles = keep;
-      super._moveProjectiles(dt);
+    }
+    _explode(p, directRobot = null, directBlock = null) {
+      const spec = WEAPONS.rocket, color = this.robots[p.owner].color;
+      this._effect('blast', p.x, p.y, color, spec.blastRadius, .8);
+      for (const r of this.robots) if (r.alive && r.id !== p.owner) {
+        const d = Math.max(0, Math.hypot(p.x - r.x, p.y - r.y) - r.r);
+        if (d < spec.blastRadius || r.id === directRobot) this._hurtRobot(r, FIGHT.rocket * (r.id === directRobot ? 1 : Math.max(.12, 1 - d / spec.blastRadius)), p.owner, r.x, r.y);
+      }
+      for (const b of this.blocks) if (b.alive) {
+        const d = distanceToBox(p.x, p.y, b);
+        if (d < spec.blastRadius || b.id === directBlock)
+          this._hurtBlock(b, spec.blockDamage * (b.id === directBlock ? 1 : 1 - d / spec.blastRadius), color, { x: clamp(p.x, b.x, b.x + b.w), y: clamp(p.y, b.y, b.y + b.h) });
+      }
     }
     checkInvariants() {
       const result = super.checkInvariants();
@@ -162,5 +268,5 @@
     }
   }
 
-  EBS.ScrapTactics = { Round: TacticalRound, CRATE };
+  EBS.ScrapTactics = { Round: TacticalRound, CRATE, FIGHT, CHARACTERS };
 })();

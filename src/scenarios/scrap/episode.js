@@ -40,11 +40,13 @@
       if (r.hp < hp) this.emit?.('hit', x, y, { team: r.id, owner, p: hp - r.hp });
       if (alive && !r.alive) this.emit?.('ko', r.x, r.y, { team: r.id, owner });
     }
-    _hurtBlock(b, amount, color) {
+    _hurtBlock(b, amount, color, at) {
       const hp = b.hp, alive = b.alive;
-      super._hurtBlock(b, amount, color);
+      super._hurtBlock(b, amount, color, at);
       const material = b.material ? { material: b.material } : {};
-      if (b.hp < hp) this.emit?.('cover_hit', b.x + b.w / 2, b.y + b.h / 2, { block: b.id, p: hp - b.hp, ...material });
+      // v4 nennt die Trefferstelle; ältere Regeln übergeben keine und bleiben bytegleich
+      const point = at ? { hitX: at.x, hitY: at.y } : {};
+      if (b.hp < hp) this.emit?.('cover_hit', b.x + b.w / 2, b.y + b.h / 2, { block: b.id, p: hp - b.hp, ...material, ...point });
       if (alive && !b.alive) this.emit?.('break', b.x + b.w / 2, b.y + b.h / 2, { block: b.id, ...material });
     }
     _explode(p, directRobot, directBlock) {
