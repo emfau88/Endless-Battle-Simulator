@@ -805,6 +805,20 @@
       text(g, `${s.draws} DRAW${s.draws === 1 ? '' : 'S'}  ·  SEE YOU IN THE NEXT ARENA`, 500, 793, 21, '#9eb4bf', 'center');
       g.restore();
     }
+    // Weapon icon and ammo count in the status card; shared by the dark and the Sunny header.
+    _hudWeapon(g, robot, x, y, width, color) {
+      if (robot.weapon) {
+        g.save(); g.translate(x + width - 72, y + 35); g.scale(.8, .8);
+        this.arena._weapon(g, robot.weapon.kind, robot.weapon.ammo > 0, color, true); g.restore();
+      } else {
+        // An empty silhouette makes the missing weapon visible without
+        // adding another word to the compact status row.
+        g.save(); g.translate(x + width - 59, y + 35);
+        path(g, [[-9,-4],[2,-4],[2,-2],[12,-2],[12,2],[2,2],[2,5],[-9,5]]);
+        g.strokeStyle = '#8096a2'; g.lineWidth = 1.1; g.stroke(); g.restore();
+      }
+      text(g, robot.weapon ? Math.max(0, Math.ceil(robot.weapon.ammo)) : '—', x + width - 12, y + 35, 13, '#c4d1d6', 'right', 650);
+    }
     materialHudPolished(g, final) {
       const s = this.sim, r = s.roundSim, wide = this.world.w > 1500;
       const round = s.cfg.episodeMode === 'tournament' ? `ROUND ${s.roundNumber}/8` : `ROUND ${String(s.roundNumber).padStart(2, '0')}`;
@@ -833,17 +847,7 @@
           if (fillWidth > 0) {
             box(g, x + 13, y + 32, fillWidth, 7, Math.min(3.5, fillWidth / 2)); g.fillStyle = color; g.fill();
           }
-          if (robot.weapon) {
-            g.save(); g.translate(x + width - 72, y + 35); g.scale(.8, .8);
-            this.arena._weapon(g, robot.weapon.kind, robot.weapon.ammo > 0, color, true); g.restore();
-          } else {
-            // An empty silhouette makes the missing weapon visible without
-            // adding another word to the compact status row.
-            g.save(); g.translate(x + width - 59, y + 35);
-            path(g, [[-9,-4],[2,-4],[2,-2],[12,-2],[12,2],[2,2],[2,5],[-9,5]]);
-            g.strokeStyle = '#8096a2'; g.lineWidth = 1.1; g.stroke(); g.restore();
-          }
-          text(g, robot.weapon ? Math.max(0, Math.ceil(robot.weapon.ammo)) : '—', x + width - 12, y + 35, 13, '#c4d1d6', 'right', 650);
+          this._hudWeapon(g, robot, x, y, width, color);
         } else text(g, 'KNOCKED OUT', x + width - 12, y + 35, 10, '#87969d', 'right', 650);
         if (s.cfg.workshop) {
           const key = robot.module || s.workshop.modules[robot.id];
@@ -864,7 +868,7 @@
       const legendX=wide?240:this.world.w-326;
       ['wood','stone','concrete'].forEach((key,i)=>{
         const m=EBS.ScrapMaterials.materials[key],x=legendX+i*72;
-        box(g,x,46,9,9,1);g.fillStyle=s.cfg.arena==='sunshine'?EBS.ScrapMaterialArt.sunnyColors[key]:m.color;g.fill();text(g,m.name,x+14,51,10,'#9caeb6');
+        box(g,x,46,9,9,1);g.fillStyle=s.cfg.arena==='sunshine'?EBS.ScrapMaterialArt.sunnyColors[key]:m.color;g.fill();text(g,key.toUpperCase(),x+14,51,10,'#9caeb6');
       });
       const start=wide?480:12,y=wide?9:70,gap=12,ww=(this.world.w-start-12-gap*3)/4;
       r.robots.forEach((robot,i)=>{
@@ -873,9 +877,9 @@
         g.fillStyle=color;g.fillRect(x,y+10,3,30);
         text(g,robot.name,x+13,y+17,wide?17:16,color);
         text(g,`${s.wins[robot.id]} W`,x+ww-12,y+17,14,color,'right');
-        const weapon=robot.weapon,info=!robot.alive?'OUT':weapon?`${weapon.kind==='rocket'?'RKT':'BLST'} ${weapon.ammo}`:'SEARCH';
-        text(g,info,x+ww-12,y+35,11,'#a9bac1','right',600);
-        const barWidth=ww-98;
+        if(robot.alive)this._hudWeapon(g,robot,x,y,ww,color);
+        else text(g,'KNOCKED OUT',x+ww-12,y+35,10,'#87969d','right',650);
+        const barWidth=ww-112;
         box(g,x+13,y+32,barWidth,5,2);g.fillStyle='#0b141b';g.fill();
         if(robot.alive) {box(g,x+13,y+32,barWidth*robot.hp/robot.maxHp,5,2);g.fillStyle=color;g.fill();}
         if(s.cfg.workshop) {
