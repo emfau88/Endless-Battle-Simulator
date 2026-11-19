@@ -2,6 +2,12 @@
 
 Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen in der [ROADMAP](ROADMAP.md).
 
+## 19.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| R40, Scrap Wars: Ausbau-Plan nach Rückmeldung des Nutzers zu Ton, Wegfindung, Startaufstellung und Effekten. Gemessen am aktuellen Stand: 20 s hochkant mit 166 hörbaren Klängen auf −14 LUFS, Begrenzer bis −10,9 dB; im Querformat 78 % der Treffer der ersten 15 s auf dieselben zwei Nachbarpaare (40 Seeds); erster K.o. hochkant im Median nach 26 s (30 Seeds). Pakete T (Ton mit Hörprobe), E (Effekte, nur Darstellung), K (Regelversion `v4`: fallende Startkisten, Zielwahl mit Schusslinie, A*-Wegfindung, Panzerfahren, Charaktere) und S (Short-Modus, Turnier-Vorlage) mit Startwerten und Zielwerten. Dabei gefunden: Sunny-Kopfzeile zeigt „HOLZ · STEIN · BETON“, Korrektur als E0 geplant. Kein Code geändert. | Branch `scrap/ausbau-plan` | [Plan](SCRAP_AUSBAU_PLAN_2026-11-19.md) |
+
 ## 18.11.2026
 
 | Was | Commit | Bericht |
