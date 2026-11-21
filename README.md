@@ -41,7 +41,7 @@ Die folgenden Szenarien und Varianten sind im aktuellen Code vorhanden. Weitere 
 | **Video** | MP4 / H.264, optional mit AAC-Ton (48 kHz, Stereo); Lautstärke gesamt und je Klang einstellbar |
 | **Bildformat** | 9:16 und 16:9; zusätzlich 1:1 (nur per Konfiguration / Kommandozeile). Quadrat nutzt teils ein eingepasstes Querformatlayout. |
 | **Qualität** | 720p, 1080p, 1440p oder 4K (kurze Bildseite); 30 oder 60 fps. |
-| **Länge** | Frei von 1 Sekunde bis 4 Stunden. Marble Works kann bis zum Auftragsende + 12 Sekunden Fabrikfinale laufen (bei Zeitlupe länger); Scrap-Turniere enden nach 8 Runden + 5 Sekunden Ergebnisanzeige. |
+| **Länge** | Frei von 1 Sekunde bis 4 Stunden. Marble Works kann bis zum Auftragsende + 12 Sekunden Fabrikfinale laufen (bei Zeitlupe länger); Scrap-Turniere enden nach 8 Runden + 5 Sekunden Ergebnisanzeige, Scrap-Shorts 2,5 Sekunden nach dem Sieg. |
 | **Ausschnitte** | Nur **Scrap Wars, Marble Works, Waterpark und Cloud Wars** (Kommandozeilenfunktion). Der Ton stammt aus der vollständigen Episodenmischung. |
 | **Einzelbild** | PNG (Skriptfunktion, kein eigener Button in der Oberfläche) |
 | **Einstellungen / Wiederholung** | Einstellungen als JSON speicherbar. Jedes MP4 erhält außerdem eine JSON mit Konfiguration, Seed, Aufnahmeparametern, Prüfsummen und Programmstand. |
@@ -50,7 +50,7 @@ Die Online-Vorschau ist stumm und exportiert keine Videos. Gleiche Einstellungen
 
 ### Fertige Video-Vorlagen
 
-Für jedes Szenario gibt es **Short- und Langvideo-Vorlagen**: normalerweise **1 Minute hochkant** bzw. **10 Minuten quer**, jeweils **1080p30 mit Ton**. **Marble Works** verwendet stattdessen einen Mini-Auftrag mit **24** bzw. einen vollständigen Auftrag mit **144 Kugeln**; die Laufzeit ergibt sich aus der Produktion. Scrap-Vorlagen nutzen Sunny Yard mit Folgerunden, Pyramid-Vorlagen die Tierchen. **Waterpark** bietet einen 30-s-Short und einen 10-Minuten-Parktag in **1080p60**; seine Vorschau startet im Dauerbetrieb. Endliche Wasserpark-Filme werden vor dem Export auf einen vollständigen Abschluss geprüft.
+Für jedes Szenario gibt es **Short- und Langvideo-Vorlagen**: normalerweise **1 Minute hochkant** bzw. **10 Minuten quer**, jeweils **1080p30 mit Ton**. **Marble Works** verwendet stattdessen einen Mini-Auftrag mit **24** bzw. einen vollständigen Auftrag mit **144 Kugeln**; die Laufzeit ergibt sich aus der Produktion. Der **Scrap-Short** zeigt eine Runde im Short-Bild auf einem geprüften Seed und endet 2,5 Sekunden nach dem Sieg (rund 30 Sekunden); das Scrap-Langvideo nutzt Sunny Yard mit Folgerunden. Pyramid-Vorlagen nutzen die Tierchen. **Waterpark** bietet einen 30-s-Short und einen 10-Minuten-Parktag in **1080p60**; seine Vorschau startet im Dauerbetrieb. Endliche Wasserpark-Filme werden vor dem Export auf einen vollständigen Abschluss geprüft.
 
 <details>
 <summary>Alle 18 Produktionsvorlagen und zusätzliche Varianten</summary>

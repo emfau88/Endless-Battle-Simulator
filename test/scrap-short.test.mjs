@@ -3,12 +3,17 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
-import { INDEX, launchBrowser, openExportPage } from '../lib/browser.mjs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { INDEX, ROOT, launchBrowser, openExportPage } from '../lib/browser.mjs';
+import { exportVideo, verifyResult } from '../lib/exporter.mjs';
 import { castSeeds, judge } from '../scripts/scrap-short-casting.mjs';
 
+const dir = mkdtempSync(join(tmpdir(), 'ebs-scrap-short-'));
 let browser;
 before(async () => { browser = await launchBrowser({ gpu: process.env.EBS_GPU === '1' }); });
-after(async () => { await browser?.close(); });
+after(async () => { await browser?.close(); rmSync(dir, { recursive: true, force: true }); });
 const SHORT = { rulesVersion: 'v4', arena: 'sunshine', layout: 'short' };
 
 test('Scrap-Short: kein Text am Rand, keine Kopfleiste, Einstiegstext 2,5 s, Sieger groß ohne „NEXT ROUND“', async () => {
@@ -133,6 +138,26 @@ test('Scrap-Short: alle Casting-Seeds halten in Chromium den Bogen ein, und es g
     assert.deepEqual(picks, [61, 61, 61, 63, 1144, 61]);
     assert.deepEqual(errors.map(e => e.message), []);
   } finally { await page.close(); }
+});
+
+test('Scrap-Short-Vorlage (S3): Casting-Seed, Länge aus der Vorplanung, Export der letzten zwei Sekunden mit Sieger', async () => {
+  const preset = JSON.parse(readFileSync(join(ROOT, 'presets', 'production', 'scrap-short.json'), 'utf8'));
+  assert.deepEqual([preset.seed, preset.params.layout, preset.params.rulesVersion, preset.params.arena, preset.video.aspect], [61, 'short', 'v4', 'sunshine', '9:16']);
+  // Länge wie in der Oberfläche vorab geplant: Sieg + 2,5 s Abspann, im Zielbereich 26–38 s
+  const { page, errors } = await openExportPage(browser, preset);
+  let planned;
+  try {
+    planned = await page.evaluate(() => { let p; do p = exportAPI.planEpisode(); while (!p.done); return { sec: p.durationSec, natural: exportAPI.info().naturalDuration }; });
+    assert.equal(planned.natural, true); assert.ok(planned.sec >= 26 && planned.sec <= 38, String(planned.sec));
+    assert.deepEqual(errors.map(e => e.message), []);
+  } finally { await page.close(); }
+  // Echter Exportweg, nur die letzten zwei Sekunden (720p, ohne Ton): Die Episode läuft bis zum Ende durch.
+  const r = await exportVideo({ ...preset, video: { ...preset.video, durationSec: 1, resolution: 720, audio: false } },
+    { out: join(dir, 'short-ende.mp4'), gpu: false, encoder: { preset: 'ultrafast' }, clip: { startSec: planned.sec - 2, durationSec: 2 } });
+  assert.deepEqual(verifyResult(r), []);
+  assert.equal(r.cfg.video.durationSec, planned.sec); assert.equal(r.frames, 60);
+  assert.deepEqual([r.width, r.height, r.snapshot.phase, r.snapshot.completedRounds, r.snapshot.round], [720, 1280, 'ended', 1, 1]);
+  assert.ok(r.snapshot.winner !== null);
 });
 
 test('Scrap-Short: deutscher Schalter „Bildaufbau“, nur Taktik-Arena auf Sunny Yard; hochkant endet das Video von selbst', async t => {

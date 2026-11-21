@@ -472,3 +472,47 @@ Die Vorlage nimmt den nächsten geprüften Seed ab dem gewünschten (`EBS.Scrap.
 - Im Mittel sind Shorts rund 26 s lang, am unteren Rand des Ziels. Die geprüften Seeds liegen bei 26–35 s. Mit
   Schaden ×0,8 nach dem ersten K.o. wären es im Mittel knapp 2 s mehr (Frage an den Nutzer).
 - Der Startvorgang eines Shorts rechnet die Runde einmal vorab (rund 0,2 s).
+
+---
+
+## S3 · Short-Vorlage und 20-Sekunden-Probe (21.11.2026)
+
+**Umfang:** Die Short-Vorlage von Scrap Wars nutzt jetzt das Short-Bild mit Regie.
+
+- **Vorlage** `presets/production/scrap-short.json` und `src/production-presets.js`: „Scrap Wars – Short (4 Bots,
+  1 Survivor)“, Taktik-Arena `v4` auf Sunny Yard, `layout: 'short'`, Ton `soft-v1`, 9:16 in 1080p30. Bisher war es
+  eine Minute Dauerlauf im normalen Bild.
+- **Seed aus dem Casting:** Die Vorlage nimmt den nächsten geprüften Seed ab dem eingestellten. Für Seed 42 ist das
+  **Seed 61**. Das ist die eine Stelle, an der ein Vorlagenknopf den Seed ändert (wie bei Cloud Wars).
+- **Länge:** ergibt sich aus dem Ablauf, für Seed 61 **34,7 s** (Sieg nach 32,1 s, 2,5 s Abspann). In der Datei
+  stehen 35 s nur als Startwert.
+- Der Knopf heißt bei Scrap Wars „Short · eine Runde (rund 30 Sekunden)“.
+
+**20-Sekunden-Probe** (lokal, nicht im Repository): `output/scrap-short/scrap-short-probe-20s.mp4` in der
+Arbeitskopie `scrap-s1`, die ersten 20 s als Ausschnitt der ganzen Episode:
+
+```bash
+node export.mjs --config presets/production/scrap-short.json --clip-start 0 --clip-duration 20 --out output/scrap-short/scrap-short-probe-20s.mp4
+```
+
+| Messung | Wert |
+|---|---|
+| Bild | 1080 × 1920, 30 Bilder je Sekunde, 600 Bilder, 5,0 MB |
+| Ton der ganzen Episode | 155 Ereignisse, davon 59 hörbar; −20,8 LUFS, Spitze −6 dBFS, Begrenzer bis −3,3 dB |
+| Ton des Ausschnitts (AAC) | −24,5 LUFS, True Peak −5,9 dBTP |
+| Exportzeit | 24 s |
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-short.test.mjs` | 5 von 5, neu: Vorlage (Casting-Seed, geplante Länge im Ziel, Export der letzten zwei Sekunden mit Sieger über den echten Exportweg) |
+| `node --test test/presets.test.mjs test/audio-scrap-soft.test.mjs` | 8 von 8; die Vorlagen-Tests kennen den Casting-Seed und die geplante Länge |
+| `node --test test/presets-export-scrap.test.mjs` | 2 von 2 (3-Sekunden-Exporte über die Oberfläche) |
+
+**Nicht gelaufen:** kein vollständiger `npm test`; **kein ganzes Short** (nur auf Auftrag des Nutzers).
+
+**Grenzen:**
+
+- Die ganze Episode ist mit −20,8 LUFS etwas lauter als der Richtwert −23 von `soft-v1`, weil ein Short dichter ist
+  als ein Dauerlauf; die Spitzen bleiben bei −6 dBFS. Das Hörurteil liegt beim Nutzer.
+- Der 3-Sekunden-Test über die Oberfläche schaltet für die freie Länge auf das normale Bild zurück; das Short-Bild
+  selbst prüft der Export der letzten zwei Sekunden.

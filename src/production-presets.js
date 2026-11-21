@@ -37,6 +37,15 @@
         quality: { crf: 20, preset: 'medium', bitrate: null } },
       view: { hud: true, camera: false },
     };
+    // Scrap Short: Taktik-Arena auf Sunny Yard im Short-Bild (kleine Karte, keine Kopfleiste, verdeckte Regie) auf
+    // einem im Browser geprüften Casting-Seed. Das Video endet 2,5 s nach dem Sieg; 35 s ist nur der Startwert.
+    if (scenario === 'scrap' && short) return {
+      version: 1, name: `${labels[scenario]} – Short (4 Bots, 1 Survivor)`, scenario, seed: EBS.Scrap.castSeed(seed),
+      params: { arena: 'sunshine', rulesVersion: 'v4', layout: 'short', episodeMode: 'endless', repeatRounds: true, soundMix: 'soft-v1' },
+      video: { aspect: '9:16', resolution: 1080, fps: 30, durationSec: 35, tempo: 1, audio: true, volume: { master: 100 },
+        quality: { crf: 20, preset: 'medium', bitrate: null } },
+      view: { hud: true, camera: false },
+    };
     return {
       version: 1,
       name: `${labels[scenario]} – ${short ? 'Short (1 Minute)' : 'Langvideo (10 Minuten)'}`,

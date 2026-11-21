@@ -13,16 +13,17 @@ Aufgabenliste bleibt die [ROADMAP](ROADMAP.md); hier stehen die Einzelheiten. Be
 | K1–K5 Taktik-Arena `v4`, Waffen als Symbol-Marken, Vorlagen auf `v4` | PR #45, vom Nutzer angenommen |
 | T2 Ton `soft-v1` | PR #46, Hörurteil des Nutzers: „Passt“ |
 | S1, Teil 1: Short-Karte und Ablauf | PR #47 ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s1-teil-1--short-karte-und-ablauf-in-arbeit)) |
+| S3: Short-Vorlage | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Vorlage im Short-Bild auf Casting-Seed 61, Länge 34,7 s aus dem Ablauf, 20-Sekunden-Probe lokal ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s3--short-vorlage-und-20-sekunden-probe-21112026)) |
 | S2: Verdeckte Regie | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Short-Balance (Eröffnung ×2,5, danach ×1, Schwächerer im Duell −20 %), Zeitlupe beim letzten K.o. als Tempoplan, Casting in Chromium mit 23 geprüften Seeds ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s2--verdeckte-regie-21112026)) |
 | S1, Rest: Darstellung des Shorts | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Keine Kopfleiste, Schilder 1,4-fach, Einstiegstext, Sieger groß, Schalter „Bildaufbau“, Tests und Vorschaubilder ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s1-rest--darstellung-des-shorts-21112026)) |
 
 ## 2 · Offen in R40, in dieser Reihenfolge
 
-### S3: Vorlage und Export
+### Short: Urteil und Export
 
-- `presets/production/scrap-short.json` und die Vorlage in `src/production-presets.js`: `layout: 'short'`, Seed aus
-  dem Casting. Die Länge „bis Sieg + 2,5 s“ ergibt sich schon von selbst (Export-Vorplanung ist da).
-- 20-Sekunden-Probe; das ganze Short (rund 32 s) **nur auf Auftrag**.
+- **Urteil des Nutzers** zur 20-Sekunden-Probe (Bild, Tempo, Ton).
+- **Das ganze Short** (Seed 61, 34,7 s) **nur auf Auftrag**:
+  `node export.mjs --config presets/production/scrap-short.json --out output/scrap-short.mp4`
 
 ### L1: Langvideo-Vorlage
 
@@ -42,6 +43,8 @@ Aufgabenliste bleibt die [ROADMAP](ROADMAP.md); hier stehen die Einzelheiten. Be
 6. **Short-Balance:** Schaden ×2,5 bis zum ersten K.o., danach normal. Im Mittel dauert ein Short damit rund 26 s.
    Länger gewünscht (Schaden ×0,8 nach dem ersten K.o., knapp 2 s mehr)?
 7. **Zeitlupe:** 0,3 s vor und 0,2 s nach dem letzten K.o., Ton ohne eigenen Akzent. Passt das, oder länger?
+8. **Short-Seed:** Die Vorlage nimmt Seed 61 (AMBER gewinnt nach 32 s mit 10 % Rest). Die Liste hat 22 weitere
+   geprüfte Seeds, zum Beispiel 516 (28,6 s, MOSS gewinnt mit 2 % Rest). Anderen Seed gewünscht?
 
 ## 4 · Aufräumen (jeder Schritt braucht die Freigabe des Nutzers)
 

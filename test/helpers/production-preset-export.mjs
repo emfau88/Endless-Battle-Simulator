@@ -64,6 +64,11 @@ for (const kind of ['short', 'long']) {
       assert.equal(await page.isDisabled('#durationText'), true, 'the Short preset ends with the victory');
       await page.selectOption('#p-videoEnd', 'free');
       assert.equal(await page.isDisabled('#durationText'), false);
+    } else if (scenario === 'scrap' && kind === 'short') {
+      // Der Scrap-Short endet von selbst; für die kurze Probe gibt das normale Bild die Länge wieder frei.
+      assert.equal(await page.isDisabled('#durationText'), true, 'the Short preset ends with the victory');
+      await page.selectOption('#p-layout', 'standard');
+      assert.equal(await page.isDisabled('#durationText'), false);
     } else assert.equal(await page.evaluate(() => EBS.app.cfg.video.durationSec), kind === 'short' ? 60 : 600);
     await page.fill('#durationText', '3s'); await page.dispatchEvent('#durationText', 'change');
     const config = await page.evaluate(() => EBS.app.cfg);
