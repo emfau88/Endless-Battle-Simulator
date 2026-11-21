@@ -46,9 +46,11 @@ test('Bestehende Produktionsdateien entsprechen den UI-Vorlagen und definierten 
     const story = id === 'territory' && kind === 'short';
     // Scrap Short: Short-Bild auf einem geprüften Casting-Seed; die Länge wird bis zum Sieg geplant (35 s ist der Startwert).
     const scrapShort = id === 'scrap' && kind === 'short';
+    // Scrap Langvideo: Turnier mit acht Runden; die Länge wird bis zum Finale geplant (300 s ist der Startwert).
+    const scrapLong = id === 'scrap' && kind === 'long';
     assert.deepEqual([normalized.scenario, normalized.video.aspect, normalized.video.durationSec, normalized.video.resolution,
       normalized.video.fps, normalized.video.audio, normalized.video.tempo],
-    [id, kind === 'short' ? '9:16' : '16:9', story ? 33 : scrapShort ? 35 : kind === 'short' ? 60 : 600, 1080, 30, true, story ? 2 : id === 'territory' ? .75 : 1]);
+    [id, kind === 'short' ? '9:16' : '16:9', story ? 33 : scrapShort ? 35 : scrapLong ? 300 : kind === 'short' ? 60 : 600, 1080, 30, true, story ? 2 : id === 'territory' ? .75 : 1]);
     if (scrapShort) assert.deepEqual([normalized.params.layout, normalized.params.rulesVersion, normalized.params.soundMix, file.seed], ['short', 'v4', 'soft-v1', 61]);
     if (story) assert.deepEqual([normalized.params.layout, normalized.params.story, normalized.params.videoEnd, normalized.params.repeatRounds],
       ['short', 'crown', 'victory', false]);
@@ -59,7 +61,8 @@ test('Bestehende Produktionsdateien entsprechen den UI-Vorlagen und definierten 
         emote: 110, fish: 110, ufo: 110, twinkle: 110, chirp: 110, water: 100 });
     } else assert.ok(Object.values(normalized.video.volume).every(v => v === 100));
     if (id === 'pyramid') assert.equal(normalized.params.dayMinutes, kind === 'short' ? 1 : 0);
-    if (id === 'scrap') assert.deepEqual([normalized.params.arena, normalized.params.episodeMode, normalized.view.camera], ['sunshine', 'endless', false]);
+    if (id === 'scrap') assert.deepEqual([normalized.params.arena, normalized.params.rulesVersion, normalized.params.episodeMode, normalized.view.camera],
+      ['sunshine', 'v4', scrapLong ? 'tournament' : 'endless', false]);
   }
 });
 
@@ -101,11 +104,12 @@ test('Vorlagenknöpfe erhalten den Seed und laden alle sechs Szenarien mit speic
       const expected = await page.evaluate(([id, kind, seed]) => EBS.normalizeConfig(EBS.productionPreset(id, kind, seed)), [id, kind, seed]);
       assert.equal(expected.seed, id === 'scrap' && kind === 'short' ? 733 : seed);
       seed = expected.seed;
-      if ((id === 'territory' || id === 'scrap') && kind === 'short') {
-        // The video ends with the victory: the planned length replaces the starting value of the preset.
+      if ((id === 'territory' && kind === 'short') || id === 'scrap') {
+        // The video ends with the victory (Scrap long: with the tournament): the planned length replaces the starting value of the preset.
         await page.waitForFunction(() => document.querySelector('#durationOut').textContent !== '…');
         expected.video.durationSec = await page.evaluate(() => EBS.app.cfg.video.durationSec);
-        assert.ok(expected.video.durationSec > 25 && expected.video.durationSec < 45, String(expected.video.durationSec));
+        const [lo, hi] = kind === 'short' ? [25, 45] : [200, 420];
+        assert.ok(expected.video.durationSec > lo && expected.video.durationSec < hi, String(expected.video.durationSec));
         assert.equal(await page.isDisabled('#durationText'), true);
       } else assert.equal(await page.inputValue('#durationText'), kind === 'short' ? '1m' : '10m');
       assert.deepEqual(await page.evaluate(() => EBS.app.cfg), expected);

@@ -69,6 +69,11 @@ for (const kind of ['short', 'long']) {
       assert.equal(await page.isDisabled('#durationText'), true, 'the Short preset ends with the victory');
       await page.selectOption('#p-layout', 'standard');
       assert.equal(await page.isDisabled('#durationText'), false);
+    } else if (scenario === 'scrap') {
+      // Das Scrap-Langvideo ist ein Turnier und endet von selbst; für die kurze Probe gibt die freie Videolänge sie wieder frei.
+      assert.equal(await page.isDisabled('#durationText'), true, 'the long preset ends with the tournament');
+      await page.selectOption('#p-episodeMode', 'endless');
+      assert.equal(await page.isDisabled('#durationText'), false);
     } else assert.equal(await page.evaluate(() => EBS.app.cfg.video.durationSec), kind === 'short' ? 60 : 600);
     await page.fill('#durationText', '3s'); await page.dispatchEvent('#durationText', 'change');
     const config = await page.evaluate(() => EBS.app.cfg);

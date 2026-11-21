@@ -1191,6 +1191,13 @@
     createExportPlan: EBS.Scrap.createExportPlan,
     create: ctx => new Episode(ctx),
     createRenderer: ctx => new ScrapRenderer(ctx),
+    // L1 · Kapitel für die Videobeschreibung: je Runde der Startzeitpunkt im Video. Ein einzelner Start (Short,
+    // eine Runde) ergibt keine Kapitel. Der Export schreibt die Liste in die JSON-Begleitdatei.
+    chapters(sim) {
+      const tournament = sim.cfg.episodeMode === 'tournament';
+      const list = sim.roundStarts.map(r => ({ timeSec: Number((r.step / 60).toFixed(3)), title: tournament && r.round === 8 ? 'Round 8 – Final' : `Round ${r.round}` }));
+      return list.length > 1 ? list : null;
+    },
     panelStats(sim) {
       const s = sim.snapshot();
       return [

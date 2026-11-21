@@ -116,6 +116,9 @@
       this.roundNumber = 0; this.completedRounds = 0; this.phase = 'running'; this.pauseUntil = 0;
       this.wins = [0, 0, 0, 0]; this.draws = 0;
       this.roundResults = []; this.outroUntil = 0;
+      // L1 · Rundenstarts für die Kapitelzeiten (Videoschritt je Runde). Nicht Teil des Zustands-Hashes;
+      // das Ereignisprotokoll ist begrenzt und verliert in langen Videos die frühen Runden.
+      this.roundStarts = [];
       this.workshop = { balances: [0,0,0,0], modules: [null,null,null,null], installed: [0,0,0,0], lastAwards: [] };
       this.events = []; this.eventSeq = 0; this.eventDigest = 0; this.eventStep = 0;
       this.slow = null;
@@ -149,6 +152,8 @@
       this.phase = 'running'; this.pauseUntil = 0; this.accumulator = 0;
       this.camera = { x: (this.roundSim.bounds?.w||900)/2, y: (this.roundSim.bounds?.h||900)/2, zoom: 1 };
       this._event('round_start');
+      this.roundStarts.push({ round: this.roundNumber, step: this.eventStep });
+      if (this.roundStarts.length > 1000) this.roundStarts.shift();
     }
     // Tempoplan des Shorts: ab fromTick läuft die Runde mit Tempo 0,35 bis zum letzten K.o. (endTick).
     // startStep und endStep sind die Videoschritte, an denen die Zeitlupe begann und die Runde endete.

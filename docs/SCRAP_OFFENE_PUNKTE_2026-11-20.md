@@ -13,11 +13,14 @@ Aufgabenliste bleibt die [ROADMAP](ROADMAP.md); hier stehen die Einzelheiten. Be
 | K1–K5 Taktik-Arena `v4`, Waffen als Symbol-Marken, Vorlagen auf `v4` | PR #45, vom Nutzer angenommen |
 | T2 Ton `soft-v1` | PR #46, Hörurteil des Nutzers: „Passt“ |
 | S1, Teil 1: Short-Karte und Ablauf | PR #47 ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s1-teil-1--short-karte-und-ablauf-in-arbeit)) |
+| L1: Langvideo-Vorlage | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Turnier mit acht Runden in der Taktik-Arena (Seed 42: 5:23 Minuten), Kapitelzeiten der Rundenstarts in der JSON-Begleitdatei ([Bericht](SCRAP_AUSBAU_2026-11-19.md#l1--langvideo-vorlage-im-turniermodus-21112026)) |
 | S3: Short-Vorlage | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Vorlage im Short-Bild auf Casting-Seed 61, Länge 34,7 s aus dem Ablauf, 20-Sekunden-Probe lokal ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s3--short-vorlage-und-20-sekunden-probe-21112026)) |
 | S2: Verdeckte Regie | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Short-Balance (Eröffnung ×2,5, danach ×1, Schwächerer im Duell −20 %), Zeitlupe beim letzten K.o. als Tempoplan, Casting in Chromium mit 23 geprüften Seeds ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s2--verdeckte-regie-21112026)) |
 | S1, Rest: Darstellung des Shorts | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Keine Kopfleiste, Schilder 1,4-fach, Einstiegstext, Sieger groß, Schalter „Bildaufbau“, Tests und Vorschaubilder ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s1-rest--darstellung-des-shorts-21112026)) |
 
-## 2 · Offen in R40, in dieser Reihenfolge
+## 2 · Offen in R40
+
+Alle Pakete des Plans sind gebaut. Offen sind nur noch Urteile und Aufträge des Nutzers.
 
 ### Short: Urteil und Export
 
@@ -25,10 +28,15 @@ Aufgabenliste bleibt die [ROADMAP](ROADMAP.md); hier stehen die Einzelheiten. Be
 - **Das ganze Short** (Seed 61, 34,7 s) **nur auf Auftrag**:
   `node export.mjs --config presets/production/scrap-short.json --out output/scrap-short.mp4`
 
-### L1: Langvideo-Vorlage
+### Langvideo: Export
 
-- `presets/production/scrap-long.json` auf Turniermodus (8 Runden mit Rangliste), `v4`, `soft-v1`.
-- Kapitelzeiten aus den `round_start`-Ereignissen in die JSON-Begleitdatei schreiben.
+- **Das Turnier-Langvideo** (Seed 42, 5:23 Minuten) **nur auf Auftrag**:
+  `node export.mjs --config presets/production/scrap-long.json --out output/scrap-long.mp4`
+  Die Kapitelzeiten stehen danach in `output/scrap-long.json` unter `chaptersText`.
+
+### Merge
+
+- Pull Request des Branches `scrap/s1-darstellung` als Merge-Commit nach `main`: braucht die Freigabe des Nutzers.
 
 ## 3 · Fragen an den Nutzer
 
@@ -45,12 +53,17 @@ Aufgabenliste bleibt die [ROADMAP](ROADMAP.md); hier stehen die Einzelheiten. Be
 7. **Zeitlupe:** 0,3 s vor und 0,2 s nach dem letzten K.o., Ton ohne eigenen Akzent. Passt das, oder länger?
 8. **Short-Seed:** Die Vorlage nimmt Seed 61 (AMBER gewinnt nach 32 s mit 10 % Rest). Die Liste hat 22 weitere
    geprüfte Seeds, zum Beispiel 516 (28,6 s, MOSS gewinnt mit 2 % Rest). Anderen Seed gewünscht?
+9. **Langvideo:** Das Turnier dauert rund 5 statt 10 Minuten (Seed 42: 5:23, MOSS gewinnt 5 von 8 Runden). Passt
+   das, oder lieber ein anderer Seed mit engerem Ausgang oder zwei Turniere hintereinander?
 
 ## 4 · Aufräumen (jeder Schritt braucht die Freigabe des Nutzers)
 
 - **Branches** lokal und auf GitHub, alle zusammengeführt: `scrap/e0-kopfzeile`, `scrap/v4-taktik`, `scrap/t2-ton`,
-  nach dem Merge dieses Stands auch `scrap/s1-short`.
-- **Arbeitskopien:** `.claude/worktrees/scrap-e0` und `.claude/worktrees/scrap-v4`.
+  `scrap/s1-short`; nach dem Merge dieses Stands auch `scrap/s1-darstellung`.
+- **Arbeitskopien:** `.claude/worktrees/scrap-e0` und `.claude/worktrees/scrap-v4`; nach dem Merge auch
+  `.claude/worktrees/scrap-s1`.
+- **Nur lokal** in `.claude/worktrees/scrap-s1/output/scrap-short/`: die 20-Sekunden-Probe
+  (`scrap-short-probe-20s.mp4` mit JSON), die Vorschaubilder für Seed 42 und Seed 61 und das Casting-Protokoll.
 - **Nur lokal:** In `.claude/worktrees/scrap-v4/output/` liegen die zwei Hörproben (`scrap-t2/t2-probe-hoch.mp4`,
   `t2-probe-quer.mp4` mit JSON) sowie Prüfbilder und Protokolle unter `scrap-v4/`. Vor dem Löschen der Arbeitskopie
   in den `output/`-Ordner des Hauptordners verschieben, falls sie noch gebraucht werden.

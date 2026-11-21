@@ -400,7 +400,8 @@ async function bootLive() {
     const production = c.scenario === 'marbleworks';
     $('btnShortPreset').textContent = production ? 'Short · Mini-Auftrag' : c.scenario === 'waterpark' ? 'Short · 30 Sekunden'
       : c.scenario === 'scrap' ? 'Short · eine Runde (rund 30 Sekunden)' : 'Short · 1 Minute';
-    $('btnLongPreset').textContent = production ? 'Langvideo · Vollständiger Auftrag' : 'Langvideo · 10 Minuten';
+    $('btnLongPreset').textContent = production ? 'Langvideo · Vollständiger Auftrag'
+      : c.scenario === 'scrap' ? 'Langvideo · Turnier (8 Runden)' : 'Langvideo · 10 Minuten';
     for (const ctl of session.scenario.controls) {
       const el = $('p-' + ctl.key), v = c.params[ctl.key];
       if (!el) continue;

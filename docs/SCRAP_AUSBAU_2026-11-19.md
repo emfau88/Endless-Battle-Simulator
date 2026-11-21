@@ -516,3 +516,55 @@ node export.mjs --config presets/production/scrap-short.json --clip-start 0 --cl
   als ein Dauerlauf; die Spitzen bleiben bei −6 dBFS. Das Hörurteil liegt beim Nutzer.
 - Der 3-Sekunden-Test über die Oberfläche schaltet für die freie Länge auf das normale Bild zurück; das Short-Bild
   selbst prüft der Export der letzten zwei Sekunden.
+
+---
+
+## L1 · Langvideo-Vorlage im Turniermodus (21.11.2026)
+
+**Umfang:** Die Langvideo-Vorlage von Scrap Wars ist jetzt ein Turnier statt eines Dauerlaufs; der Export schreibt
+Kapitelzeiten in die Begleitdatei.
+
+- **Vorlage** `presets/production/scrap-long.json` und `src/production-presets.js`: „Scrap Wars – Langvideo (Turnier,
+  8 Runden)“, Taktik-Arena `v4` auf Sunny Yard, Ton `soft-v1`, 16:9 in 1080p30, feste Übersicht. Acht Runden mit
+  Punktestand, danach 5 s Rangliste; das Video endet von selbst.
+- **Länge:** aus dem Ablauf. Gemessen an sechs Seeds 4:02 bis 5:23 Minuten, für Seed 42 **5:23** (322,7 s, MOSS
+  gewinnt mit 5 von 8 Runden). In der Datei stehen 300 s nur als Startwert. Der Knopf heißt „Langvideo · Turnier
+  (8 Runden)“.
+- **Kapitelzeiten:** Die Episode merkt sich den Videoschritt jedes Rundenstarts (dieselbe Zeit wie das Ereignis
+  `round_start`). Der Export schreibt daraus in die JSON-Begleitdatei `chapters` (Zeit in Sekunden, Zeitmarke,
+  Titel) und `chaptersText` als fertigen Block für die Videobeschreibung:
+
+  ```text
+  0:00 Round 1
+  0:41 Round 2
+  1:25 Round 3
+  2:06 Round 4
+  2:46 Round 5
+  3:26 Round 6
+  4:12 Round 7
+  4:50 Round 8 – Final
+  ```
+
+  Das sind die Zeiten der Vorlage mit Seed 42, in Chromium gerechnet. Titel englisch. Bei einem Ausschnitt gelten die Zeiten für die ganze Episode (`chaptersScope`). Auch ein
+  Dauerlauf mit Folgerunden bekommt Kapitel; ein Short mit einer Runde nicht.
+- Die neue Schnittstelle `chapters(sim, cfg)` steht allen Szenarien offen ([ARCHITEKTUR](ARCHITEKTUR.md)).
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-long.test.mjs` (neu) | 3 von 3: Zeitmarken der Kapitelliste; Vorlage als Turnier mit acht Kapiteln auf den Rundenstarts, Short ohne Kapitel; Export der letzten zwei Sekunden schreibt `chapters` und `chaptersText` in die Begleitdatei |
+| `node --test test/presets.test.mjs` | 4 von 4; die Vorlagen-Tests kennen das Turnier und die geplante Länge |
+| `node --test` mit `scrap-v4`, `scrap`, `scrap-short`, `audio-scrap-soft`, `presets-export-scrap`, `scrap-labels`, `scrap-hud` | 45 von 45 |
+| `node --test test/export.test.mjs` (Exporter geändert) | 7 von 7 |
+| `node scripts/scrap-map-hashes.mjs` | 6 Fälle × 4 Prüfpunkte gleich |
+| `npm run golden` (einmal, am Ende aller Pakete) | 36 Fälle × 2 Prüfpunkte identisch mit der Referenz |
+| `classic` bis `v4` ohne Short gegen `main`: Zustand (Node, 27 Fälle) und Bilder (Chromium, 10 Fälle × 5 Bilder) | alle gleich |
+
+**Nicht gelaufen:** kein vollständiger `npm test`; **kein ganzes Langvideo** (über 20 s nur auf Auftrag).
+
+**Grenzen:**
+
+- Die Vorlage nimmt den eingestellten Seed, ein Casting gibt es für das Turnier nicht. Bei Seed 314 endet es
+  zum Beispiel 2 : 2 : 2 : 2 („TIED FOR FIRST“).
+- Das Langvideo ist rund 5 statt 10 Minuten lang (acht Runden sind fest).
+- Die Rangliste am Ende ist 5 s lang und bekommt kein eigenes Kapitel, weil YouTube Kapitel unter 10 s ablehnt.
+- Die Rundenliste ist kein Teil des Zustands-Hashes; `classic` bis `v4` bleiben bit-gleich.
