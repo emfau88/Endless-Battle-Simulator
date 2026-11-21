@@ -401,6 +401,9 @@ wählbar.
 
 ### Short-Balance
 
+> Stand vor der ersten Probe. Seit dem [Nachtrag](#nachtrag-zum-short-nach-der-ersten-probe-21112026) gilt nach dem
+> ersten K.o. Schaden ×0,55 und eine kürzere Deckung.
+
 Der Startwert aus dem Plan war „Schaden überall ×1,5“. Gemessen brachte das den ersten K.o. nur von 14,4 s auf 11,6 s
 und verkürzte zugleich die ganze Runde auf rund 25 s. Deshalb wirkt der Zuschlag jetzt nur in der Eröffnung:
 
@@ -434,6 +437,9 @@ AMBER 27 %, MOSS 23 % über 1200 Seeds, kein Unentschieden).
 - Im Langvideo und ohne Short gibt es keinen Plan (`slow` ist dort leer), die Zustands-Hashes bleiben gleich.
 
 ### Casting
+
+> Die Zahlen und die Seed-Liste dieses Abschnitts sind überholt: Nach der ersten Probe wurde neu gerechnet
+> ([Nachtrag](#nachtrag-zum-short-nach-der-ersten-probe-21112026), jetzt 29 Seeds, Vorlage auf Seed 84).
 
 `node scripts/scrap-short-casting.mjs --from 1 --to 1200 --list` rechnet **in Chromium**, also dort, wo auch der
 Export rechnet. Bedingungen in Videosekunden: erster K.o. 5–10 s, zweiter 12–20 s, Schlussduell mindestens 6 s,
@@ -479,6 +485,9 @@ Die Vorlage nimmt den nächsten geprüften Seed ab dem gewünschten (`EBS.Scrap.
 ## S3 · Short-Vorlage und 20-Sekunden-Probe (21.11.2026)
 
 **Umfang:** Die Short-Vorlage von Scrap Wars nutzt jetzt das Short-Bild mit Regie.
+
+> Seed, Länge und Probe dieses Abschnitts sind der Stand vor der Rückmeldung des Nutzers. Aktuell: Seed 84, 26,5 s,
+> neue Probe ([Nachtrag](#nachtrag-zum-short-nach-der-ersten-probe-21112026)).
 
 - **Vorlage** `presets/production/scrap-short.json` und `src/production-presets.js`: „Scrap Wars – Short (4 Bots,
   1 Survivor)“, Taktik-Arena `v4` auf Sunny Yard, `layout: 'short'`, Ton `soft-v1`, 9:16 in 1080p30. Bisher war es
@@ -569,3 +578,111 @@ Kapitelzeiten in die Begleitdatei.
 - Das Langvideo ist rund 5 statt 10 Minuten lang (acht Runden sind fest).
 - Die Rangliste am Ende ist 5 s lang und bekommt kein eigenes Kapitel, weil YouTube Kapitel unter 10 s ablehnt.
 - Die Rundenliste ist kein Teil des Zustands-Hashes; `classic` bis `v4` bleiben bit-gleich.
+
+---
+
+## Nachtrag zum Short nach der ersten Probe (21.11.2026)
+
+**Rückmeldung des Nutzers zur 20-Sekunden-Probe:** Die Roboter hängen ab etwa der Hälfte des Videos. Die Waffen
+sollen erst nach den Robotern kommen, gern vom Himmel fallen. Die Bretter der Startkisten sollen nach 1 bis 2
+Sekunden ausblenden, sonst ist das Bild zu unruhig. Alle drei Punkte gelten nur im Short (`layout: 'short'`
+hochkant); `classic` bis `v4` ohne Short rechnen und zeichnen wie bisher.
+
+### Hänger
+
+**Ursache:** die Deckung. Wer unter 35 % Leben hat oder nur noch zwei Schuss, fährt hinter einen Block und wartet
+dort 3 s. Durch den hohen Schaden der Eröffnung sind nach dem ersten K.o. meist alle angeschlagen und warten
+gleichzeitig. Bei Seed 61 standen von 10,2 bis 13,5 s alle drei still, im Schlussduell noch zweimal je 3 s.
+
+**Lösung:** Im Short warten die Roboter in der Deckung nur 0,5 s (höchstens 2,5 s unterwegs, danach 6 s Pause).
+Ohne das Warten wäre die Runde nach 22 s vorbei; deshalb zählt Schaden nach dem ersten K.o. jetzt ×0,55 statt ×1.
+Die Eröffnung (×2,5) und der Schutz des Schwächeren im Duell (−20 %) bleiben.
+
+Hänger heißt hier: Alle lebenden Roboter stehen (unter 8 AE/s) und niemand schießt, mindestens 1 s lang.
+
+| Einstellung (150 Seeds, Node, Mediane) | zweiter K.o. | Schlussduell | Videolänge | Seeds mit Hänger | Hänger über 2 s |
+|---|---|---|---|---|---|
+| bisher: 3 s Deckung, Schaden ×1 | 13,5 s | 7,9 s | 25,7 s | 51 % | 31 % |
+| keine Deckung, ×1 | 11,8 s | 5,0 s | 20,3 s | 7 % | 1 % |
+| keine Deckung, ×0,55 | 13,8 s | 7,3 s | 26,8 s | 5 % | 0 % |
+| 0,5 s Deckung, ×1 | 12,9 s | 5,7 s | 22,5 s | 4 % | 0 % |
+| 0,5 s Deckung, ×0,6 | 15,0 s | 8,0 s | 27,8 s | 3 % | 0 % |
+| 0,5 s Deckung, ×0,5 | 15,5 s | 9,0 s | 31,7 s | 3 % | 0 % |
+| **0,5 s Deckung, ×0,55 (gewählt)** | siehe Casting | | | | |
+
+Der erste K.o. bleibt in allen Zeilen bei 8,0 s. Die kurze Deckung bleibt als Bewegung erhalten (ein Roboter duckt
+sich kurz weg), ganz ohne Deckung wären die Duelle kürzer und einförmiger.
+
+### Waffen fallen vom Himmel
+
+- Am Start liegt **keine Waffe** mehr auf der Karte. Die vier Waffen fallen, wenn alle Roboter aus den Kisten sind:
+  die erste 0,8 s nach dem letzten Ausbruch, dann alle 0,4 s eine. Die Reihenfolge kommt aus einem eigenen
+  Seed-Zufallsstrom. Bei Seed 84 landen sie bei 3,7 / 4,1 / 4,5 / 4,9 s.
+- **Der Fall dauert 0,45 s:** Ein Schatten wächst am Zielpunkt, die Marke kommt von oben und wird kleiner, bei der
+  Landung gibt es einen kleinen Staubring. Solange die Waffe fällt, kann sie niemand aufnehmen.
+- Auch der Nachschub der zwei Stationen fällt so, zum ersten Mal erst nach den vier Waffen.
+- Alle Roboter starten weiter mit einem Blaster (9 Schuss). Die ersten Magazine sind nach rund 7,5 s leer; die
+  Waffen liegen also rechtzeitig da.
+- **Ton:** Bei der Landung spielt der vorhandene leise Klang „Waffenabwurf“ (kein neuer Regler).
+- **Technik:** Der Nachschubplan (`supply`) ist Teil des Rundenzustands. Eine fallende Waffe hat ein negatives
+  Alter; der Renderer liest nur dieses Alter und hält keinen eigenen Zustand (Seek-Regel).
+
+### Bretter der Startkisten
+
+Die Bretter fliegen wie bisher 0,45 s, bleiben bis 1,0 s liegen und blenden bis 1,8 s aus. Danach ist der Boden
+frei. Splitter und Trümmer aus dem Kampf bleiben wie bisher liegen.
+
+### Casting neu gerechnet
+
+Weil sich der Ablauf des Shorts geändert hat, gilt die alte Seed-Liste nicht mehr. Das Casting hat eine sechste
+Bedingung: **kein Hänger ab 1,5 s**.
+
+| Messung (Seeds 1–1200, Chromium 148) | Wert | vorher |
+|---|---|---|
+| erster K.o. 5–10 s | 89,4 %, Median 8,0 s | 89,3 %, 8,0 s |
+| zweiter K.o. 12–20 s | 69,3 %, Median 15,2 s | 59,5 %, 13,1 s |
+| Schlussduell mindestens 6 s | 62,5 %, Median 10,3 s | 62,1 %, 8,6 s |
+| beide beim Duellstart unter 40 % Leben | 38,4 % | 36,3 % |
+| Länge 26–38 s | 23,2 %, Median 32,1 s | 35,8 %, 25,8 s |
+| kein Hänger ab 1,5 s | 98,8 % | nicht gemessen |
+| Bogen vollständig | 36 Seeds (3,0 %) | 32 Seeds |
+| davon gewinnt nicht der zuerst Bewaffnete | **29 Seeds** (neue Liste `SHORT_SEEDS`) | 23 Seeds |
+
+Siege über 1200 Seeds: EMBER 283, AZURE 335, AMBER 316, MOSS 264, zwei Runden ohne Sieger.
+
+Die Vorlage nimmt für Seed 42 jetzt **Seed 84** (vorher 61): erster K.o. 8,5 s (AZURE), zweiter 14,9 s (AMBER),
+Sieg nach 24,0 s, Schlussduell 9,1 s mit 23 % und 16 % Leben, EMBER gewinnt mit 5 % Rest, längster Hänger 1,0 s.
+Videolänge **26,5 s**.
+
+### Neue 20-Sekunden-Probe
+
+Lokal, nicht im Repository: `output/scrap-short/scrap-short-probe-20s-v2.mp4` in der Arbeitskopie `scrap-s1`
+(derselbe Befehl wie bei S3). Dazu die Vorschaubilder `seed84-blatt.jpg` und `seed84-nachschub.jpg`.
+
+| Messung | Wert |
+|---|---|
+| Bild | 1080 × 1920, 30 Bilder je Sekunde, 600 Bilder, 5,2 MB |
+| Ton der ganzen Episode | 186 Ereignisse, 67 hörbar; −22,2 LUFS (vorher −20,8), Spitze −6 dBFS, Begrenzer bis −3,5 dB |
+| Exportzeit | 30 s |
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-v4.test.mjs` | 9 von 9, neu: Deckung im Short (höchstens 3 von 30 Seeds mit Hänger, kein Roboter länger als erlaubt in Deckung) und Nachschub (keine Waffe am Start, Landezeiten, im Fall nicht aufnehmbar, ohne Short unverändert) |
+| `node --test test/scrap-short.test.mjs` | 6 von 6, neu: Bretter blenden aus, Waffen fallen sichtbar; Seek-Bild an zehn Stellen pixelgleich (neu: Bretter beim Ausblenden, Waffe im Fall und kurz nach der Landung); alle 29 Casting-Seeds halten den Bogen |
+| `node --test` mit `scrap`, `scrap-optics`, `audio-scrap-soft`, `presets`, `presets-export-scrap`, `scrap-long` | alle bestanden (zusammen mit den beiden Dateien oben 52 Tests) |
+| `node scripts/scrap-map-hashes.mjs` | 6 Fälle × 4 Prüfpunkte gleich |
+| `npm run golden` (einmal) | 36 Fälle × 2 Prüfpunkte identisch mit der Referenz |
+
+**Nicht gelaufen:** kein vollständiger `npm test`, kein Export über 20 s.
+
+**Grenzen:**
+
+- Einzelne Roboter stehen weiterhin kurz, wenn sie von ihrem Platz aus schießen; das ist kein Hänger. Dass alle
+  stehen und niemand schießt, kommt bei den geprüften Seeds höchstens 1,0 s lang vor.
+- Die Shorts sind im Mittel länger geworden (32 s statt 26 s) und streuen stärker; nur 23 % aller Seeds liegen bei
+  26–38 s. Das Casting wählt deshalb strenger aus.
+- Seed 84 ist mit 26,5 s am unteren Rand. Längere geprüfte Seeds stehen in der Liste, zum Beispiel 349 (29,2 s)
+  oder 983 (32,1 s).
+- Die ältere Probe (`scrap-short-probe-20s.mp4`, Seed 61) zeigt den Stand vor diesem Nachtrag.
+- Im Langvideo (Turnier, normales Bild) liegen die Waffen weiter von Anfang an da, die Bretter bleiben liegen und
+  die Deckung dauert 3 s. Ob das dort auch geändert werden soll, ist eine Frage an den Nutzer.

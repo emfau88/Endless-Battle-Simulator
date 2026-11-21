@@ -51,7 +51,7 @@ test('Bestehende Produktionsdateien entsprechen den UI-Vorlagen und definierten 
     assert.deepEqual([normalized.scenario, normalized.video.aspect, normalized.video.durationSec, normalized.video.resolution,
       normalized.video.fps, normalized.video.audio, normalized.video.tempo],
     [id, kind === 'short' ? '9:16' : '16:9', story ? 33 : scrapShort ? 35 : scrapLong ? 300 : kind === 'short' ? 60 : 600, 1080, 30, true, story ? 2 : id === 'territory' ? .75 : 1]);
-    if (scrapShort) assert.deepEqual([normalized.params.layout, normalized.params.rulesVersion, normalized.params.soundMix, file.seed], ['short', 'v4', 'soft-v1', 61]);
+    if (scrapShort) assert.deepEqual([normalized.params.layout, normalized.params.rulesVersion, normalized.params.soundMix, file.seed], ['short', 'v4', 'soft-v1', 84]);
     if (story) assert.deepEqual([normalized.params.layout, normalized.params.story, normalized.params.videoEnd, normalized.params.repeatRounds],
       ['short', 'crown', 'victory', false]);
     assert.deepEqual(normalized.video.quality, { crf: 20, preset: 'medium', bitrate: null });
@@ -95,14 +95,14 @@ test('Vorlagenknöpfe erhalten den Seed und laden alle sechs Szenarien mit speic
   const page = await ctx.newPage(), errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.goto(base + '?seed=731&paused=1'); await ready(page);
-  // Der Seed bleibt erhalten; nur der Scrap-Short nimmt den nächsten geprüften Casting-Seed (731 → 733), der danach gilt.
+  // Der Seed bleibt erhalten; nur der Scrap-Short nimmt den nächsten geprüften Casting-Seed (731 → 768), der danach gilt.
   let seed = 731;
   for (const id of ids) {
     await page.selectOption('#scenario', id);
     for (const kind of ['short', 'long']) {
       await page.click(kind === 'short' ? '#btnShortPreset' : '#btnLongPreset');
       const expected = await page.evaluate(([id, kind, seed]) => EBS.normalizeConfig(EBS.productionPreset(id, kind, seed)), [id, kind, seed]);
-      assert.equal(expected.seed, id === 'scrap' && kind === 'short' ? 733 : seed);
+      assert.equal(expected.seed, id === 'scrap' && kind === 'short' ? 768 : seed);
       seed = expected.seed;
       if ((id === 'territory' && kind === 'short') || id === 'scrap') {
         // The video ends with the victory (Scrap long: with the tournament): the planned length replaces the starting value of the preset.

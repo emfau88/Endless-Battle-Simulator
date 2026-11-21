@@ -5,6 +5,7 @@
 //   1. erster K.o. bei 5–10 s          2. zweiter K.o. bei 12–20 s
 //   3. Schlussduell mindestens 6 s      4. beide Duellanten beim Start des Duells unter 40 % Leben
 //   5. Videolänge (Sieg + Abspann) 26–38 s
+//   6. kein Hänger: nie stehen alle Roboter 1,5 s lang still, ohne dass einer schießt
 // Bevorzugt: Es gewinnt nicht der Roboter, der zuerst bewaffnet war. Alle starten mit einem Blaster (9 Schuss);
 // gemeint ist deshalb, wer als Erster eine neue Waffe vom Boden aufnimmt (erstes Ereignis „pickup“).
 //   node scripts/scrap-short-casting.mjs                       Seeds 1–300
@@ -18,15 +19,21 @@ import vm from 'node:vm';
 import { launchBrowser, openExportPage } from '../lib/browser.mjs';
 
 const NAMES = ['EMBER', 'AZURE', 'AMBER', 'MOSS'];
+// Längster erlaubter Hänger in Sekunden: alle Roboter stehen und niemand schießt
+const HANG_MAX = 1.5;
 
 // Läuft im Browser (oder in Node): ein Short je Seed, Kennzahlen aus Ereignisprotokoll und Rundenzustand.
 export function castSeeds(EBS, seeds) {
   const world = { w: 1080, h: 1920 }, rows = [];
   for (const seed of seeds) {
     const sim = new EBS.Scrap.Episode({ seed, params: { rulesVersion: 'v4', arena: 'sunshine', layout: 'short' }, world, view: { camera: false }, timeScale: 1 });
-    const round = sim.roundSim, kos = []; let seq = 0, armed = null, duel = null;
+    const round = sim.roundSim, kos = []; let seq = 0, armed = null, duel = null, shots = 0, still = 0, hang = 0;
     while (sim.phase === 'running' && sim.step < 95 * 60) {
       sim.stepOnce();
+      // Hänger: alle lebenden Roboter sind frei, fast still (unter 8 AE/s) und niemand schießt
+      const living = round.robots.filter(r => r.alive), fired = round.stats.shots !== shots; shots = round.stats.shots;
+      still = !fired && living.length > 1 && living.every(r => !r.caged && Math.hypot(r.vx, r.vy) < 8) ? still + 1 : 0;
+      hang = Math.max(hang, still / 60);
       for (const e of sim.events) if (e.seq >= seq) {
         seq = e.seq + 1;
         if (e.type === 'pickup' && armed === null) armed = e.team;
@@ -38,7 +45,7 @@ export function castSeeds(EBS, seeds) {
       }
     }
     const end = sim.step / 60, winner = round.winner, last = kos.length === 3 ? kos[2].t : null;
-    rows.push({ seed, kos, armed, winner, duel, end, length: end + EBS.Scrap.SHORT_END_SEC,
+    rows.push({ seed, kos, armed, winner, duel, end, hang, length: end + EBS.Scrap.SHORT_END_SEC,
       duelSec: last !== null ? last - kos[1].t : null, winnerHp: winner === null ? null : round.robots[winner].hp / round.robots[winner].maxHp,
       ok: sim.checkInvariants().ok });
     sim.destroy();
@@ -50,7 +57,7 @@ export function castSeeds(EBS, seeds) {
 export function judge(r) {
   const within = (v, lo, hi) => v !== null && v !== undefined && v >= lo && v <= hi;
   r.checks = [within(r.kos[0]?.t, 5, 10), within(r.kos[1]?.t, 12, 20), r.duelSec !== null && r.duelSec >= 6,
-    !!r.duel && r.duel.length === 2 && r.duel.every(v => v < .4), within(r.length, 26, 38) && r.winner !== null];
+    !!r.duel && r.duel.length === 2 && r.duel.every(v => v < .4), within(r.length, 26, 38) && r.winner !== null, r.hang < HANG_MAX];
   r.complete = r.checks.every(Boolean) && r.ok;
   r.underdog = r.winner !== null && r.winner !== r.armed;
   // Kleiner ist besser: Sieger nicht zuerst bewaffnet, knappes Ende, langes Duell
@@ -88,7 +95,7 @@ async function main() {
   const median = list => { const s = list.filter(Number.isFinite).sort((a, b) => a - b); return s.length ? s[s.length >> 1] : NaN; };
   console.log(`Scrap-Short-Casting · Seeds ${from}–${to} · gerechnet in ${where}`);
   console.log(`  Bogen vollständig bei ${pct(good.length)}, davon gewinnt nicht der zuerst Bewaffnete: ${good.filter(r => r.underdog).length}`);
-  ['erster K.o. 5–10 s', 'zweiter K.o. 12–20 s', 'Schlussduell ≥ 6 s', 'beide unter 40 % Leben', 'Länge 26–38 s'].forEach((l, i) =>
+  ['erster K.o. 5–10 s', 'zweiter K.o. 12–20 s', 'Schlussduell ≥ 6 s', 'beide unter 40 % Leben', 'Länge 26–38 s', 'kein Hänger ab 1,5 s'].forEach((l, i) =>
     console.log(`  ${l.padEnd(24)} ${pct(rows.filter(r => r.checks[i]).length)}`));
   console.log(`  Median: erster K.o. ${median(rows.map(r => r.kos[0]?.t)).toFixed(1)} s, zweiter ${median(rows.map(r => r.kos[1]?.t)).toFixed(1)} s, Länge ${median(rows.map(r => r.length)).toFixed(1)} s, Schlussduell ${median(rows.map(r => r.duelSec)).toFixed(1)} s`);
   console.log(`  ohne Sieger: ${rows.filter(r => r.winner === null).length} · Invarianten verletzt: ${rows.filter(r => !r.ok).length}`);
@@ -96,9 +103,9 @@ async function main() {
   if (process.argv.includes('--list')) console.log('\nVollständige Seeds, bei denen nicht der zuerst Bewaffnete gewinnt (für SHORT_SEEDS in src/scenarios/scrap/episode.js):\n'
     + JSON.stringify(good.filter(r => r.underdog).map(r => r.seed).sort((a, b) => a - b)));
   const sec = v => (v === null || v === undefined ? '  –  ' : v.toFixed(1).padStart(5)), hp = v => `${Math.round(v * 100)}`.padStart(3) + ' %';
-  if (top > 0) console.log('\n Seed | 1. K.o.        | 2. K.o.        | Sieg    | Duell   | Leben im Duell | Länge   | Sieger (Rest) | zuerst bewaffnet');
+  if (top > 0) console.log('\n Seed | 1. K.o.        | 2. K.o.        | Sieg    | Duell   | Leben im Duell | Länge   | Hänger | Sieger (Rest) | zuerst bewaffnet');
   for (const r of good.slice(0, top)) {
-    console.log(`${String(r.seed).padStart(5)} | ${sec(r.kos[0].t)} s ${NAMES[r.kos[0].team].padEnd(6)} | ${sec(r.kos[1].t)} s ${NAMES[r.kos[1].team].padEnd(6)} | ${sec(r.kos[2].t)} s | ${sec(r.duelSec)} s | ${hp(r.duel[0])} / ${hp(r.duel[1])}  | ${sec(r.length)} s | ${NAMES[r.winner].padEnd(5)} (${hp(r.winnerHp)}) | ${NAMES[r.armed] ?? '–'}`);
+    console.log(`${String(r.seed).padStart(5)} | ${sec(r.kos[0].t)} s ${NAMES[r.kos[0].team].padEnd(6)} | ${sec(r.kos[1].t)} s ${NAMES[r.kos[1].team].padEnd(6)} | ${sec(r.kos[2].t)} s | ${sec(r.duelSec)} s | ${hp(r.duel[0])} / ${hp(r.duel[1])}  | ${sec(r.length)} s | ${r.hang.toFixed(1)} s  | ${NAMES[r.winner].padEnd(5)} (${hp(r.winnerHp)}) | ${NAMES[r.armed] ?? '–'}`);
   }
 }
 

@@ -25,10 +25,10 @@
   // Eine zweite, unbeobachtete Runde mit demselben Seed liefert den Schritt des letzten K.o.
   const SLOW = { tempo: .35, beforeSec: .3, afterSec: .2 };
   // S2 · Casting: in Chromium geprüfte Seeds (node scripts/scrap-short-casting.mjs --from 1 --to 1200 --list).
-  // Erster K.o. bei 5–10 s, zweiter bei 12–20 s, Schlussduell ab 6 s mit beiden unter 40 % Leben, Länge 26–38 s,
+  // Erster K.o. bei 5–10 s, zweiter bei 12–20 s, Schlussduell ab 6 s mit beiden unter 40 % Leben, Länge 26–38 s, kein Hänger ab 1,5 s,
   // und es gewinnt nicht der Roboter, der zuerst bewaffnet war. Nach jeder Änderung an v4 oder der Short-Balance
   // neu rechnen; test/scrap-short.test.mjs prüft die Liste im Browser.
-  const SHORT_SEEDS = [61, 63, 124, 149, 163, 248, 290, 321, 349, 501, 502, 503, 516, 572, 675, 733, 768, 830, 842, 862, 1030, 1069, 1144];
+  const SHORT_SEEDS = [8, 27, 84, 92, 130, 159, 182, 210, 247, 271, 309, 349, 360, 408, 474, 480, 502, 527, 541, 613, 768, 776, 911, 941, 947, 983, 994, 1007, 1189];
   const castSeed = seed => SHORT_SEEDS.find(s => s >= seed) ?? SHORT_SEEDS[0];
   const PROBES = new Map();
   function lastKoTick(options) {

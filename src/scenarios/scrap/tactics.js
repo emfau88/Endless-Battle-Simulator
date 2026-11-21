@@ -54,10 +54,17 @@
     pads: [[100, 350], [440, 350]], weapons: [[270, 190], [270, 510], [130, 300], [410, 400]],
     starts: [[100, 90], [440, 90], [440, 610], [100, 610]] };
   // S2 · Short-Balance (nur auf der Short-Karte), gemessen statt des Startwerts „überall ×1,5“: Solange alle vier
-  // leben, zählt Schaden an Robotern ×2,5 (erster K.o. im Median nach 8 s statt 14 s), danach ×1 (sonst wäre die Runde
-  // nach 24 s vorbei). Im Schlussduell nimmt der Schwächere 20 % weniger Schaden, damit es knapp wird. Die Kisten
-  // brechen innerhalb von 1,2 s statt 2,4 s auf. v4 ohne Short rechnet unverändert.
-  const SHORT_FIGHT = { opening: 2.5, damage: 1, underdog: .8, crateSpread: 1.2 };
+  // leben, zählt Schaden an Robotern ×2,5 (erster K.o. im Median nach 8 s statt 14 s), danach ×0,55. Im Schlussduell
+  // nimmt der Schwächere 20 % weniger Schaden, damit es knapp wird. Die Kisten brechen innerhalb von 1,2 s statt
+  // 2,4 s auf. Deckung: nur 0,5 s statt 3 s warten, höchstens 2,5 s unterwegs, danach 6 s Pause. Mit 3 s standen nach
+  // dem ersten K.o. oft alle gleichzeitig still (Hänger bei 51 % der Seeds, jetzt 3 %); der kleinere Schaden gleicht
+  // aus, dass die Runde ohne das Warten sonst nach 22 s vorbei wäre. v4 ohne Short rechnet unverändert.
+  const SHORT_FIGHT = { opening: 2.5, damage: .55, underdog: .8, crateSpread: 1.2, coverSec: .5, coverMax: 2.5, coverPause: 6 };
+  // S2 · Nachschub im Short: Die vier Waffen liegen nicht von Anfang an da. Sie fallen vom Himmel, wenn alle Roboter
+  // aus den Kisten sind: die erste 0,8 s nach dem letzten Ausbruch, dann alle 0,4 s eine (Reihenfolge nach Seed).
+  // Der Fall dauert 0,45 s; so lange ist das Alter der Waffe negativ und niemand kann sie aufnehmen. Auch der
+  // Nachschub der beiden Stationen fällt so, zum ersten Mal erst nach den vier Waffen.
+  const SUPPLY = { after: .8, gap: .4, fall: .45, pad: .6 };
   // Zwischenspeicher außerhalb des Simulationszustands (Raster, Suchpuffer, Hindernisliste)
   const NAV = new WeakMap(), OBSTACLES = new WeakMap();
   class TacticalRound extends M.Round {
@@ -74,8 +81,42 @@
         r.mode = 'search'; r.hiddenSince = null; r.coverSince = 0; r.coverUntil = null; r.coverBlock = 0;
       }
       this._placeCrates();
+      if (this.shortMap) this._planSupply();
       for (const r of this.robots) r.heading = r.angle;
     }
+
+    // ---- S2 · Nachschub im Short ------------------------------------------
+    // Eigener Zufallsstrom nur für die Reihenfolge. Die Liste ist Teil des Rundenzustands.
+    _planSupply() {
+      const open = Math.max(...this.crates.map(c => c.openAt)), rng = new EBS.RNG((this.seed ^ 0x2f6b1d47) >>> 0);
+      const order = this.pickups.map((p, i) => i);
+      for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(rng.next() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+      this.supply = order.map((i, k) => {
+        const p = this.pickups[i];
+        return { x: p.x, y: p.y, kind: p.kind, at: Number((open + SUPPLY.after + k * SUPPLY.gap).toFixed(4)) };
+      });
+      this.pickups = [];
+      const last = this.supply.at(-1).at;
+      this.pads.forEach((pad, i) => { pad.readyIn = Math.max(pad.readyIn, last + SUPPLY.pad * (i + 1) - SUPPLY.fall); });
+    }
+    _updateSupply() {
+      while (this.supply.length && this.t >= this.supply[0].at - SUPPLY.fall - 1e-9) {
+        const s = this.supply.shift();
+        this._addPickup(s.x, s.y, s.kind);
+      }
+      for (const p of this.pickups) if (p.sky && !p.landed && p.age >= -1e-9) {
+        p.landed = true;
+        this.emit?.('drop', p.x, p.y, { kind: p.kind, ammo: p.ammo, sky: true });
+      }
+    }
+    // Neue geladene Waffen (Nachschub und Stationen, nicht die abgelegten der Roboter) fallen im Short vom Himmel.
+    _addPickup(x, y, kind, ...rest) {
+      const p = super._addPickup(x, y, kind, ...rest);
+      if (this.shortMap && !rest.length) { p.sky = true; p.landed = false; p.age = -SUPPLY.fall; }
+      return p;
+    }
+    // Wartender Nachschub zählt zur Waffenzahl, damit die Stationen nicht mehr liefern als bisher
+    _weaponCount() { return super._weaponCount() + (this.supply ? this.supply.length : 0); }
 
     // ---- S1 · Short-Karte -------------------------------------------------
     _shortMap() {
@@ -222,6 +263,7 @@
       this.tickDt = dt;
       super._tick(dt);
       if (this.phase === 'running') this._updateCrates();
+      if (this.supply) this._updateSupply();
     }
     // Der Turm dreht höchstens 5 rad/s; geschossen wird erst, wenn er auf den Vorhaltepunkt zeigt.
     _shoot(r) {
@@ -599,10 +641,12 @@
       else if (target) {
         const hidden = this._blocked(r.x, r.y, target.x, target.y, WEAPONS.blaster.radius);
         r.hiddenSince = hidden ? (r.hiddenSince ?? now) : null;
+        // Short: kürzere Deckung (Zeiten in SHORT_FIGHT), sonst stehen nach dem ersten K.o. alle gleichzeitig still
+        const B = this.shortMap ? SHORT_FIGHT : BEHAVIOUR;
         const low = r.hp / r.maxHp < character.coverHp || r.weapon.ammo <= 2;
         if (r.mode === 'cover') {
-          if (r.coverUntil === null && Math.hypot(r.goalX - r.x, r.goalY - r.y) < 30) r.coverUntil = now + BEHAVIOUR.coverSec;
-          if ((r.coverUntil !== null && now >= r.coverUntil) || now - r.coverSince > BEHAVIOUR.coverMax) { r.mode = 'attack'; r.coverBlock = now + BEHAVIOUR.coverPause; }
+          if (r.coverUntil === null && Math.hypot(r.goalX - r.x, r.goalY - r.y) < 30) r.coverUntil = now + B.coverSec;
+          if ((r.coverUntil !== null && now >= r.coverUntil) || now - r.coverSince > B.coverMax) { r.mode = 'attack'; r.coverBlock = now + B.coverPause; }
           else goal = [r.goalX, r.goalY];
         } else if (low && now >= r.coverBlock) {
           const c = this._coverGoal(r);
@@ -655,5 +699,5 @@
     }
   }
 
-  EBS.ScrapTactics = { Round: TacticalRound, CRATE, FIGHT, CHARACTERS, PATH, DRIVE, BEHAVIOUR, SHORT, SHORT_FIGHT };
+  EBS.ScrapTactics = { Round: TacticalRound, CRATE, FIGHT, CHARACTERS, PATH, DRIVE, BEHAVIOUR, SHORT, SHORT_FIGHT, SUPPLY };
 })();

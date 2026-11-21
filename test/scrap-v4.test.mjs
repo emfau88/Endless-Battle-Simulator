@@ -177,31 +177,92 @@ test('Scrap v4 Short (S1, Simulation): eigene Karte nur hochkant, 2,5 s Abspann,
   }
 });
 
-test('Scrap v4 Short (S2, Balance): Schaden ×2,5 bis zum ersten K.o., danach ×1; im Schlussduell nimmt der Schwächere 20 % weniger; ohne Short unverändert', () => {
+test('Scrap v4 Short (S2, Balance): Schaden ×2,5 bis zum ersten K.o., danach ×0,55; im Schlussduell nimmt der Schwächere 20 % weniger; ohne Short unverändert', () => {
   const { SHORT_FIGHT } = EBS.ScrapTactics;
-  assert.deepEqual({ ...SHORT_FIGHT }, { opening: 2.5, damage: 1, underdog: .8, crateSpread: 1.2 });
+  assert.deepEqual({ ...SHORT_FIGHT }, { opening: 2.5, damage: .55, underdog: .8, crateSpread: 1.2, coverSec: .5, coverMax: 2.5, coverPause: 6 });
   const make = short => {
     const r = new Round({ seed: 5, rulesVersion: 'v4', arena: 'sunshine', portrait: true, short, upgrades: [null, null, null, null] });
     for (const robot of r.robots) robot.caged = false;
     return r;
   };
-  const hit = (r, id, amount = 10) => { const hp = r.robots[id].hp; r._hurtRobot(r.robots[id], amount, (id + 1) % 4, 0, 0); return hp - r.robots[id].hp; };
+  // auf 1e-9 gerundet: 0,55 und 0,8 sind keine glatten Binärzahlen
+  const hit = (r, id, amount = 10) => { const hp = r.robots[id].hp; r._hurtRobot(r.robots[id], amount, (id + 1) % 4, 0, 0); return Number((hp - r.robots[id].hp).toFixed(9)); };
   for (const short of [false, true]) {
     const r = make(short), f = short ? SHORT_FIGHT : { opening: 1, damage: 1, underdog: 1 };
-    assert.equal(hit(r, 0), 10 * f.opening, 'alle vier leben');
+    const want = v => Number(v.toFixed(9));
+    assert.equal(hit(r, 0), want(10 * f.opening), 'alle vier leben');
     r.robots[3].alive = false;
-    assert.equal(hit(r, 0), 10 * f.damage, 'nach dem ersten K.o.');
+    assert.equal(hit(r, 0), want(10 * f.damage), 'nach dem ersten K.o.');
     r.robots[2].alive = false;
     // Schlussduell: Roboter 0 ist angeschlagen, Roboter 1 unverletzt
-    assert.equal(hit(r, 0), 10 * f.damage * f.underdog, 'der Schwächere');
-    assert.equal(hit(r, 1), 10 * f.damage, 'der Stärkere');
+    assert.equal(hit(r, 0), want(10 * f.damage * f.underdog), 'der Schwächere');
+    assert.equal(hit(r, 1), want(10 * f.damage), 'der Stärkere');
     r.robots[0].hp = r.robots[1].hp;
-    assert.equal(hit(r, 0), 10 * f.damage, 'Gleichstand: keine Schonung');
+    assert.equal(hit(r, 0), want(10 * f.damage), 'Gleichstand: keine Schonung');
   }
   // Kisten brechen im Short dichter nacheinander auf
   for (let seed = 1; seed <= 20; seed++) {
     const times = make(true), last = Math.max(...new Round({ seed, rulesVersion: 'v4', arena: 'sunshine', portrait: true, short: true, upgrades: [null, null, null, null] }).crates.map(c => c.openAt));
     assert.ok(times && last <= CRATE.open + SHORT_FIGHT.crateSpread + 3 * CRATE.gap + 1e-9, `Seed ${seed}: letzter Ausbruch ${last}`);
+  }
+});
+
+test('Scrap v4 Short (S2, Deckung): höchstens 0,5 s warten, kaum Hänger (alle stehen, niemand schießt); ohne Short bleiben 3 s', () => {
+  const { SHORT_FIGHT, BEHAVIOUR } = EBS.ScrapTactics;
+  assert.deepEqual([BEHAVIOUR.coverSec, BEHAVIOUR.coverMax, BEHAVIOUR.coverPause], [3, 6, 4]);
+  let hangs = 0, covers = 0;
+  for (let seed = 1; seed <= 30; seed++) {
+    const r = new Round({ seed, rulesVersion: 'v4', arena: 'sunshine', portrait: true, short: true, upgrades: [null, null, null, null] });
+    let shots = 0, still = 0, longest = 0; const since = r.robots.map(() => null);
+    while (r.phase === 'running' && r.t < 90) {
+      r.step(1 / 120);
+      const living = r.robots.filter(o => o.alive), fired = r.stats.shots !== shots; shots = r.stats.shots;
+      still = !fired && living.length > 1 && living.every(o => !o.caged && Math.hypot(o.vx, o.vy) < 8) ? still + 1 : 0;
+      longest = Math.max(longest, still / 120);
+      // Kein Roboter bleibt länger als coverMax (plus eine Denkpause) am Stück im Modus Deckung
+      for (const o of r.robots) {
+        if (o.alive && o.mode === 'cover') { if (since[o.id] === null) { since[o.id] = r.t; covers++; } assert.ok(r.t - since[o.id] <= SHORT_FIGHT.coverMax + .7, `Seed ${seed}: Roboter ${o.id} ${(r.t - since[o.id]).toFixed(2)} s in Deckung`); }
+        else since[o.id] = null;
+      }
+    }
+    assert.ok(r.winner !== null, `Seed ${seed}: kein Sieger`);
+    hangs += longest >= 1.5;
+  }
+  assert.ok(covers > 30, `Deckung wird weiter genutzt (${covers}-mal)`);
+  assert.ok(hangs <= 3, `${hangs} von 30 Seeds mit einem Hänger ab 1,5 s`);
+});
+
+test('Scrap v4 Short (S2, Nachschub): Waffen fallen erst nach dem letzten Ausbruch vom Himmel, im Fall nimmt sie niemand; ohne Short liegen sie von Anfang an', () => {
+  const { SUPPLY } = EBS.ScrapTactics;
+  assert.deepEqual({ ...SUPPLY }, { after: .8, gap: .4, fall: .45, pad: .6 });
+  // Ohne Short: vier Waffen ab dem Start, kein Nachschubplan, keine fallenden Waffen
+  const plain = round(5, true);
+  assert.equal(plain.supply, undefined); assert.equal(plain.pickups.length, 4);
+  for (let i = 0; i < 20 * 120; i++) plain.step(1 / 120);
+  assert.ok(plain.pickups.every(p => p.sky === undefined && p.age >= 0));
+  for (const seed of [1, 2, 3, 84]) {
+    const s = new EBS.Scrap.Episode({ seed, params: { rulesVersion: 'v4', arena: 'sunshine', layout: 'short' }, world: { w: 1080, h: 1920 }, view: { camera: false } });
+    const r = s.roundSim, open = Math.max(...r.crates.map(c => c.openAt)), plan = r.supply.map(p => ({ ...p }));
+    assert.equal(r.pickups.length, 0, 'am Start liegt keine Waffe'); assert.equal(plan.length, 4);
+    assert.equal(plan.map(p => p.kind).sort().join(), 'blaster,blaster,rocket,rocket');
+    plan.forEach((p, k) => assert.ok(Math.abs(p.at - (open + SUPPLY.after + k * SUPPLY.gap)) < 1e-4, `Seed ${seed}: Landezeit ${p.at}`));
+    // Stationen liefern zum ersten Mal erst nach den vier Waffen
+    assert.ok(r.pads.every(pad => pad.readyIn + SUPPLY.fall >= plan[3].at + SUPPLY.pad - 1e-9));
+    assert.equal(r._weaponCount(), 8, 'wartender Nachschub zählt mit');
+    const landed = []; let falling = 0, seq = 0;
+    while (s.phase === 'running' && r.t < plan[3].at + 3) {
+      const before = r.pickups.filter(p => p.age < 0).map(p => p.id);
+      s.stepOnce();
+      // Solange eine Waffe fällt (Alter unter 0), bleibt sie liegen: Niemand nimmt sie aus der Luft
+      for (const id of before) assert.ok(r.pickups.some(p => p.id === id), `Seed ${seed}: Waffe ${id} im Fall aufgenommen`);
+      falling += r.pickups.some(p => p.sky && p.age < 0);
+      for (const e of s.events) if (e.seq >= seq) { seq = e.seq + 1; if (e.type === 'drop' && e.sky) landed.push(e); }
+      assert.ok(s.checkInvariants().ok);
+    }
+    assert.ok(falling > 4 * SUPPLY.fall * 60 * .5, `Seed ${seed}: Fall sichtbar (${falling} Schritte)`);
+    assert.ok(landed.length >= 4, `Seed ${seed}: ${landed.length} Landungen`);
+    landed.slice(0, 4).forEach((e, k) => assert.ok(Math.abs(e.roundTime - plan[k].at) < 1 / 60, `Seed ${seed}: Landung ${e.roundTime} statt ${plan[k].at}`));
+    assert.equal(r.supply.length, 0);
   }
 });
 
