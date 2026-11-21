@@ -35,6 +35,9 @@
     gradient.addColorStop(1, rgba(color, 0)); g.fillStyle = gradient;
     g.fillRect(x - radius, y - radius, radius * 2, radius * 2);
   };
+  // S1 · Short: Schilder 1,4-fach, Einstiegstext 2,5 s bei 22 % der Bildhöhe
+  // S2: Der Sieger erscheint 0,3 s nach dem letzten K.o., damit die Zeitlupe der Explosion frei bleibt
+  const SHORT_ART = { labels: 1.4, introSec: 2.5, introY: .22, winnerDelay: .3, winnerFade: .25 };
   class ArenaRenderer extends ScrapArena.Renderer {
     _scorchEvents() {
       const s = this.episode, marks = [];
@@ -128,42 +131,43 @@
       const bg = shadow.getContext('2d'); bg.filter = 'blur(3px)'; bg.drawImage(mask, 0, 0);
       const result = { sprite, shadow }; this._pickupTextures.set(key, result); return result;
     }
-    _labelLayout(robots, width, height) {
-      const labels = [], h = 16.5, margin = 18;
-      const overlaps = (a, b) => a.x < b.x + 60 && a.x + 60 > b.x && a.y < b.y + h + 2 && a.y + h + 2 > b.y;
+    // k = Maßstab der Schilder: 1 im Normalbild (alle Zahlen wie bisher), 1,4 im Short.
+    _labelLayout(robots, width, height, k = 1) {
+      const labels = [], h = 16.5 * k, wide = 58 * k, margin = 18;
+      const overlaps = (a, b) => a.x < b.x + wide + 2 && a.x + wide + 2 > b.x && a.y < b.y + h + 2 && a.y + h + 2 > b.y;
       // Sorting a copy keeps this pass independent of draw history and physics.
       for (const robot of robots.filter(r => r.alive !== false && r.hp > 0).slice().sort((a, b) => a.y - b.y || a.id - b.id)) {
-        const radius = Math.max(12, robot.r || 24), x = Math.max(margin, Math.min(width - margin - 58, robot.x - 29));
+        const radius = Math.max(12, robot.r || 24), x = Math.max(margin, Math.min(width - margin - wide, robot.x - wide / 2));
         const top = robot.y - radius - 6 - h, bottom = robot.y + radius + 10;
-        const candidates = [top, bottom, top - 20, bottom + 20, top - 40, bottom + 40];
+        const candidates = [top, bottom, top - 20 * k, bottom + 20 * k, top - 40 * k, bottom + 40 * k];
         let y = candidates.find(yy => yy >= margin && yy + h <= height - margin && !labels.some(b => overlaps({ x, y: yy }, b)));
         if (y === undefined) y = Math.max(margin, Math.min(height - margin - h, top));
-        labels.push({ robot, x, y, width: 58, height: h, below: y > robot.y,
+        labels.push({ robot, x, y, width: wide, height: h, below: y > robot.y,
           ammoY: y > robot.y ? y + h + 4 : robot.y + radius + 12 });
       }
       return labels;
     }
-    _labels(g, robots, width, height) {
-      const labels = this._labelLayout(robots, width, height);
+    _labels(g, robots, width, height, k = 1) {
+      const labels = this._labelLayout(robots, width, height, k);
       g.save();
       // Magazine pips stay below the machine; a lower nameplate moves them
       // beneath that plate so the two indicators never occupy the same row.
       for (const { robot, ammoY } of labels) if (robot.weapon) {
         const rocket = robot.weapon.kind === 'rocket', max = Math.max(1, robot.weapon.maxAmmo || (rocket ? 2 : 12));
         const count = Math.min(12, max), n = Math.max(0, Math.min(1, robot.weapon.ammo / max)) * count;
-        const gap = (rocket ? 4 : 1.8) * .8, wide = (rocket ? 9 : 3) * .8, total = count * wide + (count - 1) * gap;
+        const gap = (rocket ? 4 : 1.8) * .8 * k, wide = (rocket ? 9 : 3) * .8 * k, total = count * wide + (count - 1) * gap;
         for (let i = 0; i < count; i++) {
-          box(g, robot.x - total / 2 + i * (wide + gap), ammoY, wide, 3.2, .8);
+          box(g, robot.x - total / 2 + i * (wide + gap), ammoY, wide, 3.2 * k, .8 * k);
           g.fillStyle = i < n ? (rocket ? '#f1b773' : '#bbdee7') : '#273b47'; g.fill();
         }
       }
       for (const { robot, x, y } of labels) {
         const color = colorOf(robot), hp = Math.max(0, Math.min(1, robot.hp / Math.max(1, robot.maxHp)));
-        box(g, x, y, 58, 13, 3); g.fillStyle = rgba('#0c1820', .88); g.fill();
-        text(g, robot.name, x + 29, y + 6.5, 9, color, 'center', 800);
-        box(g, x + 5, y + 13, 48, 3.5, 1.2); g.fillStyle = '#050c11'; g.fill();
+        box(g, x, y, 58 * k, 13 * k, 3 * k); g.fillStyle = rgba('#0c1820', .88); g.fill();
+        text(g, robot.name, x + 29 * k, y + 6.5 * k, 9 * k, color, 'center', 800);
+        box(g, x + 5 * k, y + 13 * k, 48 * k, 3.5 * k, 1.2 * k); g.fillStyle = '#050c11'; g.fill();
         if (hp > 0) {
-          box(g, x + 5, y + 13, 48 * hp, 3.5, Math.min(1.2, 24 * hp));
+          box(g, x + 5 * k, y + 13 * k, 48 * k * hp, 3.5 * k, Math.min(1.2, 24 * hp) * k);
           g.fillStyle = hp < .25 ? '#f48562' : color; g.fill();
         }
       }
@@ -669,7 +673,10 @@
     paintMaterialArena(g) {
       const s=this.sim,r=s.roundSim,l=this.layout,art=EBS.ScrapMaterialArt,portrait=l.kind==='portrait';
       const final=s.cfg.episodeMode==='tournament'&&s.completedRounds===8;
-      const elapsed=s.phase==='pause'?s.cfg.endPauseSec-(s.pauseUntil-s.step)/60:final?Math.max(0,5-(s.outroUntil-s.step)/60):0;
+      // Short: Die Runde steht nach dem Sieg still; die letzten Effekte laufen über die Abspannzeit weiter.
+      // In der Zeitlupe (S2) altern sie langsamer: Szenenzeit statt Videozeit.
+      const elapsed=l.short?(r.phase==='ended'?Math.max(0,s.sceneTime(s.step)-s.sceneTime(s.outroUntil-EBS.Scrap.SHORT_END_SEC*60)):0)
+        :s.phase==='pause'?s.cfg.endPauseSec-(s.pauseUntil-s.step)/60:final?Math.max(0,5-(s.outroUntil-s.step)/60):0;
       const mapPoint=p=>portrait?{...p,x:r.bounds.h-p.y,y:p.x,
         ...('vx' in p?{vx:-p.vy,vy:p.vx}:{}),...('angle' in p?{angle:p.angle+Math.PI/2}:{}),...('heading' in p?{heading:p.heading+Math.PI/2}:{}),
         ...('px' in p?{px:r.bounds.h-p.py,py:p.px}:{})}:p;
@@ -711,8 +718,10 @@
       for(const p of r.projectiles)this.arena._projectile(g,mapPoint(p));
       for(const e of effects)this.arena._effect(g,e);
       fx.puffs(g,scene.smoke);
-      this.arena._labels(g,robots,l.arenaW,l.arenaH);
+      this.arena._labels(g,robots,l.arenaW,l.arenaH,l.short?SHORT_ART.labels:1);
       g.restore();
+      // Short: keine Kopfleiste, kein Rundenbanner; nur Einstiegstext und Sieger
+      if(l.short){this.shortOverlay(g);return;}
       if(final)this.finale(g);
       else if(r.phase==='ended') {
         if (this._usesDarkMaterialArt()) this.materialRoundBanner(g);
@@ -726,6 +735,47 @@
       }
       if(this.view.hud)this.materialHud(g,final);
     }
+    // S1 · Short: Einstiegstext (0–2,5 s) und großer Sieger im Abspann. Beides folgt nur aus dem Episodenschritt
+    // und dem Rundenende im Ereignisprotokoll, nie aus gezeichneten Bildern (Seek-Regel).
+    shortOverlay(g) {
+      const s = this.sim, r = s.roundSim, l = this.layout, { w, h } = this.world, A = SHORT_ART, t = s.step / 60;
+      const title = (value, x, y, size, color) => {
+        g.font = `800 ${size}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+        g.strokeStyle = '#0c1820'; g.lineWidth = size * .2; g.strokeText(value, x, y);
+        g.fillStyle = color; g.fillText(value, x, y);
+      };
+      if (t < A.introSec) {
+        // Ab dem ersten Bild voll sichtbar (der Einstieg zählt), nur das Ausblenden ist weich
+        g.save(); g.globalAlpha = Math.max(0, Math.min(1, (A.introSec - t) / .3));
+        title('4 BOTS · 1 SURVIVOR', w / 2, h * A.introY, 82, '#fbf8ef');
+        title('PICK YOUR COLOR', w / 2, h * A.introY + 92, 56, '#ffe9a8');
+        g.restore();
+      }
+      if (r.phase !== 'ended') return;
+      const winner = r.robots.find(robot => robot.id === r.winner);
+      const since = (s.step - (s.outroUntil - EBS.Scrap.SHORT_END_SEC * 60)) / 60;
+      const p = Math.max(0, Math.min(1, (since - A.winnerDelay) / A.winnerFade));
+      if (p <= 0) return;
+      const x = l.x + l.width / 2, k = .8 + .2 * (1 - (1 - p) ** 3);
+      // Mitte der Arena; steht der Sieger selbst dort, rückt die Schrift knapp über oder unter ihn (er steht still).
+      let y = l.y + l.height / 2;
+      if (winner) {
+        const ry = l.y + winner.x * l.scale;
+        if (Math.abs(ry - y) < 170) y = ry >= y ? ry - 200 : ry + 200;
+      }
+      g.save(); g.globalAlpha = p;
+      // Weiches dunkles Band, damit die Schrift auch auf dem hellen Boden trägt
+      const band = g.createLinearGradient(0, y - 190, 0, y + 190);
+      band.addColorStop(0, 'rgba(12,24,32,0)'); band.addColorStop(.5, 'rgba(12,24,32,.5)'); band.addColorStop(1, 'rgba(12,24,32,0)');
+      g.fillStyle = band; g.fillRect(l.x, y - 190, l.width, 380);
+      // Schriftgröße 150, bei langen Namen so verkleinert, dass links und rechts Rand bleibt
+      const words = winner ? `${winner.name} WINS` : 'DRAW';
+      g.font = `800 150px ${FONT}`;
+      const size = Math.floor(150 * Math.min(1, l.width * .8 / g.measureText(words).width));
+      g.translate(x, y); g.scale(k, k);
+      title(words, 0, 0, size, winner ? colorOf(winner) : '#e6ebe6');
+      g.restore();
+    }
     // E1–E5: liegende Splitter und Trümmer, abgesprengte Türme, Rauch und Treffer-Schubs aus dem Ereignisprotokoll
     // der laufenden Runde. Zustandslos und seek-fest: Alter = Episodenschritt minus Ereignisschritt.
     _fxScene(mapPoint, robots) {
@@ -738,7 +788,9 @@
         const e = ev[i];
         if (e.round < s.roundNumber) break;
         if (e.round !== s.roundNumber || !Number.isFinite(e.arenaX)) continue;
-        const age = Math.max(0, (s.step - e.step) / 60) * ts, p = mapPoint({ x: e.arenaX, y: e.arenaY }), seq = e.seq;
+        // Short mit Zeitlupe: Alter in Szenenzeit, damit Splitter und Rauch mit der Runde langsamer werden
+        const age = s.slow ? Math.max(0, s.sceneTime(s.step) - s.sceneTime(e.step)) : Math.max(0, (s.step - e.step) / 60) * ts;
+        const p = mapPoint({ x: e.arenaX, y: e.arenaY }), seq = e.seq;
         const robot = e.team != null ? robots.find(r => r.id === e.team) : null, scale = Math.max(.5, (robot?.r || 24) / 24);
         if (e.type === 'hit') {
           if (age < .1 && robot && !scene.nudge.has(e.team)) {
@@ -1115,11 +1167,14 @@
     id: 'scrap', title: 'Scrap Wars',
     supportsClips: true,
     supportsCamera: false,
-    defaults: { rulesVersion: 'v3', episodeMode: 'endless', arena: 'yard', workshop: false, repeatRounds: true, endPauseSec: 3, soundMix: 'classic' },
+    defaults: { rulesVersion: 'v3', episodeMode: 'endless', arena: 'yard', workshop: false, repeatRounds: true, endPauseSec: 3, soundMix: 'classic', layout: 'standard' },
     controls: [
       { key: 'episodeMode', label: 'Format', type: 'select', options: [['endless', 'Freie Videolänge'], ['tournament', 'Turnier · 8 Runden + Finale']], restart: true },
       { key: 'rulesVersion', label: 'Arena / Kampfregeln', type: 'select', enabled: p => p.arena !== 'sunshine' || p.rulesVersion === 'v4', options: [['v4', 'Taktik-Arena · Startkisten, Zielwahl, Wegfindung'], ['v3', 'Große Arena · Holz, Stein, Beton'], ['v2', 'Bisherige Arena · flüssiger Kampf'], ['classic', 'Originalprototyp']], restart: true },
       { key: 'arena', label: 'Arena', type: 'select', options: [['yard', 'Scrapyard · ausgewogen'], ['foundry', 'Foundry · Deckungsgassen'], ['crossroads', 'Crossroads · offenes Zentrum'], ['sunshine', 'Sunny Yard · Tageslicht / Deckungsgassen']], restart: true },
+      // Short: nur Taktik-Arena auf Sunny Yard und nur im Hochformat; sonst bleibt das normale Bild.
+      { key: 'layout', label: 'Bildaufbau', type: 'select', enabled: p => p.rulesVersion === 'v4' && p.arena === 'sunshine',
+        options: [['standard', 'Normal · Kopfleiste, ganze Arena'], ['short', 'Short · kleine Karte, ohne Kopfleiste, eine Runde (nur Hochformat)']], restart: true },
       { key: 'workshop', label: 'Werkstatt (experimentell, ein Modul je Roboter)', type: 'check', enabled: p => p.episodeMode === 'tournament', restart: true },
       { key: 'repeatRounds', label: 'Weitere Runden spielen', type: 'check', enabled: p => p.episodeMode !== 'tournament', restart: true },
       { key: 'endPauseSec', label: 'Ergebnis zeigen', type: 'range', min: 2, max: 8, step: 1, restart: true, format: v => `${v} s` },
@@ -1127,13 +1182,23 @@
       { key: 'soundMix', label: 'Ton', type: 'select', options: [['soft-v1', 'Weich · klare Klänge, leiser Wind, feste Mischung'], ['classic', 'Bisheriger Ton · auf −14 LUFS eingemessen']], restart: true, resetMix: true },
     ],
     // Die Simulation sieht soundMix nicht (eigene Normalisierung in der Episode), ihre Hashes bleiben gleich.
-    normalizeParams: p => ({ ...normalizeParams(p), soundMix: soundMixOf(p) }),
+    // layout steht hier immer (für den Schalter); die Episode kennt den Schlüssel nur im Short.
+    normalizeParams: p => { const n = normalizeParams(p); return { ...n, layout: n.layout || 'standard', soundMix: soundMixOf(p) }; },
+    durationLabel: cfg => normalizeParams(cfg.params).layout === 'short'
+      ? { pending: 'Ablauf des Shorts wird berechnet …', complete: 'Automatisch: eine Runde bis zum Sieg und 2,5 Sekunden Abspann.' } : null,
     audioForParams(p) { return soundMixOf(p) === 'soft-v1' ? SOFT_AUDIO : this.audio; },
     createAudioMixPlan: softMixPlan,
     hasNaturalDuration: cfg => EBS.Scrap.hasNaturalEnd(cfg),
     createExportPlan: EBS.Scrap.createExportPlan,
     create: ctx => new Episode(ctx),
     createRenderer: ctx => new ScrapRenderer(ctx),
+    // L1 · Kapitel für die Videobeschreibung: je Runde der Startzeitpunkt im Video. Ein einzelner Start (Short,
+    // eine Runde) ergibt keine Kapitel. Der Export schreibt die Liste in die JSON-Begleitdatei.
+    chapters(sim) {
+      const tournament = sim.cfg.episodeMode === 'tournament';
+      const list = sim.roundStarts.map(r => ({ timeSec: Number((r.step / 60).toFixed(3)), title: tournament && r.round === 8 ? 'Round 8 – Final' : `Round ${r.round}` }));
+      return list.length > 1 ? list : null;
+    },
     panelStats(sim) {
       const s = sim.snapshot();
       return [

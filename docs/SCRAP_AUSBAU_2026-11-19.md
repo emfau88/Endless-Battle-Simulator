@@ -354,4 +354,218 @@ stehen in [SCRAP_OFFENE_PUNKTE_2026-11-20.md](SCRAP_OFFENE_PUNKTE_2026-11-20.md)
 **Grenzen:** Der erste K.o. liegt über dem Ziel aus S2 (5–10 s); das soll die Short-Balance in S2 lösen. Die Werte
 sind in Node gemessen; im Browser laufen `v4`-Runden wegen leicht anderer `sin`/`cos`-Werte etwas anders.
 
-**Stopp** am 20.11. auf Wunsch des Nutzers nach diesem Teil.
+**Stopp** am 20.11. auf Wunsch des Nutzers nach diesem Teil. Fortsetzung am 21.11. im nächsten Abschnitt.
+
+---
+
+## S1, Rest · Darstellung des Shorts (21.11.2026)
+
+**Umfang:** nur Darstellung und Bedienung; die Simulation ist unverändert. Der Short ist jetzt in der Oberfläche
+wählbar.
+
+- **Keine Kopfleiste:** Bei `layout: 'short'` hochkant zeichnet der Short weder Kopfleiste noch Rundenbanner. Oben
+  bleiben 8 %, unten 19 % des Bildes einfarbig frei (dort liegt die Bedienung der Plattform).
+- **Namensschilder 1,4-fach** mit Lebensbalken; die Munitionspunkte wachsen mit. Die Schilder haben dafür einen
+  Maßstab bekommen; im normalen Bild ist er 1 und alle Zahlen sind wie bisher.
+- **Einstiegstext** 0–2,5 s: „4 BOTS · 1 SURVIVOR“ bei 22 % der Bildhöhe, darunter „PICK YOUR COLOR“. Weiße Schrift
+  mit dunklem Rand, ab dem ersten Bild voll sichtbar, blendet 0,3 s aus. Die Zeit folgt aus dem Episodenschritt.
+- **Abspann:** groß „<NAME> WINS“ in der Teamfarbe mit weichem dunklem Band dahinter, in der Mitte der Arena. Steht
+  der Sieger selbst in der Mitte, rückt die Schrift knapp über oder unter ihn. Kein „NEXT ROUND“, kein „ROUND
+  COMPLETE“. Die letzte Explosion klingt im Abspann aus, statt einzufrieren.
+- **Sunny-Boden bei 540 × 700:** geprüft, passt ohne Änderung (Platten, Mittelstreifen, Abläufe und Pflanztröge
+  sitzen richtig).
+- **Schalter „Bildaufbau“** in der Oberfläche: „Normal · Kopfleiste, ganze Arena“ oder „Short · kleine Karte, ohne
+  Kopfleiste, eine Runde (nur Hochformat)“. Wählbar nur mit Taktik-Arena auf Sunny Yard. Im Hochformat endet das
+  Video dann von selbst; die Längenanzeige sagt „eine Runde bis zum Sieg und 2,5 Sekunden Abspann“.
+- **Vorschau-Skript** `scripts/scrap-short-preview.mjs`: Einstieg, Kampf und Sieger als Einzelbilder und als ein
+  Blatt (lokal unter `output/scrap-short/`).
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-short.test.mjs` (neu) | 3 von 3: kein Text am Rand (oben 8 %, unten 19 % einfarbig, acht Zeitpunkte), Einstiegstext bei 22 %, Sieger groß ohne „NEXT ROUND“; Seek-Bild an fünf Stellen pixelgleich; Schalter „Bildaufbau“ |
+| `node --test test/scrap-labels.test.mjs test/scrap-optics.test.mjs test/scrap-hud.test.mjs test/audio-scrap-soft.test.mjs` | 15 von 15 |
+| Bildvergleich gegen `main` ohne Short (`classic`, `v2`, `v3`, `v4`; quer und hochkant; je 5 Bilder bis 30 s) | 10 Fälle × 5 Bilder pixelgleich, Zustands-Hash gleich |
+| Vorschaubilder Seed 42 (Einstieg 1,0 s, Kampf 10,6 s, Sieger 22,4 s) | dem Nutzer gezeigt |
+
+**Nicht gelaufen:** kein vollständiger `npm test`, kein Export.
+
+**Grenzen:** Die farbigen Startecken im Boden sind auch im Short zu sehen (offene Frage an den Nutzer). Die Regie
+(Schaden, Zeitlupe, Casting) folgt in S2; bis dahin dauert eine Runde so lange wie in `v4`.
+
+---
+
+## S2 · Verdeckte Regie (21.11.2026)
+
+**Umfang:** Short-Balance, Zeitlupe beim letzten K.o. und Casting. Alles gilt nur bei `layout: 'short'` hochkant;
+`classic` bis `v4` ohne Short rechnen wie bisher.
+
+### Short-Balance
+
+Der Startwert aus dem Plan war „Schaden überall ×1,5“. Gemessen brachte das den ersten K.o. nur von 14,4 s auf 11,6 s
+und verkürzte zugleich die ganze Runde auf rund 25 s. Deshalb wirkt der Zuschlag jetzt nur in der Eröffnung:
+
+- **Solange alle vier leben: Schaden an Robotern ×2,5.** Danach normaler Schaden (×1).
+- **Im Schlussduell nimmt der Schwächere 20 % weniger Schaden** (wie im Plan).
+- **Die Startkisten brechen innerhalb von 1,2 s auf** statt 2,4 s (der Mindestabstand von 0,4 s bleibt).
+
+| Einstellung (200 Seeds, Node) | erster K.o. | zweiter K.o. | Schlussduell | Videolänge |
+|---|---|---|---|---|
+| ohne Balance (Stand S1, 100 Seeds) | 14,4 s | – | – | 29,5 s |
+| überall ×1,5 (Startwert) | 11,6 s | 14,7 s | 7,0 s | 25,3 s |
+| Eröffnung ×2,0, danach ×1,5 | 9,5 s | 13,9 s | 5,6 s | 23,4 s |
+| Eröffnung ×2,5, danach ×1,5, Kisten 1,2 s | 8,0 s | 12,3 s | 6,6 s | 22,6 s |
+| **Eröffnung ×2,5, danach ×1, Kisten 1,2 s (gewählt)** | **8,0 s** | **13,4 s** | **8,6 s** | **26,4 s** |
+| Eröffnung ×2,5, danach ×0,8, Kisten 1,2 s | 8,0 s | 14,7 s | 8,7 s | 28,3 s |
+
+Alle Werte sind Mediane. Zielwerte: erster K.o. 5–10 s, zweiter 12–20 s, Schlussduell ab 6 s, Länge 26–38 s. Mit
+der gewählten Einstellung liegt der erste K.o. bei 90 % der Seeds im Ziel (mit „überall ×1,5“ waren es 35 %). Die Siege bleiben verteilt (EMBER 22 %, AZURE 28 %,
+AMBER 27 %, MOSS 23 % über 1200 Seeds, kein Unentschieden).
+
+### Zeitlupe beim letzten K.o.
+
+- 0,5 s Videozeit mit Tempo 0,35: **0,3 s vor dem letzten Treffer** läuft die Simulation langsamer, **0,2 s danach**
+  laufen Explosion, Trümmer und Rauch langsamer. Der Sieger-Schriftzug erscheint erst 0,3 s nach dem K.o.
+- **Vorab berechneter Tempoplan:** Beim Start rechnet die Episode eine zweite, unbeobachtete Runde mit demselben
+  Seed bis zum Ende und kennt damit den Schritt des letzten K.o. Der Plan steht fest, bevor das erste Bild entsteht.
+- **Seek-Regel:** Der Renderer hält keinen eigenen Zustand. Das Alter der Effekte rechnet er über die neue
+  Szenenzeit der Episode (`sceneTime`), die in der Zeitlupe langsamer läuft.
+- Das Video wird durch die Zeitlupe rund 0,2 s länger; die Export-Vorplanung rechnet das mit.
+- **Ton:** Die Klänge liegen zeitlich richtig, werden aber nicht gedehnt und bekommen keinen eigenen Akzent.
+- Im Langvideo und ohne Short gibt es keinen Plan (`slow` ist dort leer), die Zustands-Hashes bleiben gleich.
+
+### Casting
+
+`node scripts/scrap-short-casting.mjs --from 1 --to 1200 --list` rechnet **in Chromium**, also dort, wo auch der
+Export rechnet. Bedingungen in Videosekunden: erster K.o. 5–10 s, zweiter 12–20 s, Schlussduell mindestens 6 s,
+beide Duellanten beim Start des Duells unter 40 % Leben, Länge 26–38 s. Bevorzugt gewinnt nicht der Roboter, der
+zuerst bewaffnet war. In `v4` starten alle vier mit einem Blaster (9 Schuss); „zuerst bewaffnet“ heißt hier deshalb:
+Er nimmt als Erster eine neue Waffe vom Boden auf.
+
+| Messung (Seeds 1–1200, Chromium 148) | Wert |
+|---|---|
+| erster K.o. 5–10 s | 89,3 % der Seeds, Median 8,0 s |
+| zweiter K.o. 12–20 s | 59,5 %, Median 13,1 s |
+| Schlussduell mindestens 6 s | 62,1 %, Median 8,6 s |
+| beide beim Duellstart unter 40 % Leben | 36,3 % |
+| Länge 26–38 s | 35,8 %, Median 25,8 s |
+| Bogen vollständig | 32 Seeds (2,7 %) |
+| davon gewinnt nicht der zuerst Bewaffnete | **23 Seeds**, als Liste `SHORT_SEEDS` in `src/scenarios/scrap/episode.js` |
+| Vergleich Node | 33 vollständige Seeds statt 32: Einzelne Runden laufen in Node anders, wie angekündigt |
+
+Die Vorlage nimmt den nächsten geprüften Seed ab dem gewünschten (`EBS.Scrap.castSeed`). Für Seed 42 ist das
+**Seed 61**: erster K.o. 7,8 s (EMBER), zweiter 18,1 s (AZURE), Sieg nach 32,1 s, Schlussduell 14,1 s mit 33 % und
+11 % Leben, AMBER gewinnt mit 10 % Rest, zuerst bewaffnet war MOSS. Videolänge 34,6 s.
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-v4.test.mjs test/scrap.test.mjs` | 27 von 27, neu: Balance (Schadensstufen, Kistenzeiten) und Zeitlupe (Plan, letzter K.o. am geplanten Schritt, Szenenzeit stetig, Exportlänge) |
+| `node --test test/scrap-short.test.mjs` | 4 von 4, neu: alle 23 Casting-Seeds halten in Chromium den Bogen ein; Seek-Bild an sieben Stellen pixelgleich, zwei davon in der Zeitlupe |
+| `node scripts/scrap-map-hashes.mjs` | 6 Fälle × 4 Prüfpunkte gleich |
+| `classic` bis `v4` ohne Short gegen `main` (Node, 24 Fälle über 45 s, zwei Turniere, Short-Parameter im Querformat) | 27 Fälle gleich |
+| `node scripts/scrap-v4-stats.mjs --layout short` (100 Seeds) | festgefahren 0,7 %, häufigstes Paar 19,3 %, kein Unentschieden, 5,5 ms je Simulationssekunde |
+
+**Nicht gelaufen:** kein vollständiger `npm test`, kein Export. `npm run golden` läuft einmal am Ende der Pakete.
+
+**Grenzen:**
+
+- Die Liste gilt für den heutigen Stand von `v4`, die Short-Balance und Chromium 148. Nach Änderungen daran neu
+  rechnen; der Test im Browser meldet es.
+- Im Mittel sind Shorts rund 26 s lang, am unteren Rand des Ziels. Die geprüften Seeds liegen bei 26–35 s. Mit
+  Schaden ×0,8 nach dem ersten K.o. wären es im Mittel knapp 2 s mehr (Frage an den Nutzer).
+- Der Startvorgang eines Shorts rechnet die Runde einmal vorab (rund 0,2 s).
+
+---
+
+## S3 · Short-Vorlage und 20-Sekunden-Probe (21.11.2026)
+
+**Umfang:** Die Short-Vorlage von Scrap Wars nutzt jetzt das Short-Bild mit Regie.
+
+- **Vorlage** `presets/production/scrap-short.json` und `src/production-presets.js`: „Scrap Wars – Short (4 Bots,
+  1 Survivor)“, Taktik-Arena `v4` auf Sunny Yard, `layout: 'short'`, Ton `soft-v1`, 9:16 in 1080p30. Bisher war es
+  eine Minute Dauerlauf im normalen Bild.
+- **Seed aus dem Casting:** Die Vorlage nimmt den nächsten geprüften Seed ab dem eingestellten. Für Seed 42 ist das
+  **Seed 61**. Das ist die eine Stelle, an der ein Vorlagenknopf den Seed ändert (wie bei Cloud Wars).
+- **Länge:** ergibt sich aus dem Ablauf, für Seed 61 **34,7 s** (Sieg nach 32,1 s, 2,5 s Abspann). In der Datei
+  stehen 35 s nur als Startwert.
+- Der Knopf heißt bei Scrap Wars „Short · eine Runde (rund 30 Sekunden)“.
+
+**20-Sekunden-Probe** (lokal, nicht im Repository): `output/scrap-short/scrap-short-probe-20s.mp4` in der
+Arbeitskopie `scrap-s1`, die ersten 20 s als Ausschnitt der ganzen Episode:
+
+```bash
+node export.mjs --config presets/production/scrap-short.json --clip-start 0 --clip-duration 20 --out output/scrap-short/scrap-short-probe-20s.mp4
+```
+
+| Messung | Wert |
+|---|---|
+| Bild | 1080 × 1920, 30 Bilder je Sekunde, 600 Bilder, 5,0 MB |
+| Ton der ganzen Episode | 155 Ereignisse, davon 59 hörbar; −20,8 LUFS, Spitze −6 dBFS, Begrenzer bis −3,3 dB |
+| Ton des Ausschnitts (AAC) | −24,5 LUFS, True Peak −5,9 dBTP |
+| Exportzeit | 24 s |
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-short.test.mjs` | 5 von 5, neu: Vorlage (Casting-Seed, geplante Länge im Ziel, Export der letzten zwei Sekunden mit Sieger über den echten Exportweg) |
+| `node --test test/presets.test.mjs test/audio-scrap-soft.test.mjs` | 8 von 8; die Vorlagen-Tests kennen den Casting-Seed und die geplante Länge |
+| `node --test test/presets-export-scrap.test.mjs` | 2 von 2 (3-Sekunden-Exporte über die Oberfläche) |
+
+**Nicht gelaufen:** kein vollständiger `npm test`; **kein ganzes Short** (nur auf Auftrag des Nutzers).
+
+**Grenzen:**
+
+- Die ganze Episode ist mit −20,8 LUFS etwas lauter als der Richtwert −23 von `soft-v1`, weil ein Short dichter ist
+  als ein Dauerlauf; die Spitzen bleiben bei −6 dBFS. Das Hörurteil liegt beim Nutzer.
+- Der 3-Sekunden-Test über die Oberfläche schaltet für die freie Länge auf das normale Bild zurück; das Short-Bild
+  selbst prüft der Export der letzten zwei Sekunden.
+
+---
+
+## L1 · Langvideo-Vorlage im Turniermodus (21.11.2026)
+
+**Umfang:** Die Langvideo-Vorlage von Scrap Wars ist jetzt ein Turnier statt eines Dauerlaufs; der Export schreibt
+Kapitelzeiten in die Begleitdatei.
+
+- **Vorlage** `presets/production/scrap-long.json` und `src/production-presets.js`: „Scrap Wars – Langvideo (Turnier,
+  8 Runden)“, Taktik-Arena `v4` auf Sunny Yard, Ton `soft-v1`, 16:9 in 1080p30, feste Übersicht. Acht Runden mit
+  Punktestand, danach 5 s Rangliste; das Video endet von selbst.
+- **Länge:** aus dem Ablauf. Gemessen an sechs Seeds 4:02 bis 5:23 Minuten, für Seed 42 **5:23** (322,7 s, MOSS
+  gewinnt mit 5 von 8 Runden). In der Datei stehen 300 s nur als Startwert. Der Knopf heißt „Langvideo · Turnier
+  (8 Runden)“.
+- **Kapitelzeiten:** Die Episode merkt sich den Videoschritt jedes Rundenstarts (dieselbe Zeit wie das Ereignis
+  `round_start`). Der Export schreibt daraus in die JSON-Begleitdatei `chapters` (Zeit in Sekunden, Zeitmarke,
+  Titel) und `chaptersText` als fertigen Block für die Videobeschreibung:
+
+  ```text
+  0:00 Round 1
+  0:41 Round 2
+  1:25 Round 3
+  2:06 Round 4
+  2:46 Round 5
+  3:26 Round 6
+  4:12 Round 7
+  4:50 Round 8 – Final
+  ```
+
+  Das sind die Zeiten der Vorlage mit Seed 42, in Chromium gerechnet. Titel englisch. Bei einem Ausschnitt gelten die Zeiten für die ganze Episode (`chaptersScope`). Auch ein
+  Dauerlauf mit Folgerunden bekommt Kapitel; ein Short mit einer Runde nicht.
+- Die neue Schnittstelle `chapters(sim, cfg)` steht allen Szenarien offen ([ARCHITEKTUR](ARCHITEKTUR.md)).
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-long.test.mjs` (neu) | 3 von 3: Zeitmarken der Kapitelliste; Vorlage als Turnier mit acht Kapiteln auf den Rundenstarts, Short ohne Kapitel; Export der letzten zwei Sekunden schreibt `chapters` und `chaptersText` in die Begleitdatei |
+| `node --test test/presets.test.mjs` | 4 von 4; die Vorlagen-Tests kennen das Turnier und die geplante Länge |
+| `node --test` mit `scrap-v4`, `scrap`, `scrap-short`, `audio-scrap-soft`, `presets-export-scrap`, `scrap-labels`, `scrap-hud` | 45 von 45 |
+| `node --test test/export.test.mjs` (Exporter geändert) | 7 von 7 |
+| `node scripts/scrap-map-hashes.mjs` | 6 Fälle × 4 Prüfpunkte gleich |
+| `npm run golden` (einmal, am Ende aller Pakete) | 36 Fälle × 2 Prüfpunkte identisch mit der Referenz |
+| `classic` bis `v4` ohne Short gegen `main`: Zustand (Node, 27 Fälle) und Bilder (Chromium, 10 Fälle × 5 Bilder) | alle gleich |
+
+**Nicht gelaufen:** kein vollständiger `npm test`; **kein ganzes Langvideo** (über 20 s nur auf Auftrag).
+
+**Grenzen:**
+
+- Die Vorlage nimmt den eingestellten Seed, ein Casting gibt es für das Turnier nicht. Bei Seed 314 endet es
+  zum Beispiel 2 : 2 : 2 : 2 („TIED FOR FIRST“).
+- Das Langvideo ist rund 5 statt 10 Minuten lang (acht Runden sind fest).
+- Die Rangliste am Ende ist 5 s lang und bekommt kein eigenes Kapitel, weil YouTube Kapitel unter 10 s ablehnt.
+- Die Rundenliste ist kein Teil des Zustands-Hashes; `classic` bis `v4` bleiben bit-gleich.

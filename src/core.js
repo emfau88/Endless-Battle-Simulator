@@ -475,6 +475,8 @@ function installExportAPI(session, extra = {}) {
     events: (since) => (session.sim.events || []).filter((e) => e && e.seq >= since).sort((a, b) => a.seq - b.seq),
     // Presentation-only, after collecting the full episode. Never replace the
     // original events or read only the simulation's bounded event ring here.
+    // Kapitel für die Videobeschreibung ([{ timeSec, title }]) oder null; nur Szenarien mit eigenem chapters().
+    chapters: () => session.scenario.chapters?.(session.sim, session.cfg) || null,
     audioMixPlan: events => session.scenario.createAudioMixPlan?.(events, {
       cfg: session.cfg, world: session.world, sim: session.sim, view: session.view,
     }) || null,

@@ -1,10 +1,10 @@
-# Scrap Wars: offene Punkte – Stand 20.11.2026 (R40)
+# Scrap Wars: offene Punkte – Stand 21.11.2026 (R40)
 
-Übergabe nach dem Stopp am 20.11.2026: was auf `main` liegt, was offen ist und wo es weitergeht. Die aktive
+Angelegt als Übergabe nach dem Stopp am 20.11.2026, seit dem 21.11. je Paket nachgezogen: was fertig ist, was offen ist und wo es weitergeht. Die aktive
 Aufgabenliste bleibt die [ROADMAP](ROADMAP.md); hier stehen die Einzelheiten. Bezug: [Ausbau-Plan](SCRAP_AUSBAU_PLAN_2026-11-19.md),
 [Ausbau-Bericht](SCRAP_AUSBAU_2026-11-19.md).
 
-## 1 · Auf `main`
+## 1 · Fertig
 
 | Paket | Stand |
 |---|---|
@@ -12,53 +12,31 @@ Aufgabenliste bleibt die [ROADMAP](ROADMAP.md); hier stehen die Einzelheiten. Be
 | E0–E5 Kopfzeile und Effekte | PR #44 |
 | K1–K5 Taktik-Arena `v4`, Waffen als Symbol-Marken, Vorlagen auf `v4` | PR #45, vom Nutzer angenommen |
 | T2 Ton `soft-v1` | PR #46, Hörurteil des Nutzers: „Passt“ |
-| S1, Teil 1: Short-Karte und Ablauf | Branch `scrap/s1-short`. Nur Simulation, in der Oberfläche noch nicht wählbar und deshalb unsichtbar ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s1-teil-1--short-karte-und-ablauf-in-arbeit)) |
+| S1, Teil 1: Short-Karte und Ablauf | PR #47 ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s1-teil-1--short-karte-und-ablauf-in-arbeit)) |
+| L1: Langvideo-Vorlage | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Turnier mit acht Runden in der Taktik-Arena (Seed 42: 5:23 Minuten), Kapitelzeiten der Rundenstarts in der JSON-Begleitdatei ([Bericht](SCRAP_AUSBAU_2026-11-19.md#l1--langvideo-vorlage-im-turniermodus-21112026)) |
+| S3: Short-Vorlage | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Vorlage im Short-Bild auf Casting-Seed 61, Länge 34,7 s aus dem Ablauf, 20-Sekunden-Probe lokal ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s3--short-vorlage-und-20-sekunden-probe-21112026)) |
+| S2: Verdeckte Regie | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Short-Balance (Eröffnung ×2,5, danach ×1, Schwächerer im Duell −20 %), Zeitlupe beim letzten K.o. als Tempoplan, Casting in Chromium mit 23 geprüften Seeds ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s2--verdeckte-regie-21112026)) |
+| S1, Rest: Darstellung des Shorts | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Keine Kopfleiste, Schilder 1,4-fach, Einstiegstext, Sieger groß, Schalter „Bildaufbau“, Tests und Vorschaubilder ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s1-rest--darstellung-des-shorts-21112026)) |
 
-## 2 · Offen in R40, in dieser Reihenfolge
+## 2 · Offen in R40
 
-### S1, Rest: Darstellung des Shorts
+Alle Pakete des Plans sind gebaut. Offen sind nur noch Urteile und Aufträge des Nutzers.
 
-Ausgangslage im Code: `EBS.Scrap.layout()` liefert bei `layout: 'short'` hochkant `short: true` und die Kartengröße
-540 × 700 AE; die Episode kennt `this.short` und steht nach dem Rundenende 2,5 s in `phase === 'outro'`. Gezeichnet
-wird in `paintMaterialArena` in `src/scenarios/scrap.js`.
+### Short: Urteil und Export
 
-1. **Keine Kopfleiste:** `materialHud` bei `layout.short` auslassen.
-2. **Namensschilder 1,4-fach** mit Lebensbalken am Roboter (eigene Variante von `_labels`, `_labelLayout`).
-3. **Einstiegstext** 0–2,5 s bei 22 % Höhe: „4 BOTS · 1 SURVIVOR“, darunter „PICK YOUR COLOR“. Die Zeit aus
-   `sim.step` rechnen, nicht aus gezeichneten Bildern (Seek-Regel).
-4. **Ende:** großer Sieger „AZURE WINS“ in der Mitte während des Abspanns; kein „NEXT ROUND“ und kein „ROUND COMPLETE“.
-5. **Boden prüfen:** Der Sunny-Boden (`EBS.ScrapDaylightArt.floor`) ist auf die große Karte zugeschnitten
-   (Platten 146 × 104, Mittelstreifen); bei 540 × 700 ansehen.
-6. **Schalter in der Oberfläche** (deutsch, wirkt nur hochkant). Bis dahin nur über Vorlagen erreichbar.
-7. **Tests:** Bildtest „kein Text am Rand“ (oben 8 %, unten 19 % frei) und ein Seek-Bild für den Short.
-8. **Vorschaubilder** (Einstieg, Kampf, Sieger) dem Nutzer zeigen; Bericht und Übersicht nachziehen.
+- **Urteil des Nutzers** zur 20-Sekunden-Probe (Bild, Tempo, Ton).
+- **Das ganze Short** (Seed 61, 34,7 s) **nur auf Auftrag**:
+  `node export.mjs --config presets/production/scrap-short.json --out output/scrap-short.mp4`
 
-Messwerte der Short-Karte bisher (100 Seeds, hochkant, `node scripts/scrap-v4-stats.mjs --layout short`): erster
-K.o. im Median nach 14,4 s, Runde im Median 27,0 s (längste 46,4 s), häufigstes Paar in den ersten 15 s 19,4 %,
-festgefahren 0,6 %, Siege EMBER 27 / AZURE 31 / AMBER 18 / MOSS 24 %, kein Unentschieden.
+### Langvideo: Export
 
-### S2: Verdeckte Regie
+- **Das Turnier-Langvideo** (Seed 42, 5:23 Minuten) **nur auf Auftrag**:
+  `node export.mjs --config presets/production/scrap-long.json --out output/scrap-long.mp4`
+  Die Kapitelzeiten stehen danach in `output/scrap-long.json` unter `chaptersText`.
 
-- **Casting-Skript** `scripts/scrap-short-casting.mjs`: erster K.o. bei 5–10 s, zweiter bei 12–20 s, Schlussduell
-  mindestens 6 s mit beiden unter 40 % Leben, Gesamtlänge 26–38 s. Bevorzugt gewinnt nicht der zuerst Bewaffnete.
-- **Short-Balance** nur im Short: Schaden ×1,5, im Schlussduell nimmt der Schwächere 20 % weniger Schaden. Nur bei
-  `layout: 'short'`, damit `v4` ohne Short gleich bleibt.
-- **Zeitlupe** beim letzten K.o.: 0,5 s Videozeit mit Tempo 0,35, als vorab berechneter Tempoplan der Episode
-  (Vorbild: Territory-Short). Im Langvideo aus.
-- **Achtung:** Der erste K.o. liegt heute bei 14,4 s im Median, also über dem Ziel 5–10 s; das muss die Balance
-  schaffen. Das Casting im Browser (Chromium) rechnen oder dort gegenprüfen: `sin` und `cos` liefern in Node und
-  Chromium leicht andere Werte, `v4`-Runden laufen deshalb verschieden. Der Export rechnet im Browser.
+### Merge
 
-### S3: Vorlage und Export
-
-- `presets/production/scrap-short.json` und die Vorlage in `src/production-presets.js`: `layout: 'short'`, Seed aus
-  dem Casting. Die Länge „bis Sieg + 2,5 s“ ergibt sich schon von selbst (Export-Vorplanung ist da).
-- 20-Sekunden-Probe; das ganze Short (rund 32 s) **nur auf Auftrag**.
-
-### L1: Langvideo-Vorlage
-
-- `presets/production/scrap-long.json` auf Turniermodus (8 Runden mit Rangliste), `v4`, `soft-v1`.
-- Kapitelzeiten aus den `round_start`-Ereignissen in die JSON-Begleitdatei schreiben.
+- Pull Request #48 (Branch `scrap/s1-darstellung`) als Merge-Commit nach `main`: braucht die Freigabe des Nutzers.
 
 ## 3 · Fragen an den Nutzer
 
@@ -68,12 +46,24 @@ festgefahren 0,6 %, Siege EMBER 27 / AZURE 31 / AMBER 18 / MOSS 24 %, kein Unent
    Passt das so?
 4. **R41** (Idee vom 19.11.: Roboter zerfallen in kleinere, daraus springen Puscheltiere mit Keulen): steht nur in
    der Merkliste, noch kein Plan.
+5. **Short-Optik:** Einstiegstext weiß und gelb mit dunklem Rand, Sieger in Teamfarbe mit weichem dunklem Band,
+   dunkle Streifen oben und unten. Passt das?
+6. **Short-Balance:** Schaden ×2,5 bis zum ersten K.o., danach normal. Im Mittel dauert ein Short damit rund 26 s.
+   Länger gewünscht (Schaden ×0,8 nach dem ersten K.o., knapp 2 s mehr)?
+7. **Zeitlupe:** 0,3 s vor und 0,2 s nach dem letzten K.o., Ton ohne eigenen Akzent. Passt das, oder länger?
+8. **Short-Seed:** Die Vorlage nimmt Seed 61 (AMBER gewinnt nach 32 s mit 10 % Rest). Die Liste hat 22 weitere
+   geprüfte Seeds, zum Beispiel 516 (28,6 s, MOSS gewinnt mit 2 % Rest). Anderen Seed gewünscht?
+9. **Langvideo:** Das Turnier dauert rund 5 statt 10 Minuten (Seed 42: 5:23, MOSS gewinnt 5 von 8 Runden). Passt
+   das, oder lieber ein anderer Seed mit engerem Ausgang oder zwei Turniere hintereinander?
 
 ## 4 · Aufräumen (jeder Schritt braucht die Freigabe des Nutzers)
 
 - **Branches** lokal und auf GitHub, alle zusammengeführt: `scrap/e0-kopfzeile`, `scrap/v4-taktik`, `scrap/t2-ton`,
-  nach dem Merge dieses Stands auch `scrap/s1-short`.
-- **Arbeitskopien:** `.claude/worktrees/scrap-e0` und `.claude/worktrees/scrap-v4`.
+  `scrap/s1-short`; nach dem Merge dieses Stands auch `scrap/s1-darstellung`.
+- **Arbeitskopien:** `.claude/worktrees/scrap-e0` und `.claude/worktrees/scrap-v4`; nach dem Merge auch
+  `.claude/worktrees/scrap-s1`.
+- **Nur lokal** in `.claude/worktrees/scrap-s1/output/scrap-short/`: die 20-Sekunden-Probe
+  (`scrap-short-probe-20s.mp4` mit JSON), die Vorschaubilder für Seed 42 und Seed 61 und das Casting-Protokoll.
 - **Nur lokal:** In `.claude/worktrees/scrap-v4/output/` liegen die zwei Hörproben (`scrap-t2/t2-probe-hoch.mp4`,
   `t2-probe-quer.mp4` mit JSON) sowie Prüfbilder und Protokolle unter `scrap-v4/`. Vor dem Löschen der Arbeitskopie
   in den `output/`-Ordner des Hauptordners verschieben, falls sie noch gebraucht werden.
