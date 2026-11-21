@@ -1,10 +1,10 @@
-# Scrap Wars: offene Punkte – Stand 20.11.2026 (R40)
+# Scrap Wars: offene Punkte – Stand 21.11.2026 (R40)
 
-Übergabe nach dem Stopp am 20.11.2026: was auf `main` liegt, was offen ist und wo es weitergeht. Die aktive
+Angelegt als Übergabe nach dem Stopp am 20.11.2026, seit dem 21.11. je Paket nachgezogen: was fertig ist, was offen ist und wo es weitergeht. Die aktive
 Aufgabenliste bleibt die [ROADMAP](ROADMAP.md); hier stehen die Einzelheiten. Bezug: [Ausbau-Plan](SCRAP_AUSBAU_PLAN_2026-11-19.md),
 [Ausbau-Bericht](SCRAP_AUSBAU_2026-11-19.md).
 
-## 1 · Auf `main`
+## 1 · Fertig
 
 | Paket | Stand |
 |---|---|
@@ -12,30 +12,10 @@ Aufgabenliste bleibt die [ROADMAP](ROADMAP.md); hier stehen die Einzelheiten. Be
 | E0–E5 Kopfzeile und Effekte | PR #44 |
 | K1–K5 Taktik-Arena `v4`, Waffen als Symbol-Marken, Vorlagen auf `v4` | PR #45, vom Nutzer angenommen |
 | T2 Ton `soft-v1` | PR #46, Hörurteil des Nutzers: „Passt“ |
-| S1, Teil 1: Short-Karte und Ablauf | Branch `scrap/s1-short`. Nur Simulation, in der Oberfläche noch nicht wählbar und deshalb unsichtbar ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s1-teil-1--short-karte-und-ablauf-in-arbeit)) |
+| S1, Teil 1: Short-Karte und Ablauf | PR #47 ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s1-teil-1--short-karte-und-ablauf-in-arbeit)) |
+| S1, Rest: Darstellung des Shorts | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Keine Kopfleiste, Schilder 1,4-fach, Einstiegstext, Sieger groß, Schalter „Bildaufbau“, Tests und Vorschaubilder ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s1-rest--darstellung-des-shorts-21112026)) |
 
 ## 2 · Offen in R40, in dieser Reihenfolge
-
-### S1, Rest: Darstellung des Shorts
-
-Ausgangslage im Code: `EBS.Scrap.layout()` liefert bei `layout: 'short'` hochkant `short: true` und die Kartengröße
-540 × 700 AE; die Episode kennt `this.short` und steht nach dem Rundenende 2,5 s in `phase === 'outro'`. Gezeichnet
-wird in `paintMaterialArena` in `src/scenarios/scrap.js`.
-
-1. **Keine Kopfleiste:** `materialHud` bei `layout.short` auslassen.
-2. **Namensschilder 1,4-fach** mit Lebensbalken am Roboter (eigene Variante von `_labels`, `_labelLayout`).
-3. **Einstiegstext** 0–2,5 s bei 22 % Höhe: „4 BOTS · 1 SURVIVOR“, darunter „PICK YOUR COLOR“. Die Zeit aus
-   `sim.step` rechnen, nicht aus gezeichneten Bildern (Seek-Regel).
-4. **Ende:** großer Sieger „AZURE WINS“ in der Mitte während des Abspanns; kein „NEXT ROUND“ und kein „ROUND COMPLETE“.
-5. **Boden prüfen:** Der Sunny-Boden (`EBS.ScrapDaylightArt.floor`) ist auf die große Karte zugeschnitten
-   (Platten 146 × 104, Mittelstreifen); bei 540 × 700 ansehen.
-6. **Schalter in der Oberfläche** (deutsch, wirkt nur hochkant). Bis dahin nur über Vorlagen erreichbar.
-7. **Tests:** Bildtest „kein Text am Rand“ (oben 8 %, unten 19 % frei) und ein Seek-Bild für den Short.
-8. **Vorschaubilder** (Einstieg, Kampf, Sieger) dem Nutzer zeigen; Bericht und Übersicht nachziehen.
-
-Messwerte der Short-Karte bisher (100 Seeds, hochkant, `node scripts/scrap-v4-stats.mjs --layout short`): erster
-K.o. im Median nach 14,4 s, Runde im Median 27,0 s (längste 46,4 s), häufigstes Paar in den ersten 15 s 19,4 %,
-festgefahren 0,6 %, Siege EMBER 27 / AZURE 31 / AMBER 18 / MOSS 24 %, kein Unentschieden.
 
 ### S2: Verdeckte Regie
 

@@ -2,6 +2,12 @@
 
 Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen in der [ROADMAP](ROADMAP.md).
 
+## 21.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| R40, Scrap Wars, S1 Rest: Darstellung des Shorts. Keine Kopfleiste, Namensschilder 1,4-fach mit Lebensbalken, Einstiegstext „4 BOTS · 1 SURVIVOR / PICK YOUR COLOR“ (0–2,5 s bei 22 % Höhe), im Abspann groß „<NAME> WINS“ ohne „NEXT ROUND“. Neuer Schalter „Bildaufbau“ (nur Taktik-Arena auf Sunny Yard, wirkt hochkant). Neue Testdatei `test/scrap-short.test.mjs` (kein Text am Rand, Seek-Bild, Schalter), Vorschau-Skript `scripts/scrap-short-preview.mjs`. Simulation unverändert, übrige Ansichten bildgleich. | Branch `scrap/s1-darstellung` | [Bericht](SCRAP_AUSBAU_2026-11-19.md#s1-rest--darstellung-des-shorts-21112026) |
+
 ## 20.11.2026
 
 | Was | Commit | Bericht |

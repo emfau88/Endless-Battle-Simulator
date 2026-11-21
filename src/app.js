@@ -360,9 +360,11 @@ async function bootLive() {
     durText.classList.toggle('bad', !!isError);
     $('durationOut').textContent = fmtTime(d);
     dur.value = UI_DURATIONS.some(([v]) => v === d) ? String(d) : '';
+    // Fester Text je Szenario oder, wenn er vom Modus abhängt, eine Funktion der Einstellungen
+    const durLabel = typeof session.scenario.durationLabel === 'function' ? session.scenario.durationLabel(cfg()) : session.scenario.durationLabel;
     durHint.textContent = natural ? (durationPending
-      ? session.scenario.durationLabel?.pending || 'Turnierdauer wird berechnet …'
-      : session.scenario.durationLabel?.complete || 'Automatisch: acht vollständige Runden und 5 Sekunden Gesamtergebnis.') : note || DUR_HINT;
+      ? durLabel?.pending || 'Turnierdauer wird berechnet …'
+      : durLabel?.complete || 'Automatisch: acht vollständige Runden und 5 Sekunden Gesamtergebnis.') : note || DUR_HINT;
     $('durationOut').textContent = durationPending ? '…' : fmtTime(d);
     durHint.classList.toggle('err', !!isError);
   };

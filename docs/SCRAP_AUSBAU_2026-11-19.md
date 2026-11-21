@@ -354,4 +354,40 @@ stehen in [SCRAP_OFFENE_PUNKTE_2026-11-20.md](SCRAP_OFFENE_PUNKTE_2026-11-20.md)
 **Grenzen:** Der erste K.o. liegt über dem Ziel aus S2 (5–10 s); das soll die Short-Balance in S2 lösen. Die Werte
 sind in Node gemessen; im Browser laufen `v4`-Runden wegen leicht anderer `sin`/`cos`-Werte etwas anders.
 
-**Stopp** am 20.11. auf Wunsch des Nutzers nach diesem Teil.
+**Stopp** am 20.11. auf Wunsch des Nutzers nach diesem Teil. Fortsetzung am 21.11. im nächsten Abschnitt.
+
+---
+
+## S1, Rest · Darstellung des Shorts (21.11.2026)
+
+**Umfang:** nur Darstellung und Bedienung; die Simulation ist unverändert. Der Short ist jetzt in der Oberfläche
+wählbar.
+
+- **Keine Kopfleiste:** Bei `layout: 'short'` hochkant zeichnet der Short weder Kopfleiste noch Rundenbanner. Oben
+  bleiben 8 %, unten 19 % des Bildes einfarbig frei (dort liegt die Bedienung der Plattform).
+- **Namensschilder 1,4-fach** mit Lebensbalken; die Munitionspunkte wachsen mit. Die Schilder haben dafür einen
+  Maßstab bekommen; im normalen Bild ist er 1 und alle Zahlen sind wie bisher.
+- **Einstiegstext** 0–2,5 s: „4 BOTS · 1 SURVIVOR“ bei 22 % der Bildhöhe, darunter „PICK YOUR COLOR“. Weiße Schrift
+  mit dunklem Rand, blendet 0,2 s ein und 0,3 s aus. Die Zeit folgt aus dem Episodenschritt.
+- **Abspann:** groß „<NAME> WINS“ in der Teamfarbe mit weichem dunklem Band dahinter, in der Mitte der Arena. Steht
+  der Sieger selbst in der Mitte, rückt die Schrift knapp über oder unter ihn. Kein „NEXT ROUND“, kein „ROUND
+  COMPLETE“. Die letzte Explosion klingt im Abspann aus, statt einzufrieren.
+- **Sunny-Boden bei 540 × 700:** geprüft, passt ohne Änderung (Platten, Mittelstreifen, Abläufe und Pflanztröge
+  sitzen richtig).
+- **Schalter „Bildaufbau“** in der Oberfläche: „Normal · Kopfleiste, ganze Arena“ oder „Short · kleine Karte, ohne
+  Kopfleiste, eine Runde (nur Hochformat)“. Wählbar nur mit Taktik-Arena auf Sunny Yard. Im Hochformat endet das
+  Video dann von selbst; die Längenanzeige sagt „eine Runde bis zum Sieg und 2,5 Sekunden Abspann“.
+- **Vorschau-Skript** `scripts/scrap-short-preview.mjs`: Einstieg, Kampf und Sieger als Einzelbilder und als ein
+  Blatt (lokal unter `output/scrap-short/`).
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-short.test.mjs` (neu) | 3 von 3: kein Text am Rand (oben 8 %, unten 19 % einfarbig, acht Zeitpunkte), Einstiegstext bei 22 %, Sieger groß ohne „NEXT ROUND“; Seek-Bild an fünf Stellen pixelgleich; Schalter „Bildaufbau“ |
+| `node --test test/scrap-labels.test.mjs test/scrap-optics.test.mjs test/scrap-hud.test.mjs test/audio-scrap-soft.test.mjs` | 15 von 15 |
+| Bildvergleich gegen `main` ohne Short (`classic`, `v2`, `v3`, `v4`; quer und hochkant; je 5 Bilder bis 30 s) | 10 Fälle × 5 Bilder pixelgleich, Zustands-Hash gleich |
+| Vorschaubilder Seed 42 (Einstieg 1,0 s, Kampf 10,6 s, Sieger 22,4 s) | dem Nutzer gezeigt |
+
+**Nicht gelaufen:** kein vollständiger `npm test`, kein Export.
+
+**Grenzen:** Die farbigen Startecken im Boden sind auch im Short zu sehen (offene Frage an den Nutzer). Die Regie
+(Schaden, Zeitlupe, Casting) folgt in S2; bis dahin dauert eine Runde so lange wie in `v4`.
