@@ -53,6 +53,11 @@
     centre: [[230, 330, 40, 40, 'stone'], [270, 330, 40, 40, 'concrete']],
     pads: [[100, 350], [440, 350]], weapons: [[270, 190], [270, 510], [130, 300], [410, 400]],
     starts: [[100, 90], [440, 90], [440, 610], [100, 610]] };
+  // S2 · Short-Balance (nur auf der Short-Karte), gemessen statt des Startwerts „überall ×1,5“: Solange alle vier
+  // leben, zählt Schaden an Robotern ×2,5 (erster K.o. im Median nach 8 s statt 14 s), danach ×1 (sonst wäre die Runde
+  // nach 24 s vorbei). Im Schlussduell nimmt der Schwächere 20 % weniger Schaden, damit es knapp wird. Die Kisten
+  // brechen innerhalb von 1,2 s statt 2,4 s auf. v4 ohne Short rechnet unverändert.
+  const SHORT_FIGHT = { opening: 2.5, damage: 1, underdog: .8, crateSpread: 1.2 };
   // Zwischenspeicher außerhalb des Simulationszustands (Raster, Suchpuffer, Hindernisliste)
   const NAV = new WeakMap(), OBSTACLES = new WeakMap();
   class TacticalRound extends M.Round {
@@ -115,7 +120,7 @@
       this.crateFallback = !chosen;
       if (!chosen) chosen = this.robots.map(r => [r.x, r.y]);
       // Ausbruchszeiten: Seed-Zufall, danach in zeitlicher Reihenfolge mindestens 0,4 s Abstand
-      const times = this.robots.map(() => CRATE.open + rng.next() * CRATE.spread);
+      const times = this.robots.map(() => CRATE.open + rng.next() * (this.shortMap ? SHORT_FIGHT.crateSpread : CRATE.spread));
       const order = times.map((t, i) => i).sort((a, b) => times[a] - times[b] || a - b);
       for (let k = 1; k < order.length; k++) times[order[k]] = Math.max(times[order[k]], times[order[k - 1]] + CRATE.gap);
       const s = CRATE.size;
@@ -249,6 +254,14 @@
     }
     _hurtRobot(r, amount, owner, x, y) {
       if (r.caged) return;
+      if (this.shortMap && r.alive && amount > 0) {
+        const living = this.robots.filter(o => o.alive);
+        amount *= living.length >= 4 ? SHORT_FIGHT.opening : SHORT_FIGHT.damage;
+        if (living.length === 2) {
+          const other = living[0] === r ? living[1] : living[0];
+          if (r.hp / r.maxHp < other.hp / other.maxHp) amount *= SHORT_FIGHT.underdog;
+        }
+      }
       if (r.alive && amount > 0 && owner !== r.id && this.robots[owner]) r.hitBy[owner] = this.t;
       super._hurtRobot(r, amount, owner, x, y);
     }
@@ -642,5 +655,5 @@
     }
   }
 
-  EBS.ScrapTactics = { Round: TacticalRound, CRATE, FIGHT, CHARACTERS, PATH, DRIVE, BEHAVIOUR, SHORT };
+  EBS.ScrapTactics = { Round: TacticalRound, CRATE, FIGHT, CHARACTERS, PATH, DRIVE, BEHAVIOUR, SHORT, SHORT_FIGHT };
 })();

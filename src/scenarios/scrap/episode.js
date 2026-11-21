@@ -20,6 +20,28 @@
     return out;
   }
   const SHORT_END_SEC = 2.5;
+  // S2 · Zeitlupe beim letzten K.o. (nur Short): 0,5 s Videozeit mit Tempo 0,35, davon 0,3 s vor dem letzten Treffer
+  // (die Simulation läuft langsamer) und 0,2 s danach (die Effekte laufen langsamer). Der Plan wird vorab berechnet:
+  // Eine zweite, unbeobachtete Runde mit demselben Seed liefert den Schritt des letzten K.o.
+  const SLOW = { tempo: .35, beforeSec: .3, afterSec: .2 };
+  // S2 · Casting: in Chromium geprüfte Seeds (node scripts/scrap-short-casting.mjs --from 1 --to 1200 --list).
+  // Erster K.o. bei 5–10 s, zweiter bei 12–20 s, Schlussduell ab 6 s mit beiden unter 40 % Leben, Länge 26–38 s,
+  // und es gewinnt nicht der Roboter, der zuerst bewaffnet war. Nach jeder Änderung an v4 oder der Short-Balance
+  // neu rechnen; test/scrap-short.test.mjs prüft die Liste im Browser.
+  const SHORT_SEEDS = [61, 63, 124, 149, 163, 248, 290, 321, 349, 501, 502, 503, 516, 572, 675, 733, 768, 830, 842, 862, 1030, 1069, 1144];
+  const castSeed = seed => SHORT_SEEDS.find(s => s >= seed) ?? SHORT_SEEDS[0];
+  const PROBES = new Map();
+  function lastKoTick(options) {
+    const key = JSON.stringify(options), known = PROBES.get(key);
+    if (known !== undefined) return known;
+    const probe = new EBS.ScrapTactics.Round(options);
+    let ticks = 0;
+    while (probe.phase === 'running') { probe.step(1 / 120); ticks++; }
+    const result = probe.winner === null ? null : ticks;
+    if (PROBES.size >= 16) PROBES.clear();
+    PROBES.set(key, result);
+    return result;
+  }
   function layout({ w, h }, params = {}) {
     // Short: Arena füllt die Bildbreite (2 Pixel je Einheit bei 1080) und liegt zwischen 8 % und 81 % der Bildhöhe.
     if (params.layout === 'short' && params.rulesVersion === 'v4' && h > w) {
@@ -96,6 +118,7 @@
       this.roundResults = []; this.outroUntil = 0;
       this.workshop = { balances: [0,0,0,0], modules: [null,null,null,null], installed: [0,0,0,0], lastAwards: [] };
       this.events = []; this.eventSeq = 0; this.eventDigest = 0; this.eventStep = 0;
+      this.slow = null;
       this._startRound();
     }
     _event(type, arenaX, arenaY, details = {}) {
@@ -117,13 +140,32 @@
       this.roundNumber++;
       this.roundSeed = this.roundNumber === 1 ? this.seed : hashSeed('scrap-round-v1', this.seed, this.roundNumber);
       const Round = this.cfg.rulesVersion === 'v4' ? TacticalRound : this.cfg.rulesVersion === 'v3' ? MaterialRound : this.cfg.rulesVersion === 'classic' && this.cfg.arena === 'yard' && !this.cfg.workshop ? ObservedRound : ImprovedRound;
-      this.roundSim = new Round({ seed: this.roundSeed, rulesVersion: this.cfg.rulesVersion, arena: this.cfg.arena,
-        portrait: this.world.h > this.world.w, short: this.short, upgrades: this.workshop.modules });
+      const options = { seed: this.roundSeed, rulesVersion: this.cfg.rulesVersion, arena: this.cfg.arena,
+        portrait: this.world.h > this.world.w, short: this.short, upgrades: this.workshop.modules };
+      this.roundSim = new Round(options);
+      if (this.short) this._planSlowMotion(options);
       // Non-enumerable: JSON of the round stays byte-identical to the source.
       Object.defineProperty(this.roundSim, 'emit', { value: (...args) => this._event(...args) });
       this.phase = 'running'; this.pauseUntil = 0; this.accumulator = 0;
       this.camera = { x: (this.roundSim.bounds?.w||900)/2, y: (this.roundSim.bounds?.h||900)/2, zoom: 1 };
       this._event('round_start');
+    }
+    // Tempoplan des Shorts: ab fromTick läuft die Runde mit Tempo 0,35 bis zum letzten K.o. (endTick).
+    // startStep und endStep sind die Videoschritte, an denen die Zeitlupe begann und die Runde endete.
+    _planSlowMotion(options) {
+      const endTick = lastKoTick(options);
+      if (endTick === null) { this.slow = null; return; }
+      const units = Math.max(1, Math.round(this.unitsPerStep * SLOW.tempo));
+      this.slow = { fromTick: Math.max(0, endTick - Math.round(SLOW.beforeSec * 60 * units / 100)), endTick, units,
+        tempo: SLOW.tempo, afterSteps: SLOW.afterSec * 60, startStep: null, endStep: null };
+    }
+    // Szenenzeit in Sekunden zu einem Videoschritt: in der Zeitlupe vergeht sie langsamer. Die Darstellung rechnet
+    // damit das Alter von Effekten; ohne Zeitlupe ist es Schritt / 60 × Tempo.
+    sceneTime(step) {
+      const s = this.slow, ts = this.timeScale;
+      if (!s || s.startStep === null || step <= s.startStep) return step / 60 * ts;
+      const stop = s.endStep === null ? Infinity : s.endStep + s.afterSteps;
+      return (s.startStep + (Math.min(step, stop) - s.startStep) * s.tempo + Math.max(0, step - stop)) / 60 * ts;
     }
     stepOnce() {
       this.step++;
@@ -135,11 +177,17 @@
         }
         return;
       }
+      // Ohne Zeitlupe ist units immer unitsPerStep (classic bis v4 rechnen wie bisher)
+      let units = this.unitsPerStep;
+      if (this.slow && this.simTicks >= this.slow.fromTick) {
+        units = this.slow.units;
+        if (this.slow.startStep === null) this.slow.startStep = this.step - 1;
+      }
       const before = this.accumulator;
-      this.accumulator += this.unitsPerStep;
+      this.accumulator += units;
       let crossed = 100 - before;
       while (this.accumulator >= 100) {
-        this.eventStep = this.step - 1 + crossed / this.unitsPerStep;
+        this.eventStep = this.step - 1 + crossed / units;
         crossed += 100;
         this.accumulator -= 100;
         this.roundSim.step(1 / 120); this.simTicks++; this.t = this.simTicks / 120;
@@ -155,6 +203,7 @@
           if (this.short) {
             // Short: Sieger 2,5 s groß zeigen, danach Schluss
             this.phase = 'outro'; this.outroUntil = this.step + SHORT_END_SEC * 60;
+            if (this.slow) this.slow.endStep = this.step;
           } else if (tournament && this.completedRounds === 8) {
             this.phase = 'outro'; this.outroUntil = this.step + 5 * 60;
             this._event('tournament_end', undefined, undefined, { champions: this.champions(), wins: [...this.wins] });
@@ -219,6 +268,8 @@
         eventSeq: this.eventSeq, eventDigest: this.eventDigest,
         camera: this.camera,
         workshop: this.workshop,
+        // nur im Short vorhanden: Hashes ohne Short bleiben gleich
+        ...(this.slow ? { slow: this.slow } : {}),
         roundState: this.roundSim };
       return fnv1a(JSON.stringify(state, (_, v) => typeof v === 'number' && !Number.isFinite(v) ? String(v) : v)).toString(16).padStart(8, '0');
     }
@@ -276,5 +327,5 @@
     const size = world || (cfg.video ? EBS.videoSize(cfg.video) : null);
     return !size || (size.h ?? size.logicalHeight) > (size.w ?? size.logicalWidth);
   }
-  EBS.Scrap = { Episode, normalizeParams, layout, EVENT_LIMIT, createExportPlan, hasNaturalEnd, SHORT_END_SEC };
+  EBS.Scrap = { Episode, normalizeParams, layout, EVENT_LIMIT, createExportPlan, hasNaturalEnd, SHORT_END_SEC, SLOW, SHORT_SEEDS, castSeed };
 })();

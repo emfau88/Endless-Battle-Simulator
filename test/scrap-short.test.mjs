@@ -1,9 +1,10 @@
-// Scrap Wars · Short (R40, S1): Darstellung ohne Kopfleiste, Einstiegstext, Sieger groß, Seek-Bild, Schalter.
-// Die Simulation des Shorts prüft test/scrap-v4.test.mjs.
+// Scrap Wars · Short (R40, S1–S3): Darstellung ohne Kopfleiste, Einstiegstext, Sieger groß, Seek-Bild mit Zeitlupe,
+// Casting-Seeds im Browser, Schalter. Die Simulation des Shorts prüft test/scrap-v4.test.mjs.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 import { INDEX, launchBrowser, openExportPage } from '../lib/browser.mjs';
+import { castSeeds, judge } from '../scripts/scrap-short-casting.mjs';
 
 let browser;
 before(async () => { browser = await launchBrowser({ gpu: process.env.EBS_GPU === '1' }); });
@@ -44,7 +45,8 @@ test('Scrap-Short: kein Text am Rand, keine Kopfleiste, Einstiegstext 2,5 s, Sie
       for (const step of [6, 60, 144, 156, 600]) { while (sim.step < step) sim.stepOnce(); out.shots.push(shot()); }
       while (sim.phase === 'running') sim.stepOnce();
       const end = sim.step, hash = sim.stateHash();
-      for (const step of [end + 3, end + 60, end + 149]) { while (sim.step < step) sim.stepOnce(); out.shots.push(shot()); }
+      // 0,1 s nach dem letzten K.o. läuft noch die Zeitlupe (Sieger erst ab 0,3 s), danach steht er groß im Bild
+      for (const step of [end + 6, end + 60, end + 149]) { while (sim.step < step) sim.stepOnce(); out.shots.push(shot()); }
       out.winner = sim.roundSim.robots[sim.roundSim.winner].name; out.readOnly = hash !== undefined && sim.checkInvariants().ok;
       renderer.destroy(); sim.destroy(); return out;
     }, SHORT);
@@ -57,18 +59,18 @@ test('Scrap-Short: kein Text am Rand, keine Kopfleiste, Einstiegstext 2,5 s, Sie
       assert.ok(s.words.every(w => w.top >= .08 && w.bottom <= .81), `Schritt ${s.step}: Text am Rand ${JSON.stringify(s.words.filter(w => w.top < .08 || w.bottom > .81))}`);
       assert.ok(texts(s).every(t => !banned.test(t)), `Schritt ${s.step}: ${texts(s).join(' | ')}`);
     }
-    const [early, mid, late, gone, fight, won, hold, last] = result.shots;
+    const [early, mid, late, gone, fight, blast, hold, last] = result.shots;
     for (const s of [early, mid, late]) {
       assert.ok(texts(s).includes('4 BOTS · 1 SURVIVOR') && texts(s).includes('PICK YOUR COLOR'), `Schritt ${s.step}`);
       const head = s.words.find(w => w.text === '4 BOTS · 1 SURVIVOR'), sub = s.words.find(w => w.text === 'PICK YOUR COLOR');
       assert.ok(Math.abs((head.top + head.bottom) / 2 - .22) < 1e-6 && sub.top > head.top, 'Einstiegstext bei 22 % Höhe, zweite Zeile darunter');
     }
-    for (const s of [gone, fight]) assert.ok(!texts(s).some(t => /BOTS|PICK|WINS/.test(t)), `Schritt ${s.step}: ${texts(s).join(' | ')}`);
-    for (const s of [won, hold, last]) {
-      assert.equal(s.phase, 'outro');
+    for (const s of [gone, fight, blast]) assert.ok(!texts(s).some(t => /BOTS|PICK|WINS/.test(t)), `Schritt ${s.step}: ${texts(s).join(' | ')}`);
+    for (const s of [blast, hold, last]) assert.equal(s.phase, 'outro');
+    for (const s of [hold, last]) {
       const big = s.words.filter(w => w.text === `${result.winner} WINS`);
       assert.ok(big.length >= 1, `Schritt ${s.step}: Sieger fehlt`);
-      if (s !== won) assert.ok(big[0].bottom - big[0].top > .05, 'Sieger groß (über 5 % der Bildhöhe)');
+      assert.ok(big[0].bottom - big[0].top > .05, 'Sieger groß (über 5 % der Bildhöhe)');
     }
     assert.ok(result.readOnly);
     assert.deepEqual(errors.map(e => e.message), []);
@@ -88,12 +90,13 @@ test('Scrap-Short: Bild nach Seek entspricht laufendem Zeichnen (Einstieg, Kampf
       const probe = create();
       while (probe.sim.phase === 'running' && probe.sim.step < 91 * 60) probe.sim.stepOnce();
       if (probe.sim.phase !== 'outro') throw Error('Short endet nicht im Abspann');
-      const end = probe.sim.step, even = v => Math.ceil(v / 2) * 2;
+      const end = probe.sim.step, slow = probe.sim.slow.startStep, even = v => Math.ceil(v / 2) * 2;
       const blast = probe.sim.events.find(e => e.type === 'blast')?.step ?? probe.sim.events.find(e => e.type === 'hit').step;
       probe.renderer.destroy(); probe.sim.destroy();
       const out = [];
-      // Einstiegstext beim Ein- und Ausblenden, frische Explosion, Sieger beim Einblenden und im Stand
-      for (const target of [6, 144, even(blast + 6), even(end + 8), even(end + 90)]) {
+      // Einstiegstext beim Ein- und Ausblenden, frische Explosion, Zeitlupe vor und nach dem letzten K.o.,
+      // Sieger beim Einblenden und im Stand
+      for (const target of [6, 144, even(blast + 6), even(slow + 10), even(end + 6), even(end + 26), even(end + 90)]) {
         const continuous = create(), start = Math.max(0, target - 60);
         while (continuous.sim.step < start) continuous.sim.stepOnce();
         let frame;
@@ -112,8 +115,22 @@ test('Scrap-Short: Bild nach Seek entspricht laufendem Zeichnen (Einstieg, Kampf
       }
       return out;
     }, SHORT);
-    assert.equal(results.length, 5);
+    assert.equal(results.length, 7);
     for (const r of results) assert.ok(r.samePixels && r.sameState && r.readOnlyEvents && r.ok, JSON.stringify(r));
+    assert.deepEqual(errors.map(e => e.message), []);
+  } finally { await page.close(); }
+});
+
+test('Scrap-Short: alle Casting-Seeds halten in Chromium den Bogen ein, und es gewinnt nicht der zuerst Bewaffnete', async () => {
+  const { page, errors } = await openExportPage(browser, { scenario: 'scrap', seed: 1, video: { aspect: '9:16', resolution: 720 } });
+  try {
+    await page.addScriptTag({ content: `window.castSeeds = ${castSeeds.toString()};` });
+    const { rows, picks } = await page.evaluate(() => ({ rows: window.castSeeds(EBS, EBS.Scrap.SHORT_SEEDS),
+      picks: [1, 42, 61, 62, 1144, 99999].map(seed => EBS.Scrap.castSeed(seed)) }));
+    assert.ok(rows.length >= 10, `${rows.length} geprüfte Seeds`);
+    for (const r of rows.map(judge)) assert.ok(r.complete && r.underdog, `Seed ${r.seed}: ${JSON.stringify({ checks: r.checks, kos: r.kos, duel: r.duel, length: r.length, winner: r.winner, armed: r.armed })}`);
+    // Die Vorlage nimmt den nächsten geprüften Seed ab dem gewünschten, am Ende der Liste wieder den ersten
+    assert.deepEqual(picks, [61, 61, 61, 63, 1144, 61]);
     assert.deepEqual(errors.map(e => e.message), []);
   } finally { await page.close(); }
 });

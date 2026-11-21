@@ -176,3 +176,61 @@ test('Scrap v4 Short (S1, Simulation): eigene Karte nur hochkant, 2,5 s Abspann,
     assert.equal(step.durationSec, Math.ceil(s.step / 60 * 30) / 30);
   }
 });
+
+test('Scrap v4 Short (S2, Balance): Schaden ×2,5 bis zum ersten K.o., danach ×1; im Schlussduell nimmt der Schwächere 20 % weniger; ohne Short unverändert', () => {
+  const { SHORT_FIGHT } = EBS.ScrapTactics;
+  assert.deepEqual({ ...SHORT_FIGHT }, { opening: 2.5, damage: 1, underdog: .8, crateSpread: 1.2 });
+  const make = short => {
+    const r = new Round({ seed: 5, rulesVersion: 'v4', arena: 'sunshine', portrait: true, short, upgrades: [null, null, null, null] });
+    for (const robot of r.robots) robot.caged = false;
+    return r;
+  };
+  const hit = (r, id, amount = 10) => { const hp = r.robots[id].hp; r._hurtRobot(r.robots[id], amount, (id + 1) % 4, 0, 0); return hp - r.robots[id].hp; };
+  for (const short of [false, true]) {
+    const r = make(short), f = short ? SHORT_FIGHT : { opening: 1, damage: 1, underdog: 1 };
+    assert.equal(hit(r, 0), 10 * f.opening, 'alle vier leben');
+    r.robots[3].alive = false;
+    assert.equal(hit(r, 0), 10 * f.damage, 'nach dem ersten K.o.');
+    r.robots[2].alive = false;
+    // Schlussduell: Roboter 0 ist angeschlagen, Roboter 1 unverletzt
+    assert.equal(hit(r, 0), 10 * f.damage * f.underdog, 'der Schwächere');
+    assert.equal(hit(r, 1), 10 * f.damage, 'der Stärkere');
+    r.robots[0].hp = r.robots[1].hp;
+    assert.equal(hit(r, 0), 10 * f.damage, 'Gleichstand: keine Schonung');
+  }
+  // Kisten brechen im Short dichter nacheinander auf
+  for (let seed = 1; seed <= 20; seed++) {
+    const times = make(true), last = Math.max(...new Round({ seed, rulesVersion: 'v4', arena: 'sunshine', portrait: true, short: true, upgrades: [null, null, null, null] }).crates.map(c => c.openAt));
+    assert.ok(times && last <= CRATE.open + SHORT_FIGHT.crateSpread + 3 * CRATE.gap + 1e-9, `Seed ${seed}: letzter Ausbruch ${last}`);
+  }
+});
+
+test('Scrap v4 Short (S2, Zeitlupe): vorab berechneter Tempoplan, letzter K.o. am geplanten Schritt, Szenenzeit stetig; ohne Short kein Plan', () => {
+  const { SLOW, SHORT_END_SEC } = EBS.Scrap, params = { rulesVersion: 'v4', arena: 'sunshine', layout: 'short' };
+  assert.deepEqual({ ...SLOW }, { tempo: .35, beforeSec: .3, afterSec: .2 });
+  assert.equal(episode(1, true).slow, null); assert.equal(episode(1, false).slow, null);
+  for (const seed of [1, 2, 3]) {
+    const make = () => new EBS.Scrap.Episode({ seed, params, world: { w: 1080, h: 1920 }, view: { camera: false } });
+    const s = make(), plan = { ...s.slow }, perStep = [];
+    assert.deepEqual([plan.units, plan.startStep, plan.endStep, plan.endTick - plan.fromTick], [70, null, null, 13]);
+    while (s.phase === 'running') { const before = s.simTicks; s.stepOnce(); perStep.push(s.simTicks - before); }
+    const { startStep: start, endStep: end } = s.slow, last = s.events.filter(e => e.type === 'ko').at(-1);
+    assert.equal(s.simTicks, plan.endTick, `Seed ${seed}: letzter K.o. am vorab berechneten Schritt`);
+    assert.equal(end, s.step); assert.ok(last.step > end - 1 && last.step <= end);
+    // Vor der Zeitlupe zwei Simulationsschritte je Videoschritt, darin höchstens einer; rund 0,3 s Videozeit
+    assert.ok(perStep.slice(0, start).every(n => n === 2)); assert.ok(perStep.slice(start).every(n => n <= 1));
+    assert.ok(end - start >= 17 && end - start <= 20, `Seed ${seed}: Zeitlupe ${end - start} Videoschritte`);
+    // Szenenzeit: stetig; Tempo 0,35 von Beginn der Zeitlupe bis 0,2 s nach dem K.o., sonst 1
+    const rate = v => (s.sceneTime(v + 1) - s.sceneTime(v)) * 60;
+    for (const [v, want] of [[start - 5, 1], [start + 3, .35], [end + 5, .35], [end + SLOW.afterSec * 60 + 2, 1]]) assert.ok(Math.abs(rate(v) - want) < 1e-9, `Seed ${seed}: Tempo ${rate(v)} bei ${v}`);
+    for (let v = start - 3; v < end + 20; v += .5) assert.ok(s.sceneTime(v + .5) > s.sceneTime(v) && s.sceneTime(v + .5) - s.sceneTime(v) < .5 / 60 + 1e-9);
+    // Abspann, Wiederholbarkeit, Exportlänge mit Zeitlupe
+    while (s.phase !== 'ended') s.stepOnce();
+    assert.equal(s.step - end, SHORT_END_SEC * 60); assert.ok(s.checkInvariants().ok);
+    const again = make(); while (again.phase !== 'ended') again.stepOnce();
+    assert.equal(again.stateHash(), s.stateHash());
+    const exportPlan = EBS.Scrap.createExportPlan({ seed, params, video: { aspect: '9:16', fps: 30, tempo: 1 } }, { w: 1080, h: 1920 });
+    let step; do step = exportPlan.advance(); while (!step.done);
+    assert.equal(step.durationSec, Math.ceil(s.step / 60 * 30) / 30);
+  }
+});

@@ -13,21 +13,10 @@ Aufgabenliste bleibt die [ROADMAP](ROADMAP.md); hier stehen die Einzelheiten. Be
 | K1–K5 Taktik-Arena `v4`, Waffen als Symbol-Marken, Vorlagen auf `v4` | PR #45, vom Nutzer angenommen |
 | T2 Ton `soft-v1` | PR #46, Hörurteil des Nutzers: „Passt“ |
 | S1, Teil 1: Short-Karte und Ablauf | PR #47 ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s1-teil-1--short-karte-und-ablauf-in-arbeit)) |
+| S2: Verdeckte Regie | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Short-Balance (Eröffnung ×2,5, danach ×1, Schwächerer im Duell −20 %), Zeitlupe beim letzten K.o. als Tempoplan, Casting in Chromium mit 23 geprüften Seeds ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s2--verdeckte-regie-21112026)) |
 | S1, Rest: Darstellung des Shorts | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Keine Kopfleiste, Schilder 1,4-fach, Einstiegstext, Sieger groß, Schalter „Bildaufbau“, Tests und Vorschaubilder ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s1-rest--darstellung-des-shorts-21112026)) |
 
 ## 2 · Offen in R40, in dieser Reihenfolge
-
-### S2: Verdeckte Regie
-
-- **Casting-Skript** `scripts/scrap-short-casting.mjs`: erster K.o. bei 5–10 s, zweiter bei 12–20 s, Schlussduell
-  mindestens 6 s mit beiden unter 40 % Leben, Gesamtlänge 26–38 s. Bevorzugt gewinnt nicht der zuerst Bewaffnete.
-- **Short-Balance** nur im Short: Schaden ×1,5, im Schlussduell nimmt der Schwächere 20 % weniger Schaden. Nur bei
-  `layout: 'short'`, damit `v4` ohne Short gleich bleibt.
-- **Zeitlupe** beim letzten K.o.: 0,5 s Videozeit mit Tempo 0,35, als vorab berechneter Tempoplan der Episode
-  (Vorbild: Territory-Short). Im Langvideo aus.
-- **Achtung:** Der erste K.o. liegt heute bei 14,4 s im Median, also über dem Ziel 5–10 s; das muss die Balance
-  schaffen. Das Casting im Browser (Chromium) rechnen oder dort gegenprüfen: `sin` und `cos` liefern in Node und
-  Chromium leicht andere Werte, `v4`-Runden laufen deshalb verschieden. Der Export rechnet im Browser.
 
 ### S3: Vorlage und Export
 
@@ -48,6 +37,11 @@ Aufgabenliste bleibt die [ROADMAP](ROADMAP.md); hier stehen die Einzelheiten. Be
    Passt das so?
 4. **R41** (Idee vom 19.11.: Roboter zerfallen in kleinere, daraus springen Puscheltiere mit Keulen): steht nur in
    der Merkliste, noch kein Plan.
+5. **Short-Optik:** Einstiegstext weiß und gelb mit dunklem Rand, Sieger in Teamfarbe mit weichem dunklem Band,
+   dunkle Streifen oben und unten. Passt das?
+6. **Short-Balance:** Schaden ×2,5 bis zum ersten K.o., danach normal. Im Mittel dauert ein Short damit rund 26 s.
+   Länger gewünscht (Schaden ×0,8 nach dem ersten K.o., knapp 2 s mehr)?
+7. **Zeitlupe:** 0,3 s vor und 0,2 s nach dem letzten K.o., Ton ohne eigenen Akzent. Passt das, oder länger?
 
 ## 4 · Aufräumen (jeder Schritt braucht die Freigabe des Nutzers)
 

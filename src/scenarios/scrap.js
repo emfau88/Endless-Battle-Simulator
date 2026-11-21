@@ -36,7 +36,8 @@
     g.fillRect(x - radius, y - radius, radius * 2, radius * 2);
   };
   // S1 · Short: Schilder 1,4-fach, Einstiegstext 2,5 s bei 22 % der Bildhöhe
-  const SHORT_ART = { labels: 1.4, introSec: 2.5, introY: .22 };
+  // S2: Der Sieger erscheint 0,3 s nach dem letzten K.o., damit die Zeitlupe der Explosion frei bleibt
+  const SHORT_ART = { labels: 1.4, introSec: 2.5, introY: .22, winnerDelay: .3, winnerFade: .25 };
   class ArenaRenderer extends ScrapArena.Renderer {
     _scorchEvents() {
       const s = this.episode, marks = [];
@@ -673,7 +674,8 @@
       const s=this.sim,r=s.roundSim,l=this.layout,art=EBS.ScrapMaterialArt,portrait=l.kind==='portrait';
       const final=s.cfg.episodeMode==='tournament'&&s.completedRounds===8;
       // Short: Die Runde steht nach dem Sieg still; die letzten Effekte laufen über die Abspannzeit weiter.
-      const elapsed=l.short?(r.phase==='ended'?Math.max(0,EBS.Scrap.SHORT_END_SEC-(s.outroUntil-s.step)/60):0)
+      // In der Zeitlupe (S2) altern sie langsamer: Szenenzeit statt Videozeit.
+      const elapsed=l.short?(r.phase==='ended'?Math.max(0,s.sceneTime(s.step)-s.sceneTime(s.outroUntil-EBS.Scrap.SHORT_END_SEC*60)):0)
         :s.phase==='pause'?s.cfg.endPauseSec-(s.pauseUntil-s.step)/60:final?Math.max(0,5-(s.outroUntil-s.step)/60):0;
       const mapPoint=p=>portrait?{...p,x:r.bounds.h-p.y,y:p.x,
         ...('vx' in p?{vx:-p.vy,vy:p.vx}:{}),...('angle' in p?{angle:p.angle+Math.PI/2}:{}),...('heading' in p?{heading:p.heading+Math.PI/2}:{}),
@@ -749,7 +751,9 @@
         g.restore();
       }
       if (r.phase !== 'ended') return;
-      const winner = r.robots.find(robot => robot.id === r.winner), p = this._materialResultProgress();
+      const winner = r.robots.find(robot => robot.id === r.winner);
+      const since = (s.step - (s.outroUntil - EBS.Scrap.SHORT_END_SEC * 60)) / 60;
+      const p = Math.max(0, Math.min(1, (since - A.winnerDelay) / A.winnerFade));
       if (p <= 0) return;
       const x = l.x + l.width / 2, k = .8 + .2 * (1 - (1 - p) ** 3);
       // Mitte der Arena; steht der Sieger selbst dort, rückt die Schrift knapp über oder unter ihn (er steht still).
@@ -783,7 +787,9 @@
         const e = ev[i];
         if (e.round < s.roundNumber) break;
         if (e.round !== s.roundNumber || !Number.isFinite(e.arenaX)) continue;
-        const age = Math.max(0, (s.step - e.step) / 60) * ts, p = mapPoint({ x: e.arenaX, y: e.arenaY }), seq = e.seq;
+        // Short mit Zeitlupe: Alter in Szenenzeit, damit Splitter und Rauch mit der Runde langsamer werden
+        const age = s.slow ? Math.max(0, s.sceneTime(s.step) - s.sceneTime(e.step)) : Math.max(0, (s.step - e.step) / 60) * ts;
+        const p = mapPoint({ x: e.arenaX, y: e.arenaY }), seq = e.seq;
         const robot = e.team != null ? robots.find(r => r.id === e.team) : null, scale = Math.max(.5, (robot?.r || 24) / 24);
         if (e.type === 'hit') {
           if (age < .1 && robot && !scene.nudge.has(e.team)) {

@@ -391,3 +391,84 @@ wählbar.
 
 **Grenzen:** Die farbigen Startecken im Boden sind auch im Short zu sehen (offene Frage an den Nutzer). Die Regie
 (Schaden, Zeitlupe, Casting) folgt in S2; bis dahin dauert eine Runde so lange wie in `v4`.
+
+---
+
+## S2 · Verdeckte Regie (21.11.2026)
+
+**Umfang:** Short-Balance, Zeitlupe beim letzten K.o. und Casting. Alles gilt nur bei `layout: 'short'` hochkant;
+`classic` bis `v4` ohne Short rechnen wie bisher.
+
+### Short-Balance
+
+Der Startwert aus dem Plan war „Schaden überall ×1,5“. Gemessen brachte das den ersten K.o. nur von 14,4 s auf 11,6 s
+und verkürzte zugleich die ganze Runde auf rund 25 s. Deshalb wirkt der Zuschlag jetzt nur in der Eröffnung:
+
+- **Solange alle vier leben: Schaden an Robotern ×2,5.** Danach normaler Schaden (×1).
+- **Im Schlussduell nimmt der Schwächere 20 % weniger Schaden** (wie im Plan).
+- **Die Startkisten brechen innerhalb von 1,2 s auf** statt 2,4 s (der Mindestabstand von 0,4 s bleibt).
+
+| Einstellung (200 Seeds, Node) | erster K.o. | zweiter K.o. | Schlussduell | Videolänge |
+|---|---|---|---|---|
+| ohne Balance (Stand S1, 100 Seeds) | 14,4 s | – | – | 29,5 s |
+| überall ×1,5 (Startwert) | 11,6 s | 14,7 s | 7,0 s | 25,3 s |
+| Eröffnung ×2,0, danach ×1,5 | 9,5 s | 13,9 s | 5,6 s | 23,4 s |
+| Eröffnung ×2,5, danach ×1,5, Kisten 1,2 s | 8,0 s | 12,3 s | 6,6 s | 22,6 s |
+| **Eröffnung ×2,5, danach ×1, Kisten 1,2 s (gewählt)** | **8,0 s** | **13,4 s** | **8,6 s** | **26,4 s** |
+| Eröffnung ×2,5, danach ×0,8, Kisten 1,2 s | 8,0 s | 14,7 s | 8,7 s | 28,3 s |
+
+Alle Werte sind Mediane. Zielwerte: erster K.o. 5–10 s, zweiter 12–20 s, Schlussduell ab 6 s, Länge 26–38 s. Mit
+der gewählten Einstellung liegt der erste K.o. bei 90 % der Seeds im Ziel (mit „überall ×1,5“ waren es 35 %). Die Siege bleiben verteilt (EMBER 22 %, AZURE 28 %,
+AMBER 27 %, MOSS 23 % über 1200 Seeds, kein Unentschieden).
+
+### Zeitlupe beim letzten K.o.
+
+- 0,5 s Videozeit mit Tempo 0,35: **0,3 s vor dem letzten Treffer** läuft die Simulation langsamer, **0,2 s danach**
+  laufen Explosion, Trümmer und Rauch langsamer. Der Sieger-Schriftzug erscheint erst 0,3 s nach dem K.o.
+- **Vorab berechneter Tempoplan:** Beim Start rechnet die Episode eine zweite, unbeobachtete Runde mit demselben
+  Seed bis zum Ende und kennt damit den Schritt des letzten K.o. Der Plan steht fest, bevor das erste Bild entsteht.
+- **Seek-Regel:** Der Renderer hält keinen eigenen Zustand. Das Alter der Effekte rechnet er über die neue
+  Szenenzeit der Episode (`sceneTime`), die in der Zeitlupe langsamer läuft.
+- Das Video wird durch die Zeitlupe rund 0,2 s länger; die Export-Vorplanung rechnet das mit.
+- **Ton:** Die Klänge liegen zeitlich richtig, werden aber nicht gedehnt und bekommen keinen eigenen Akzent.
+- Im Langvideo und ohne Short gibt es keinen Plan (`slow` ist dort leer), die Zustands-Hashes bleiben gleich.
+
+### Casting
+
+`node scripts/scrap-short-casting.mjs --from 1 --to 1200 --list` rechnet **in Chromium**, also dort, wo auch der
+Export rechnet. Bedingungen in Videosekunden: erster K.o. 5–10 s, zweiter 12–20 s, Schlussduell mindestens 6 s,
+beide Duellanten beim Start des Duells unter 40 % Leben, Länge 26–38 s. Bevorzugt gewinnt nicht der Roboter, der
+zuerst bewaffnet war.
+
+| Messung (Seeds 1–1200, Chromium 148) | Wert |
+|---|---|
+| erster K.o. 5–10 s | 89,3 % der Seeds, Median 8,0 s |
+| zweiter K.o. 12–20 s | 59,5 %, Median 13,1 s |
+| Schlussduell mindestens 6 s | 62,1 %, Median 8,6 s |
+| beide beim Duellstart unter 40 % Leben | 36,3 % |
+| Länge 26–38 s | 35,8 %, Median 25,8 s |
+| Bogen vollständig | 32 Seeds (2,7 %) |
+| davon gewinnt nicht der zuerst Bewaffnete | **23 Seeds**, als Liste `SHORT_SEEDS` in `src/scenarios/scrap/episode.js` |
+| Vergleich Node | 33 vollständige Seeds statt 32: Einzelne Runden laufen in Node anders, wie angekündigt |
+
+Die Vorlage nimmt den nächsten geprüften Seed ab dem gewünschten (`EBS.Scrap.castSeed`). Für Seed 42 ist das
+**Seed 61**: erster K.o. 7,8 s (EMBER), zweiter 18,1 s (AZURE), Sieg nach 32,1 s, Schlussduell 14,1 s mit 33 % und
+11 % Leben, AMBER gewinnt mit 10 % Rest, zuerst bewaffnet war MOSS. Videolänge 34,6 s.
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-v4.test.mjs test/scrap.test.mjs` | 27 von 27, neu: Balance (Schadensstufen, Kistenzeiten) und Zeitlupe (Plan, letzter K.o. am geplanten Schritt, Szenenzeit stetig, Exportlänge) |
+| `node --test test/scrap-short.test.mjs` | 4 von 4, neu: alle 23 Casting-Seeds halten in Chromium den Bogen ein; Seek-Bild an sieben Stellen pixelgleich, zwei davon in der Zeitlupe |
+| `node scripts/scrap-map-hashes.mjs` | 6 Fälle × 4 Prüfpunkte gleich |
+| `classic` bis `v4` ohne Short gegen `main` (Node, 24 Fälle über 45 s, zwei Turniere, Short-Parameter im Querformat) | 27 Fälle gleich |
+| `node scripts/scrap-v4-stats.mjs --layout short` (100 Seeds) | festgefahren 0,7 %, häufigstes Paar 19,3 %, kein Unentschieden, 5,5 ms je Simulationssekunde |
+
+**Nicht gelaufen:** kein vollständiger `npm test`, kein Export. `npm run golden` läuft einmal am Ende der Pakete.
+
+**Grenzen:**
+
+- Die Liste gilt für den heutigen Stand von `v4`, die Short-Balance und Chromium 148. Nach Änderungen daran neu
+  rechnen; der Test im Browser meldet es.
+- Im Mittel sind Shorts rund 26 s lang, am unteren Rand des Ziels. Die geprüften Seeds liegen bei 26–35 s. Mit
+  Schaden ×0,8 nach dem ersten K.o. wären es im Mittel knapp 2 s mehr (Frage an den Nutzer).
+- Der Startvorgang eines Shorts rechnet die Runde einmal vorab (rund 0,2 s).
