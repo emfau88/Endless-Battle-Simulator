@@ -36,7 +36,7 @@ Alle Pakete des Plans sind gebaut. Offen sind nur noch Urteile und Aufträge des
 
 ### Merge
 
-- Pull Request des Branches `scrap/s1-darstellung` als Merge-Commit nach `main`: braucht die Freigabe des Nutzers.
+- Pull Request #48 (Branch `scrap/s1-darstellung`) als Merge-Commit nach `main`: braucht die Freigabe des Nutzers.
 
 ## 3 · Fragen an den Nutzer
 
