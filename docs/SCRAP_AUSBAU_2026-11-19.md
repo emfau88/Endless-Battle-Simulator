@@ -368,7 +368,7 @@ wählbar.
 - **Namensschilder 1,4-fach** mit Lebensbalken; die Munitionspunkte wachsen mit. Die Schilder haben dafür einen
   Maßstab bekommen; im normalen Bild ist er 1 und alle Zahlen sind wie bisher.
 - **Einstiegstext** 0–2,5 s: „4 BOTS · 1 SURVIVOR“ bei 22 % der Bildhöhe, darunter „PICK YOUR COLOR“. Weiße Schrift
-  mit dunklem Rand, blendet 0,2 s ein und 0,3 s aus. Die Zeit folgt aus dem Episodenschritt.
+  mit dunklem Rand, ab dem ersten Bild voll sichtbar, blendet 0,3 s aus. Die Zeit folgt aus dem Episodenschritt.
 - **Abspann:** groß „<NAME> WINS“ in der Teamfarbe mit weichem dunklem Band dahinter, in der Mitte der Arena. Steht
   der Sieger selbst in der Mitte, rückt die Schrift knapp über oder unter ihn. Kein „NEXT ROUND“, kein „ROUND
   COMPLETE“. Die letzte Explosion klingt im Abspann aus, statt einzufrieren.
@@ -438,7 +438,8 @@ AMBER 27 %, MOSS 23 % über 1200 Seeds, kein Unentschieden).
 `node scripts/scrap-short-casting.mjs --from 1 --to 1200 --list` rechnet **in Chromium**, also dort, wo auch der
 Export rechnet. Bedingungen in Videosekunden: erster K.o. 5–10 s, zweiter 12–20 s, Schlussduell mindestens 6 s,
 beide Duellanten beim Start des Duells unter 40 % Leben, Länge 26–38 s. Bevorzugt gewinnt nicht der Roboter, der
-zuerst bewaffnet war.
+zuerst bewaffnet war. In `v4` starten alle vier mit einem Blaster (9 Schuss); „zuerst bewaffnet“ heißt hier deshalb:
+Er nimmt als Erster eine neue Waffe vom Boden auf.
 
 | Messung (Seeds 1–1200, Chromium 148) | Wert |
 |---|---|

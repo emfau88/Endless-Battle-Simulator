@@ -745,7 +745,8 @@
         g.fillStyle = color; g.fillText(value, x, y);
       };
       if (t < A.introSec) {
-        g.save(); g.globalAlpha = Math.max(0, Math.min(1, t / .2, (A.introSec - t) / .3));
+        // Ab dem ersten Bild voll sichtbar (der Einstieg zählt), nur das Ausblenden ist weich
+        g.save(); g.globalAlpha = Math.max(0, Math.min(1, (A.introSec - t) / .3));
         title('4 BOTS · 1 SURVIVOR', w / 2, h * A.introY, 82, '#fbf8ef');
         title('PICK YOUR COLOR', w / 2, h * A.introY + 92, 56, '#ffe9a8');
         g.restore();

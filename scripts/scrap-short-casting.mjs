@@ -5,7 +5,8 @@
 //   1. erster K.o. bei 5–10 s          2. zweiter K.o. bei 12–20 s
 //   3. Schlussduell mindestens 6 s      4. beide Duellanten beim Start des Duells unter 40 % Leben
 //   5. Videolänge (Sieg + Abspann) 26–38 s
-// Bevorzugt: Es gewinnt nicht der Roboter, der zuerst bewaffnet war.
+// Bevorzugt: Es gewinnt nicht der Roboter, der zuerst bewaffnet war. Alle starten mit einem Blaster (9 Schuss);
+// gemeint ist deshalb, wer als Erster eine neue Waffe vom Boden aufnimmt (erstes Ereignis „pickup“).
 //   node scripts/scrap-short-casting.mjs                       Seeds 1–300
 //   node scripts/scrap-short-casting.mjs --from 1 --to 1200 --top 20 [--list] [--node]
 //   --list: geprüfte Seeds für SHORT_SEEDS in src/scenarios/scrap/episode.js
