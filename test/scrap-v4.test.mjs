@@ -179,7 +179,7 @@ test('Scrap v4 Short (S1, Simulation): eigene Karte nur hochkant, 2,5 s Abspann,
 
 test('Scrap v4 Short (S2, Balance): Schaden ×2,5 bis zum ersten K.o., zu dritt ×0,5, im Schlussduell ×0,9 und der Schwächere 20 % weniger; ohne Short unverändert', () => {
   const { SHORT_FIGHT } = EBS.ScrapTactics;
-  assert.deepEqual({ ...SHORT_FIGHT }, { opening: 2.5, damage: .5, duel: .9, underdog: .8, crateSpread: 1.2, coverSec: .5, coverMax: 2.5, coverPause: 6 });
+  assert.deepEqual({ ...SHORT_FIGHT }, { opening: 2.5, damage: .5, duel: .9, underdog: .8, crateSpread: 1.2, coverSec: .15, coverMax: 2.5, coverPause: 6, ...EBS.ScrapTactics.DECIDE });
   const make = short => {
     const r = new Round({ seed: 5, rulesVersion: 'v4', arena: 'sunshine', portrait: true, short, upgrades: [null, null, null, null] });
     for (const robot of r.robots) robot.caged = false;
@@ -207,7 +207,7 @@ test('Scrap v4 Short (S2, Balance): Schaden ×2,5 bis zum ersten K.o., zu dritt 
   }
 });
 
-test('Scrap v4 Short (S2, Deckung): höchstens 0,5 s warten, kaum Hänger (alle stehen, niemand schießt); ohne Short bleiben 3 s', () => {
+test('Scrap v4 Short (S2, Deckung): höchstens 0,15 s warten, kaum Hänger (alle stehen, niemand schießt); ohne Short bleiben 3 s', () => {
   const { SHORT_FIGHT, BEHAVIOUR } = EBS.ScrapTactics;
   assert.deepEqual([BEHAVIOUR.coverSec, BEHAVIOUR.coverMax, BEHAVIOUR.coverPause], [3, 6, 4]);
   let hangs = 0, covers = 0;
@@ -284,7 +284,7 @@ test('Scrap v4 Short (S2, Waffen): Blaster lädt von selbst nach, Raketen nur vo
 test('Scrap v4 (L2, Schalter items): Raketen-Regeln auf der großen Karte, Duell wird mit der Zeit härter; ohne Schalter unverändert', () => {
   const { ARENA_ITEMS, ARENA_FIGHT, SHORT_FIGHT } = EBS.ScrapTactics;
   assert.deepEqual(JSON.parse(JSON.stringify(ARENA_ITEMS)), { reload: 1.4, swap: .5, first: [6, 7.5], period: 9, fetch: 320, fetchWait: 1.2 });
-  assert.deepEqual({ ...ARENA_FIGHT }, { opening: 2, damage: .45, duel: .8, underdog: .85, duelRamp: .06, duelMax: 3, coverSec: .5, coverMax: 2.5, coverPause: 6 });
+  assert.deepEqual({ ...ARENA_FIGHT }, { opening: 1.8, damage: .4, duel: .8, underdog: .85, duelRamp: .06, duelMax: 3, coverSec: .15, coverMax: 2.5, coverPause: 6, ...EBS.ScrapTactics.DECIDE });
   assert.equal(SHORT_FIGHT.duelRamp, undefined, 'im Short keine Steigerung');
   const make = (seed, portrait, items) => new Round({ seed, rulesVersion: 'v4', arena: 'sunshine', portrait, ...(items ? { items: 'rockets' } : {}), upgrades: [null, null, null, null] });
   // Ohne Schalter: keine neuen Felder, vier Startwaffen
@@ -303,7 +303,7 @@ test('Scrap v4 (L2, Schalter items): Raketen-Regeln auf der großen Karte, Duell
     }
     assert.ok(r.winner !== null && pickups >= 1 && r.stats.drops === 0 && r.checkInvariants().ok, `Seed ${seed}: ${JSON.stringify({ winner: r.winner, pickups })}`);
   }
-  // Schaden: ×2 zu viert, ×0,45 zu dritt; im Duell ×0,8 und je Sekunde 6 % mehr, höchstens ×3
+  // Schaden: ×1,8 zu viert, ×0,4 zu dritt; im Duell ×0,8 und je Sekunde 6 % mehr, höchstens ×3
   const r = make(5, false, true);
   for (const robot of r.robots) robot.caged = false;
   const hit = (id, amount = 10) => { const hp = r.robots[id].hp; r._hurtRobot(r.robots[id], amount, (id + 1) % 4, 0, 0); return Number((hp - r.robots[id].hp).toFixed(9)); };
@@ -315,6 +315,47 @@ test('Scrap v4 (L2, Schalter items): Raketen-Regeln auf der großen Karte, Duell
   r.t = 30; assert.equal(hit(1), want(10 * f.duel * (1 + f.duelRamp * 10)), 'nach 10 s');
   assert.equal(hit(0), want(10 * f.duel * f.underdog * (1 + f.duelRamp * 10)), 'der Schwächere');
   r.t = 100; assert.equal(hit(1, 1), want(1 * f.duel * f.duelMax), 'Obergrenze');
+});
+
+test('Scrap v4 (S4, entschlossen fahren): mit Raketen-Regeln stehen Roboter kaum untätig, keine lange Pause; ohne die Regeln keine neuen Felder', () => {
+  const { DECIDE } = EBS.ScrapTactics;
+  assert.deepEqual({ ...DECIDE }, { loyalSec: 3, dwell: 1.6, flankAfter: .5, idleSec: 1, shift: 70, ahead: .35 });
+  // untätig = lebt, frei, Tempo unter 8 AE/s und seit 0,8 s kein eigener Schuss
+  const measure = options => {
+    let total = 0, idle = 0, longest = 0, switches = 0;
+    for (let seed = 1; seed <= 12; seed++) {
+      const r = new Round({ seed, rulesVersion: 'v4', arena: 'sunshine', upgrades: [null, null, null, null], ...options });
+      const st = r.robots.map(o => ({ flash: 0, shot: -9, since: null, target: null, at: 0 }));
+      while (r.phase === 'running' && r.t < 120) {
+        r.step(1 / 120);
+        for (const o of r.robots) {
+          const s = st[o.id];
+          if (!o.alive || o.caged) { s.since = null; continue; }
+          total++;
+          if (o.flashUntil !== s.flash) { s.flash = o.flashUntil; s.shot = r.t; }
+          // Gegnerwechsel frühestens nach loyalSec, solange der alte Gegner lebt
+          if (options.items || options.short) {
+            if (o.targetId !== s.target) {
+              const old = s.target === null ? null : r.robots[s.target];
+              if (old && old.alive && !old.caged) { switches++; assert.ok(r.t - s.at >= DECIDE.loyalSec - .01, `Seed ${seed}: Gegnerwechsel nach ${(r.t - s.at).toFixed(2)} s`); }
+              s.target = o.targetId; s.at = r.t;
+            }
+          }
+          if (Math.hypot(o.vx, o.vy) < 8 && r.t - s.shot > .8) { idle++; s.since ??= r.t; longest = Math.max(longest, r.t - s.since); } else s.since = null;
+        }
+      }
+      assert.ok(r.winner !== null && r.checkInvariants().ok, `Seed ${seed}`);
+      if (!options.items && !options.short) assert.ok(r.robots.every(o => o.goalUntil === undefined && o.nudge === undefined && o.shotAt === undefined));
+    }
+    return { share: idle / total, longest, switches };
+  };
+  const classic = measure({ portrait: false }), wide = measure({ portrait: false, items: 'rockets' }), short = measure({ portrait: true, short: true });
+  assert.ok(classic.share > .1, `klassisch ${(classic.share * 100).toFixed(1)} % untätig`);
+  for (const [name, m] of [['große Karte', wide], ['Short', short]]) {
+    assert.ok(m.share < .075, `${name}: ${(m.share * 100).toFixed(1)} % untätig`);
+    assert.ok(m.longest < 2.6, `${name}: längste Pause ${m.longest.toFixed(2)} s`);
+    assert.ok(m.switches > 5, `${name}: ${m.switches} Gegnerwechsel`);
+  }
 });
 
 test('Scrap v4 Short (S2, Zeitlupe): vorab berechneter Tempoplan, letzter K.o. am geplanten Schritt, Szenenzeit stetig; ohne Short kein Plan', () => {

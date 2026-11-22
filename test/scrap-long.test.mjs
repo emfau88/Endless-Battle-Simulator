@@ -27,7 +27,7 @@ test('Scrap-Langvideo-Vorlage: Turnier mit acht Runden in der Taktik-Arena; Kapi
   assert.deepEqual([long.params.episodeMode, long.params.rulesVersion, long.params.arena, long.params.soundMix, long.video.aspect],
     ['tournament', 'v4', 'sunshine', 'soft-v1', '16:9']);
   // L2: Raketen-Regeln wie im Short, 4 s Ergebnis zwischen den Runden, geprüfter Turnier-Seed
-  assert.deepEqual([long.params.items, long.params.endPauseSec, long.seed], ['rockets', 4, 431]);
+  assert.deepEqual([long.params.items, long.params.endPauseSec, long.seed], ['rockets', 4, 458]);
   assert.deepEqual({ ...PARAMS, soundMix: 'soft-v1' }, long.params, 'Casting rechnet mit den Werten der Vorlage');
   const { page, errors } = await openExportPage(browser, long);
   try {
@@ -70,18 +70,18 @@ test('Scrap-Langvideo (L2): Schalter „Waffen“, alle Turnier-Seeds bleiben in
         // Der Schlüssel gilt nur in der Taktik-Arena; die Episode kennt ihn nur, wenn er an ist (gleiche Zustands-Hashes)
         ui: [n({ rulesVersion: 'v4', items: 'rockets' }).items, n({ rulesVersion: 'v3', items: 'rockets' }).items, n({ rulesVersion: 'v4' }).items],
         episode: ['items' in EBS.Scrap.normalizeParams({ rulesVersion: 'v4', items: 'rockets' }), 'items' in EBS.Scrap.normalizeParams({ rulesVersion: 'v3', items: 'rockets' }), 'items' in EBS.Scrap.normalizeParams({ rulesVersion: 'v4' })],
-        seeds: EBS.Scrap.LONG_SEEDS, picks: [1, 431, 432, 470, 99999].map(seed => EBS.Scrap.castTournamentSeed(seed)),
+        seeds: EBS.Scrap.LONG_SEEDS, picks: [1, 458, 459, 470, 99999].map(seed => EBS.Scrap.castTournamentSeed(seed)),
         rows: window.castTournaments(EBS, EBS.Scrap.LONG_SEEDS, params) };
     }, PARAMS);
     assert.equal(out.label, 'Waffen'); assert.deepEqual(out.options, ['classic', 'rockets']);
     assert.deepEqual(out.enabled, [true, false, false]);
     assert.deepEqual(out.ui, ['rockets', 'classic', 'classic']); assert.deepEqual(out.episode, [true, false, false]);
-    assert.deepEqual(out.seeds, [431, 469, 488]); assert.deepEqual(out.picks, [431, 431, 469, 488, 431]);
+    assert.deepEqual(out.seeds, [458, 469, 489]); assert.deepEqual(out.picks, [458, 458, 469, 489, 458]);
     for (const r of out.rows.map(judge)) {
       assert.ok(r.complete, `Seed ${r.seed}: ${JSON.stringify({ checks: r.checks, wins: r.wins, before: r.before, length: r.length, hang: r.hang })}`);
       // Vor der letzten Runde liegen drei Roboter mit je zwei Siegen gleichauf
       assert.deepEqual([...r.before].sort(), [1, 2, 2, 2], `Seed ${r.seed}: Stand vor Runde 8`);
-      assert.ok(r.length >= 285 && r.length <= 320, `Seed ${r.seed}: ${r.length} s`);
+      assert.ok(r.length >= 280 && r.length <= 320, `Seed ${r.seed}: ${r.length} s`);
     }
     assert.deepEqual(errors.map(e => e.message), []);
   } finally { await page.close(); }

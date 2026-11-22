@@ -14,6 +14,7 @@ Aufgabenliste bleibt die [ROADMAP](ROADMAP.md); hier stehen die Einzelheiten. Be
 | T2 Ton `soft-v1` | PR #46, Hörurteil des Nutzers: „Passt“ |
 | S1, Teil 1: Short-Karte und Ablauf | PR #47 ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s1-teil-1--short-karte-und-ablauf-in-arbeit)) |
 | L1: Langvideo-Vorlage | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Turnier mit acht Runden in der Taktik-Arena (Seed 42: 5:23 Minuten), Kapitelzeiten der Rundenstarts in der JSON-Begleitdatei ([Bericht](SCRAP_AUSBAU_2026-11-19.md#l1--langvideo-vorlage-im-turniermodus-21112026)) |
+| S4: Entschlossen fahren | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Rückmeldung zur Langvideo-Probe umgesetzt (Roboter standen herum und entschieden ständig neu): Gegner und Stellung werden gehalten, ohne Schusslinie wird sofort umgesetzt, beim Nachladen wird weitergefahren, Sicherheitsnetz gegen Stehen. Untätige Zeit 5 % statt 13 %, im Casting gar keine Hänger mehr. Seeds neu: Short 78 (33,0 s), Turnier 458 (4:59 Minuten); neue 20-Sekunden-Proben lokal ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s4--entschlossen-fahren-22112026)) |
 | L2: Langvideo mit den Raketen-Regeln | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Schalter „Waffen“ (`items: 'rockets'`) für die Taktik-Arena, Tempo auf der großen Karte gemessen (Eröffnung ×2, zu dritt ×0,45, Duell ×0,8 mit Steigerung), Ergebnis 4 s; neues Turnier-Casting (49 von 900 Seeds bleiben bis Runde 8 offen), Vorlage auf Seed 431 (5:08 Minuten). Das ganze Short (Seed 1601, 60 fps) ist exportiert ([Bericht](SCRAP_AUSBAU_2026-11-19.md#l2--langvideo-mit-den-raketen-regeln-22112026)) |
 | Dritter Nachtrag zum Short: Raketen als einziges Item | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Nach einer Vorschau vom Nutzer freigegeben („viel besser“): Blaster lädt von selbst nach, Raketen kommen nur von den zwei Plattformen (höchstens zwei Münzen), Roboter holen sie gezielt; Ring und Abzeichen bei der Aufnahme, Startkisten in Teamfarbe. Balance neu (zu dritt ×0,5, Duell ×0,9), Casting über 2400 Seeds: 11 geprüfte, Vorlage auf Seed 318 ([Bericht](SCRAP_AUSBAU_2026-11-19.md#dritter-nachtrag-zum-short-raketen-als-einziges-item-22112026)) |
 | Zweiter Nachtrag zum Short: Waffen als Münzen | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Rückmeldung zur zweiten Probe umgesetzt: Der Abwurf vom Himmel ist wieder ausgebaut; die Waffen stehen von Anfang an als drehende Münzen da (Ring orange für Rakete, blau für Blitz), neue Waffen an den Stationen wachsen auf. Casting neu gerechnet, Liste und Seed 84 unverändert; dritte 20-Sekunden-Probe lokal ([Bericht](SCRAP_AUSBAU_2026-11-19.md#zweiter-nachtrag-zum-short-waffen-als-drehende-münzen-22112026)) |
@@ -30,13 +31,14 @@ Alle Pakete des Plans sind gebaut. Offen sind nur noch Urteile und Aufträge des
 
 - Die Proben eins bis drei und die Vorschau der Raketen-Regeln sind beurteilt; die Punkte daraus sind umgesetzt.
   Die 20-Sekunden-Probe des endgültigen Stands ist `scrap-short-probe-20s-v5-seed1601.mp4`.
-- **Das ganze Short ist exportiert** (Auftrag vom 22.11.): `scrap-short-seed1601-60fps.mp4`, Seed 1601, 32,1 s,
-  60 Bilder je Sekunde. Offen ist das Urteil des Nutzers. Neu exportieren:
-  `node export.mjs --config presets/production/scrap-short.json --seed 1601 --fps 60 --out output/scrap-short.mp4`
+- **Das ganze Short muss neu exportiert werden:** `scrap-short-seed1601-60fps.mp4` (Auftrag vom 22.11.) zeigt den
+  Stand vor S4. Neu, mit Seed 78 (33,0 s):
+  `node export.mjs --config presets/production/scrap-short.json --fps 60 --out output/scrap-short.mp4`
 
 ### Langvideo: Export
 
-- **Das Turnier-Langvideo** (Seed 431, 5:08 Minuten, Auftrag vom 22.11. liegt vor):
+- **Das Turnier-Langvideo** (Seed 458, 4:59 Minuten). Der Nutzer hat den ersten Export abgebrochen und will erst
+  das Fahren beurteilen; danach auf Auftrag:
   `node export.mjs --config presets/production/scrap-long.json --out output/scrap-long.mp4`
   Die Kapitelzeiten stehen danach in `output/scrap-long.json` unter `chaptersText`.
 
@@ -57,13 +59,14 @@ Alle Pakete des Plans sind gebaut. Offen sind nur noch Urteile und Aufträge des
 6. **Short-Balance:** Schaden ×2,5 bis zum ersten K.o., zu dritt ×0,5, im Duell ×0,9, Deckung nur 0,5 s. Im Mittel
    dauert ein Short damit rund 28 s, ohne Hänger. Passt das Tempo?
 7. **Zeitlupe:** 0,3 s vor und 0,2 s nach dem letzten K.o., Ton ohne eigenen Akzent. Passt das, oder länger?
-8. **Short-Seed:** Die Vorlage nimmt Seed 318 (32,9 s, MOSS gewinnt mit 24 % Rest). Empfehlung für den Export:
-   Seed 1601 (32,1 s, AZURE gewinnt mit 1 % Rest). Die Liste hat neun weitere geprüfte Seeds. Welcher soll es sein?
-9. **Langvideo:** Das Turnier dauert rund 5 statt 10 Minuten (Seed 431: 5:08, drei Roboter vor dem Finale gleichauf,
-   AZURE gewinnt). Passt das, oder lieber Seed 469 oder 488 oder zwei Turniere hintereinander?
+8. **Short-Seed:** Die Vorlage nimmt Seed 78 (33,0 s, AZURE gewinnt mit unter 1 % Rest). Die Liste hat neun weitere
+   geprüfte Seeds. Passt Seed 78?
+9. **Langvideo:** Das Turnier dauert rund 5 statt 10 Minuten (Seed 458: 4:59, drei Roboter vor dem Finale gleichauf,
+   EMBER gewinnt das Finale mit 2 % Rest). Passt das, oder lieber Seed 469 oder 489 oder zwei Turniere hintereinander?
 10. **Langvideo wie der Short:** erledigt am 22.11. (Schalter „Waffen“, siehe L2). Offen ist nur das Urteil zum
     Tempo: Eröffnung ×2, Steigerung im Schlussduell, 4 s Ergebnis zwischen den Runden.
-11. **Moss:** gewinnt im Short seltener als die anderen (510 von 2400). Ausgleichen?
+11. **Moss:** gewinnt im Short etwas seltener als die anderen (831 von 3600, AZURE 982). Ausgleichen?
+12. **Fahren:** Passt das Verhalten nach S4 (Stellung 1,6 s halten, dann weiterziehen), oder wirkt es zu unruhig?
 
 ## 4 · Aufräumen (jeder Schritt braucht die Freigabe des Nutzers)
 
@@ -71,8 +74,11 @@ Alle Pakete des Plans sind gebaut. Offen sind nur noch Urteile und Aufträge des
   `scrap/s1-short`; nach dem Merge dieses Stands auch `scrap/s1-darstellung`.
 - **Arbeitskopien:** `.claude/worktrees/scrap-e0` und `.claude/worktrees/scrap-v4`; nach dem Merge auch
   `.claude/worktrees/scrap-s1`.
-- **Nur lokal** in `.claude/worktrees/scrap-s1/output/scrap-short/`: die 20-Sekunden-Probe des endgültigen Stands
-  (`scrap-short-probe-20s-v5-seed1601.mp4` mit JSON), die Vorschau der Raketen-Regeln (`…-v4-raketen.mp4`,
+- **Nur lokal** in `.claude/worktrees/scrap-s1/output/scrap-long/`: die 20-Sekunden-Probe des Langvideos
+  (`scrap-long-probe-20s-v2-seed458.mp4`), die ältere mit Seed 431 und die Turnier-Casting-Protokolle.
+- **Nur lokal** in `.claude/worktrees/scrap-s1/output/scrap-short/`: die 20-Sekunden-Probe des aktuellen Stands
+  (`scrap-short-probe-20s-v6-seed78.mp4` mit JSON), das ganze Short vor S4 (`scrap-short-seed1601-60fps.mp4`),
+  die Probe davor (`scrap-short-probe-20s-v5-seed1601.mp4`), die Vorschau der Raketen-Regeln (`…-v4-raketen.mp4`,
   Seed 946) und die drei älteren Proben (`…-v3.mp4`, `…-v2.mp4`, `scrap-short-probe-20s.mp4`), alle alter Stand, die Vorschaubilder für Seed 42, 61 und 84 und die Casting-Protokolle.
 - **Nur lokal:** In `.claude/worktrees/scrap-v4/output/` liegen die zwei Hörproben (`scrap-t2/t2-probe-hoch.mp4`,
   `t2-probe-quer.mp4` mit JSON) sowie Prüfbilder und Protokolle unter `scrap-v4/`. Vor dem Löschen der Arbeitskopie

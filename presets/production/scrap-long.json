@@ -2,7 +2,7 @@
   "version": 1,
   "name": "Scrap Wars – Langvideo (Turnier, 8 Runden)",
   "scenario": "scrap",
-  "seed": 431,
+  "seed": 458,
   "params": {
     "arena": "sunshine",
     "rulesVersion": "v4",

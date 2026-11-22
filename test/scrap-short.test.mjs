@@ -168,18 +168,18 @@ test('Scrap-Short: alle Casting-Seeds halten in Chromium den Bogen ein, und es g
   try {
     await page.addScriptTag({ content: `window.castSeeds = ${castSeeds.toString()};` });
     const { rows, picks } = await page.evaluate(() => ({ rows: window.castSeeds(EBS, EBS.Scrap.SHORT_SEEDS),
-      picks: [1, 318, 319, 1601, 2328, 99999].map(seed => EBS.Scrap.castSeed(seed)) }));
+      picks: [1, 78, 79, 1302, 2252, 99999].map(seed => EBS.Scrap.castSeed(seed)) }));
     assert.ok(rows.length >= 10, `${rows.length} geprüfte Seeds`);
     for (const r of rows.map(judge)) assert.ok(r.complete && r.underdog, `Seed ${r.seed}: ${JSON.stringify({ checks: r.checks, kos: r.kos, duel: r.duel, length: r.length, winner: r.winner, armed: r.armed })}`);
     // Die Vorlage nimmt den nächsten geprüften Seed ab dem gewünschten, am Ende der Liste wieder den ersten
-    assert.deepEqual(picks, [318, 318, 370, 1601, 2328, 318]);
+    assert.deepEqual(picks, [78, 78, 134, 1302, 2252, 78]);
     assert.deepEqual(errors.map(e => e.message), []);
   } finally { await page.close(); }
 });
 
 test('Scrap-Short-Vorlage (S3): Casting-Seed, Länge aus der Vorplanung, Export der letzten zwei Sekunden mit Sieger', async () => {
   const preset = JSON.parse(readFileSync(join(ROOT, 'presets', 'production', 'scrap-short.json'), 'utf8'));
-  assert.deepEqual([preset.seed, preset.params.layout, preset.params.rulesVersion, preset.params.arena, preset.video.aspect], [318, 'short', 'v4', 'sunshine', '9:16']);
+  assert.deepEqual([preset.seed, preset.params.layout, preset.params.rulesVersion, preset.params.arena, preset.video.aspect], [78, 'short', 'v4', 'sunshine', '9:16']);
   // Länge wie in der Oberfläche vorab geplant: Sieg + 2,5 s Abspann, im Zielbereich 26–38 s
   const { page, errors } = await openExportPage(browser, preset);
   let planned;

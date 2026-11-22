@@ -2,7 +2,7 @@
   "version": 1,
   "name": "Scrap Wars – Short (4 Bots, 1 Survivor)",
   "scenario": "scrap",
-  "seed": 318,
+  "seed": 78,
   "params": {
     "arena": "sunshine",
     "rulesVersion": "v4",

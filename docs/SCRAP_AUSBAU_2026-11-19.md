@@ -779,6 +779,9 @@ hat einen Zeichenfehler gezeigt (Radius knapp unter null im ersten Bild einer ne
 
 ## Dritter Nachtrag zum Short: Raketen als einziges Item (22.11.2026)
 
+> **Ergänzt am selben Tag:** Seed-Liste, Vorlagen-Seed und die Deckungszeit haben sich mit
+> [S4](#s4--entschlossen-fahren-22112026) noch einmal geändert. Die Regeln selbst gelten weiter.
+
 **Rückmeldung des Nutzers zur dritten Probe:** nicht schlecht, aber für ein Short fast zu viele Items. Und warum
 haben zwei Items eine Plattform und die anderen nicht? Nach einer Vorschau (Bilder, Messwerte, 20-Sekunden-Probe)
 hat der Nutzer den Umbau freigegeben („so ist es viel besser“).
@@ -893,6 +896,9 @@ Lokal, nicht im Repository, in `output/scrap-short/` der Arbeitskopie `scrap-s1`
 
 ## L2 · Langvideo mit den Raketen-Regeln (22.11.2026)
 
+> **Ergänzt am selben Tag:** Tempo-Werte, Casting und Vorlagen-Seed (jetzt 458) stehen aktuell in
+> [S4](#s4--entschlossen-fahren-22112026). Seed 431 und das exportierte Short mit Seed 1601 zeigen den Stand davor.
+
 **Auftrag des Nutzers:** heute ein hochwertiges Short und ein Langvideo von rund fünf Minuten, so spannend wie
 möglich. Die Raketen-Regeln des Shorts sollen auch im Langvideo gelten.
 
@@ -991,3 +997,130 @@ Casting-Protokolle.
 - Runde 6 von Seed 431 hat eine lange Phase zu dritt (K.o. bei 6,7 s und erst wieder bei 47,3 s).
 - AZURE gewinnt über alle Seeds etwas öfter (208 von 661 klaren Turniersiegen), MOSS seltener (129).
 - Die Hof-Kulisse fürs Short (Bild ganz gefüllt) war begonnen und ist auf Wunsch des Nutzers wieder ausgebaut.
+
+---
+
+## S4 · Entschlossen fahren (22.11.2026)
+
+**Rückmeldung des Nutzers zur 20-Sekunden-Probe des Langvideos:** Die Roboter hängen gern mal ein wenig fest und
+können sich nicht entscheiden. Das soll vor dem Langvideo behoben werden. Der Nutzer hat den Export abgebrochen,
+sich die Ursachen erklären lassen und den Umbau für Short und Langvideo freigegeben.
+
+### Messung vorher (je 60 Runden, Node)
+
+„Untätig“ heißt: Der Roboter lebt, ist frei, fährt unter 8 AE/s und hat seit 0,8 s nicht geschossen. Die bisherige
+Hänger-Messung zählte nur, wenn **alle** gleichzeitig standen.
+
+| Ursache (große Karte) | Anteil der Roboterzeit | Pausen ab 1 s je Runde |
+|---|---|---|
+| steht am Zielpunkt, aber ohne freie Schusslinie | 5,8 % | 0,8 |
+| wartet in der Deckung | 2,4 % | 0,5 |
+| dreht den Turm oder zielt | 2,3 % | 0,2 |
+| lädt nach und bleibt dabei stehen | 2,2 % | 0,1 |
+| wartet an der Station, kein Ziel | 0,3 % | 0,2 |
+| **zusammen** | **12,8 %** | **1,8** |
+
+Dazu dachte jeder Roboter alle 0,4 bis 0,6 s neu und wählte dabei oft einen anderen Zielpunkt (111 Zielwechsel je
+Runde).
+
+### Umbau (nur mit den Raketen-Regeln: Short und Schalter „Waffen“)
+
+Werte in `DECIDE` in `tactics.js`.
+
+1. **Beim Gegner bleiben:** Wechsel frühestens nach 3 s statt 1,5 s.
+2. **Stellung halten:** Ein Roboter fährt eine Stellung an, schießt von dort 1,6 s und zieht dann gezielt weiter
+   (mindestens 70 AE, bevorzugt in Fahrtrichtung). Vorher wurde der Punkt bei jedem Denken neu gewählt.
+3. **Ohne Schusslinie sofort umsetzen:** Umfahren nach 0,5 s statt 2 s; wer am Zielpunkt ankommt und nichts sieht,
+   wählt sofort neu.
+4. **Beim Nachladen die Stellung wechseln** statt stehen zu bleiben.
+5. **Deckung ohne Warten:** 0,15 s statt 0,5 s.
+6. **Sicherheitsnetz:** Wer steht und seit 1 s nicht geschossen hat, entscheidet sofort neu.
+7. **Raketen-Holen durchziehen:** Wer losgefahren ist, bleibt dabei, solange die Rakete daliegt oder gleich kommt.
+
+Ohne die Raketen-Regeln ändert sich nichts; die Roboter bekommen dort auch keine neuen Felder.
+
+### Messung nachher
+
+| Messung (je 60 Runden, Node) | große Karte vorher | nachher | Short vorher | nachher |
+|---|---|---|---|---|
+| untätige Roboterzeit | 12,8 % | **5,1 %** | 11,9 % | **4,7 %** |
+| Zielwechsel je Runde | 111 | 65 | nicht gemessen | nicht gemessen |
+| Kehrtwenden über 110° je Runde | 3,7 | 3,7 | 3,0 | 3,3 |
+| mittleres Tempo | 52 AE/s | 71 AE/s | 46 AE/s | 68 AE/s |
+
+Pausen ab 1 s kamen in der Messung direkt nach dem Umbau nicht mehr vor (0,0 je Runde in jeder Ursache).
+
+| Casting (Chromium 148) | vorher | nachher |
+|---|---|---|
+| Short: kein Hänger ab 1,5 s | 98,4 % von 2400 | **100 % von 3600** |
+| Turnier: kein Hänger ab 2 s | 98,1 % von 900 | **100 % von 900** |
+
+### Tempo und Seeds neu
+
+Die Roboter treffen durch die Bewegung etwas anders; deshalb ist das Tempo der großen Karte nachgestellt:
+Schaden ×1,8 bis zum ersten K.o. (vorher ×2), zu dritt ×0,4 (vorher ×0,45), Duell unverändert. Gemessen (120 Runden,
+Node): K.o. nach 9,9 s und 19,0 s, Rundenende 31,0 s, Duelle über 20 s in 2 % der Runden. Das Short behält seine
+Werte (150 Runden: K.o. nach 7,8 s und 14,5 s, Ende 26,7 s).
+
+| Short-Casting (Seeds 1–3600) | Wert |
+|---|---|
+| erster K.o. 5–10 s | 94,4 %, Median 7,4 s |
+| zweiter K.o. 12–20 s | 51,7 %, Median 14,8 s |
+| Schlussduell mindestens 6 s | 70,2 %, Median 10,6 s |
+| beide beim Duellstart unter 40 % Leben | 12,1 % |
+| Länge 26–38 s | 64,9 %, Median 29,6 s |
+| Bogen vollständig | 16 Seeds, davon 10 mit Außenseiter-Sieg (Liste `SHORT_SEEDS`) |
+
+Siege über 3600 Shorts: EMBER 879, AZURE 982, AMBER 908, MOSS 831.
+
+Die Short-Vorlage steht jetzt auf **Seed 78**: K.o. nach 9,1 s (AMBER) und 15,5 s (EMBER), Schlussduell 15,0 s mit
+26 % und 37 % Leben, AZURE gewinnt nach 30,5 s mit unter 1 % Rest, Videolänge **33,0 s**.
+
+| Turnier-Casting (Seeds 1–900) | Wert | vor S4 |
+|---|---|---|
+| alle Bedingungen | 75 Seeds (8,3 %) | 49 Seeds |
+| Rundenlängen und Videolänge | 88,6 % | 62,7 % |
+| Median | Video 4:46, Runde 31,2 s, erster K.o. 9,8 s | 4:33, 30,2 s, 10,1 s |
+| Rundensiege | EMBER 1756, AZURE 1860, AMBER 1761, MOSS 1821 | 1783 / 1948 / 1787 / 1681 |
+
+Die Langvideo-Vorlage steht jetzt auf **Seed 458** (Liste `LONG_SEEDS`: 458, 469, 489), **4:59 Minuten**:
+
+| Runde | Kapitel | K.o. bei | Sieger (Rest-Leben) | Duell |
+|---|---|---|---|---|
+| 1 | 0:00 | 12,3 / 20,6 / 24,3 s | AZURE (64 %) | 3,7 s |
+| 2 | 0:28 | 9,6 / 29,4 / 43,4 s | EMBER (8 %) | 14,0 s |
+| 3 | 1:15 | 11,2 / 17,9 / 40,8 s | AMBER (8 %) | 22,9 s |
+| 4 | 2:00 | 8,1 / 27,6 / 37,6 s | MOSS (34 %) | 10,0 s |
+| 5 | 2:42 | 10,7 / 15,2 / 29,4 s | MOSS (9 %) | 14,2 s |
+| 6 | 3:15 | 10,1 / 12,4 / 27,5 s | AZURE (35 %) | 15,1 s |
+| 7 | 3:47 | 9,5 / 21,0 / 34,1 s | EMBER (44 %) | 13,1 s |
+| 8 – Finale | 4:25 | 10,7 / 13,0 / 28,9 s | EMBER (2 %) | 15,9 s |
+
+Stand vor dem Finale: EMBER 2, AZURE 2, AMBER 1, MOSS 2. Endstand: EMBER 3, AZURE 2, MOSS 2, AMBER 1.
+
+### Proben und Prüfungen
+
+Lokal, nicht im Repository: `output/scrap-long/scrap-long-probe-20s-v2-seed458.mp4` (1920 × 1080, 600 Bilder,
+5,2 MB; ganze Episode 299,1 s, 1640 Tonereignisse, −22,0 LUFS) und
+`output/scrap-short/scrap-short-probe-20s-v6-seed78.mp4` (1080 × 1920, 600 Bilder, 5,4 MB; ganze Episode 33,0 s,
+179 Tonereignisse, −21,5 LUFS). Beide mit `--clip-start 0 --clip-duration 20`.
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-v4.test.mjs` | 11 von 11, neu: untätige Zeit unter 7,5 %, längste Pause unter 2,6 s, Gegnerwechsel frühestens nach 3 s, ohne Raketen-Regeln keine neuen Felder |
+| `node --test test/scrap-long.test.mjs` | 4 von 4, die drei Turnier-Seeds bestehen das Casting in Chromium |
+| `node --test test/scrap-short.test.mjs` | 6 von 6, alle 10 Casting-Seeds halten den Bogen |
+| `node --test` mit `scrap`, `scrap-optics`, `audio-scrap-soft`, `presets`, `presets-export-scrap` | 34 von 34 |
+| `node scripts/scrap-map-hashes.mjs` | 6 Fälle × 4 Prüfpunkte gleich |
+| `npm run golden` (einmal) | 36 Fälle × 2 Prüfpunkte identisch mit der Referenz |
+
+**Nicht gelaufen:** kein vollständiger `npm test`, kein Export über 20 s nach diesem Umbau.
+
+**Grenzen:**
+
+- Rund 5 % der Zeit steht ein Roboter weiterhin kurz, meist beim Zielen oder im Wenden.
+- Die Zahl der Kehrtwenden ist nicht gesunken; sie war mit rund einer je Roboter und Runde schon vorher klein.
+  Der Eindruck des Zögerns kam vom ständigen Neuwählen des Zielpunkts und vom Stehen.
+- Das exportierte Short (`scrap-short-seed1601-60fps.mp4`) zeigt den Stand vor S4 und muss neu exportiert werden.
+- Nur 16 von 3600 Shorts erfüllen alle sechs Bedingungen; es bremst vor allem „beide unter 40 % Leben“ (12 %).
+- Ob das Fahren jetzt gut aussieht, entscheidet der Nutzer an den Proben.

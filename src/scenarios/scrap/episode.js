@@ -26,18 +26,18 @@
   // (die Simulation läuft langsamer) und 0,2 s danach (die Effekte laufen langsamer). Der Plan wird vorab berechnet:
   // Eine zweite, unbeobachtete Runde mit demselben Seed liefert den Schritt des letzten K.o.
   const SLOW = { tempo: .35, beforeSec: .3, afterSec: .2 };
-  // S2 · Casting: in Chromium geprüfte Seeds (node scripts/scrap-short-casting.mjs --from 1 --to 2400 --list).
+  // S2 · Casting: in Chromium geprüfte Seeds (node scripts/scrap-short-casting.mjs --from 1 --to 3600 --list).
   // Erster K.o. bei 5–10 s, zweiter bei 12–20 s, Schlussduell ab 6 s mit beiden unter 40 % Leben, Länge 26–38 s, kein Hänger ab 1,5 s,
   // und es gewinnt nicht der Roboter, der die erste Rakete geholt hat. Nach jeder Änderung an v4 oder der Short-Balance
   // neu rechnen; test/scrap-short.test.mjs prüft die Liste im Browser.
-  const SHORT_SEEDS = [318, 370, 876, 1492, 1541, 1601, 1661, 1722, 2216, 2261, 2328];
+  const SHORT_SEEDS = [78, 134, 258, 572, 1302, 1412, 1647, 2252, 2619, 2780];
   const castSeed = seed => SHORT_SEEDS.find(s => s >= seed) ?? SHORT_SEEDS[0];
   // L2 · Casting fürs Turnier-Langvideo (node scripts/scrap-tournament-casting.mjs --from 1 --to 900): ein Sieger,
   // offen bis Runde 8 (davor liegen drei Roboter mit je zwei Siegen gleichauf), jeder gewinnt eine Runde, die
-  // Führung wechselt zweimal, rund fünf Minuten, kein Hänger ab 2 s. 49 von 900 Seeds bestehen; hier stehen die drei
+  // Führung wechselt zweimal, rund fünf Minuten, kein Hänger ab 2 s. 75 von 900 Seeds bestehen; hier stehen drei
   // besten um fünf Minuten. Nach jeder Änderung an v4 oder den Raketen-Regeln neu rechnen; test/scrap-long.test.mjs
   // prüft die Liste im Browser.
-  const LONG_SEEDS = [431, 469, 488];
+  const LONG_SEEDS = [458, 469, 489];
   const castTournamentSeed = seed => LONG_SEEDS.find(s => s >= seed) ?? LONG_SEEDS[0];
   const PROBES = new Map();
   function lastKoTick(options) {
