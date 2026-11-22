@@ -1,6 +1,6 @@
 # Gesamtplan: ein Main, sichere Architektur, Ausbau je Szenario
 
-**Zuletzt aktualisiert:** 20.11.2026 (Scrap-Ausbau R40: S1 Teil 1 Short-Karte, danach gestoppt; offene Punkte gesammelt). **Status:** vom Nutzer am 16.11.2026 freigegeben („freie Hand“),
+**Zuletzt aktualisiert:** 22.11.2026 (Szenenvorschlag Kippkaskade in Abschnitt 0). **Status:** vom Nutzer am 16.11.2026 freigegeben („freie Hand“),
 Umsetzung läuft.
 
 Die [ROADMAP](ROADMAP.md) bleibt die einzige aktive Aufgabenliste; die Vorhaben dieses Plans stehen dort als
@@ -12,6 +12,9 @@ R31 bis R36. Dieser Plan liefert Begründung, Reihenfolge und Paketbeschreibunge
 ## 0 · Umsetzungsstand
 
 Drei Zustände: **Erledigt**, **Läuft**, **Offen**. Dazu **Entfällt** für gestrichene Schritte.
+
+**R42 · Kippkaskade.** **Erledigt** sind die [Bildentwürfe mit drei Kippschalen und einer Glocke](KIPPKASKADE_2026-11-22.md)
+für Hoch- und Querformat. **Offen** ist die Auswahl der Szene für den ersten bewegten Prototyp.
 
 ### Block 0 · Sichern und aufräumen (R31)
 

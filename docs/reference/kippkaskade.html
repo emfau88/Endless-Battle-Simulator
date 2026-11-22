@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kippkaskade – Bildentwurf</title>
+<style>
+  html, body { height: 100%; margin: 0; background: #0c2024; }
+  body { display: grid; place-items: center; }
+  canvas { display: block; }
+</style>
+<canvas aria-label="Drei gläserne Kippschalen führen zu einer Messingglocke. Darunter fängt eine flache Schublade die Murmeln auf." role="img"></canvas>
+<script src="../../src/core.js"></script>
+<script>
+'use strict';
+const canvas = document.querySelector('canvas');
+const ctx = canvas.getContext('2d');
+const hit = document.createElement('canvas').getContext('2d');
+const bowl = new Path2D('M-71 -60 Q-66 8 -40 30 Q-16 51 24 44 Q80 39 122 -49');
+const copper = ['#ffe0ab', '#ed965c', '#9c472d'];
+const mint = ['#d3fff2', '#72c7b7', '#317c77'];
+const ivory = ['#fff0c8', '#e7cc97', '#9d835d'];
+
+// Koordinaten der Wandlager. Links/rechts ist jeweils die Ausgussrichtung der Schale.
+const portrait = {
+  width: 720, height: 1280, title: [65, 145, 78],
+  feed: [111, 226, 1.14],
+  cups: [
+    { x: 242, y: 415, scale: 1.05, side: 1 },
+    { x: 465, y: 644, scale: 1.18, side: -1 },
+    { x: 246, y: 855, scale: 1.32, side: 1 }
+  ],
+  rails: [
+    [[375, 474], [428, 495], [461, 506], [467, 539]],
+    [[317, 716], [300, 728], [282, 733], [259, 751]],
+    [[414, 931], [444, 941], [454, 942], [468, 951]]
+  ],
+  bell: [537, 928, 1.22],
+  tray: [290, 1093, 324]
+};
+const landscape = {
+  width: 1280, height: 720, title: [77, 591, 77],
+  feed: [93, 84, 0.95],
+  cups: [
+    { x: 202, y: 235, scale: 1.03, side: 1 },
+    { x: 517, y: 390, scale: 1.14, side: 1 },
+    { x: 828, y: 530, scale: 1.25, side: 1 }
+  ],
+  rails: [
+    [[331, 292], [384, 310], [426, 307], [465, 326]],
+    [[660, 458], [698, 469], [723, 461], [769, 479]],
+    [[988, 597], [1007, 603], [1016, 596], [1032, 601]]
+  ],
+  bell: [1126, 527, 1.30],
+  tray: [958, 699, 260]
+};
+
+function stroke(path, color, width) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.stroke(path);
+}
+function circle(x, y, radius, fill) {
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fillStyle = fill;
+  ctx.fill();
+}
+function gradient(x1, y1, x2, y2, stops) {
+  const paint = ctx.createLinearGradient(x1, y1, x2, y2);
+  for (const [at, color] of stops) paint.addColorStop(at, color);
+  return paint;
+}
+function background(w, h) {
+  const light = ctx.createRadialGradient(w * .36, h * .30, 0, w * .42, h * .45, Math.max(w, h) * .78);
+  light.addColorStop(0, '#32575a');
+  light.addColorStop(.58, '#1b383d');
+  light.addColorStop(1, '#0f252b');
+  ctx.fillStyle = light;
+  ctx.fillRect(0, 0, w, h);
+  const holes = new Path2D();
+  for (let y = 16; y < h; y += 28) {
+    for (let x = 16; x < w; x += 28) {
+      holes.moveTo(x + 1, y);
+      holes.arc(x, y, 1, 0, Math.PI * 2);
+    }
+  }
+  ctx.fillStyle = 'rgba(177,211,198,.16)';
+  ctx.fill(holes);
+}
+function marble(x, y, radius, palette) {
+  const shine = ctx.createRadialGradient(x - radius * .36, y - radius * .46, .2, x, y, radius);
+  shine.addColorStop(0, palette[0]);
+  shine.addColorStop(.48, palette[1]);
+  shine.addColorStop(1, palette[2]);
+  circle(x, y + .8, radius + .5, '#183a3e');
+  circle(x, y, radius, shine);
+  circle(x - radius * .34, y - radius * .42, radius * .18, 'rgba(255,255,245,.74)');
+}
+function bolt(x, y, r) {
+  circle(x, y + 1.6, r + 1.2, '#0e272c');
+  circle(x, y, r, gradient(x, y - r, x, y + r, [[0, '#e7c68b'], [.46, '#b58c53'], [1, '#85653f']]));
+  stroke(new Path2D('M' + (x - r * .42) + ' ' + (y + r * .26) + 'l' + (r * .84) + ' ' + (-r * .52)), '#69563e', Math.max(1, r * .17));
+}
+function railPath(points) {
+  const [a, b, c, d] = points;
+  return new Path2D('M' + a.join(' ') + ' C' + b.join(' ') + ' ' + c.join(' ') + ' ' + d.join(' '));
+}
+function rail(points) {
+  const path = railPath(points);
+  const [a, b, c, d] = points;
+  const midX = (a[0] + 3 * b[0] + 3 * c[0] + d[0]) / 8;
+  const midY = (a[1] + 3 * b[1] + 3 * c[1] + d[1]) / 8;
+  stroke(new Path2D('M' + (midX - 6) + ' ' + midY + 'l6 13 6 -13'), '#54706c', 4);
+  bolt(midX, midY + 13, 3.2);
+  ctx.save();
+  ctx.translate(0, 5);
+  stroke(path, '#102c32', 9);
+  ctx.translate(0, -5);
+  stroke(path, '#587a79', 7);
+  ctx.translate(0, -2);
+  stroke(path, '#a4bfaf', 2);
+  ctx.restore();
+}
+function feeder([x, y, scale], loaded) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  rail([[0, 0], [30, 1], [70, 10], [117, 18]]);
+  const ramp = new Path2D('M-2 -18 L-2 -2 Q48 0 116 16 L116 1 Q50 -12 -2 -18Z');
+  ctx.fillStyle = '#709f9a50';
+  ctx.fill(ramp);
+  stroke(ramp, '#a8cac16e', 1.6);
+  if (loaded) {
+    for (const [i, offset] of [19, 39, 61, 88, 110].entries()) {
+      marble(offset, -7 + offset * offset * .00123, 7.1, i === 1 ? ivory : copper);
+    }
+    marble(125, 29, 7.1, copper);
+    marble(132, 60, 7.1, ivory);
+  }
+  ctx.restore();
+}
+function cup(cupLayout, index, activeIndex) {
+  const { x, y, scale, side } = cupLayout;
+  const active = index === activeIndex;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(side * scale, scale);
+  const plate = new Path2D('M-54 42 L-16 -23 Q0 -42 17 -16 L44 43 Q48 53 34 54 H-46 Q-62 54 -54 42Z');
+  ctx.fillStyle = '#1e373b';
+  ctx.fill(plate);
+  stroke(plate, '#63817c', 2);
+  bolt(-43, 42, 4.3);
+  bolt(30, 42, 4.3);
+  // Die Teilstriche zeigen den Weg des Gegengewichts bis zum Anschlag.
+  const dial = new Path2D();
+  dial.arc(0, 0, 115, Math.PI - .24, Math.PI + .91);
+  stroke(dial, '#8eaaa16e', 2);
+  for (let i = 0; i <= 8; i++) {
+    const a = Math.PI - .24 + i * .143;
+    const inner = i % 4 === 0 ? 105 : 110;
+    ctx.beginPath();
+    ctx.moveTo(inner * Math.cos(a), inner * Math.sin(a));
+    ctx.lineTo(114 * Math.cos(a), 114 * Math.sin(a));
+    ctx.strokeStyle = '#b2c1a8';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+  }
+  ctx.rotate(active ? .72 : -.065);
+  const arm = new Path2D('M-103 0 H4');
+  stroke(arm, '#122a2c', 13);
+  stroke(arm, '#a48757', 8);
+  ctx.fillStyle = gradient(-101, -17, -84, 14, [[0, '#ebcc8d'], [.35, '#b99b63'], [.8, '#806846'], [1, '#594f3c']]);
+  const weight = new Path2D();
+  weight.roundRect(-107, -15, 30, 30, 5);
+  ctx.fill(weight);
+  for (const mark of [-99, -94, -89]) stroke(new Path2D('M' + mark + ' -12v24'), '#756347', 1.3);
+
+  ctx.fillStyle = gradient(-55, -65, 50, 60, [[0, '#97d4cc55'], [.48, '#548e8a55'], [1, '#21484cbb']]);
+  ctx.fill(bowl);
+  stroke(new Path2D('M-67 -59 Q18 -78 119 -49'), '#bed6ca76', 2);
+  const colors = [[copper, copper, ivory], [mint, mint, ivory], [ivory, mint, copper]][index];
+  const rng = new EBS.RNG(141 + index);
+  const r = 7.4;
+  for (let row = 0; row < 8 && index >= activeIndex; row++) {
+    const cy = 37 - row * 13.2;
+    for (let col = 0; col < 13; col++) {
+      const cx = -68 + col * 15.6 + (row % 2) * 7.8;
+      const surface = active ? 34 - cx * .85 : -15 + Math.abs(cx - 16) * .2 - index * 3;
+      if (cy < surface || !hit.isPointInPath(bowl, cx, cy + r) ||
+          !hit.isPointInPath(bowl, cx - r, cy) || !hit.isPointInPath(bowl, cx + r, cy) ||
+          !hit.isPointInPath(bowl, cx, cy - r)) continue;
+      marble(cx + rng.range(-.45, .45), cy, r, colors[rng.int(0, colors.length - 1)]);
+    }
+  }
+  stroke(bowl, '#172f32', 8);
+  stroke(bowl, '#97bbb1', 4);
+  stroke(new Path2D('M-69 -59 Q-66 -20 -56 -2 M50 32 Q80 17 102 -17'), '#e5f1da', 2.3);
+  stroke(new Path2D('M-68 -60 Q24 -45 121 -49'), '#d6e8d294', 2);
+  circle(0, 0, 12, '#244347');
+  bolt(0, 0, 8.3);
+  ctx.restore();
+}
+function spill(points, landingX, landingY, colors) {
+  // Auf der Rinne folgt der Schwall der Bahn, nach dem Auslauf fällt er frei.
+  const [a, b, c, d] = points;
+  const rng = new EBS.RNG(472);
+  const onRail = Math.round(Math.hypot(d[0] - a[0], d[1] - a[1]) / 8);
+  for (let i = 0; i < onRail; i++) {
+    const t = (i + .4) / onRail, u = 1 - t;
+    const x = u ** 3 * a[0] + 3 * u ** 2 * t * b[0] + 3 * u * t ** 2 * c[0] + t ** 3 * d[0];
+    const y = u ** 3 * a[1] + 3 * u ** 2 * t * b[1] + 3 * u * t ** 2 * c[1] + t ** 3 * d[1];
+    marble(x, y - 10 - (i % 2) * 10 + rng.range(-1, 1), 7.3, colors[i % colors.length]);
+  }
+  const count = Math.max(2, Math.floor(Math.hypot(landingX - d[0], landingY - d[1]) / 17));
+  for (let i = 1; i <= count; i++) {
+    const t = i / count;
+    marble(d[0] + (landingX - d[0]) * t, d[1] - 8 + (landingY - d[1] + 8) * (t * .52 + t * t * .48), 7.4, colors[i % colors.length]);
+  }
+}
+function catchTray([x, y, width], finale) {
+  ctx.save();
+  ctx.translate(x, y);
+  const bin = new Path2D('M0 -43 L5 -4 Q6 0 11 0 H' + (width - 11) + 'q5 0 6 -4l5 -39');
+  ctx.fillStyle = '#46716f66';
+  ctx.fill(bin);
+  if (finale) {
+    const rng = new EBS.RNG(624);
+    const colors = [mint, ivory, copper];
+    for (let row = 0; row < 3; row++) {
+      const count = Math.floor(width / 15) - 2;
+      for (let i = row * 2; i < count - row * 2; i++) {
+        marble(16 + i * 15 + row % 2 * 7.5, -9 - row * 12.5, 7.1, colors[(row + rng.int(0, 1)) % colors.length]);
+      }
+    }
+  }
+  stroke(bin, '#1a3438', 8);
+  stroke(bin, '#8eaaa0', 3);
+  bolt(13, 6, 4);
+  bolt(width - 13, 6, 4);
+  ctx.restore();
+}
+function bell([x, y, scale], ringing) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  const hanger = new Path2D('M0 0 V-15 Q0 -26 15 -26 H72 V-12');
+  stroke(hanger, '#102b2f', 12);
+  stroke(hanger, '#8a9b88', 6);
+  bolt(72, -14, 8);
+  circle(0, 0, 7, '#c6a363');
+  if (ringing) ctx.rotate(-.16);
+  const body = new Path2D('M-8 1 Q-26 5 -31 23 C-36 43 -38 55 -55 65 Q-58 69 -52 72 Q0 83 52 72 Q59 68 54 65 C37 54 35 43 31 23 Q26 6 8 1Z');
+  ctx.fillStyle = gradient(-50, 0, 51, 15, [[0, '#7b592d'], [.18, '#b08a4a'], [.37, '#ebc97e'], [.47, '#f3d996'], [.66, '#c6a15f'], [1, '#815e39']]);
+  ctx.fill(body);
+  stroke(body, '#e3c180', 2);
+  stroke(new Path2D('M-37 53 Q0 62 37 53 M-49 63 Q0 73 49 63'), '#866937', 2);
+  ctx.beginPath();
+  ctx.ellipse(0, 70, 53, 5.2, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#5c4c34';
+  ctx.fill();
+  stroke(new Path2D('M0 71v9'), '#caae71', 4);
+  bolt(0, 83, 7);
+  if (ringing) {
+    stroke(new Path2D('M53 39q10 8 11 19 M60 31q13 9 15 23'), '#dec690', 2);
+  }
+  ctx.restore();
+}
+function draw() {
+  const scene = innerHeight > innerWidth ? portrait : landscape;
+  const fit = Math.min(innerWidth / scene.width, innerHeight / scene.height);
+  const width = Math.round(scene.width * fit), height = Math.round(scene.height * fit);
+  canvas.style.width = width + 'px';
+  canvas.style.height = height + 'px';
+  canvas.width = Math.round(width * devicePixelRatio);
+  canvas.height = Math.round(height * devicePixelRatio);
+  ctx.setTransform(canvas.width / scene.width, 0, 0, canvas.height / scene.height, 0, 0);
+  ctx.lineJoin = ctx.lineCap = 'round';
+  background(scene.width, scene.height);
+  const [x, y, size] = scene.title;
+  ctx.font = 'bold ' + size + 'px Georgia, serif';
+  const question = 'Will it ';
+  ctx.fillStyle = '#f1ead6';
+  ctx.fillText(question, x, y);
+  const questionWidth = ctx.measureText(question).width;
+  ctx.font = 'italic bold ' + size + 'px Georgia, serif';
+  ctx.fillStyle = '#f1c57b';
+  ctx.fillText('ring?', x + questionWidth, y);
+  const finale = location.hash === '#glocke';
+  const active = finale ? 2 : 0;
+  scene.rails.forEach(rail);
+  feeder(scene.feed, !finale);
+  scene.cups.forEach((v, i) => cup(v, i, active));
+  catchTray(scene.tray, finale);
+  bell(scene.bell, finale);
+  if (finale) {
+    const [bx, by, bs] = scene.bell;
+    spill(scene.rails[active], bx - 40 * bs, by + 65 * bs, [mint, ivory, copper]);
+  } else {
+    const middle = scene.cups[1];
+    spill(scene.rails[active], middle.x + 5, middle.y - 23, [copper, ivory, copper, copper]);
+  }
+}
+window.addEventListener('resize', draw);
+window.addEventListener('hashchange', draw);
+draw();
+</script>
+</html>

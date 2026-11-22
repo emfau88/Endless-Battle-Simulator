@@ -2,6 +2,12 @@
 
 Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen in der [ROADMAP](ROADMAP.md).
 
+## 22.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| R42, Kippkaskade. Zwei Momente als Bildentwurf in Hoch- und Querformat gerendert und verglichen. | Branch `konzept/kippkaskade` | [Szenenvorschlag und Bildquelle](KIPPKASKADE_2026-11-22.md) |
+
 ## 20.11.2026
 
 | Was | Commit | Bericht |

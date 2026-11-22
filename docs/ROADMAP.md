@@ -55,6 +55,7 @@ R33 bündelt die bisherigen Einzelabnahmen **R18** (Naval), **R20** (Scrap Wars)
 
 | Nr. | Punkt |
 |---|---|
+| R42 | [Szenenvorschlag Kippkaskade](KIPPKASKADE_2026-11-22.md) ansehen. Gefällt die Idee mit den drei Kippschalen und der Glocke, folgt eine kurze Bewegungs- und Klangprobe. |
 | R10 | Hörbare Vorschau im Simulator (würde jede Abnahme erleichtern) |
 | R27 | Pyramid-Tonspitzen: Standardfall behoben, weitere Klangkombinationen beobachten |
 | R07 | Oberfläche: Qualitätswerte (CRF, Preset, Bitrate) einstellbar |
@@ -95,7 +96,7 @@ Getroffene Entscheidungen stehen im [CHANGELOG](CHANGELOG.md#entscheidungen).
 
 ## 7 · Pflege
 
-- IDs werden nie wiederverwendet. **Nächste freie ID: R42.**
+- IDs werden nie wiederverwendet. **Nächste freie ID: R43.**
 - Neue offene Punkte nur hier eintragen. Erledigtes mit Datum, Commit und Bericht in den CHANGELOG übertragen.
 - Der Fortschritt der einzelnen Schritte steht in [Abschnitt 0 des Gesamtplans](GESAMTPLAN_2026-11-16.md#0--umsetzungsstand) und wird mit jedem Paket nachgezogen.
 - Diese Datei bleibt kurz. Verlauf, Messwerte und Begründungen gehören in datierte Berichte unter `docs/`.
