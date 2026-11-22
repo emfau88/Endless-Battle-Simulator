@@ -3,9 +3,10 @@
   const F=EBS.Foerderduell;
   const defaults={mode:'single',supply:'bursts'};
   const audio={
+    limiterReleaseMs:25,
     events:{
-      turn:{label:'Förderschnecke',samples:['mw-soft-switch-0','mw-soft-switch-1'],gain:.14,semis:-4,detune:.5},
-      stroke:{label:'Kolbenanschlag',samples:['impactWood_medium_000','impactWood_medium_001'],gain:.52,semis:-3,detune:.6},
+      turn:{label:'Förderschnecke',samples:['synth:auger-turn'],gain:.26,detune:.12},
+      stroke:{label:'Kolbenanschlag',samples:['mw-soft-wood-0','mw-soft-wood-2'],gain:.5,semis:-4,detune:.4},
       glass:{label:'Kugeln im Zielglas',samples:['mw-soft-glass-0','mw-soft-glass-1','mw-soft-glass-2'],gain:.34,scale:[0,2,4,7],detune:.5}
     }
   };
