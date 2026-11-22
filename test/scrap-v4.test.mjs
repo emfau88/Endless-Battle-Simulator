@@ -177,9 +177,9 @@ test('Scrap v4 Short (S1, Simulation): eigene Karte nur hochkant, 2,5 s Abspann,
   }
 });
 
-test('Scrap v4 Short (S2, Balance): Schaden ×2,5 bis zum ersten K.o., danach ×0,55; im Schlussduell nimmt der Schwächere 20 % weniger; ohne Short unverändert', () => {
+test('Scrap v4 Short (S2, Balance): Schaden ×2,5 bis zum ersten K.o., zu dritt ×0,5, im Schlussduell ×0,9 und der Schwächere 20 % weniger; ohne Short unverändert', () => {
   const { SHORT_FIGHT } = EBS.ScrapTactics;
-  assert.deepEqual({ ...SHORT_FIGHT }, { opening: 2.5, damage: .55, underdog: .8, crateSpread: 1.2, coverSec: .5, coverMax: 2.5, coverPause: 6 });
+  assert.deepEqual({ ...SHORT_FIGHT }, { opening: 2.5, damage: .5, duel: .9, underdog: .8, crateSpread: 1.2, coverSec: .5, coverMax: 2.5, coverPause: 6 });
   const make = short => {
     const r = new Round({ seed: 5, rulesVersion: 'v4', arena: 'sunshine', portrait: true, short, upgrades: [null, null, null, null] });
     for (const robot of r.robots) robot.caged = false;
@@ -188,17 +188,17 @@ test('Scrap v4 Short (S2, Balance): Schaden ×2,5 bis zum ersten K.o., danach ×
   // auf 1e-9 gerundet: 0,55 und 0,8 sind keine glatten Binärzahlen
   const hit = (r, id, amount = 10) => { const hp = r.robots[id].hp; r._hurtRobot(r.robots[id], amount, (id + 1) % 4, 0, 0); return Number((hp - r.robots[id].hp).toFixed(9)); };
   for (const short of [false, true]) {
-    const r = make(short), f = short ? SHORT_FIGHT : { opening: 1, damage: 1, underdog: 1 };
+    const r = make(short), f = short ? SHORT_FIGHT : { opening: 1, damage: 1, duel: 1, underdog: 1 };
     const want = v => Number(v.toFixed(9));
     assert.equal(hit(r, 0), want(10 * f.opening), 'alle vier leben');
     r.robots[3].alive = false;
     assert.equal(hit(r, 0), want(10 * f.damage), 'nach dem ersten K.o.');
     r.robots[2].alive = false;
     // Schlussduell: Roboter 0 ist angeschlagen, Roboter 1 unverletzt
-    assert.equal(hit(r, 0), want(10 * f.damage * f.underdog), 'der Schwächere');
-    assert.equal(hit(r, 1), want(10 * f.damage), 'der Stärkere');
+    assert.equal(hit(r, 0), want(10 * f.duel * f.underdog), 'der Schwächere');
+    assert.equal(hit(r, 1), want(10 * f.duel), 'der Stärkere');
     r.robots[0].hp = r.robots[1].hp;
-    assert.equal(hit(r, 0), want(10 * f.damage), 'Gleichstand: keine Schonung');
+    assert.equal(hit(r, 0), want(10 * f.duel), 'Gleichstand: keine Schonung');
   }
   // Kisten brechen im Short dichter nacheinander auf
   for (let seed = 1; seed <= 20; seed++) {
@@ -232,24 +232,53 @@ test('Scrap v4 Short (S2, Deckung): höchstens 0,5 s warten, kaum Hänger (alle 
   assert.ok(hangs <= 3, `${hangs} von 30 Seeds mit einem Hänger ab 1,5 s`);
 });
 
-test('Scrap v4 Short (S2, Waffen): Die vier Waffen liegen wie ohne Short von Anfang an da, nichts fällt vom Himmel', () => {
+test('Scrap v4 Short (S2, Waffen): Blaster lädt von selbst nach, Raketen nur von den zwei Plattformen, nichts fällt zu Boden; ohne Short wie bisher', () => {
+  const { SHORT_ITEMS } = EBS.ScrapTactics;
+  assert.deepEqual(JSON.parse(JSON.stringify(SHORT_ITEMS)), { reload: 1.4, swap: .5, first: [6, 7.5], period: 9, fetch: 320, fetchWait: 1.2 });
   assert.equal(EBS.ScrapTactics.SUPPLY, undefined);
-  for (const seed of [1, 2, 3, 84]) {
+  // Ohne Short: vier Startwaffen, Rakete links und Blaster rechts, leere Waffen fallen zu Boden
+  const plain = round(5, true);
+  assert.equal(plain.pickups.length, 4); assert.equal(plain.pads.map(p => `${p.kind}:${p.readyIn}:${p.period}`).join(), 'rocket:3:7.5,blaster:5:6');
+  for (let i = 0; i < 20 * 120; i++) plain.step(1 / 120);
+  assert.ok(plain.stats.drops > 0 && plain.robots.every(o => o.reloadUntil === undefined));
+  let reloads = 0, swaps = 0, fetches = 0;
+  for (const seed of [1, 2, 3, 946]) {
     const s = new EBS.Scrap.Episode({ seed, params: { rulesVersion: 'v4', arena: 'sunshine', layout: 'short' }, world: { w: 1080, h: 1920 }, view: { camera: false } });
     const r = s.roundSim;
-    assert.equal(r.supply, undefined); assert.equal(r.pickups.length, 4, 'vier Waffen am Start');
-    assert.equal(r.pickups.map(p => p.kind).sort().join(), 'blaster,blaster,rocket,rocket');
-    assert.ok(r.pickups.every(p => p.age === 0 && p.sky === undefined && !p.empty));
-    assert.equal(r.pads.map(pad => pad.readyIn).join(), '3,5', 'Stationen liefern wie ohne Short');
-    assert.equal(r._weaponCount(), 8);
-    let seq = 0;
-    while (s.phase === 'running' && r.t < 8) {
+    assert.equal(r.pickups.length, 0, 'am Start liegt keine Waffe'); assert.equal(r.crateFallback, false);
+    assert.equal(r.pads.map(p => `${p.kind}:${p.readyIn}:${p.period}`).join(), 'rocket:6,rocket:7.5'.split(',').map(v => v + ':9').join());
+    const kind = r.robots.map(o => o.weapon.kind), taken = [null, null]; let seq = 0, pickups = 0;
+    while (s.phase === 'running' && r.t < 60) {
+      const loaded = r.pads.map(pad => r._padLoaded(pad)), ammo = r.robots.map(o => o.weapon ? o.weapon.ammo : 0);
       s.stepOnce();
-      assert.ok(r.pickups.every(p => p.age >= 0 && p.sky === undefined), `Seed ${seed}: fallende Waffe`);
-      for (const e of s.events) if (e.seq >= seq) { seq = e.seq + 1; assert.ok(!e.sky, `Seed ${seed}: Abwurf-Ereignis`); }
+      // Nie unbewaffnet, nie eine leere oder freie Waffe am Boden, höchstens zwei Raketen (eine je Plattform)
+      for (const o of r.robots) assert.equal(!!o.weapon, o.alive, `Seed ${seed}: Roboter ${o.id} ${o.alive ? 'ohne Waffe' : 'mit Waffe nach K.o.'}`);
+      assert.ok(r.pickups.length <= 2 && r.pickups.every(p => p.kind === 'rocket' && !p.empty && r.pads.some(pad => Math.hypot(pad.x - p.x, pad.y - p.y) < 1)), `Seed ${seed}: freie Waffe`);
+      r.pads.forEach((pad, i) => {
+        // Die Plattform lädt erst, wenn die Rakete geholt ist: Danach vergeht eine volle Periode bis zur nächsten
+        if (loaded[i] && !r._padLoaded(pad)) taken[i] = r.t;
+        if (!loaded[i] && r._padLoaded(pad) && taken[i] !== null) assert.ok(r.t - taken[i] >= SHORT_ITEMS.period - .05, `Seed ${seed}: Plattform ${i} nach ${(r.t - taken[i]).toFixed(2)} s`);
+        if (r._padLoaded(pad)) assert.ok(pad.readyIn >= SHORT_ITEMS.period - 1e-9);
+      });
+      for (const o of r.robots) if (o.alive) {
+        const now = o.weapon.kind;
+        // Leerer Blaster: sofort wieder voll, aber gesperrt für die Nachladezeit; leere Rakete: zurück zum Blaster
+        if (kind[o.id] === 'blaster' && now === 'blaster' && ammo[o.id] === 1 && o.weapon.ammo === o.weapon.maxAmmo) { reloads++; assert.ok(o.cooldown > SHORT_ITEMS.reload - .05 && o.reloadUntil > r.t); }
+        if (kind[o.id] === 'rocket' && now === 'blaster') { swaps++; assert.equal(o.weapon.ammo, o.weapon.maxAmmo); }
+        // Ein Videoschritt hat zwei Rechenschritte: Aufnahme oder Wechsel zurück kann mitten darin liegen
+        if (o.mode === 'fetch') { fetches++; assert.ok(kind[o.id] === 'blaster' || now === 'blaster', 'nur mit Blaster holen'); }
+        kind[o.id] = now;
+      }
+      for (const e of s.events) if (e.seq >= seq) {
+        seq = e.seq + 1;
+        assert.ok(e.type !== 'drop', `Seed ${seed}: Abwurf-Ereignis`);
+        if (e.type === 'pickup') { pickups++; assert.equal(e.kind, 'rocket'); }
+      }
     }
-    assert.ok(s.checkInvariants().ok);
+    assert.equal(pickups, r.stats.pickups); assert.ok(pickups >= 1, `Seed ${seed}: keine Rakete geholt`);
+    assert.equal(r.stats.drops, 0); assert.ok(s.checkInvariants().ok);
   }
+  assert.ok(reloads > 8 && swaps > 4 && fetches > 100, JSON.stringify({ reloads, swaps, fetches }));
 });
 
 test('Scrap v4 Short (S2, Zeitlupe): vorab berechneter Tempoplan, letzter K.o. am geplanten Schritt, Szenenzeit stetig; ohne Short kein Plan', () => {

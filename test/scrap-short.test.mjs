@@ -99,11 +99,13 @@ test('Scrap-Short: Bild nach Seek entspricht laufendem Zeichnen (Einstieg, Kampf
       const blast = probe.sim.events.find(e => e.type === 'blast')?.step ?? probe.sim.events.find(e => e.type === 'hit').step;
       const crate = probe.sim.events.find(e => e.type === 'crate_break').step;
       const spawn = probe.sim.events.find(e => e.type === 'weapon_spawn' && e.step > 0).step;
+      const pickup = probe.sim.events.find(e => e.type === 'pickup').step;
       probe.renderer.destroy(); probe.sim.destroy();
       const out = [];
-      // Einstiegstext beim Ein- und Ausblenden, Münze fast von der Seite, Bretter beim Ausblenden, neue Münze beim Aufwachsen,
+      // Einstiegstext beim Ein- und Ausblenden, Kisten in Teamfarbe, Bretter beim Ausblenden, neue Raketen-Münze beim Aufwachsen,
+      // Ring und Abzeichen kurz nach der Aufnahme,
       // frische Explosion, Zeitlupe vor und nach dem letzten K.o., Sieger beim Einblenden und im Stand
-      for (const target of [6, 24, 144, even(crate + 84), even(spawn + 8), even(blast + 6), even(slow + 10), even(end + 6), even(end + 26), even(end + 90)]) {
+      for (const target of [6, 84, 144, even(crate + 84), even(spawn + 8), even(pickup + 12), even(blast + 6), even(slow + 10), even(end + 6), even(end + 26), even(end + 90)]) {
         const continuous = create(), start = Math.max(0, target - 60);
         while (continuous.sim.step < start) continuous.sim.stepOnce();
         let frame;
@@ -122,13 +124,13 @@ test('Scrap-Short: Bild nach Seek entspricht laufendem Zeichnen (Einstieg, Kampf
       }
       return out;
     }, SHORT);
-    assert.equal(results.length, 10);
+    assert.equal(results.length, 11);
     for (const r of results) assert.ok(r.samePixels && r.sameState && r.readOnlyEvents && r.ok, JSON.stringify(r));
     assert.deepEqual(errors.map(e => e.message), []);
   } finally { await page.close(); }
 });
 
-test('Scrap-Short: Bretter der Startkisten blenden nach 1 bis 1,8 s aus, Waffen sind drehende Münzen; ohne Short bleiben die Bretter liegen und die Marken flach', async () => {
+test('Scrap-Short: Bretter der Startkisten blenden nach 1 bis 1,8 s aus, Raketen sind drehende Münzen an den Plattformen; ohne Short bleiben die Bretter liegen und die Marken flach', async () => {
   const { page, errors } = await openExportPage(browser, { scenario: 'scrap', seed: 42, video: { resolution: 720 } });
   try {
     const out = await page.evaluate(params => {
@@ -141,8 +143,10 @@ test('Scrap-Short: Bretter der Startkisten blenden nach 1 bis 1,8 s aus, Waffen 
         const art = EBS.ScrapDaylightArt, original = art.coin; let coins = 0;
         art.coin = (...args) => { coins++; return original(...args); };
         const at = sec => { while (sim.step < Math.round(sec * 60)) sim.stepOnce(); return planks(); };
-        at(.5); renderer.draw(); const coinsDrawn = coins, weapons = sim.roundSim.pickups.length;
-        const fresh = at(first + .5), fading = at(first + 1.4).filter(d => d.alpha !== undefined), late = at(last + 4);
+        const fresh = at(first + .5), fading = at(first + 1.4).filter(d => d.alpha !== undefined);
+        // 6,1 s: Im Short liegt die erste Rakete auf ihrer Plattform (aufnehmbar erst ab 0,22 s Alter)
+        at(6.1); renderer.draw(); const coinsDrawn = coins, weapons = sim.roundSim.pickups.filter(q => !q.empty).length;
+        const late = at(last + 4);
         const result = { fresh: fresh.length, freshAlpha: fresh.filter(d => d.alpha !== undefined).length, fading: fading.map(d => d.alpha), late: late.length, coinsDrawn, weapons, ok: sim.checkInvariants().ok };
         art.coin = original; renderer.destroy(); sim.destroy(); return result;
       };
@@ -151,9 +155,10 @@ test('Scrap-Short: Bretter der Startkisten blenden nach 1 bis 1,8 s aus, Waffen 
     assert.ok(out.short.fresh >= 9 && out.short.freshAlpha === 0, 'frische Bretter deckend');
     assert.ok(out.short.fading.length >= 9 && out.short.fading.every(a => a > 0 && a < 1), JSON.stringify(out.short.fading));
     assert.equal(out.short.late, 0, 'nach dem letzten Ausbruch bleibt kein Brett liegen');
-    assert.deepEqual([out.short.weapons, out.short.coinsDrawn], [4, 4], 'vier Waffen ab dem Start, jede als Münze');
+    assert.deepEqual([out.short.weapons, out.short.coinsDrawn], [1, 1], 'eine Rakete auf der Plattform, als Münze gezeichnet');
     assert.ok(out.short.ok);
-    assert.deepEqual([out.plain.late, out.plain.fading.length, out.plain.weapons, out.plain.coinsDrawn], [36, 0, 4, 0], 'ohne Short: 36 Bretter bleiben, keine Münzen');
+    assert.deepEqual([out.plain.late, out.plain.fading.length, out.plain.coinsDrawn], [36, 0, 0], 'ohne Short: 36 Bretter bleiben, keine Münzen');
+    assert.ok(out.plain.weapons >= 2, 'ohne Short liegen Waffen frei auf der Karte');
     assert.deepEqual(errors.map(e => e.message), []);
   } finally { await page.close(); }
 });
@@ -163,18 +168,18 @@ test('Scrap-Short: alle Casting-Seeds halten in Chromium den Bogen ein, und es g
   try {
     await page.addScriptTag({ content: `window.castSeeds = ${castSeeds.toString()};` });
     const { rows, picks } = await page.evaluate(() => ({ rows: window.castSeeds(EBS, EBS.Scrap.SHORT_SEEDS),
-      picks: [1, 42, 84, 85, 1189, 99999].map(seed => EBS.Scrap.castSeed(seed)) }));
+      picks: [1, 318, 319, 1601, 2328, 99999].map(seed => EBS.Scrap.castSeed(seed)) }));
     assert.ok(rows.length >= 10, `${rows.length} geprüfte Seeds`);
     for (const r of rows.map(judge)) assert.ok(r.complete && r.underdog, `Seed ${r.seed}: ${JSON.stringify({ checks: r.checks, kos: r.kos, duel: r.duel, length: r.length, winner: r.winner, armed: r.armed })}`);
     // Die Vorlage nimmt den nächsten geprüften Seed ab dem gewünschten, am Ende der Liste wieder den ersten
-    assert.deepEqual(picks, [8, 84, 84, 92, 1189, 8]);
+    assert.deepEqual(picks, [318, 318, 370, 1601, 2328, 318]);
     assert.deepEqual(errors.map(e => e.message), []);
   } finally { await page.close(); }
 });
 
 test('Scrap-Short-Vorlage (S3): Casting-Seed, Länge aus der Vorplanung, Export der letzten zwei Sekunden mit Sieger', async () => {
   const preset = JSON.parse(readFileSync(join(ROOT, 'presets', 'production', 'scrap-short.json'), 'utf8'));
-  assert.deepEqual([preset.seed, preset.params.layout, preset.params.rulesVersion, preset.params.arena, preset.video.aspect], [84, 'short', 'v4', 'sunshine', '9:16']);
+  assert.deepEqual([preset.seed, preset.params.layout, preset.params.rulesVersion, preset.params.arena, preset.video.aspect], [318, 'short', 'v4', 'sunshine', '9:16']);
   // Länge wie in der Oberfläche vorab geplant: Sieg + 2,5 s Abspann, im Zielbereich 26–38 s
   const { page, errors } = await openExportPage(browser, preset);
   let planned;

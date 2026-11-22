@@ -24,11 +24,11 @@
   // (die Simulation läuft langsamer) und 0,2 s danach (die Effekte laufen langsamer). Der Plan wird vorab berechnet:
   // Eine zweite, unbeobachtete Runde mit demselben Seed liefert den Schritt des letzten K.o.
   const SLOW = { tempo: .35, beforeSec: .3, afterSec: .2 };
-  // S2 · Casting: in Chromium geprüfte Seeds (node scripts/scrap-short-casting.mjs --from 1 --to 1200 --list).
+  // S2 · Casting: in Chromium geprüfte Seeds (node scripts/scrap-short-casting.mjs --from 1 --to 2400 --list).
   // Erster K.o. bei 5–10 s, zweiter bei 12–20 s, Schlussduell ab 6 s mit beiden unter 40 % Leben, Länge 26–38 s, kein Hänger ab 1,5 s,
-  // und es gewinnt nicht der Roboter, der zuerst bewaffnet war. Nach jeder Änderung an v4 oder der Short-Balance
+  // und es gewinnt nicht der Roboter, der die erste Rakete geholt hat. Nach jeder Änderung an v4 oder der Short-Balance
   // neu rechnen; test/scrap-short.test.mjs prüft die Liste im Browser.
-  const SHORT_SEEDS = [8, 27, 84, 92, 130, 159, 182, 210, 247, 271, 309, 349, 360, 408, 474, 480, 502, 527, 541, 613, 768, 776, 911, 941, 947, 983, 994, 1007, 1189];
+  const SHORT_SEEDS = [318, 370, 876, 1492, 1541, 1601, 1661, 1722, 2216, 2261, 2328];
   const castSeed = seed => SHORT_SEEDS.find(s => s >= seed) ?? SHORT_SEEDS[0];
   const PROBES = new Map();
   function lastKoTick(options) {
@@ -88,14 +88,16 @@
       super._explode(p, directRobot, directBlock);
     }
     _takePickup(r) {
-      const armed = !!r.weapon;
+      // Short: Der Blaster wird gegen die Rakete getauscht, deshalb zählt der Wechsel der Waffe
+      const before = r.weapon ? r.weapon.kind : null;
       super._takePickup(r);
-      if (!armed && r.weapon) this.emit?.('pickup', r.x, r.y, { team: r.id, kind: r.weapon.kind, ammo: r.weapon.ammo });
+      if (r.weapon && r.weapon.kind !== before) this.emit?.('pickup', r.x, r.y, { team: r.id, kind: r.weapon.kind, ammo: r.weapon.ammo });
     }
     _drop(r, exhausted) {
       const weapon = r.weapon && { ...r.weapon };
       super._drop(r, exhausted);
-      if (weapon) this.emit?.('drop', r.x, r.y, { team: r.id, kind: weapon.kind, ammo: weapon.ammo });
+      // Short: Nichts fällt zu Boden (Nachladen, Wechsel zurück zum Blaster)
+      if (weapon && !this.shortMap) this.emit?.('drop', r.x, r.y, { team: r.id, kind: weapon.kind, ammo: weapon.ammo });
     }
     _addPickup(...args) {
       const p = super._addPickup(...args);

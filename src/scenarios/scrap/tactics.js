@@ -46,20 +46,26 @@
   const DRIVE = { turn: 3.2, spinAngle: Math.PI / 3, spinSpeed: .3, accel: 260, brake: 420, reverse: .5 };
   const BEHAVIOUR = { range: { blaster: [220, 340], rocket: [260, 420] }, coverNear: 60, coverSec: 3, coverMax: 6, coverPause: 4, claimed: 300 };
   // S1 · Short-Karte (nur v4 hochkant, layout short): 540 × 700 statt 540 × 1040, 12 Deckungen (6 Holz, 3 Stein,
-  // 3 Beton), gleiche Waffen und Stationen. Entworfen in Hochformat-Bildkoordinaten, punktsymmetrisch um die Mitte;
+  // 3 Beton), zwei Plattformen für Raketen (siehe SHORT_ITEMS). Entworfen in Hochformat-Bildkoordinaten, punktsymmetrisch um die Mitte;
   // die Mittelinsel ist halb Stein, halb Beton. Umrechnung in die Motorkoordinaten wie bei den Hochformatkarten.
   const SHORT = { w: 540, h: 700,
     half: [[222, 104, 96, 36, 'concrete'], [96, 200, 60, 44, 'wood'], [384, 200, 60, 44, 'wood'], [186, 236, 56, 40, 'wood'], [330, 270, 60, 44, 'stone']],
     centre: [[230, 330, 40, 40, 'stone'], [270, 330, 40, 40, 'concrete']],
-    pads: [[100, 350], [440, 350]], weapons: [[270, 190], [270, 510], [130, 300], [410, 400]],
+    pads: [[100, 350], [440, 350]],
     starts: [[100, 90], [440, 90], [440, 610], [100, 610]] };
   // S2 · Short-Balance (nur auf der Short-Karte), gemessen statt des Startwerts „überall ×1,5“: Solange alle vier
-  // leben, zählt Schaden an Robotern ×2,5 (erster K.o. im Median nach 8 s statt 14 s), danach ×0,55. Im Schlussduell
-  // nimmt der Schwächere 20 % weniger Schaden, damit es knapp wird. Die Kisten brechen innerhalb von 1,2 s statt
+  // leben, zählt Schaden an Robotern ×2,5 (erster K.o. im Median nach 8 s statt 14 s), zu dritt ×0,5, im Schlussduell
+  // ×0,9 (seit den Raketen-Regeln; vorher beides ×0,55). Im Duell nimmt der Schwächere 20 % weniger, damit es knapp wird. Die Kisten brechen innerhalb von 1,2 s statt
   // 2,4 s auf. Deckung: nur 0,5 s statt 3 s warten, höchstens 2,5 s unterwegs, danach 6 s Pause. Mit 3 s standen nach
   // dem ersten K.o. oft alle gleichzeitig still (Hänger bei 51 % der Seeds, jetzt 3 %); der kleinere Schaden gleicht
   // aus, dass die Runde ohne das Warten sonst nach 22 s vorbei wäre. v4 ohne Short rechnet unverändert.
-  const SHORT_FIGHT = { opening: 2.5, damage: .55, underdog: .8, crateSpread: 1.2, coverSec: .5, coverMax: 2.5, coverPause: 6 };
+  const SHORT_FIGHT = { opening: 2.5, damage: .5, duel: .9, underdog: .8, crateSpread: 1.2, coverSec: .5, coverMax: 2.5, coverPause: 6 };
+  // S2 · Waffen im Short: Der Blaster ist die Grundwaffe und lädt nach `reload` Sekunden von selbst nach;
+  // niemand ist je unbewaffnet, nichts fällt zu Boden. Das einzige Item ist die Rakete, und sie kommt nur von den zwei
+  // Plattformen: zum ersten Mal nach `first` Sekunden, danach `period` Sekunden nach der Aufnahme. Wer nur den Blaster
+  // hat, holt eine Rakete, wenn der Weg höchstens `fetch` AE lang ist und kein anderer näher dran ist. Nach drei
+  // Raketen ist nach `swap` Sekunden wieder der Blaster da.
+  const SHORT_ITEMS = { reload: 1.4, swap: .5, first: [6, 7.5], period: 9, fetch: 320, fetchWait: 1.2 };
   // Zwischenspeicher außerhalb des Simulationszustands (Raster, Suchpuffer, Hindernisliste)
   const NAV = new WeakMap(), OBSTACLES = new WeakMap();
   class TacticalRound extends M.Round {
@@ -88,8 +94,12 @@
         const hp = M.materials[material].hp;
         return { id, x: y, y: W - x - w, w: h, h: w, material, hp, maxHp: hp, alive: true };
       });
-      SHORT.pads.forEach((p, i) => { [this.pads[i].x, this.pads[i].y] = point(p); });
-      SHORT.weapons.forEach((p, i) => { [this.pickups[i].x, this.pickups[i].y] = point(p); });
+      SHORT.pads.forEach((p, i) => {
+        const pad = this.pads[i];
+        [pad.x, pad.y] = point(p); pad.kind = 'rocket'; pad.readyIn = SHORT_ITEMS.first[i]; pad.period = SHORT_ITEMS.period;
+      });
+      // Keine freien Startwaffen: Raketen gibt es nur an den zwei Plattformen
+      this.pickups = [];
       // Ersatz-Startplätze, falls keine Kistenaufstellung passt
       for (const r of this.robots) { [r.x, r.y] = point(SHORT.starts[r.id]); r.lastX = r.x; r.lastY = r.y; }
     }
@@ -135,7 +145,7 @@
     }
     // Fairness: Weg zur nächsten Waffe je Startpunkt zwischen 0,6- und 1,6-mal dem Median
     _fairStarts(pick) {
-      const weapons = this.pickups.filter(p => !p.empty && p.ammo > 0);
+      const loaded = this.pickups.filter(p => !p.empty && p.ammo > 0), weapons = loaded.length ? loaded : this.pads;
       const d = pick.map(([x, y]) => Math.min(...weapons.map(p => this._travel(x, y, p.x, p.y))));
       const sorted = [...d].sort((a, b) => a - b), median = (sorted[1] + sorted[2]) / 2;
       return d.every(v => v >= CRATE.fair[0] * median && v <= CRATE.fair[1] * median);
@@ -222,8 +232,48 @@
     }
     _tick(dt) {
       this.tickDt = dt;
+      // Short: Die Plattform lädt erst, wenn ihre Rakete geholt ist
+      if (this.shortMap) for (const pad of this.pads) if (this._padLoaded(pad)) pad.readyIn = pad.period + dt;
       super._tick(dt);
       if (this.phase === 'running') this._updateCrates();
+    }
+    // ---- S2 · Waffen im Short ----------------------------------------------
+    _padLoaded(pad) { return this.pickups.some(p => !p.empty && p.ammo > 0 && Math.hypot(p.x - pad.x, p.y - pad.y) < 40); }
+    // Leeres Magazin: Blaster lädt nach, leerer Raketenwerfer wird wieder zum Blaster. Nichts fällt zu Boden, auch nicht beim K.o.
+    _drop(r, exhausted = false) {
+      if (!this.shortMap) { super._drop(r, exhausted); return; }
+      if (!r.weapon) return;
+      if (!r.alive) { r.weapon = null; return; }
+      const pause = r.weapon.kind === 'rocket' ? SHORT_ITEMS.swap : SHORT_ITEMS.reload;
+      r.weapon = this._weapon('blaster'); r.cooldown = Math.max(r.cooldown, pause); r.reloadUntil = this.t + r.cooldown; r.thinkIn = 0;
+    }
+    // Aufnahme: Wer den Blaster trägt, tauscht ihn gegen die Rakete
+    _takePickup(r) {
+      if (!this.shortMap) { super._takePickup(r); return; }
+      if (!r.weapon || r.weapon.kind !== 'blaster') return;
+      for (let i = 0; i < this.pickups.length; i++) {
+        const p = this.pickups[i];
+        if (p.empty || p.ammo <= 0 || p.age < .22 || Math.hypot(p.x - r.x, p.y - r.y) > r.r + 15) continue;
+        r.weapon = this._weapon(p.kind, p.ammo); r.cooldown = Math.max(r.cooldown, .28); r.reloadUntil = 0;
+        this.pickups.splice(i, 1); this.stats.pickups++; r.thinkIn = 0;
+        this._effect('pickup', r.x, r.y, r.color, 49, .7);
+        this._event('pickup', `${r.name}: Raketenwerfer`, r.id);
+        return;
+      }
+    }
+    // Rakete holen: nächste geladene (oder gleich fertige) Plattform in Reichweite, die kein näherer Roboter ansteuert.
+    // Für alle vier gleich weit: Mit Ambers Raketen-Vorliebe gewann Amber 360 von 1200 Shorts, Moss nur 248.
+    _rocketGoal(r) {
+      if (!r.weapon || r.weapon.kind !== 'blaster') return null;
+      let best = null, cost = SHORT_ITEMS.fetch;
+      for (const pad of this.pads) {
+        if (!this._padLoaded(pad) && pad.readyIn > SHORT_ITEMS.fetchWait) continue;
+        const mine = Math.hypot(pad.x - r.x, pad.y - r.y);
+        if (this.robots.some(o => o !== r && o.alive && !o.caged && o.mode === 'fetch' && Math.hypot(o.goalX - pad.x, o.goalY - pad.y) < 30 && Math.hypot(pad.x - o.x, pad.y - o.y) < mine)) continue;
+        const c = this._travel(r.x, r.y, pad.x, pad.y);
+        if (c < cost) { cost = c; best = pad; }
+      }
+      return best;
     }
     // Der Turm dreht höchstens 5 rad/s; geschossen wird erst, wenn er auf den Vorhaltepunkt zeigt.
     _shoot(r) {
@@ -258,7 +308,7 @@
       if (r.caged) return;
       if (this.shortMap && r.alive && amount > 0) {
         const living = this.robots.filter(o => o.alive);
-        amount *= living.length >= 4 ? SHORT_FIGHT.opening : SHORT_FIGHT.damage;
+        amount *= living.length >= 4 ? SHORT_FIGHT.opening : living.length === 2 ? SHORT_FIGHT.duel : SHORT_FIGHT.damage;
         if (living.length === 2) {
           const other = living[0] === r ? living[1] : living[0];
           if (r.hp / r.maxHp < other.hp / other.maxHp) amount *= SHORT_FIGHT.underdog;
@@ -597,7 +647,9 @@
       r.thinkIn = .38 + this.rng.next() * .22;
       const target = this._chooseTarget(r), { w, h, edge } = this.bounds, now = this.t, character = CHARACTERS[r.id % 4];
       let goal = null;
+      const rocket = this.shortMap ? this._rocketGoal(r) : null;
       if (!r.weapon) { r.mode = 'search'; const g = this._weaponGoal(r); if (g) goal = [g.x, g.y]; }
+      else if (rocket) { r.mode = 'fetch'; goal = [rocket.x, rocket.y]; }
       else if (target) {
         const hidden = this._blocked(r.x, r.y, target.x, target.y, WEAPONS.blaster.radius);
         r.hiddenSince = hidden ? (r.hiddenSince ?? now) : null;
@@ -659,5 +711,5 @@
     }
   }
 
-  EBS.ScrapTactics = { Round: TacticalRound, CRATE, FIGHT, CHARACTERS, PATH, DRIVE, BEHAVIOUR, SHORT, SHORT_FIGHT };
+  EBS.ScrapTactics = { Round: TacticalRound, CRATE, FIGHT, CHARACTERS, PATH, DRIVE, BEHAVIOUR, SHORT, SHORT_FIGHT, SHORT_ITEMS };
 })();

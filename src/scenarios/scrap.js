@@ -37,7 +37,7 @@
   };
   // S1 · Short: Schilder 1,4-fach, Einstiegstext 2,5 s bei 22 % der Bildhöhe
   // S2: Der Sieger erscheint 0,3 s nach dem letzten K.o., damit die Zeitlupe der Explosion frei bleibt
-  const SHORT_ART = { labels: 1.4, introSec: 2.5, introY: .22, winnerDelay: .3, winnerFade: .25, plankStay: 1, plankGone: 1.8 };
+  const SHORT_ART = { labels: 1.4, introSec: 2.5, introY: .22, winnerDelay: .3, winnerFade: .25, plankStay: 1, plankGone: 1.8, ringSec: .7 };
   class ArenaRenderer extends ScrapArena.Renderer {
     _scorchEvents() {
       const s = this.episode, marks = [];
@@ -719,7 +719,11 @@
       for(const p of r.projectiles)this.arena._projectile(g,mapPoint(p));
       for(const e of effects)this.arena._effect(g,e);
       fx.puffs(g,scene.smoke);
-      this.arena._labels(g,robots,l.arenaW,l.arenaH,l.short?SHORT_ART.labels:1);
+      // Short: Beim Nachladen füllen sich die Magazinpunkte wieder (nur Anzeige, auf Kopien der Roboter)
+      const reload=l.short?EBS.ScrapTactics.SHORT_ITEMS.reload:0;
+      const labelled=l.short?robots.map(o=>o.weapon&&o.reloadUntil>r.t?{...o,weapon:{...o.weapon,ammo:o.weapon.maxAmmo*Math.max(0,1-(o.reloadUntil-r.t)/reload)}}:o):robots;
+      this.arena._labels(g,labelled,l.arenaW,l.arenaH,l.short?SHORT_ART.labels:1);
+      if(l.short){this._weaponBadges(g,robots,l.arenaW,l.arenaH);this._pickupRings(g,scene.rings);}
       g.restore();
       // Short: keine Kopfleiste, kein Rundenbanner; nur Einstiegstext und Sieger
       if(l.short){this.shortOverlay(g);return;}
@@ -780,7 +784,7 @@
     // E1–E5: liegende Splitter und Trümmer, abgesprengte Türme, Rauch und Treffer-Schubs aus dem Ereignisprotokoll
     // der laufenden Runde. Zustandslos und seek-fest: Alter = Episodenschritt minus Ereignisschritt.
     _fxScene(mapPoint, robots) {
-      const s = this.sim, ev = s.events || [], scene = { debris: [], turrets: [], smoke: [], nudge: new Map() };
+      const s = this.sim, ev = s.events || [], scene = { debris: [], turrets: [], smoke: [], nudge: new Map(), rings: [] };
       const fx = EBS.ScrapEffectsArt, n = fx.noise, TAU = Math.PI * 2, sunny = this.arena.sunny, ts = s.timeScale || 1;
       const smokeColor = sunny ? '#3a3936' : '#5d5b57', puffColor = sunny ? '#8d8a82' : '#9a9890';
       const rubble = sunny ? ['#7d766a', '#5f5a52'] : ['#4e5559', '#3a4044'];
@@ -831,8 +835,12 @@
               }
             }
           }
+        } else if (e.type === 'pickup') {
+          // Short: Aufnahme sichtbar machen (Ring in Teamfarbe und aufsteigende Münze, 0,7 s)
+          if (this.layout.short && robot && age < SHORT_ART.ringSec) scene.rings.push({ robot, age, kind: e.kind, color: palette[e.team % 4] });
         } else if (e.type === 'crate_break') {
-          const planks = ['#a8743f', '#7b532c', '#c08b52'];
+          // Short: Startkisten und ihre Bretter in Teamfarbe, damit sie sich von der Holz-Deckung abheben
+          const team = palette[e.team % 4], planks = this.layout.short && e.team != null ? [fx.shade(team, .95), fx.shade(team, .68), fx.shade(team, .82)] : ['#a8743f', '#7b532c', '#c08b52'];
           // Short: Die Bretter bleiben nicht liegen, sie blenden von 1,0 s bis 1,8 s aus (ruhigeres Bild).
           const fade = this.layout.short ? Math.max(0, Math.min(1, (SHORT_ART.plankGone - age) / (SHORT_ART.plankGone - SHORT_ART.plankStay))) : 1;
           // Bretter zählen nicht gegen die Grenze von 40 Teilen: höchstens vier Kisten je Runde
@@ -864,6 +872,28 @@
       }
       return scene;
     }
+    // Short: Ring in Teamfarbe um den Roboter, der gerade eine Rakete geholt hat, dazu eine aufsteigende Münze.
+    // Folgt nur aus dem Alter des Ereignisses.
+    _pickupRings(g, rings) {
+      const fx = EBS.ScrapEffectsArt, TAU = Math.PI * 2;
+      for (const ring of rings) {
+        const u = ring.age / SHORT_ART.ringSec, k = fx.easeOut(u), { x, y } = ring.robot;
+        g.save();
+        for (const [delay, width] of [[0, 6], [.25, 3]]) {
+          const v = (u - delay) / (1 - delay); if (v <= 0) continue;
+          g.beginPath(); g.arc(x, y, 30 + 40 * fx.easeOut(v), 0, TAU);
+          g.strokeStyle = fx.rgba(ring.color, .9 * (1 - v)); g.lineWidth = width * (1 - v) + 1; g.stroke();
+        }
+        EBS.ScrapDaylightArt.badge(g, x, y - 64 - 30 * k, ring.kind, 1 + .35 * Math.sin(Math.PI * Math.min(1, u * 2)), Math.min(1, (1 - u) * 3));
+        g.restore();
+      }
+    }
+    // Short: Wer Raketen trägt, bekommt die Raketen-Münze links an sein Namensschild
+    _weaponBadges(g, robots, width, height) {
+      const k = SHORT_ART.labels;
+      for (const { robot, x, y } of this.arena._labelLayout(robots, width, height, k))
+        if (robot.weapon && robot.weapon.kind === 'rocket') EBS.ScrapDaylightArt.badge(g, x - 7 * k, y + 8 * k, 'rocket', .5 * k, 1);
+    }
     // K1 · Startkisten (nur v4): Schatten wächst bis zum Aufschlag, Kiste mit Teamband, Staubring, Wackeln vor dem Ausbruch.
     // Alles folgt aus der Rundenzeit und den Kistenzeiten der Simulation; kein Zustand im Renderer.
     _paintCrates(g, r, portrait, sunny, layer) {
@@ -882,7 +912,8 @@
             const a = i * Math.PI / 2, len = i % 2 ? c.h : c.w, out = c.w / 2 - 5 + 44 * k, spin = (fx.noise(c.id + 11, i) - .5) * 1.6 * k;
             g.save(); g.translate(cx + Math.cos(a) * out, cy + Math.sin(a) * out); g.rotate(a + Math.PI / 2 + spin);
             g.globalAlpha = 1 - u * u; g.beginPath(); g.roundRect(-len / 2, -5, len, 10, 2);
-            g.fillStyle = i % 2 ? '#a8743f' : '#c08b52'; g.fill(); g.strokeStyle = fx.rgba(ink, .6); g.lineWidth = 1.2; g.stroke();
+            const team = palette[c.id % 4];
+            g.fillStyle = this.layout.short ? fx.shade(team, i % 2 ? .7 : .92) : i % 2 ? '#a8743f' : '#c08b52'; g.fill(); g.strokeStyle = fx.rgba(ink, .6); g.lineWidth = 1.2; g.stroke();
             g.restore();
           }
           g.restore();
@@ -921,6 +952,14 @@
         g.drawImage(tex.canvas, -c.w / 2 - tex.pad, -c.h / 2 - tex.pad, tex.width, tex.height);
         // Teamband quer über den Deckel, damit man sieht, wer in welcher Kiste steckt
         const color = palette[c.id % 4], vertical = c.w < c.h;
+        if (this.layout.short) {
+          // Short: ganzer Deckel in Teamfarbe mit hellem Rahmen, damit die Kiste nicht wie Holz-Deckung aussieht
+          g.beginPath(); g.roundRect(-c.w / 2 + 1.5, -c.h / 2 + 1.5, c.w - 3, c.h - 3, 5);
+          g.fillStyle = fx.rgba(color, .84); g.fill(); g.strokeStyle = fx.rgba(ink, .65); g.lineWidth = 1.8; g.stroke();
+          g.beginPath(); g.roundRect(-c.w / 2 + 9, -c.h / 2 + 9, c.w - 18, c.h - 18, 3);
+          g.strokeStyle = fx.rgba('#ffffff', .5); g.lineWidth = 2.2; g.stroke();
+          g.restore(); continue;
+        }
         g.beginPath(); g.roundRect(vertical ? -6 : -c.w / 2 + 3, vertical ? -c.h / 2 + 3 : -10, vertical ? 12 : c.w - 6, vertical ? c.h - 14 : 12, 2);
         g.fillStyle = fx.rgba(color, .9); g.fill(); g.strokeStyle = fx.rgba(ink, .55); g.lineWidth = 1.2; g.stroke();
         g.restore();

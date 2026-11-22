@@ -241,5 +241,14 @@
     }
     g.restore();
   }
-  EBS.ScrapDaylightArt={floor,block,rubble,pad,pickup,coin,colors};
+  // Short: flache Münze von vorn (Abzeichen am Namensschild und bei der Aufnahme)
+  function badge(g,x,y,kind,scale,alpha) {
+    if(alpha<=0||scale<=0)return;
+    const R=COIN.radius;
+    g.save();g.translate(x,y);g.scale(scale,scale);g.globalAlpha*=alpha;
+    circle(g,0,0,R+2.2,INK);circle(g,0,0,R,COIN.rim[kind]||INK);circle(g,0,0,R*.8,PAPER);
+    g.scale(1.05,1.05);weaponIcon(g,kind,INK);
+    g.restore();
+  }
+  EBS.ScrapDaylightArt={floor,block,rubble,pad,pickup,coin,badge,colors};
 })();

@@ -694,6 +694,10 @@ Lokal, nicht im Repository: `output/scrap-short/scrap-short-probe-20s-v2.mp4` in
 
 ## Zweiter Nachtrag zum Short: Waffen als drehende Münzen (22.11.2026)
 
+> **Teilweise überholt am selben Tag:** Die vier freien Startwaffen und die Blitz-Münzen gibt es im Short nicht
+> mehr, siehe den [dritten Nachtrag](#dritter-nachtrag-zum-short-raketen-als-einziges-item-22112026). Die Münze
+> selbst (Drehung, Aufwachsen) ist geblieben.
+
 **Rückmeldung des Nutzers zur zweiten Probe:** Erst fallen die Kisten, dann ein Haufen Waffen; das ist für den
 Zuschauer schlecht lesbar. Die Waffen sollen nicht auch noch fallen, sondern von Anfang an da sein, wie drehende
 Münzen.
@@ -766,3 +770,117 @@ hat einen Zeichenfehler gezeigt (Radius knapp unter null im ersten Bild einer ne
 - Farben, Größe und Drehtempo der Münzen sind Startwerte; das Urteil liegt beim Nutzer.
 - Die Proben `scrap-short-probe-20s.mp4` (Seed 61) und `…-v2.mp4` (Abwurf vom Himmel) zeigen ältere Stände.
 - Im Langvideo (Turnier, normales Bild) bleiben die flachen Marken, liegende Bretter und 3 s Deckung.
+
+---
+
+## Dritter Nachtrag zum Short: Raketen als einziges Item (22.11.2026)
+
+**Rückmeldung des Nutzers zur dritten Probe:** nicht schlecht, aber für ein Short fast zu viele Items. Und warum
+haben zwei Items eine Plattform und die anderen nicht? Nach einer Vorschau (Bilder, Messwerte, 20-Sekunden-Probe)
+hat der Nutzer den Umbau freigegeben („so ist es viel besser“).
+
+### Was vorher nicht stimmte (200 Runden, Node)
+
+| Messung | Wert |
+|---|---|
+| geladene Waffen gleichzeitig am Boden | im Mittel 4,6, in der Spitze 7 |
+| erste Aufnahme einer Waffe | nach 9,8 s (Median); bis dahin drehen sich die Münzen unbenutzt |
+| Startwaffen, die bis zum Ende unberührt liegen | 0,8 von 4 |
+| Zeit ohne Waffe je lebendem Roboter | 12 % |
+
+Dazu kamen zwei Regeln für dieselbe Sache: vier freie Startwaffen und zwei Plattformen mit Nachschub, ein Erbe der
+großen Arena. Und wer eine Blitz-Münze holte, bekam die Waffe, die er schon hatte.
+
+### Neue Regeln (nur im Short)
+
+- **Der Blaster ist die Grundwaffe und lädt von selbst nach:** Nach dem neunten Schuss ist er 1,4 s gesperrt, dann
+  wieder voll. Niemand ist je unbewaffnet, leere Waffen fallen nicht mehr zu Boden (auch nicht beim K.o.).
+- **Die Rakete ist das einzige Item und kommt nur von den zwei Plattformen.** Die erste erscheint nach 6 s, die
+  zweite nach 7,5 s; vorher füllt sich der Ring der Plattform. Eine Plattform lädt erst wieder, wenn ihre Rakete
+  geholt ist, dann 9 s lang. Es liegen also höchstens zwei Münzen auf der Karte.
+- **Holen:** Wer nur den Blaster hat, fährt zu einer geladenen (oder in 1,2 s fertigen) Plattform, wenn der Weg
+  höchstens 320 AE lang ist und kein anderer Holer näher dran ist. Der Blaster wird gegen drei Raketen getauscht;
+  danach ist nach 0,5 s wieder der volle Blaster da.
+- **Schaden:** ×2,5, solange alle vier leben, zu dritt ×0,5 (vorher ×0,55), im Schlussduell ×0,9 (vorher ×0,55);
+  der Schwächere im Duell nimmt weiter 20 % weniger.
+- **Fairness:** Ambers Vorliebe für Raketen gilt im Short nicht. Mit ihr gewann Amber 360 von 1200 Shorts, Moss
+  nur 248.
+- **Technik:** Die Regeln hängen an der Short-Karte (`SHORT_ITEMS` in `tactics.js`). Das Ereignis `pickup` meldet
+  jetzt den Wechsel der Waffe; ohne Short ist das dasselbe wie bisher. `classic` bis `v4` ohne Short rechnen
+  unverändert.
+
+### Darstellung (nur im Short)
+
+- **Aufnahme:** Ring in Teamfarbe um den Roboter und eine aufsteigende Münze, 0,7 s.
+- **Abzeichen:** Wer Raketen trägt, hat die Raketen-Münze links an seinem Namensschild.
+- **Nachladen:** Die Magazinpunkte unter dem Roboter füllen sich während der 1,4 s wieder.
+- **Startkisten:** Deckel ganz in Teamfarbe mit hellem Rahmen, Seitenwände und Bretter ebenfalls in Teamfarbe. So
+  sehen sie nicht mehr wie die Holz-Deckung aus.
+- Alles folgt aus Rundenzeit, Ereignisalter und Roboterzustand; der Renderer hält keinen eigenen Zustand.
+
+### Balance gemessen (je 150 Runden, Node, Rundenzeit)
+
+| Einstellung | erster K.o. | zweiter K.o. | Ende | Schlussduell | beide unter 40 % | Raketen je Short |
+|---|---|---|---|---|---|---|
+| erste Rakete 3 / 4,5 s, Schaden ×0,55 | 7,2 s | 15,7 s | 30,2 s | 12,8 s | 6 % | 6,0 |
+| erste Rakete 6 / 7,5 s, ×0,55 | 8,3 s | 13,1 s | 29,9 s | 13,7 s | 19 % | 5,3 |
+| erste Rakete 6 / 7,5 s, ×0,7 | 8,3 s | 12,5 s | 26,6 s | 12,1 s | 19 % | 4,6 |
+| **erste Rakete 6 / 7,5 s, zu dritt ×0,5, Duell ×0,9 (gewählt)** | 8,3 s | 13,2 s | 25,8 s | 10,1 s | 19 % | 4,4 |
+| ohne Holen (Raketen nur im Vorbeifahren) | 8,0 s | 14,6 s | 31,0 s | 11,6 s | 41 % | 1,8 |
+
+Kommen die Raketen schon nach 3 s, trifft es in der Eröffnung (Schaden ×2,5) früh einen einzelnen Roboter hart;
+die anderen bleiben fast unverletzt, und das Schlussduell beginnt ungleich. Mit 6 s gehört die Eröffnung dem
+Blaster, die Raketen kommen zum ersten K.o.
+
+### Casting
+
+| Messung (Seeds 1–2400, Chromium 148) | Wert | vorher (Seeds 1–1200) |
+|---|---|---|
+| erster K.o. 5–10 s | 88,4 %, Median 8,1 s | 89,4 %, 8,0 s |
+| zweiter K.o. 12–20 s | 57,9 %, Median 14,0–14,3 s | 69,3 %, 15,1 s |
+| Schlussduell mindestens 6 s | 67,0 %, Median 9,3–10,0 s | 62,1 %, 10,3 s |
+| beide beim Duellstart unter 40 % Leben | 19,4 % | 38,3 % |
+| Länge 26–38 s | 59,0 %, Median 28,2–28,7 s | 22,9 %, 31,9 s |
+| kein Hänger ab 1,5 s | 98,4 % | 98,7 % |
+| Bogen vollständig | 17 Seeds (0,7 %) | 36 Seeds (3,0 %) |
+| davon gewinnt nicht, wer die erste Rakete holt | **11 Seeds** (neue Liste `SHORT_SEEDS`) | 29 Seeds |
+
+Siege über 2400 Seeds: EMBER 616, AZURE 650, AMBER 623, MOSS 510, eine Runde ohne Sieger.
+
+| Seed | 1. K.o. | 2. K.o. | Sieg | Duell | Leben im Duell | Länge | Sieger (Rest) |
+|---|---|---|---|---|---|---|---|
+| 318 (Vorlage) | 7,8 s | 19,6 s | 30,4 s | 10,8 s | 38 % / 37 % | 32,9 s | MOSS (24 %) |
+| **1601 (Empfehlung)** | 8,5 s | 16,0 s | 29,6 s | 13,6 s | 16 % / 35 % | 32,1 s | AZURE (1 %) |
+| 2261 | 8,8 s | 15,9 s | 24,0 s | 8,0 s | 16 % / 16 % | 26,5 s | AZURE (1 %) |
+| 2216 | 10,0 s | 18,1 s | 30,8 s | 12,6 s | 21 % / 23 % | 33,3 s | EMBER (14 %) |
+
+Die Vorlage nimmt wie bisher den nächsten geprüften Seed ab 42, das ist jetzt **318**. Am knappsten endet
+**Seed 1601** (AZURE gewinnt mit 1 % Rest); für den Export genügt `--seed 1601`.
+
+### Vorschau und Probe
+
+Lokal, nicht im Repository, in `output/scrap-short/` der Arbeitskopie `scrap-s1`:
+
+- `scrap-short-probe-20s-v5-seed1601.mp4`: 20-Sekunden-Probe des endgültigen Stands (Seed 1601), 1080 × 1920,
+  600 Bilder, 5,3 MB; Ton der ganzen Episode 152 Ereignisse, −21,8 LUFS, Spitze −6 dBFS, Begrenzer bis −5,3 dB.
+- `scrap-short-probe-20s-v4-raketen.mp4`, `seed946-raketen-blatt.jpg`, `seed946-raketen-8s.png`: die Vorschau, die
+  der Nutzer gesehen hat (Seed 946, noch mit Ambers Raketen-Vorliebe). Seed 946 steht nicht mehr in der Liste.
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-v4.test.mjs` | 9 von 9; der Waffen-Test ist neu: nie unbewaffnet, nur Raketen an den Plattformen, Plattform lädt erst nach der Aufnahme, Nachladen und Wechsel zurück zum Blaster, kein Abwurf; Balance-Test mit ×0,5 und ×0,9 |
+| `node --test test/scrap-short.test.mjs` | 6 von 6; Seek-Bild an elf Stellen pixelgleich (neu: Kisten in Teamfarbe, Ring und Abzeichen kurz nach der Aufnahme); alle 11 Casting-Seeds halten den Bogen |
+| `node --test` mit `scrap`, `scrap-optics`, `audio-scrap-soft`, `presets`, `presets-export-scrap`, `scrap-long` | alle bestanden (zusammen mit den beiden Dateien oben 52 Tests) |
+| `node scripts/scrap-map-hashes.mjs` | 6 Fälle × 4 Prüfpunkte gleich |
+| `npm run golden` (einmal) | 36 Fälle × 2 Prüfpunkte identisch mit der Referenz |
+
+**Nicht gelaufen:** kein vollständiger `npm test`, kein Export über 20 s.
+
+**Grenzen:**
+
+- **Wenige Seeds:** 11 von 2400. Hauptgrund ist die Bedingung „beide beim Duellstart unter 40 % Leben“ (19 % statt
+  38 %), weil Raketen einzelne Roboter schnell herausnehmen.
+- **Moss gewinnt seltener** als die anderen (510 von 2400, die anderen 616 bis 650). Nicht ausgeglichen.
+- Das Nachladen sieht man nur an den Magazinpunkten; einen eigenen Klang gibt es nicht.
+- **Langvideo:** Das Turnier (normales Bild) hat weiter vier Startwaffen, Blitz-Münzen als flache Marken, braune
+  Startkisten, liegende Bretter und 3 s Deckung. Die neuen Regeln hängen an der Short-Karte.
