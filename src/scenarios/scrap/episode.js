@@ -17,6 +17,8 @@
   // S1 · Short: nur Taktik-Arena auf Sunny Yard. Ohne Short fehlt der Schlüssel, damit Zustands-Hashes gleich bleiben.
   function withShort(p, out) {
     if (p.layout === 'short' && out.rulesVersion === 'v4' && out.arena === 'sunshine') out.layout = 'short';
+    // L2 · Raketen-Regeln als Schalter (nur Taktik-Arena). Ohne den Schalter fehlt der Schlüssel ebenfalls.
+    if (p.items === 'rockets' && out.rulesVersion === 'v4') out.items = 'rockets';
     return out;
   }
   const SHORT_END_SEC = 2.5;
@@ -30,6 +32,13 @@
   // neu rechnen; test/scrap-short.test.mjs prüft die Liste im Browser.
   const SHORT_SEEDS = [318, 370, 876, 1492, 1541, 1601, 1661, 1722, 2216, 2261, 2328];
   const castSeed = seed => SHORT_SEEDS.find(s => s >= seed) ?? SHORT_SEEDS[0];
+  // L2 · Casting fürs Turnier-Langvideo (node scripts/scrap-tournament-casting.mjs --from 1 --to 900): ein Sieger,
+  // offen bis Runde 8 (davor liegen drei Roboter mit je zwei Siegen gleichauf), jeder gewinnt eine Runde, die
+  // Führung wechselt zweimal, rund fünf Minuten, kein Hänger ab 2 s. 49 von 900 Seeds bestehen; hier stehen die drei
+  // besten um fünf Minuten. Nach jeder Änderung an v4 oder den Raketen-Regeln neu rechnen; test/scrap-long.test.mjs
+  // prüft die Liste im Browser.
+  const LONG_SEEDS = [431, 469, 488];
+  const castTournamentSeed = seed => LONG_SEEDS.find(s => s >= seed) ?? LONG_SEEDS[0];
   const PROBES = new Map();
   function lastKoTick(options) {
     const key = JSON.stringify(options), known = PROBES.get(key);
@@ -97,7 +106,7 @@
       const weapon = r.weapon && { ...r.weapon };
       super._drop(r, exhausted);
       // Short: Nichts fällt zu Boden (Nachladen, Wechsel zurück zum Blaster)
-      if (weapon && !this.shortMap) this.emit?.('drop', r.x, r.y, { team: r.id, kind: weapon.kind, ammo: weapon.ammo });
+      if (weapon && !this.items) this.emit?.('drop', r.x, r.y, { team: r.id, kind: weapon.kind, ammo: weapon.ammo });
     }
     _addPickup(...args) {
       const p = super._addPickup(...args);
@@ -146,7 +155,8 @@
       this.roundSeed = this.roundNumber === 1 ? this.seed : hashSeed('scrap-round-v1', this.seed, this.roundNumber);
       const Round = this.cfg.rulesVersion === 'v4' ? TacticalRound : this.cfg.rulesVersion === 'v3' ? MaterialRound : this.cfg.rulesVersion === 'classic' && this.cfg.arena === 'yard' && !this.cfg.workshop ? ObservedRound : ImprovedRound;
       const options = { seed: this.roundSeed, rulesVersion: this.cfg.rulesVersion, arena: this.cfg.arena,
-        portrait: this.world.h > this.world.w, short: this.short, upgrades: this.workshop.modules };
+        portrait: this.world.h > this.world.w, short: this.short, upgrades: this.workshop.modules,
+        ...(this.cfg.items ? { items: this.cfg.items } : {}) };
       this.roundSim = new Round(options);
       if (this.short) this._planSlowMotion(options);
       // Non-enumerable: JSON of the round stays byte-identical to the source.
@@ -334,5 +344,5 @@
     const size = world || (cfg.video ? EBS.videoSize(cfg.video) : null);
     return !size || (size.h ?? size.logicalHeight) > (size.w ?? size.logicalWidth);
   }
-  EBS.Scrap = { Episode, normalizeParams, layout, EVENT_LIMIT, createExportPlan, hasNaturalEnd, SHORT_END_SEC, SLOW, SHORT_SEEDS, castSeed };
+  EBS.Scrap = { Episode, normalizeParams, layout, EVENT_LIMIT, createExportPlan, hasNaturalEnd, SHORT_END_SEC, SLOW, SHORT_SEEDS, castSeed, LONG_SEEDS, castTournamentSeed };
 })();

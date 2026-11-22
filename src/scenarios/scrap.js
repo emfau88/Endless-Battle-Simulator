@@ -532,6 +532,8 @@
     constructor(ctx) {
       super(ctx);
       this.sim = ctx.sim; this.view = ctx.view; this.layout = layout(ctx.world, ctx.sim.cfg);
+      // Raketen-Regeln (Short oder Schalter): Münzen, Ring und Abzeichen, Startkisten in Teamfarbe, Bretter blenden aus
+      this.rocketLook = !!this.layout.short || ctx.sim.cfg.items === 'rockets';
       this.arenaCanvas = document.createElement('canvas');
       this.arena = new ArenaRenderer(this.arenaCanvas, { dpr: 1, quality: 1 });
       this.arena.episode = this.sim;
@@ -708,7 +710,7 @@
       for(const e of effects)this.arena._effect(g,e,true);
       fx.debris(g,scene.debris,sunny);
       // Short: Geladene Waffen stehen als drehende Münzen da (von Anfang an, nichts fällt vom Himmel)
-      for(const p of r.pickups){if(l.short&&sunny)EBS.ScrapDaylightArt.coin(g,mapPoint(p),r.t);else this.arena._pickup(g,mapPoint(p),r.t);}
+      for(const p of r.pickups){if(this.rocketLook&&sunny)EBS.ScrapDaylightArt.coin(g,mapPoint(p),r.t);else this.arena._pickup(g,mapPoint(p),r.t);}
       for(const b of blocks)if(b.alive) {
         const t=art.block(b,this.arena._blocks,sunny);g.drawImage(t.canvas,b.x-t.pad,b.y-t.pad,t.width,t.height);
       }
@@ -720,10 +722,10 @@
       for(const e of effects)this.arena._effect(g,e);
       fx.puffs(g,scene.smoke);
       // Short: Beim Nachladen füllen sich die Magazinpunkte wieder (nur Anzeige, auf Kopien der Roboter)
-      const reload=l.short?EBS.ScrapTactics.SHORT_ITEMS.reload:0;
-      const labelled=l.short?robots.map(o=>o.weapon&&o.reloadUntil>r.t?{...o,weapon:{...o.weapon,ammo:o.weapon.maxAmmo*Math.max(0,1-(o.reloadUntil-r.t)/reload)}}:o):robots;
+      const reload=r.items?r.items.reload:0;
+      const labelled=r.items?robots.map(o=>o.weapon&&o.reloadUntil>r.t?{...o,weapon:{...o.weapon,ammo:o.weapon.maxAmmo*Math.max(0,1-(o.reloadUntil-r.t)/reload)}}:o):robots;
       this.arena._labels(g,labelled,l.arenaW,l.arenaH,l.short?SHORT_ART.labels:1);
-      if(l.short){this._weaponBadges(g,robots,l.arenaW,l.arenaH);this._pickupRings(g,scene.rings);}
+      if(this.rocketLook){this._weaponBadges(g,robots,l.arenaW,l.arenaH);this._pickupRings(g,scene.rings);}
       g.restore();
       // Short: keine Kopfleiste, kein Rundenbanner; nur Einstiegstext und Sieger
       if(l.short){this.shortOverlay(g);return;}
@@ -837,12 +839,12 @@
           }
         } else if (e.type === 'pickup') {
           // Short: Aufnahme sichtbar machen (Ring in Teamfarbe und aufsteigende Münze, 0,7 s)
-          if (this.layout.short && robot && age < SHORT_ART.ringSec) scene.rings.push({ robot, age, kind: e.kind, color: palette[e.team % 4] });
+          if (this.rocketLook && robot && age < SHORT_ART.ringSec) scene.rings.push({ robot, age, kind: e.kind, color: palette[e.team % 4] });
         } else if (e.type === 'crate_break') {
           // Short: Startkisten und ihre Bretter in Teamfarbe, damit sie sich von der Holz-Deckung abheben
-          const team = palette[e.team % 4], planks = this.layout.short && e.team != null ? [fx.shade(team, .95), fx.shade(team, .68), fx.shade(team, .82)] : ['#a8743f', '#7b532c', '#c08b52'];
+          const team = palette[e.team % 4], planks = this.rocketLook && e.team != null ? [fx.shade(team, .95), fx.shade(team, .68), fx.shade(team, .82)] : ['#a8743f', '#7b532c', '#c08b52'];
           // Short: Die Bretter bleiben nicht liegen, sie blenden von 1,0 s bis 1,8 s aus (ruhigeres Bild).
-          const fade = this.layout.short ? Math.max(0, Math.min(1, (SHORT_ART.plankGone - age) / (SHORT_ART.plankGone - SHORT_ART.plankStay))) : 1;
+          const fade = this.rocketLook ? Math.max(0, Math.min(1, (SHORT_ART.plankGone - age) / (SHORT_ART.plankGone - SHORT_ART.plankStay))) : 1;
           // Bretter zählen nicht gegen die Grenze von 40 Teilen: höchstens vier Kisten je Runde
           if (fade > 0) for (let k = 0; k < 9; k++) { const dir = (k + n(seq, k + 2)) / 9 * TAU; scene.debris.push({ kind: 'plank', x: p.x + Math.cos(dir) * 22, y: p.y + Math.sin(dir) * 22, age, flight: .45,
             dir, dist: 30 + 26 * n(seq, k + 6), hop: 12, rot: n(seq, k + 10) * TAU, spin: 9 * (n(seq, k + 14) - .5),
@@ -890,7 +892,7 @@
     }
     // Short: Wer Raketen trägt, bekommt die Raketen-Münze links an sein Namensschild
     _weaponBadges(g, robots, width, height) {
-      const k = SHORT_ART.labels;
+      const k = this.layout.short ? SHORT_ART.labels : 1;
       for (const { robot, x, y } of this.arena._labelLayout(robots, width, height, k))
         if (robot.weapon && robot.weapon.kind === 'rocket') EBS.ScrapDaylightArt.badge(g, x - 7 * k, y + 8 * k, 'rocket', .5 * k, 1);
     }
@@ -913,7 +915,7 @@
             g.save(); g.translate(cx + Math.cos(a) * out, cy + Math.sin(a) * out); g.rotate(a + Math.PI / 2 + spin);
             g.globalAlpha = 1 - u * u; g.beginPath(); g.roundRect(-len / 2, -5, len, 10, 2);
             const team = palette[c.id % 4];
-            g.fillStyle = this.layout.short ? fx.shade(team, i % 2 ? .7 : .92) : i % 2 ? '#a8743f' : '#c08b52'; g.fill(); g.strokeStyle = fx.rgba(ink, .6); g.lineWidth = 1.2; g.stroke();
+            g.fillStyle = this.rocketLook ? fx.shade(team, i % 2 ? .7 : .92) : i % 2 ? '#a8743f' : '#c08b52'; g.fill(); g.strokeStyle = fx.rgba(ink, .6); g.lineWidth = 1.2; g.stroke();
             g.restore();
           }
           g.restore();
@@ -952,7 +954,7 @@
         g.drawImage(tex.canvas, -c.w / 2 - tex.pad, -c.h / 2 - tex.pad, tex.width, tex.height);
         // Teamband quer über den Deckel, damit man sieht, wer in welcher Kiste steckt
         const color = palette[c.id % 4], vertical = c.w < c.h;
-        if (this.layout.short) {
+        if (this.rocketLook) {
           // Short: ganzer Deckel in Teamfarbe mit hellem Rahmen, damit die Kiste nicht wie Holz-Deckung aussieht
           g.beginPath(); g.roundRect(-c.w / 2 + 1.5, -c.h / 2 + 1.5, c.w - 3, c.h - 3, 5);
           g.fillStyle = fx.rgba(color, .84); g.fill(); g.strokeStyle = fx.rgba(ink, .65); g.lineWidth = 1.8; g.stroke();
@@ -1209,7 +1211,7 @@
     id: 'scrap', title: 'Scrap Wars',
     supportsClips: true,
     supportsCamera: false,
-    defaults: { rulesVersion: 'v3', episodeMode: 'endless', arena: 'yard', workshop: false, repeatRounds: true, endPauseSec: 3, soundMix: 'classic', layout: 'standard' },
+    defaults: { rulesVersion: 'v3', episodeMode: 'endless', arena: 'yard', workshop: false, repeatRounds: true, endPauseSec: 3, soundMix: 'classic', layout: 'standard', items: 'classic' },
     controls: [
       { key: 'episodeMode', label: 'Format', type: 'select', options: [['endless', 'Freie Videolänge'], ['tournament', 'Turnier · 8 Runden + Finale']], restart: true },
       { key: 'rulesVersion', label: 'Arena / Kampfregeln', type: 'select', enabled: p => p.arena !== 'sunshine' || p.rulesVersion === 'v4', options: [['v4', 'Taktik-Arena · Startkisten, Zielwahl, Wegfindung'], ['v3', 'Große Arena · Holz, Stein, Beton'], ['v2', 'Bisherige Arena · flüssiger Kampf'], ['classic', 'Originalprototyp']], restart: true },
@@ -1217,6 +1219,9 @@
       // Short: nur Taktik-Arena auf Sunny Yard und nur im Hochformat; sonst bleibt das normale Bild.
       { key: 'layout', label: 'Bildaufbau', type: 'select', enabled: p => p.rulesVersion === 'v4' && p.arena === 'sunshine',
         options: [['standard', 'Normal · Kopfleiste, ganze Arena'], ['short', 'Short · kleine Karte, ohne Kopfleiste, eine Runde (nur Hochformat)']], restart: true },
+      // Raketen-Regeln: nur Taktik-Arena. Im Short gelten sie immer.
+      { key: 'items', label: 'Waffen', type: 'select', enabled: p => p.rulesVersion === 'v4' && p.layout !== 'short',
+        options: [['classic', 'Klassisch · Startwaffen und zwei Stationen'], ['rockets', 'Nur Raketen · Blaster lädt nach, Raketen von den zwei Stationen']], restart: true },
       { key: 'workshop', label: 'Werkstatt (experimentell, ein Modul je Roboter)', type: 'check', enabled: p => p.episodeMode === 'tournament', restart: true },
       { key: 'repeatRounds', label: 'Weitere Runden spielen', type: 'check', enabled: p => p.episodeMode !== 'tournament', restart: true },
       { key: 'endPauseSec', label: 'Ergebnis zeigen', type: 'range', min: 2, max: 8, step: 1, restart: true, format: v => `${v} s` },
@@ -1225,7 +1230,7 @@
     ],
     // Die Simulation sieht soundMix nicht (eigene Normalisierung in der Episode), ihre Hashes bleiben gleich.
     // layout steht hier immer (für den Schalter); die Episode kennt den Schlüssel nur im Short.
-    normalizeParams: p => { const n = normalizeParams(p); return { ...n, layout: n.layout || 'standard', soundMix: soundMixOf(p) }; },
+    normalizeParams: p => { const n = normalizeParams(p); return { ...n, layout: n.layout || 'standard', items: n.items || 'classic', soundMix: soundMixOf(p) }; },
     durationLabel: cfg => normalizeParams(cfg.params).layout === 'short'
       ? { pending: 'Ablauf des Shorts wird berechnet …', complete: 'Automatisch: eine Runde bis zum Sieg und 2,5 Sekunden Abspann.' } : null,
     audioForParams(p) { return soundMixOf(p) === 'soft-v1' ? SOFT_AUDIO : this.audio; },

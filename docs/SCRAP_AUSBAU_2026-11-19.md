@@ -531,6 +531,10 @@ node export.mjs --config presets/production/scrap-short.json --clip-start 0 --cl
 
 ## L1 · Langvideo-Vorlage im Turniermodus (21.11.2026)
 
+> **Ergänzt am 22.11.2026:** Die Vorlage nutzt jetzt die Raketen-Regeln und einen geprüften Turnier-Seed (431,
+> 5:08 Minuten), siehe [L2](#l2--langvideo-mit-den-raketen-regeln-22112026). Die Zahlen zu Seed 42 unten gelten für
+> den Stand davor.
+
 **Umfang:** Die Langvideo-Vorlage von Scrap Wars ist jetzt ein Turnier statt eines Dauerlaufs; der Export schreibt
 Kapitelzeiten in die Begleitdatei.
 
@@ -884,3 +888,106 @@ Lokal, nicht im Repository, in `output/scrap-short/` der Arbeitskopie `scrap-s1`
 - Das Nachladen sieht man nur an den Magazinpunkten; einen eigenen Klang gibt es nicht.
 - **Langvideo:** Das Turnier (normales Bild) hat weiter vier Startwaffen, Blitz-Münzen als flache Marken, braune
   Startkisten, liegende Bretter und 3 s Deckung. Die neuen Regeln hängen an der Short-Karte.
+
+---
+
+## L2 · Langvideo mit den Raketen-Regeln (22.11.2026)
+
+**Auftrag des Nutzers:** heute ein hochwertiges Short und ein Langvideo von rund fünf Minuten, so spannend wie
+möglich. Die Raketen-Regeln des Shorts sollen auch im Langvideo gelten.
+
+### Das ganze Short
+
+Auf Auftrag exportiert, lokal: `output/scrap-short/scrap-short-seed1601-60fps.mp4` (Seed 1601, 32,1 s, 1080 × 1920,
+60 Bilder je Sekunde, 1927 Bilder, 8,5 MB, −21,8 LUFS). Befehl:
+`node export.mjs --config presets/production/scrap-short.json --seed 1601 --fps 60 --out …`.
+Der Nutzer fragte, warum die Arena nicht das ganze Hochkantbild füllt. Antwort: Sie liegt absichtlich zwischen 8 %
+und 81 % der Bildhöhe, weil YouTube oben und unten Titel und Knöpfe einblendet. Das bleibt so („lass es einfach so“).
+
+### Schalter „Waffen“
+
+- Neuer Parameter `items: 'rockets'`, nur in der Taktik-Arena `v4`, auf allen Karten und in beiden Formaten. In der
+  Oberfläche: „Waffen“ mit „Klassisch“ und „Nur Raketen“. Im Short gelten die Regeln ohnehin immer.
+- Ohne den Schalter fehlt der Schlüssel in der Episode; `classic` bis `v4` rechnen und zeichnen unverändert.
+- **Regeln wie im Short:** Blaster lädt nach 1,4 s von selbst nach, Raketen nur von den zwei Stationen (erste nach
+  6 s und 7,5 s, danach 9 s nach der Aufnahme), gezieltes Holen bis 320 AE Weg, Deckung nur 0,5 s.
+- **Darstellung wie im Short:** drehende Münzen, Ring und Abzeichen bei der Aufnahme, Magazinpunkte beim Nachladen,
+  Startkisten in Teamfarbe, Bretter blenden aus. Kopfleiste, Rangliste und Rundenbanner bleiben.
+
+### Tempo auf der großen Karte (je 120 Runden, Sunny Yard quer, Node)
+
+| Einstellung | erster K.o. | zweiter K.o. | Rundenende | Schlussduell | Duell über 20 s | Hänger ab 1,5 s |
+|---|---|---|---|---|---|---|
+| klassisch (bisher) | 15,6 s | 21,2 s | 31,2 s | 9,5 s | nicht gemessen | 28 % |
+| Raketen, Schaden ×1 | 15,2 s | 19,6 s | 28,7 s | 7,7 s | nicht gemessen | 1 % |
+| Raketen, ×2 zu viert, dann ×0,55, Duell ×0,8 | 10,2 s | 18,4 s | 32,4 s | 11,8 s | 19 % | 1 % |
+| dazu Steigerung im Duell 6 % je Sekunde | 10,2 s | 18,4 s | 29,3 s | 9,8 s | 5 % | 1 % |
+| **×2 zu viert, zu dritt ×0,45, Duell ×0,8 mit Steigerung (gewählt)** | 10,2 s | 19,8 s | 31,5 s | 9,4 s | 4 % | unter 1 % |
+
+- **Eröffnung ×2:** Der erste K.o. fällt nach 10 statt 15 Sekunden.
+- **Steigerung im Duell:** Ab dem ersten Treffer im Schlussduell steigt der Schaden je Sekunde um 6 %, höchstens
+  auf das Dreifache. Lange, zähe Duelle über 20 Sekunden gibt es damit in 4 % statt 19 % der Runden. Der Schwächere
+  nimmt 15 % weniger Schaden. Im Short gibt es diese Steigerung nicht.
+- **Ergebnis zwischen den Runden:** 4 statt 3 Sekunden, damit die Rangliste lesbar ist.
+
+### Turnier-Casting
+
+Neu: `scripts/scrap-tournament-casting.mjs` rechnet ganze Turniere in Chromium (rund 0,5 s je Turnier). Bedingungen:
+ein Turniersieger und keine Runde ohne Sieger; offen bis Runde 8; jeder gewinnt mindestens eine Runde; die Führung
+wechselt mindestens zweimal; Runden 18–50 s und Video 4:15–5:30 Minuten; kein Hänger ab 2 s.
+
+| Messung (Seeds 1–900, Chromium 148) | Wert |
+|---|---|
+| ein Sieger, keine Runde ohne Sieger | 73,3 % |
+| offen bis Runde 8 | 75,0 % |
+| jeder gewinnt eine Runde | 62,2 % |
+| Führung wechselt zweimal | 15,6 % |
+| Rundenlängen und Videolänge | 62,7 % |
+| kein Hänger ab 2 s | 98,1 % |
+| alle Bedingungen | 49 Seeds (5,4 %) |
+| Median | Video 4:33, Runde 30,2 s, erster K.o. 10,1 s |
+
+Rundensiege über 7200 Runden: EMBER 1783, AZURE 1948, AMBER 1787, MOSS 1681, eine Runde ohne Sieger.
+
+Die Vorlage nimmt den nächsten geprüften Turnier-Seed (`EBS.Scrap.castTournamentSeed`), die Liste hat die drei besten
+um fünf Minuten: **431**, 469, 488. Bei allen dreien liegen vor der letzten Runde drei Roboter mit je zwei Siegen
+gleichauf.
+
+**Seed 431, 5:08 Minuten:**
+
+| Runde | Kapitel | K.o. bei | Sieger (Rest-Leben) | Duell |
+|---|---|---|---|---|
+| 1 | 0:00 | 8,4 / 27,6 / 43,4 s | AZURE (14 %) | 15,8 s |
+| 2 | 0:47 | 11,3 / 13,1 / 26,5 s | EMBER (34 %) | 13,4 s |
+| 3 | 1:17 | 12,7 / 13,4 / 23,4 s | EMBER (6 %) | 10,0 s |
+| 4 | 1:45 | 10,5 / 17,9 / 25,8 s | AZURE (19 %) | 7,9 s |
+| 5 | 2:15 | 7,5 / 20,7 / 31,9 s | AMBER (14 %) | 11,2 s |
+| 6 | 2:51 | 6,7 / 47,3 / 49,4 s | MOSS (28 %) | 2,1 s |
+| 7 | 3:44 | 8,2 / 28,0 / 34,8 s | AMBER (60 %) | 6,8 s |
+| 8 – Finale | 4:23 | 9,3 / 27,2 / 39,6 s | AZURE (6 %) | 12,4 s |
+
+Stand vor dem Finale: EMBER 2, AZURE 2, AMBER 2, MOSS 1. Endstand: AZURE 3, EMBER 2, AMBER 2, MOSS 1.
+
+### Probe und Prüfungen
+
+Lokal, nicht im Repository: `output/scrap-long/scrap-long-probe-20s.mp4` (erste 20 Sekunden, 1920 × 1080, 600 Bilder,
+4,6 MB; Ton der ganzen Episode 1679 Ereignisse, −22,0 LUFS, Spitze −6 dBFS), `probe-20s-bilder.jpg` und die
+Casting-Protokolle.
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-v4.test.mjs` | 10 von 10, neu: Schalter `items` auf der großen Karte in beiden Formaten, Schadenswerte und Steigerung im Duell, ohne Schalter keine neuen Felder |
+| `node --test test/scrap-long.test.mjs` | 4 von 4, neu: Schalter „Waffen“ in der Oberfläche, alle drei Turnier-Seeds bestehen das Casting in Chromium |
+| `node --test test/scrap-short.test.mjs` | 6 von 6 (Short unverändert) |
+| `node --test` mit `scrap`, `scrap-optics`, `audio-scrap-soft`, `presets`, `presets-export-scrap` | 34 von 34 |
+| `node scripts/scrap-map-hashes.mjs` | 6 Fälle × 4 Prüfpunkte gleich |
+| `npm run golden` (einmal) | 36 Fälle × 2 Prüfpunkte identisch mit der Referenz |
+
+**Nicht gelaufen:** kein vollständiger `npm test`.
+
+**Grenzen:**
+
+- Gemessen ist nur Sunny Yard. Auf den dunklen Karten gelten die Regeln, aber die Waffen bleiben flache Marken.
+- Runde 6 von Seed 431 hat eine lange Phase zu dritt (K.o. bei 6,7 s und erst wieder bei 47,3 s).
+- AZURE gewinnt über alle Seeds etwas öfter (208 von 661 klaren Turniersiegen), MOSS seltener (129).
+- Die Hof-Kulisse fürs Short (Bild ganz gefüllt) war begonnen und ist auf Wunsch des Nutzers wieder ausgebaut.

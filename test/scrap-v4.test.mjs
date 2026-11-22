@@ -281,6 +281,42 @@ test('Scrap v4 Short (S2, Waffen): Blaster lädt von selbst nach, Raketen nur vo
   assert.ok(reloads > 8 && swaps > 4 && fetches > 100, JSON.stringify({ reloads, swaps, fetches }));
 });
 
+test('Scrap v4 (L2, Schalter items): Raketen-Regeln auf der großen Karte, Duell wird mit der Zeit härter; ohne Schalter unverändert', () => {
+  const { ARENA_ITEMS, ARENA_FIGHT, SHORT_FIGHT } = EBS.ScrapTactics;
+  assert.deepEqual(JSON.parse(JSON.stringify(ARENA_ITEMS)), { reload: 1.4, swap: .5, first: [6, 7.5], period: 9, fetch: 320, fetchWait: 1.2 });
+  assert.deepEqual({ ...ARENA_FIGHT }, { opening: 2, damage: .45, duel: .8, underdog: .85, duelRamp: .06, duelMax: 3, coverSec: .5, coverMax: 2.5, coverPause: 6 });
+  assert.equal(SHORT_FIGHT.duelRamp, undefined, 'im Short keine Steigerung');
+  const make = (seed, portrait, items) => new Round({ seed, rulesVersion: 'v4', arena: 'sunshine', portrait, ...(items ? { items: 'rockets' } : {}), upgrades: [null, null, null, null] });
+  // Ohne Schalter: keine neuen Felder, vier Startwaffen
+  const plain = make(3, false, false);
+  assert.deepEqual([plain.items, plain.pace, plain.duelSince, plain.pickups.length], [undefined, undefined, undefined, 4]);
+  for (const portrait of [false, true]) for (const seed of [1, 2, 3]) {
+    const r = make(seed, portrait, true);
+    assert.equal(r.shortMap, undefined); assert.equal(r.pickups.length, 0); assert.equal(r.crateFallback, false);
+    assert.equal(r.pads.map(p => `${p.kind}:${p.readyIn}:${p.period}`).join(), 'rocket:6:9,rocket:7.5:9');
+    let pickups = 0, last = 0;
+    while (r.phase === 'running' && r.t < 120) {
+      r.step(1 / 120);
+      for (const o of r.robots) assert.equal(!!o.weapon, o.alive);
+      assert.ok(r.pickups.length <= 2 && r.pickups.every(p => p.kind === 'rocket' && !p.empty));
+      if (r.stats.pickups !== last) { pickups += r.stats.pickups - last; last = r.stats.pickups; }
+    }
+    assert.ok(r.winner !== null && pickups >= 1 && r.stats.drops === 0 && r.checkInvariants().ok, `Seed ${seed}: ${JSON.stringify({ winner: r.winner, pickups })}`);
+  }
+  // Schaden: ×2 zu viert, ×0,45 zu dritt; im Duell ×0,8 und je Sekunde 6 % mehr, höchstens ×3
+  const r = make(5, false, true);
+  for (const robot of r.robots) robot.caged = false;
+  const hit = (id, amount = 10) => { const hp = r.robots[id].hp; r._hurtRobot(r.robots[id], amount, (id + 1) % 4, 0, 0); return Number((hp - r.robots[id].hp).toFixed(9)); };
+  const want = v => Number(v.toFixed(9)), f = ARENA_FIGHT;
+  assert.equal(hit(0), want(10 * f.opening));
+  r.robots[3].alive = false; assert.equal(hit(0), want(10 * f.damage));
+  r.robots[2].alive = false; r.t = 20;
+  assert.equal(hit(1), want(10 * f.duel), 'Duellbeginn: der Stärkere, noch keine Steigerung'); assert.equal(r.duelSince, 20);
+  r.t = 30; assert.equal(hit(1), want(10 * f.duel * (1 + f.duelRamp * 10)), 'nach 10 s');
+  assert.equal(hit(0), want(10 * f.duel * f.underdog * (1 + f.duelRamp * 10)), 'der Schwächere');
+  r.t = 100; assert.equal(hit(1, 1), want(1 * f.duel * f.duelMax), 'Obergrenze');
+});
+
 test('Scrap v4 Short (S2, Zeitlupe): vorab berechneter Tempoplan, letzter K.o. am geplanten Schritt, Szenenzeit stetig; ohne Short kein Plan', () => {
   const { SLOW, SHORT_END_SEC } = EBS.Scrap, params = { rulesVersion: 'v4', arena: 'sunshine', layout: 'short' };
   assert.deepEqual({ ...SLOW }, { tempo: .35, beforeSec: .3, afterSec: .2 });

@@ -14,6 +14,7 @@ Aufgabenliste bleibt die [ROADMAP](ROADMAP.md); hier stehen die Einzelheiten. Be
 | T2 Ton `soft-v1` | PR #46, Hörurteil des Nutzers: „Passt“ |
 | S1, Teil 1: Short-Karte und Ablauf | PR #47 ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s1-teil-1--short-karte-und-ablauf-in-arbeit)) |
 | L1: Langvideo-Vorlage | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Turnier mit acht Runden in der Taktik-Arena (Seed 42: 5:23 Minuten), Kapitelzeiten der Rundenstarts in der JSON-Begleitdatei ([Bericht](SCRAP_AUSBAU_2026-11-19.md#l1--langvideo-vorlage-im-turniermodus-21112026)) |
+| L2: Langvideo mit den Raketen-Regeln | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Schalter „Waffen“ (`items: 'rockets'`) für die Taktik-Arena, Tempo auf der großen Karte gemessen (Eröffnung ×2, zu dritt ×0,45, Duell ×0,8 mit Steigerung), Ergebnis 4 s; neues Turnier-Casting (49 von 900 Seeds bleiben bis Runde 8 offen), Vorlage auf Seed 431 (5:08 Minuten). Das ganze Short (Seed 1601, 60 fps) ist exportiert ([Bericht](SCRAP_AUSBAU_2026-11-19.md#l2--langvideo-mit-den-raketen-regeln-22112026)) |
 | Dritter Nachtrag zum Short: Raketen als einziges Item | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Nach einer Vorschau vom Nutzer freigegeben („viel besser“): Blaster lädt von selbst nach, Raketen kommen nur von den zwei Plattformen (höchstens zwei Münzen), Roboter holen sie gezielt; Ring und Abzeichen bei der Aufnahme, Startkisten in Teamfarbe. Balance neu (zu dritt ×0,5, Duell ×0,9), Casting über 2400 Seeds: 11 geprüfte, Vorlage auf Seed 318 ([Bericht](SCRAP_AUSBAU_2026-11-19.md#dritter-nachtrag-zum-short-raketen-als-einziges-item-22112026)) |
 | Zweiter Nachtrag zum Short: Waffen als Münzen | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Rückmeldung zur zweiten Probe umgesetzt: Der Abwurf vom Himmel ist wieder ausgebaut; die Waffen stehen von Anfang an als drehende Münzen da (Ring orange für Rakete, blau für Blitz), neue Waffen an den Stationen wachsen auf. Casting neu gerechnet, Liste und Seed 84 unverändert; dritte 20-Sekunden-Probe lokal ([Bericht](SCRAP_AUSBAU_2026-11-19.md#zweiter-nachtrag-zum-short-waffen-als-drehende-münzen-22112026)) |
 | Nachtrag zum Short nach der ersten Probe | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Rückmeldung des Nutzers umgesetzt: keine Hänger mehr (Deckung im Short 0,5 s statt 3 s, Schaden nach dem ersten K.o. ×0,55), Waffen fielen zunächst erst nach den Robotern vom Himmel (am 22.11. wieder ausgebaut), Bretter der Startkisten blenden nach 1 bis 1,8 s aus. Casting neu gerechnet (29 Seeds, Vorlage auf Seed 84, 26,5 s), neue 20-Sekunden-Probe lokal ([Bericht](SCRAP_AUSBAU_2026-11-19.md#nachtrag-zum-short-nach-der-ersten-probe-21112026)) |
@@ -29,13 +30,13 @@ Alle Pakete des Plans sind gebaut. Offen sind nur noch Urteile und Aufträge des
 
 - Die Proben eins bis drei und die Vorschau der Raketen-Regeln sind beurteilt; die Punkte daraus sind umgesetzt.
   Die 20-Sekunden-Probe des endgültigen Stands ist `scrap-short-probe-20s-v5-seed1601.mp4`.
-- **Das ganze Short nur auf Auftrag.** Vorlage (Seed 318, 32,9 s):
-  `node export.mjs --config presets/production/scrap-short.json --out output/scrap-short.mp4`;
-  knappstes Ende (Seed 1601, 32,1 s): derselbe Befehl mit `--seed 1601`.
+- **Das ganze Short ist exportiert** (Auftrag vom 22.11.): `scrap-short-seed1601-60fps.mp4`, Seed 1601, 32,1 s,
+  60 Bilder je Sekunde. Offen ist das Urteil des Nutzers. Neu exportieren:
+  `node export.mjs --config presets/production/scrap-short.json --seed 1601 --fps 60 --out output/scrap-short.mp4`
 
 ### Langvideo: Export
 
-- **Das Turnier-Langvideo** (Seed 42, 5:23 Minuten) **nur auf Auftrag**:
+- **Das Turnier-Langvideo** (Seed 431, 5:08 Minuten, Auftrag vom 22.11. liegt vor):
   `node export.mjs --config presets/production/scrap-long.json --out output/scrap-long.mp4`
   Die Kapitelzeiten stehen danach in `output/scrap-long.json` unter `chaptersText`.
 
@@ -58,12 +59,10 @@ Alle Pakete des Plans sind gebaut. Offen sind nur noch Urteile und Aufträge des
 7. **Zeitlupe:** 0,3 s vor und 0,2 s nach dem letzten K.o., Ton ohne eigenen Akzent. Passt das, oder länger?
 8. **Short-Seed:** Die Vorlage nimmt Seed 318 (32,9 s, MOSS gewinnt mit 24 % Rest). Empfehlung für den Export:
    Seed 1601 (32,1 s, AZURE gewinnt mit 1 % Rest). Die Liste hat neun weitere geprüfte Seeds. Welcher soll es sein?
-9. **Langvideo:** Das Turnier dauert rund 5 statt 10 Minuten (Seed 42: 5:23, MOSS gewinnt 5 von 8 Runden). Passt
-   das, oder lieber ein anderer Seed mit engerem Ausgang oder zwei Turniere hintereinander?
-10. **Langvideo wie der Short?** Raketen als einziges Item, selbst nachladender Blaster, Münzen, Ring und Abzeichen,
-    Startkisten in Teamfarbe, ausblendende Bretter und die kurze Deckung gelten bisher nur im Short. Für das
-    Turnier-Langvideo (normales Bild, große Karte) braucht es einen eigenen Schalter, eine eigene Messung und eine
-    Seed-Auswahl.
+9. **Langvideo:** Das Turnier dauert rund 5 statt 10 Minuten (Seed 431: 5:08, drei Roboter vor dem Finale gleichauf,
+   AZURE gewinnt). Passt das, oder lieber Seed 469 oder 488 oder zwei Turniere hintereinander?
+10. **Langvideo wie der Short:** erledigt am 22.11. (Schalter „Waffen“, siehe L2). Offen ist nur das Urteil zum
+    Tempo: Eröffnung ×2, Steigerung im Schlussduell, 4 s Ergebnis zwischen den Runden.
 11. **Moss:** gewinnt im Short seltener als die anderen (510 von 2400). Ausgleichen?
 
 ## 4 · Aufräumen (jeder Schritt braucht die Freigabe des Nutzers)

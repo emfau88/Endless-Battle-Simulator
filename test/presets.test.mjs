@@ -95,14 +95,14 @@ test('Vorlagenknöpfe erhalten den Seed und laden alle sechs Szenarien mit speic
   const page = await ctx.newPage(), errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.goto(base + '?seed=731&paused=1'); await ready(page);
-  // Der Seed bleibt erhalten; nur der Scrap-Short nimmt den nächsten geprüften Casting-Seed (731 → 876), der danach gilt.
+  // Der Seed bleibt erhalten; nur Scrap nimmt geprüfte Casting-Seeds, die danach gelten (Short 731 → 876, Turnier 876 → 431).
   let seed = 731;
   for (const id of ids) {
     await page.selectOption('#scenario', id);
     for (const kind of ['short', 'long']) {
       await page.click(kind === 'short' ? '#btnShortPreset' : '#btnLongPreset');
       const expected = await page.evaluate(([id, kind, seed]) => EBS.normalizeConfig(EBS.productionPreset(id, kind, seed)), [id, kind, seed]);
-      assert.equal(expected.seed, id === 'scrap' && kind === 'short' ? 876 : seed);
+      assert.equal(expected.seed, id === 'scrap' ? (kind === 'short' ? 876 : 431) : seed);
       seed = expected.seed;
       if ((id === 'territory' && kind === 'short') || id === 'scrap') {
         // The video ends with the victory (Scrap long: with the tournament): the planned length replaces the starting value of the preset.

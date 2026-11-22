@@ -48,9 +48,11 @@
     };
     // Scrap Langvideo: Turnier mit acht Runden und Rangliste in der Taktik-Arena. Das Video endet 5 s nach der
     // letzten Runde (rund 4 bis 5,5 Minuten); 300 s ist nur der Startwert. Der Export schreibt Kapitelzeiten.
+    // Waffen wie im Short: Blaster lädt nach, Raketen nur von den zwei Stationen (items: 'rockets'). Die Vorlage
+    // nimmt einen geprüften Turnier-Seed, bei dem die Entscheidung erst in der letzten Runde fällt.
     if (scenario === 'scrap') return {
-      version: 1, name: `${labels[scenario]} – Langvideo (Turnier, 8 Runden)`, scenario, seed,
-      params: { arena: 'sunshine', rulesVersion: 'v4', episodeMode: 'tournament', repeatRounds: true, soundMix: 'soft-v1' },
+      version: 1, name: `${labels[scenario]} – Langvideo (Turnier, 8 Runden)`, scenario, seed: EBS.Scrap.castTournamentSeed(seed),
+      params: { arena: 'sunshine', rulesVersion: 'v4', items: 'rockets', episodeMode: 'tournament', repeatRounds: true, endPauseSec: 4, soundMix: 'soft-v1' },
       video: { aspect: '16:9', resolution: 1080, fps: 30, durationSec: 300, tempo: 1, audio: true, volume: { master: 100 },
         quality: { crf: 20, preset: 'medium', bitrate: null } },
       view: { hud: true, camera: false },

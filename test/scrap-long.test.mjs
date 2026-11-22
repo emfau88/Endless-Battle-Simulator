@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ROOT, launchBrowser, openExportPage } from '../lib/browser.mjs';
 import { chapterList, exportVideo, verifyResult } from '../lib/exporter.mjs';
+import { castTournaments, judge, PARAMS } from '../scripts/scrap-tournament-casting.mjs';
 
 const dir = mkdtempSync(join(tmpdir(), 'ebs-scrap-long-'));
 let browser;
@@ -25,6 +26,9 @@ test('Scrap-Langvideo-Vorlage: Turnier mit acht Runden in der Taktik-Arena; Kapi
   const long = preset('long');
   assert.deepEqual([long.params.episodeMode, long.params.rulesVersion, long.params.arena, long.params.soundMix, long.video.aspect],
     ['tournament', 'v4', 'sunshine', 'soft-v1', '16:9']);
+  // L2: Raketen-Regeln wie im Short, 4 s Ergebnis zwischen den Runden, geprüfter Turnier-Seed
+  assert.deepEqual([long.params.items, long.params.endPauseSec, long.seed], ['rockets', 4, 431]);
+  assert.deepEqual({ ...PARAMS, soundMix: 'soft-v1' }, long.params, 'Casting rechnet mit den Werten der Vorlage');
   const { page, errors } = await openExportPage(browser, long);
   try {
     const out = await page.evaluate(() => {
@@ -51,6 +55,34 @@ test('Scrap-Langvideo-Vorlage: Turnier mit acht Runden in der Taktik-Arena; Kapi
     // Short: eine Runde, keine Kapitel
     await page.evaluate(c => exportAPI.restart(c), preset('short'));
     assert.equal(await page.evaluate(() => { exportAPI.simulate(40); return exportAPI.chapters(); }), null);
+    assert.deepEqual(errors.map(e => e.message), []);
+  } finally { await page.close(); }
+});
+
+test('Scrap-Langvideo (L2): Schalter „Waffen“, alle Turnier-Seeds bleiben in Chromium bis zur letzten Runde offen', async () => {
+  const { page, errors } = await openExportPage(browser, preset('long'));
+  try {
+    await page.addScriptTag({ content: `window.castTournaments = ${castTournaments.toString()};` });
+    const out = await page.evaluate(params => {
+      const sc = EBS.getScenario('scrap'), control = sc.controls.find(c => c.key === 'items'), n = p => sc.normalizeParams(p);
+      return { label: control.label, options: control.options.map(o => o[0]),
+        enabled: [control.enabled({ rulesVersion: 'v4', layout: 'standard' }), control.enabled({ rulesVersion: 'v3', layout: 'standard' }), control.enabled({ rulesVersion: 'v4', layout: 'short' })],
+        // Der Schlüssel gilt nur in der Taktik-Arena; die Episode kennt ihn nur, wenn er an ist (gleiche Zustands-Hashes)
+        ui: [n({ rulesVersion: 'v4', items: 'rockets' }).items, n({ rulesVersion: 'v3', items: 'rockets' }).items, n({ rulesVersion: 'v4' }).items],
+        episode: ['items' in EBS.Scrap.normalizeParams({ rulesVersion: 'v4', items: 'rockets' }), 'items' in EBS.Scrap.normalizeParams({ rulesVersion: 'v3', items: 'rockets' }), 'items' in EBS.Scrap.normalizeParams({ rulesVersion: 'v4' })],
+        seeds: EBS.Scrap.LONG_SEEDS, picks: [1, 431, 432, 470, 99999].map(seed => EBS.Scrap.castTournamentSeed(seed)),
+        rows: window.castTournaments(EBS, EBS.Scrap.LONG_SEEDS, params) };
+    }, PARAMS);
+    assert.equal(out.label, 'Waffen'); assert.deepEqual(out.options, ['classic', 'rockets']);
+    assert.deepEqual(out.enabled, [true, false, false]);
+    assert.deepEqual(out.ui, ['rockets', 'classic', 'classic']); assert.deepEqual(out.episode, [true, false, false]);
+    assert.deepEqual(out.seeds, [431, 469, 488]); assert.deepEqual(out.picks, [431, 431, 469, 488, 431]);
+    for (const r of out.rows.map(judge)) {
+      assert.ok(r.complete, `Seed ${r.seed}: ${JSON.stringify({ checks: r.checks, wins: r.wins, before: r.before, length: r.length, hang: r.hang })}`);
+      // Vor der letzten Runde liegen drei Roboter mit je zwei Siegen gleichauf
+      assert.deepEqual([...r.before].sort(), [1, 2, 2, 2], `Seed ${r.seed}: Stand vor Runde 8`);
+      assert.ok(r.length >= 285 && r.length <= 320, `Seed ${r.seed}: ${r.length} s`);
+    }
     assert.deepEqual(errors.map(e => e.message), []);
   } finally { await page.close(); }
 });

@@ -66,6 +66,14 @@
   // hat, holt eine Rakete, wenn der Weg höchstens `fetch` AE lang ist und kein anderer näher dran ist. Nach drei
   // Raketen ist nach `swap` Sekunden wieder der Blaster da.
   const SHORT_ITEMS = { reload: 1.4, swap: .5, first: [6, 7.5], period: 9, fetch: 320, fetchWait: 1.2 };
+  // L2 · Dieselben Waffenregeln auf den großen Karten, als eigener Schalter (items: 'rockets', z. B. im Turnier):
+  // Blaster lädt nach, Raketen nur von den zwei Stationen, kurze Deckung wie im Short. Schaden gemessen auf Sunny
+  // Yard quer (120 Runden): ×2, solange alle vier leben, zu dritt ×0,45, im Duell ×0,8, der Schwächere 15 % weniger.
+  // Im Duell steigt der Schaden je Sekunde um 6 % (höchstens ×3): Duelle über 20 s gibt es damit in 4 % statt
+  // 19 % der Runden. Der erste K.o. fällt im Median nach 10 s statt 15 s, der zweite nach 20 s, die Runde dauert
+  // 31,5 s (klassisch 31 s); Hänger in unter 1 % statt 28 % der Runden. Acht Runden ergeben rund 4:45 Minuten.
+  const ARENA_ITEMS = { reload: 1.4, swap: .5, first: [6, 7.5], period: 9, fetch: 320, fetchWait: 1.2 };
+  const ARENA_FIGHT = { opening: 2, damage: .45, duel: .8, underdog: .85, duelRamp: .06, duelMax: 3, coverSec: .5, coverMax: 2.5, coverPause: 6 };
   // Zwischenspeicher außerhalb des Simulationszustands (Raster, Suchpuffer, Hindernisliste)
   const NAV = new WeakMap(), OBSTACLES = new WeakMap();
   class TacticalRound extends M.Round {
@@ -74,6 +82,7 @@
       this.rulesVersion = 'v4';
       this.portraitView = !!options.portrait;
       if (options.short && this.portraitView) this._shortMap();
+      else if (options.items === 'rockets') this._rocketRules(ARENA_ITEMS, ARENA_FIGHT);
       this.fire = { clear: 0, wood: 0, splash: 0, blocked: 0 };
       for (const r of this.robots) {
         r.targetId = null; r.targetSince = 0; r.hitBy = this.robots.map(() => -99);
@@ -94,16 +103,19 @@
         const hp = M.materials[material].hp;
         return { id, x: y, y: W - x - w, w: h, h: w, material, hp, maxHp: hp, alive: true };
       });
-      SHORT.pads.forEach((p, i) => {
-        const pad = this.pads[i];
-        [pad.x, pad.y] = point(p); pad.kind = 'rocket'; pad.readyIn = SHORT_ITEMS.first[i]; pad.period = SHORT_ITEMS.period;
-      });
-      // Keine freien Startwaffen: Raketen gibt es nur an den zwei Plattformen
-      this.pickups = [];
+      SHORT.pads.forEach((p, i) => { [this.pads[i].x, this.pads[i].y] = point(p); });
+      this._rocketRules(SHORT_ITEMS, SHORT_FIGHT);
       // Ersatz-Startplätze, falls keine Kistenaufstellung passt
       for (const r of this.robots) { [r.x, r.y] = point(SHORT.starts[r.id]); r.lastX = r.x; r.lastY = r.y; }
     }
 
+    // Raketen-Regeln einschalten (Short-Karte oder Schalter items: 'rockets'): keine freien Startwaffen, beide
+    // Stationen liefern Raketen. items = Waffenwerte, pace = Schaden und Deckungszeiten.
+    _rocketRules(items, pace) {
+      this.items = items; this.pace = pace;
+      this.pads.forEach((pad, i) => { pad.kind = 'rocket'; pad.readyIn = items.first[i]; pad.period = items.period; });
+      this.pickups = [];
+    }
     // ---- K1 · Startkisten ------------------------------------------------
     // Eigener Zufallsstrom nur für die Aufstellung: Die Kampf-Zufallszahlen bleiben unberührt.
     _placeCrates() {
@@ -233,7 +245,7 @@
     _tick(dt) {
       this.tickDt = dt;
       // Short: Die Plattform lädt erst, wenn ihre Rakete geholt ist
-      if (this.shortMap) for (const pad of this.pads) if (this._padLoaded(pad)) pad.readyIn = pad.period + dt;
+      if (this.items) for (const pad of this.pads) if (this._padLoaded(pad)) pad.readyIn = pad.period + dt;
       super._tick(dt);
       if (this.phase === 'running') this._updateCrates();
     }
@@ -241,15 +253,15 @@
     _padLoaded(pad) { return this.pickups.some(p => !p.empty && p.ammo > 0 && Math.hypot(p.x - pad.x, p.y - pad.y) < 40); }
     // Leeres Magazin: Blaster lädt nach, leerer Raketenwerfer wird wieder zum Blaster. Nichts fällt zu Boden, auch nicht beim K.o.
     _drop(r, exhausted = false) {
-      if (!this.shortMap) { super._drop(r, exhausted); return; }
+      if (!this.items) { super._drop(r, exhausted); return; }
       if (!r.weapon) return;
       if (!r.alive) { r.weapon = null; return; }
-      const pause = r.weapon.kind === 'rocket' ? SHORT_ITEMS.swap : SHORT_ITEMS.reload;
+      const pause = r.weapon.kind === 'rocket' ? this.items.swap : this.items.reload;
       r.weapon = this._weapon('blaster'); r.cooldown = Math.max(r.cooldown, pause); r.reloadUntil = this.t + r.cooldown; r.thinkIn = 0;
     }
     // Aufnahme: Wer den Blaster trägt, tauscht ihn gegen die Rakete
     _takePickup(r) {
-      if (!this.shortMap) { super._takePickup(r); return; }
+      if (!this.items) { super._takePickup(r); return; }
       if (!r.weapon || r.weapon.kind !== 'blaster') return;
       for (let i = 0; i < this.pickups.length; i++) {
         const p = this.pickups[i];
@@ -265,9 +277,9 @@
     // Für alle vier gleich weit: Mit Ambers Raketen-Vorliebe gewann Amber 360 von 1200 Shorts, Moss nur 248.
     _rocketGoal(r) {
       if (!r.weapon || r.weapon.kind !== 'blaster') return null;
-      let best = null, cost = SHORT_ITEMS.fetch;
+      let best = null, cost = this.items.fetch;
       for (const pad of this.pads) {
-        if (!this._padLoaded(pad) && pad.readyIn > SHORT_ITEMS.fetchWait) continue;
+        if (!this._padLoaded(pad) && pad.readyIn > this.items.fetchWait) continue;
         const mine = Math.hypot(pad.x - r.x, pad.y - r.y);
         if (this.robots.some(o => o !== r && o.alive && !o.caged && o.mode === 'fetch' && Math.hypot(o.goalX - pad.x, o.goalY - pad.y) < 30 && Math.hypot(pad.x - o.x, pad.y - o.y) < mine)) continue;
         const c = this._travel(r.x, r.y, pad.x, pad.y);
@@ -306,12 +318,15 @@
     }
     _hurtRobot(r, amount, owner, x, y) {
       if (r.caged) return;
-      if (this.shortMap && r.alive && amount > 0) {
+      if (this.pace && r.alive && amount > 0) {
         const living = this.robots.filter(o => o.alive);
-        amount *= living.length >= 4 ? SHORT_FIGHT.opening : living.length === 2 ? SHORT_FIGHT.duel : SHORT_FIGHT.damage;
+        const P = this.pace;
+        amount *= living.length >= 4 ? P.opening : living.length === 2 ? P.duel : P.damage;
         if (living.length === 2) {
           const other = living[0] === r ? living[1] : living[0];
-          if (r.hp / r.maxHp < other.hp / other.maxHp) amount *= SHORT_FIGHT.underdog;
+          if (r.hp / r.maxHp < other.hp / other.maxHp) amount *= P.underdog;
+          // Große Karte: Ein langes Schlussduell wird härter (ab dem ersten Treffer im Duell je Sekunde mehr Schaden)
+          if (P.duelRamp) { this.duelSince ??= this.t; amount *= Math.min(P.duelMax, 1 + P.duelRamp * (this.t - this.duelSince)); }
         }
       }
       if (r.alive && amount > 0 && owner !== r.id && this.robots[owner]) r.hitBy[owner] = this.t;
@@ -647,14 +662,14 @@
       r.thinkIn = .38 + this.rng.next() * .22;
       const target = this._chooseTarget(r), { w, h, edge } = this.bounds, now = this.t, character = CHARACTERS[r.id % 4];
       let goal = null;
-      const rocket = this.shortMap ? this._rocketGoal(r) : null;
+      const rocket = this.items ? this._rocketGoal(r) : null;
       if (!r.weapon) { r.mode = 'search'; const g = this._weaponGoal(r); if (g) goal = [g.x, g.y]; }
       else if (rocket) { r.mode = 'fetch'; goal = [rocket.x, rocket.y]; }
       else if (target) {
         const hidden = this._blocked(r.x, r.y, target.x, target.y, WEAPONS.blaster.radius);
         r.hiddenSince = hidden ? (r.hiddenSince ?? now) : null;
         // Short: kürzere Deckung (Zeiten in SHORT_FIGHT), sonst stehen nach dem ersten K.o. alle gleichzeitig still
-        const B = this.shortMap ? SHORT_FIGHT : BEHAVIOUR;
+        const B = this.pace || BEHAVIOUR;
         const low = r.hp / r.maxHp < character.coverHp || r.weapon.ammo <= 2;
         if (r.mode === 'cover') {
           if (r.coverUntil === null && Math.hypot(r.goalX - r.x, r.goalY - r.y) < 30) r.coverUntil = now + B.coverSec;
@@ -711,5 +726,5 @@
     }
   }
 
-  EBS.ScrapTactics = { Round: TacticalRound, CRATE, FIGHT, CHARACTERS, PATH, DRIVE, BEHAVIOUR, SHORT, SHORT_FIGHT, SHORT_ITEMS };
+  EBS.ScrapTactics = { Round: TacticalRound, CRATE, FIGHT, CHARACTERS, PATH, DRIVE, BEHAVIOUR, SHORT, SHORT_FIGHT, SHORT_ITEMS, ARENA_ITEMS, ARENA_FIGHT };
 })();
