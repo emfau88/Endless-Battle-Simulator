@@ -24,12 +24,17 @@
     const profile = mode === 'mixed' ? profiles[(offset + index) % profiles.length] : mode;
     const supply = deliveries(profile, new EBS.RNG(hashSeed(seed, index, 'feed')));
     const dye = new EBS.RNG(hashSeed(seed, index, 'glass'));
-    const colors = supply.map(() => dye.int(0, 3));
+    const firstColor = dye.int(0,3);
+    let batch = -1;
+    const colors = supply.map((tick,id) => {
+      if (tick !== supply[id-1]) batch++;
+      return profile === 'steady' ? dye.int(0,3) : (firstColor + batch + (id % 4 === 3 ? 2 : 0)) % 4;
+    });
     const auger = [], piston = [];
     let take = -1;
     for (const [id, ready] of supply.entries()) {
       take = Math.max(ready, take + 1);
-      auger.push({ id, depart: take - .85, enter: take - .30, exit: take + 1.30, land: take + 2.68 });
+      auger.push({ id, ready, depart: take - .85, enter: take - .30, exit: take + 1.30, land: take + 2.68 });
     }
     // Ein Hub nimmt höchstens sieben der bereits gelieferten Kugeln in ihrer Eingangsreihenfolge mit.
     let previousDepart = -2, previousStroke = -2;
@@ -39,7 +44,7 @@
       while (slot < CAPACITY && piston.length < STOCK && supply[piston.length] <= tick) {
         const id = piston.length;
         const depart = Math.max(supply[id] - .90, previousStroke + .56, previousDepart + .09);
-        piston.push({ id, slot, stroke: tick, depart, enter: depart + .36, exit: tick + .19 + slot * .053, land: tick + .55 + slot * .065 });
+        piston.push({ id, ready: supply[id], slot, stroke: tick, depart, enter: depart + .36, exit: tick + .19 + slot * .053, land: tick + .55 + slot * .065 });
         previousDepart = depart;
         slot++;
       }
@@ -63,6 +68,7 @@
   }
 
   function stage(ball, beat) {
+    if (beat < ball.ready - 1) return 'reserve';
     if (beat < ball.depart) return 'hopper';
     if (beat < ball.enter) return 'feed';
     if (beat < ball.exit) return 'machine';
@@ -107,7 +113,7 @@
     }
     snapshot() {
       const counts = this.round.lanes.map(lane => {
-        const bins = { hopper: 0, feed: 0, machine: 0, outlet: 0, goal: 0 };
+        const bins = { reserve: 0, hopper: 0, feed: 0, machine: 0, outlet: 0, goal: 0 };
         for (const ball of lane) bins[stage(ball, this.beat)]++;
         return bins;
       });
