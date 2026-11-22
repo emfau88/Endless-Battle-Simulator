@@ -232,37 +232,23 @@ test('Scrap v4 Short (S2, Deckung): höchstens 0,5 s warten, kaum Hänger (alle 
   assert.ok(hangs <= 3, `${hangs} von 30 Seeds mit einem Hänger ab 1,5 s`);
 });
 
-test('Scrap v4 Short (S2, Nachschub): Waffen fallen erst nach dem letzten Ausbruch vom Himmel, im Fall nimmt sie niemand; ohne Short liegen sie von Anfang an', () => {
-  const { SUPPLY } = EBS.ScrapTactics;
-  assert.deepEqual({ ...SUPPLY }, { after: .8, gap: .4, fall: .45, pad: .6 });
-  // Ohne Short: vier Waffen ab dem Start, kein Nachschubplan, keine fallenden Waffen
-  const plain = round(5, true);
-  assert.equal(plain.supply, undefined); assert.equal(plain.pickups.length, 4);
-  for (let i = 0; i < 20 * 120; i++) plain.step(1 / 120);
-  assert.ok(plain.pickups.every(p => p.sky === undefined && p.age >= 0));
+test('Scrap v4 Short (S2, Waffen): Die vier Waffen liegen wie ohne Short von Anfang an da, nichts fällt vom Himmel', () => {
+  assert.equal(EBS.ScrapTactics.SUPPLY, undefined);
   for (const seed of [1, 2, 3, 84]) {
     const s = new EBS.Scrap.Episode({ seed, params: { rulesVersion: 'v4', arena: 'sunshine', layout: 'short' }, world: { w: 1080, h: 1920 }, view: { camera: false } });
-    const r = s.roundSim, open = Math.max(...r.crates.map(c => c.openAt)), plan = r.supply.map(p => ({ ...p }));
-    assert.equal(r.pickups.length, 0, 'am Start liegt keine Waffe'); assert.equal(plan.length, 4);
-    assert.equal(plan.map(p => p.kind).sort().join(), 'blaster,blaster,rocket,rocket');
-    plan.forEach((p, k) => assert.ok(Math.abs(p.at - (open + SUPPLY.after + k * SUPPLY.gap)) < 1e-4, `Seed ${seed}: Landezeit ${p.at}`));
-    // Stationen liefern zum ersten Mal erst nach den vier Waffen
-    assert.ok(r.pads.every(pad => pad.readyIn + SUPPLY.fall >= plan[3].at + SUPPLY.pad - 1e-9));
-    assert.equal(r._weaponCount(), 8, 'wartender Nachschub zählt mit');
-    const landed = []; let falling = 0, seq = 0;
-    while (s.phase === 'running' && r.t < plan[3].at + 3) {
-      const before = r.pickups.filter(p => p.age < 0).map(p => p.id);
+    const r = s.roundSim;
+    assert.equal(r.supply, undefined); assert.equal(r.pickups.length, 4, 'vier Waffen am Start');
+    assert.equal(r.pickups.map(p => p.kind).sort().join(), 'blaster,blaster,rocket,rocket');
+    assert.ok(r.pickups.every(p => p.age === 0 && p.sky === undefined && !p.empty));
+    assert.equal(r.pads.map(pad => pad.readyIn).join(), '3,5', 'Stationen liefern wie ohne Short');
+    assert.equal(r._weaponCount(), 8);
+    let seq = 0;
+    while (s.phase === 'running' && r.t < 8) {
       s.stepOnce();
-      // Solange eine Waffe fällt (Alter unter 0), bleibt sie liegen: Niemand nimmt sie aus der Luft
-      for (const id of before) assert.ok(r.pickups.some(p => p.id === id), `Seed ${seed}: Waffe ${id} im Fall aufgenommen`);
-      falling += r.pickups.some(p => p.sky && p.age < 0);
-      for (const e of s.events) if (e.seq >= seq) { seq = e.seq + 1; if (e.type === 'drop' && e.sky) landed.push(e); }
-      assert.ok(s.checkInvariants().ok);
+      assert.ok(r.pickups.every(p => p.age >= 0 && p.sky === undefined), `Seed ${seed}: fallende Waffe`);
+      for (const e of s.events) if (e.seq >= seq) { seq = e.seq + 1; assert.ok(!e.sky, `Seed ${seed}: Abwurf-Ereignis`); }
     }
-    assert.ok(falling > 4 * SUPPLY.fall * 60 * .5, `Seed ${seed}: Fall sichtbar (${falling} Schritte)`);
-    assert.ok(landed.length >= 4, `Seed ${seed}: ${landed.length} Landungen`);
-    landed.slice(0, 4).forEach((e, k) => assert.ok(Math.abs(e.roundTime - plan[k].at) < 1 / 60, `Seed ${seed}: Landung ${e.roundTime} statt ${plan[k].at}`));
-    assert.equal(r.supply.length, 0);
+    assert.ok(s.checkInvariants().ok);
   }
 });
 

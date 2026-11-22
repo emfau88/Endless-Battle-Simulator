@@ -2,6 +2,12 @@
 
 Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen in der [ROADMAP](ROADMAP.md).
 
+## 22.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| R40, Scrap Wars, zweiter Nachtrag zum Short nach der zweiten Probe des Nutzers. Der Abwurf vom Himmel ist wieder ausgebaut: Die vier Waffen liegen ab dem ersten Bild da, die Stationen liefern wie ohne Short. Geladene Waffen sind im Short drehende Münzen (aufrechte Scheibe mit Symbol, Ring orange oder blau, eine Umdrehung in 1,8 s); neue Waffen an den Stationen wachsen in 0,3 s auf. Casting neu gerechnet: Liste der 29 Seeds und Seed 84 unverändert. Dritte 20-Sekunden-Probe lokal. Gilt nur im Short. | Branch `scrap/s1-darstellung` | [Bericht](SCRAP_AUSBAU_2026-11-19.md#zweiter-nachtrag-zum-short-waffen-als-drehende-münzen-22112026) |
+
 ## 21.11.2026
 
 | Was | Commit | Bericht |

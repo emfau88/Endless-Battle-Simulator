@@ -92,17 +92,18 @@ test('Scrap-Short: Bild nach Seek entspricht laufendem Zeichnen (Einstieg, Kampf
         const sim = sc.create({ seed: 42, params: cfg.params, world, view: cfg.view, timeScale: 1 });
         return { sim, renderer: sc.createRenderer({ sim, world, view: cfg.view, renderScale: 2 / 3 }) };
       };
-      const probe = create(), drop = probe.sim.roundSim.supply[0].at * 60;
+      const probe = create();
       while (probe.sim.phase === 'running' && probe.sim.step < 91 * 60) probe.sim.stepOnce();
       if (probe.sim.phase !== 'outro') throw Error('Short endet nicht im Abspann');
       const end = probe.sim.step, slow = probe.sim.slow.startStep, even = v => Math.ceil(v / 2) * 2;
       const blast = probe.sim.events.find(e => e.type === 'blast')?.step ?? probe.sim.events.find(e => e.type === 'hit').step;
       const crate = probe.sim.events.find(e => e.type === 'crate_break').step;
+      const spawn = probe.sim.events.find(e => e.type === 'weapon_spawn' && e.step > 0).step;
       probe.renderer.destroy(); probe.sim.destroy();
       const out = [];
-      // Einstiegstext beim Ein- und Ausblenden, Bretter beim Ausblenden, Waffe im Fall und kurz nach der Landung,
+      // Einstiegstext beim Ein- und Ausblenden, Münze fast von der Seite, Bretter beim Ausblenden, neue Münze beim Aufwachsen,
       // frische Explosion, Zeitlupe vor und nach dem letzten K.o., Sieger beim Einblenden und im Stand
-      for (const target of [6, 144, even(crate + 84), even(drop - 10), even(drop + 8), even(blast + 6), even(slow + 10), even(end + 6), even(end + 26), even(end + 90)]) {
+      for (const target of [6, 24, 144, even(crate + 84), even(spawn + 8), even(blast + 6), even(slow + 10), even(end + 6), even(end + 26), even(end + 90)]) {
         const continuous = create(), start = Math.max(0, target - 60);
         while (continuous.sim.step < start) continuous.sim.stepOnce();
         let frame;
@@ -127,7 +128,7 @@ test('Scrap-Short: Bild nach Seek entspricht laufendem Zeichnen (Einstieg, Kampf
   } finally { await page.close(); }
 });
 
-test('Scrap-Short: Bretter der Startkisten blenden nach 1 bis 1,8 s aus, Waffen fallen sichtbar vom Himmel; ohne Short bleiben die Bretter liegen', async () => {
+test('Scrap-Short: Bretter der Startkisten blenden nach 1 bis 1,8 s aus, Waffen sind drehende Münzen; ohne Short bleiben die Bretter liegen und die Marken flach', async () => {
   const { page, errors } = await openExportPage(browser, { scenario: 'scrap', seed: 42, video: { resolution: 720 } });
   try {
     const out = await page.evaluate(params => {
@@ -136,26 +137,23 @@ test('Scrap-Short: Bretter der Startkisten blenden nach 1 bis 1,8 s aus, Waffen 
         const sim = sc.create({ seed: 42, params: p, world, view, timeScale: 1 }), renderer = sc.createRenderer({ sim, world, view, renderScale: 2 / 3 });
         const planks = () => renderer._fxScene(q => q, sim.roundSim.robots).debris.filter(d => d.kind === 'plank');
         const first = sim.roundSim.crates.reduce((a, c) => Math.min(a, c.openAt), 99), last = sim.roundSim.crates.reduce((a, c) => Math.max(a, c.openAt), 0);
-        // Fallende Waffe (Alter unter 0): Jeder solche Schritt wird gezeichnet, ohne Fehler
-        let fallSteps = 0, drawn = 0;
-        const at = sec => {
-          while (sim.step < Math.round(sec * 60)) {
-            sim.stepOnce();
-            if (sim.roundSim.pickups.some(q => q.sky && q.age < 0)) { fallSteps++; renderer.draw(); drawn++; }
-          }
-          return planks();
-        };
+        // Münzen: Im Short zeichnet jede Waffe die Münze, ohne Short keine
+        const art = EBS.ScrapDaylightArt, original = art.coin; let coins = 0;
+        art.coin = (...args) => { coins++; return original(...args); };
+        const at = sec => { while (sim.step < Math.round(sec * 60)) sim.stepOnce(); return planks(); };
+        at(.5); renderer.draw(); const coinsDrawn = coins, weapons = sim.roundSim.pickups.length;
         const fresh = at(first + .5), fading = at(first + 1.4).filter(d => d.alpha !== undefined), late = at(last + 4);
-        const result = { fresh: fresh.length, freshAlpha: fresh.filter(d => d.alpha !== undefined).length, fading: fading.map(d => d.alpha), late: late.length, fallSteps, drawn, ok: sim.checkInvariants().ok };
-        renderer.destroy(); sim.destroy(); return result;
+        const result = { fresh: fresh.length, freshAlpha: fresh.filter(d => d.alpha !== undefined).length, fading: fading.map(d => d.alpha), late: late.length, coinsDrawn, weapons, ok: sim.checkInvariants().ok };
+        art.coin = original; renderer.destroy(); sim.destroy(); return result;
       };
       return { short: run(params), plain: run({ ...params, layout: 'standard' }) };
     }, SHORT);
     assert.ok(out.short.fresh >= 9 && out.short.freshAlpha === 0, 'frische Bretter deckend');
     assert.ok(out.short.fading.length >= 9 && out.short.fading.every(a => a > 0 && a < 1), JSON.stringify(out.short.fading));
     assert.equal(out.short.late, 0, 'nach dem letzten Ausbruch bleibt kein Brett liegen');
-    assert.ok(out.short.fallSteps > 50 && out.short.drawn === out.short.fallSteps && out.short.ok);
-    assert.deepEqual([out.plain.late, out.plain.fading.length, out.plain.fallSteps], [36, 0, 0], 'ohne Short: 36 Bretter bleiben, nichts fällt');
+    assert.deepEqual([out.short.weapons, out.short.coinsDrawn], [4, 4], 'vier Waffen ab dem Start, jede als Münze');
+    assert.ok(out.short.ok);
+    assert.deepEqual([out.plain.late, out.plain.fading.length, out.plain.weapons, out.plain.coinsDrawn], [36, 0, 4, 0], 'ohne Short: 36 Bretter bleiben, keine Münzen');
     assert.deepEqual(errors.map(e => e.message), []);
   } finally { await page.close(); }
 });

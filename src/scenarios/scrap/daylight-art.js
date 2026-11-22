@@ -214,5 +214,32 @@
     weaponIcon(g,p.kind,empty?'#8b989b':INK);
     g.restore();
   }
-  EBS.ScrapDaylightArt={floor,block,rubble,pad,pickup,colors};
+  // Short: Geladene Waffen als drehende Münzen. Die Münze steht aufrecht und dreht sich um die Hochachse (alle im
+  // Gleichtakt, eine Umdrehung in 1,8 s); von der Seite sieht man nur den dunklen Rand. Das Symbol bleibt lesbar,
+  // weil beide Seiten dasselbe zeigen. Neue Waffen an den Stationen wachsen in 0,3 s auf. Alles hängt nur an der
+  // Rundenzeit und am Alter der Waffe. Leere, abgelegte Waffen bleiben die flache, blasse Marke.
+  const COIN={radius:19,edge:5,turn:1.8,pop:.3,rim:{rocket:'#d9622b',blaster:'#2c8fc4'}};
+  function coin(g,p,t) {
+    if(p.empty||p.ammo<=0){pickup(g,p,t);return;}
+    const R=COIN.radius,phase=t/COIN.turn*Math.PI*2,c=Math.cos(phase),s=Math.sin(phase),w=Math.abs(c);
+    const born=t-(p.age||0),u=born>.05?Math.min(1,Math.max(0,(p.age||0)/COIN.pop)):1;
+    const grow=u>=1?1:Math.max(0,1+2.2*Math.pow(u-1,3)+1.2*Math.pow(u-1,2)),bob=Math.sin(t*3.2);
+    if(grow<.01)return;
+    const front=Math.sign(c||1)*COIN.edge/2*s,rim=COIN.rim[p.kind]||INK;
+    g.save();g.translate(p.x,p.y);
+    g.beginPath();g.ellipse(3,7,(4+13*w)*grow,6*grow,0,0,Math.PI*2);g.fillStyle='#233d3640';g.fill();
+    g.translate(0,-5-bob*1.5);g.scale(grow,grow);
+    // Rand: hintere Fläche, Band dazwischen und Umriss in dunkler Farbe
+    g.fillStyle=INK;
+    g.beginPath();g.ellipse(-front,0,R*w+2.2,R+2.2,0,0,Math.PI*2);g.fill();
+    g.beginPath();g.ellipse(front,0,R*w+2.2,R+2.2,0,0,Math.PI*2);g.fill();
+    g.fillRect(-Math.abs(front),-R-2.2,Math.abs(front)*2,R*2+4.4);
+    if(w>.06) {
+      g.beginPath();g.ellipse(front,0,R*w,R,0,0,Math.PI*2);g.fillStyle=rim;g.fill();
+      g.beginPath();g.ellipse(front,0,R*w*.8,R*.8,0,0,Math.PI*2);g.fillStyle=PAPER;g.fill();
+      g.save();g.translate(front,0);g.scale(w*1.05,1.05);weaponIcon(g,p.kind,INK);g.restore();
+    }
+    g.restore();
+  }
+  EBS.ScrapDaylightArt={floor,block,rubble,pad,pickup,coin,colors};
 })();

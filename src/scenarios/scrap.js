@@ -37,8 +37,7 @@
   };
   // S1 · Short: Schilder 1,4-fach, Einstiegstext 2,5 s bei 22 % der Bildhöhe
   // S2: Der Sieger erscheint 0,3 s nach dem letzten K.o., damit die Zeitlupe der Explosion frei bleibt
-  const SHORT_ART = { labels: 1.4, introSec: 2.5, introY: .22, winnerDelay: .3, winnerFade: .25, plankStay: 1, plankGone: 1.8,
-    dropLift: 90, dropScale: 1.5, dropDust: .4 };
+  const SHORT_ART = { labels: 1.4, introSec: 2.5, introY: .22, winnerDelay: .3, winnerFade: .25, plankStay: 1, plankGone: 1.8 };
   class ArenaRenderer extends ScrapArena.Renderer {
     _scorchEvents() {
       const s = this.episode, marks = [];
@@ -708,17 +707,14 @@
       }
       for(const e of effects)this.arena._effect(g,e,true);
       fx.debris(g,scene.debris,sunny);
-      // Short: Waffen aus dem Nachschub fallen vom Himmel (Alter unter 0 = im Fall) und werden über den Robotern gezeichnet
-      const falling=r.pickups.filter(p=>p.sky&&p.age<0);
-      for(const p of r.pickups)if(p.sky)this._supplyDrop(g,mapPoint(p),r.t,sunny,'under');
-      for(const p of r.pickups)if(!(p.sky&&p.age<0))this.arena._pickup(g,mapPoint(p),r.t);
+      // Short: Geladene Waffen stehen als drehende Münzen da (von Anfang an, nichts fällt vom Himmel)
+      for(const p of r.pickups){if(l.short&&sunny)EBS.ScrapDaylightArt.coin(g,mapPoint(p),r.t);else this.arena._pickup(g,mapPoint(p),r.t);}
       for(const b of blocks)if(b.alive) {
         const t=art.block(b,this.arena._blocks,sunny);g.drawImage(t.canvas,b.x-t.pad,b.y-t.pad,t.width,t.height);
       }
       this._paintCrates(g,r,portrait,sunny,'top');
       for(const robot of [...shown.filter(p=>!p.alive),...shown.filter(p=>p.alive&&!p.caged)])this.arena._robot(g,robot,r.t);
       this._paintCrates(g,r,portrait,sunny,'burst');
-      for(const p of falling)this._supplyDrop(g,mapPoint(p),r.t,sunny,'air');
       for(const t of scene.turrets)fx.turret(g,t,sunny);
       for(const p of r.projectiles)this.arena._projectile(g,mapPoint(p));
       for(const e of effects)this.arena._effect(g,e);
@@ -867,34 +863,6 @@
         }
       }
       return scene;
-    }
-    // S2 · Nachschub im Short: Die Waffe fällt 0,45 s (Schatten wächst, Marke kommt von oben und wird kleiner),
-    // danach 0,4 s Staubring. Alles folgt aus dem Alter der Waffe in der Simulation; kein Zustand im Renderer.
-    _supplyDrop(g, p, t, sunny, layer) {
-      const fx = EBS.ScrapEffectsArt, A = SHORT_ART, fall = EBS.ScrapTactics.SUPPLY.fall, TAU = Math.PI * 2;
-      const u = Math.max(0, Math.min(1, 1 + p.age / fall)), k = u * u;
-      if (layer === 'under') {
-        if (p.age < 0) {
-          g.save(); g.beginPath(); g.ellipse(p.x + 3, p.y + 5, 5 + 12 * k, (5 + 12 * k) * .92, 0, 0, TAU);
-          g.fillStyle = fx.rgba('#0a1218', .3 * k); g.fill(); g.restore();
-        } else if (p.age < A.dropDust) {
-          const v = p.age / A.dropDust, e = fx.easeOut(v), dust = sunny ? '#c9b48c' : '#8c8274';
-          g.save(); g.beginPath(); g.ellipse(p.x, p.y + 3, 16 + 24 * e, (16 + 24 * e) * .85, 0, 0, TAU);
-          g.strokeStyle = fx.rgba(dust, .5 * (1 - v)); g.lineWidth = 6 * (1 - v) + 1.5; g.stroke();
-          for (let i = 0; i < 6; i++) {
-            const a = i / 6 * TAU + fx.noise(p.id + 5, i) * .7, d = 16 + 22 * e;
-            g.beginPath(); g.arc(p.x + Math.cos(a) * d, p.y + 3 + Math.sin(a) * d * .85, 3 + 4 * e, 0, TAU);
-            g.fillStyle = fx.rgba(dust, .4 * (1 - v)); g.fill();
-          }
-          g.restore();
-        }
-        return;
-      }
-      const s = 1 + (A.dropScale - 1) * (1 - k);
-      g.save(); g.globalAlpha = Math.min(1, u * 4);
-      g.translate(p.x, p.y - A.dropLift * (1 - k)); g.scale(s, s); g.translate(-p.x, -p.y);
-      this.arena._pickup(g, p, t);
-      g.restore();
     }
     // K1 · Startkisten (nur v4): Schatten wächst bis zum Aufschlag, Kiste mit Teamband, Staubring, Wackeln vor dem Ausbruch.
     // Alles folgt aus der Rundenzeit und den Kistenzeiten der Simulation; kein Zustand im Renderer.

@@ -1,4 +1,4 @@
-# Scrap Wars: offene Punkte – Stand 21.11.2026 (R40)
+# Scrap Wars: offene Punkte – Stand 22.11.2026 (R40)
 
 Angelegt als Übergabe nach dem Stopp am 20.11.2026, seit dem 21.11. je Paket nachgezogen: was fertig ist, was offen ist und wo es weitergeht. Die aktive
 Aufgabenliste bleibt die [ROADMAP](ROADMAP.md); hier stehen die Einzelheiten. Bezug: [Ausbau-Plan](SCRAP_AUSBAU_PLAN_2026-11-19.md),
@@ -14,7 +14,8 @@ Aufgabenliste bleibt die [ROADMAP](ROADMAP.md); hier stehen die Einzelheiten. Be
 | T2 Ton `soft-v1` | PR #46, Hörurteil des Nutzers: „Passt“ |
 | S1, Teil 1: Short-Karte und Ablauf | PR #47 ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s1-teil-1--short-karte-und-ablauf-in-arbeit)) |
 | L1: Langvideo-Vorlage | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Turnier mit acht Runden in der Taktik-Arena (Seed 42: 5:23 Minuten), Kapitelzeiten der Rundenstarts in der JSON-Begleitdatei ([Bericht](SCRAP_AUSBAU_2026-11-19.md#l1--langvideo-vorlage-im-turniermodus-21112026)) |
-| Nachtrag zum Short nach der ersten Probe | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Rückmeldung des Nutzers umgesetzt: keine Hänger mehr (Deckung im Short 0,5 s statt 3 s, Schaden nach dem ersten K.o. ×0,55), Waffen fallen erst nach den Robotern vom Himmel, Bretter der Startkisten blenden nach 1 bis 1,8 s aus. Casting neu gerechnet (29 Seeds, Vorlage auf Seed 84, 26,5 s), neue 20-Sekunden-Probe lokal ([Bericht](SCRAP_AUSBAU_2026-11-19.md#nachtrag-zum-short-nach-der-ersten-probe-21112026)) |
+| Zweiter Nachtrag zum Short: Waffen als Münzen | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Rückmeldung zur zweiten Probe umgesetzt: Der Abwurf vom Himmel ist wieder ausgebaut; die Waffen stehen von Anfang an als drehende Münzen da (Ring orange für Rakete, blau für Blitz), neue Waffen an den Stationen wachsen auf. Casting neu gerechnet, Liste und Seed 84 unverändert; dritte 20-Sekunden-Probe lokal ([Bericht](SCRAP_AUSBAU_2026-11-19.md#zweiter-nachtrag-zum-short-waffen-als-drehende-münzen-22112026)) |
+| Nachtrag zum Short nach der ersten Probe | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Rückmeldung des Nutzers umgesetzt: keine Hänger mehr (Deckung im Short 0,5 s statt 3 s, Schaden nach dem ersten K.o. ×0,55), Waffen fielen zunächst erst nach den Robotern vom Himmel (am 22.11. wieder ausgebaut), Bretter der Startkisten blenden nach 1 bis 1,8 s aus. Casting neu gerechnet (29 Seeds, Vorlage auf Seed 84, 26,5 s), neue 20-Sekunden-Probe lokal ([Bericht](SCRAP_AUSBAU_2026-11-19.md#nachtrag-zum-short-nach-der-ersten-probe-21112026)) |
 | S3: Short-Vorlage | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Vorlage im Short-Bild auf einem Casting-Seed (zuerst 61, seit dem Nachtrag 84), Länge aus dem Ablauf, 20-Sekunden-Probe lokal ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s3--short-vorlage-und-20-sekunden-probe-21112026)) |
 | S2: Verdeckte Regie | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Short-Balance (Eröffnung ×2,5, danach zuerst ×1, seit dem Nachtrag ×0,55, Schwächerer im Duell −20 %), Zeitlupe beim letzten K.o. als Tempoplan, Casting in Chromium ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s2--verdeckte-regie-21112026)) |
 | S1, Rest: Darstellung des Shorts | Branch `scrap/s1-darstellung`, noch nicht auf `main`. Keine Kopfleiste, Schilder 1,4-fach, Einstiegstext, Sieger groß, Schalter „Bildaufbau“, Tests und Vorschaubilder ([Bericht](SCRAP_AUSBAU_2026-11-19.md#s1-rest--darstellung-des-shorts-21112026)) |
@@ -25,8 +26,8 @@ Alle Pakete des Plans sind gebaut. Offen sind nur noch Urteile und Aufträge des
 
 ### Short: Urteil und Export
 
-- **Urteil des Nutzers** zur neuen 20-Sekunden-Probe `scrap-short-probe-20s-v2.mp4` (Bild, Tempo, Ton). Die erste
-  Probe ist beurteilt; die drei Punkte daraus sind umgesetzt.
+- **Urteil des Nutzers** zur dritten 20-Sekunden-Probe `scrap-short-probe-20s-v3.mp4` (Waffen als drehende Münzen).
+  Die ersten zwei Proben sind beurteilt; die Punkte daraus sind umgesetzt.
 - **Das ganze Short** (Seed 84, 26,5 s) **nur auf Auftrag**:
   `node export.mjs --config presets/production/scrap-short.json --out output/scrap-short.mp4`
 
@@ -58,8 +59,10 @@ Alle Pakete des Plans sind gebaut. Offen sind nur noch Urteile und Aufträge des
    gewünscht?
 9. **Langvideo:** Das Turnier dauert rund 5 statt 10 Minuten (Seed 42: 5:23, MOSS gewinnt 5 von 8 Runden). Passt
    das, oder lieber ein anderer Seed mit engerem Ausgang oder zwei Turniere hintereinander?
-10. **Langvideo wie der Short?** Fallende Waffen, ausblendende Bretter und die kurze Deckung gelten bisher nur im
-    Short. Auch im Turnier-Langvideo (normales Bild)?
+10. **Langvideo wie der Short?** Münzen, ausblendende Bretter und die kurze Deckung gelten bisher nur im Short.
+    Auch im Turnier-Langvideo (normales Bild)?
+11. **Münzen:** Ring orange (Rakete) und blau (Blitz), eine Umdrehung in 1,8 s, alle im Gleichtakt. Passen Farben,
+    Größe und Tempo?
 
 ## 4 · Aufräumen (jeder Schritt braucht die Freigabe des Nutzers)
 
@@ -67,9 +70,9 @@ Alle Pakete des Plans sind gebaut. Offen sind nur noch Urteile und Aufträge des
   `scrap/s1-short`; nach dem Merge dieses Stands auch `scrap/s1-darstellung`.
 - **Arbeitskopien:** `.claude/worktrees/scrap-e0` und `.claude/worktrees/scrap-v4`; nach dem Merge auch
   `.claude/worktrees/scrap-s1`.
-- **Nur lokal** in `.claude/worktrees/scrap-s1/output/scrap-short/`: die neue 20-Sekunden-Probe
-  (`scrap-short-probe-20s-v2.mp4` mit JSON, Seed 84), die erste Probe (`scrap-short-probe-20s.mp4`, Seed 61, alter
-  Stand), die Vorschaubilder für Seed 42, 61 und 84 und die Casting-Protokolle.
+- **Nur lokal** in `.claude/worktrees/scrap-s1/output/scrap-short/`: die dritte 20-Sekunden-Probe
+  (`scrap-short-probe-20s-v3.mp4` mit JSON, Seed 84, Münzen), die zweite (`…-v2.mp4`, Abwurf vom Himmel) und die
+  erste Probe (`scrap-short-probe-20s.mp4`, Seed 61), beide alter Stand, die Vorschaubilder für Seed 42, 61 und 84 und die Casting-Protokolle.
 - **Nur lokal:** In `.claude/worktrees/scrap-v4/output/` liegen die zwei Hörproben (`scrap-t2/t2-probe-hoch.mp4`,
   `t2-probe-quer.mp4` mit JSON) sowie Prüfbilder und Protokolle unter `scrap-v4/`. Vor dem Löschen der Arbeitskopie
   in den `output/`-Ordner des Hauptordners verschieben, falls sie noch gebraucht werden.

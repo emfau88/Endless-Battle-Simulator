@@ -615,6 +615,9 @@ sich kurz weg), ganz ohne Deckung wären die Duelle kürzer und einförmiger.
 
 ### Waffen fallen vom Himmel
 
+> **Überholt am 22.11.2026:** Der Abwurf ist wieder ausgebaut, die Waffen stehen als drehende Münzen von Anfang
+> an da. Siehe den [zweiten Nachtrag](#zweiter-nachtrag-zum-short-waffen-als-drehende-münzen-22112026).
+
 - Am Start liegt **keine Waffe** mehr auf der Karte. Die vier Waffen fallen, wenn alle Roboter aus den Kisten sind:
   die erste 0,8 s nach dem letzten Ausbruch, dann alle 0,4 s eine. Die Reihenfolge kommt aus einem eigenen
   Seed-Zufallsstrom. Bei Seed 84 landen sie bei 3,7 / 4,1 / 4,5 / 4,9 s.
@@ -686,3 +689,80 @@ Lokal, nicht im Repository: `output/scrap-short/scrap-short-probe-20s-v2.mp4` in
 - Die ältere Probe (`scrap-short-probe-20s.mp4`, Seed 61) zeigt den Stand vor diesem Nachtrag.
 - Im Langvideo (Turnier, normales Bild) liegen die Waffen weiter von Anfang an da, die Bretter bleiben liegen und
   die Deckung dauert 3 s. Ob das dort auch geändert werden soll, ist eine Frage an den Nutzer.
+
+---
+
+## Zweiter Nachtrag zum Short: Waffen als drehende Münzen (22.11.2026)
+
+**Rückmeldung des Nutzers zur zweiten Probe:** Erst fallen die Kisten, dann ein Haufen Waffen; das ist für den
+Zuschauer schlecht lesbar. Die Waffen sollen nicht auch noch fallen, sondern von Anfang an da sein, wie drehende
+Münzen.
+
+### Umsetzung
+
+- **Der Abwurf vom Himmel ist ausgebaut.** Die vier Waffen liegen im Short wieder ab dem ersten Bild auf der Karte,
+  die zwei Stationen liefern wie ohne Short (zum ersten Mal nach 3 s und 5 s). Der Nachschubplan (`supply`), die
+  fallenden Waffen und das Ereignis bei der Landung gibt es nicht mehr.
+- **Geladene Waffen sind im Short drehende Münzen:** eine aufrechte Scheibe mit dem Waffensymbol, farbigem Ring
+  (Rakete orange, Blitz blau) und dunklem Rand. Sie dreht sich um die Hochachse, eine Umdrehung in 1,8 s, alle im
+  Gleichtakt; von der Seite sieht man kurz nur den Rand. Beide Seiten zeigen dasselbe Symbol. Radius 19 statt
+  16,5 AE.
+- **Neue Waffen an den Stationen** wachsen in 0,3 s auf (mit leichtem Überschwingen), statt zu fallen.
+- **Leere, abgelegte Waffen** bleiben die flache, blasse Marke; sie drehen sich nicht.
+- Außerhalb des Shorts bleiben die flachen Marken, wie sie waren.
+- **Technik:** Drehung und Schweben hängen nur an der Rundenzeit, das Aufwachsen am Alter der Waffe in der
+  Simulation. Der Renderer hält keinen eigenen Zustand (Seek-Regel).
+- Kurze Deckung (0,5 s), Schaden ×0,55 nach dem ersten K.o. und ausblendende Bretter aus dem ersten Nachtrag
+  bleiben.
+
+### Casting
+
+Neu gerechnet, weil die Waffen wieder früher da sind. **Die Liste der 29 geprüften Seeds ist dieselbe geblieben**,
+die Vorlage bleibt auf **Seed 84** (26,5 s, K.o. bei 8,5 / 14,9 / 24,0 s, EMBER gewinnt). Alle Roboter starten mit
+einem Blaster und holen neue Waffen erst später; deshalb ändern sich nur wenige Runden.
+
+| Messung (Seeds 1–1200, Chromium 148) | Wert | mit Abwurf |
+|---|---|---|
+| erster K.o. 5–10 s | 89,4 %, Median 8,0 s | 89,4 %, 8,0 s |
+| zweiter K.o. 12–20 s | 69,3 %, Median 15,1 s | 69,3 %, 15,2 s |
+| Schlussduell mindestens 6 s | 62,1 %, Median 10,3 s | 62,5 %, 10,3 s |
+| beide beim Duellstart unter 40 % Leben | 38,3 % | 38,4 % |
+| Länge 26–38 s | 22,9 %, Median 31,9 s | 23,2 %, 32,1 s |
+| kein Hänger ab 1,5 s | 98,7 % | 98,8 % |
+| Bogen vollständig | 36 Seeds (3,0 %) | 36 Seeds |
+| davon gewinnt nicht der zuerst Bewaffnete | 29 Seeds (Liste unverändert) | 29 Seeds |
+
+Siege über 1200 Seeds: EMBER 283, AZURE 329, AMBER 314, MOSS 272, zwei Runden ohne Sieger.
+
+### Neue 20-Sekunden-Probe
+
+Lokal, nicht im Repository: `output/scrap-short/scrap-short-probe-20s-v3.mp4` in der Arbeitskopie `scrap-s1`
+(Befehl wie bei S3, mit `--clip-start 0 --clip-duration 20`). Dazu `probe-20s-v3-bilder.jpg` (fünf Bilder).
+
+| Messung | Wert |
+|---|---|
+| Bild | 1080 × 1920, 30 Bilder je Sekunde, 600 Bilder, 5,7 MB |
+| Ton der ganzen Episode | 175 Ereignisse, 67 hörbar; −21,9 LUFS, Spitze −6 dBFS, Begrenzer bis −4,1 dB |
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-v4.test.mjs` | 9 von 9; der Test zum Nachschub ist ersetzt: vier Waffen ab dem Start, Stationen bei 3 s und 5 s, nichts fällt |
+| `node --test test/scrap-short.test.mjs` | 6 von 6; Seek-Bild an zehn Stellen pixelgleich (neu: Münze fast von der Seite, neue Münze beim Aufwachsen); jede Waffe wird im Short als Münze gezeichnet, ohne Short keine; alle 29 Casting-Seeds halten den Bogen |
+| `node --test` mit `scrap`, `scrap-optics`, `audio-scrap-soft`, `presets`, `presets-export-scrap`, `scrap-long` | alle bestanden (zusammen mit den beiden Dateien oben 52 Tests) |
+| `node scripts/scrap-map-hashes.mjs` | 6 Fälle × 4 Prüfpunkte gleich |
+| `npm run golden` (einmal) | 36 Fälle × 2 Prüfpunkte identisch mit der Referenz |
+
+**Nicht gelaufen:** kein vollständiger `npm test`.
+
+**Fehler beim Export, offen gesagt:** Der erste Aufruf für die Probe nutzte `--duration 20` statt
+`--clip-duration 20`. Die Vorlage bestimmt ihre Länge selbst, deshalb entstand das ganze Short (26,5 s), ohne
+Auftrag. Die Datei wurde sofort gelöscht; die Probe ist danach mit dem richtigen Befehl entstanden. Der Lauf davor
+hat einen Zeichenfehler gezeigt (Radius knapp unter null im ersten Bild einer neuen Münze); er ist behoben.
+
+**Grenzen:**
+
+- Für etwa ein Siebtel jeder Umdrehung steht die Münze fast von der Seite, das Symbol ist dann kurz nicht zu lesen.
+- Eine Rakete liegt am Anfang hinter der zweiten Zeile des Einstiegstexts (wie vor dem ersten Nachtrag).
+- Farben, Größe und Drehtempo der Münzen sind Startwerte; das Urteil liegt beim Nutzer.
+- Die Proben `scrap-short-probe-20s.mp4` (Seed 61) und `…-v2.mp4` (Abwurf vom Himmel) zeigen ältere Stände.
+- Im Langvideo (Turnier, normales Bild) bleiben die flachen Marken, liegende Bretter und 3 s Deckung.
