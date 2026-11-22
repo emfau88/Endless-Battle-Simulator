@@ -1,6 +1,7 @@
 # Kippkaskade
 
-Bildentwurf vom 22.11.2026 für eine mögliche SimCascade-Szene.
+**Reserveidee.** Die Rückmeldung vom 22.11.2026 war, dass der Glockentreffer zu vorhersehbar wirkt.
+Der Bildentwurf bleibt zum Nachschlagen erhalten. Die [fünf neuen Vorschläge](SZENENIDEEN_2026-11-22.md) stehen zur Auswahl.
 
 ## Reicht eine Handvoll Murmeln für die Glocke?
 
@@ -30,5 +31,6 @@ Vier Standbilder in Chromium gerendert und als Bildvergleich angesehen. Beide Mo
 von Format und Motiv wieder bytegleich. Die lokalen PNGs in 1080 × 1920 und 1920 × 1080 liegen im Hauptordner
 unter `output/kippkaskade-2026-11-22/`.
 
-Die Schalenstellungen sind gezeichnet. Kippbewegung, Ausgang je Seed und Klang wären Gegenstand des ersten
-bewegten Prototyps. Simulationstests, Referenz-Hashes und MP4-Export entfielen für diesen Bildentwurf.
+Die Schalenstellungen sind gezeichnet. Falls die Idee später wieder aufgegriffen wird, lassen sich Kippbewegung,
+Ausgang je Seed und Klang in einer Bewegungsprobe prüfen. Simulationstests, Referenz-Hashes und MP4-Export
+entfielen für diesen Bildentwurf.

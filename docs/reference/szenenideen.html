@@ -1,0 +1,357 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<div id="simcascade-ideenwahl" lang="de">
+  <div class="viz-controls">
+    <label class="form-label">Szenenidee
+      <select class="form-select" name="szene">
+        <option value="duell">Schnecke gegen Stempel</option>
+        <option value="ringwerk">Ringwerk</option>
+        <option value="delta">Das wandernde Delta</option>
+        <option value="webstuhl">Perlenwebstuhl</option>
+        <option value="bruecke">Magnetbrücke</option>
+      </select>
+    </label>
+    <label class="form-label">Variante
+      <select class="form-select" name="variante"></select>
+    </label>
+  </div>
+  <figure>
+    <svg viewBox="0 0 600 266" role="img" aria-labelledby="simcascade-bildtitel simcascade-bildtext">
+      <title id="simcascade-bildtitel">Zwei Fördermaschinen im Vergleich</title>
+      <desc id="simcascade-bildtext"></desc>
+      <g data-zeichnung=""></g>
+    </svg>
+    <figcaption class="text-small" aria-live="polite"></figcaption>
+  </figure>
+</div>
+<style>
+  #simcascade-ideenwahl {
+    --papier: var(--background, Canvas);
+    --tinte: var(--foreground, CanvasText);
+    --kante: color-mix(in srgb, var(--tinte) 62%, var(--papier));
+    --fuge: color-mix(in srgb, var(--tinte) 29%, var(--papier));
+    --metall: color-mix(in srgb, var(--tinte) 12%, var(--papier));
+    --wasser: var(--viz-series-1, color-mix(in srgb, steelblue 84%, CanvasText));
+    --ton: var(--viz-series-2, color-mix(in srgb, darkorange 78%, CanvasText));
+    --glas: var(--viz-series-3, color-mix(in srgb, seagreen 85%, CanvasText));
+    --gold: var(--yellow, color-mix(in srgb, gold 78%, CanvasText));
+    max-width: 52rem; margin-inline: auto; color: var(--tinte);
+  }
+  #simcascade-ideenwahl figure { margin: calc(var(--font-size-base, 1rem) * .75) 0 0; }
+  #simcascade-ideenwahl svg { display: block; width: 100%; height: auto; stroke-linecap: round; stroke-linejoin: round; }
+  #simcascade-ideenwahl figcaption { margin-top: calc(var(--font-size-base, 1rem) * .5); }
+</style>
+<script>
+(() => {
+  'use strict';
+  const root = document.getElementById('simcascade-ideenwahl');
+  const drawing = root.querySelector('[data-zeichnung]');
+  const sceneSelect = root.querySelector('[name="szene"]');
+  const variantSelect = root.querySelector('[name="variante"]');
+  const paper = 'var(--papier)', ink = 'var(--tinte)', edge = 'var(--kante)';
+  const seam = 'var(--fuge)', metal = 'var(--metall)', gold = 'var(--gold)';
+  const blue = 'var(--wasser)', amber = 'var(--ton)', green = 'var(--glas)';
+  const colors = [blue, amber, green];
+  const tau = 2 * Math.PI;
+  const wash = (color, percent) => 'color-mix(in srgb, ' + color + ' ' + percent + '%, ' + paper + ')';
+
+  function node(parent, tag, attributes) {
+    const item = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (const [key, value] of Object.entries(attributes)) item.setAttribute(key, value);
+    parent.appendChild(item);
+    return item;
+  }
+  function path(parent, d, stroke = edge, width = 1.5, fill = 'none') {
+    return node(parent, 'path', { d, stroke, 'stroke-width': width, fill });
+  }
+  function circle(parent, x, y, radius, fill, stroke = 'none', width = 1) {
+    return node(parent, 'circle', { cx: x, cy: y, r: radius, fill, stroke, 'stroke-width': width });
+  }
+  function rect(parent, x, y, w, h, fill, stroke = edge, radius = 0) {
+    return node(parent, 'rect', { x, y, width: w, height: h, fill, stroke, rx: radius });
+  }
+  function group(parent, x, y, angle = 0) {
+    return node(parent, 'g', { transform: 'translate(' + x + ' ' + y + ') rotate(' + angle + ')' });
+  }
+  function bead(parent, x, y, r, color) {
+    circle(parent, x, y, r, color, wash(ink, 64), .65);
+    if (r >= 3.2) circle(parent, x - r * .34, y - r * .34, r * .20, paper);
+  }
+  function bearing(parent, x, y, r) {
+    circle(parent, x, y, r, metal, edge, 1.6);
+    circle(parent, x, y, r * .38, paper, edge);
+  }
+  function prize(parent, x, y, r) {
+    bead(parent, x, y, r, gold);
+    circle(parent, x, y, r * .52, 'none', ink, 1.1);
+  }
+
+  // Zwei Bahnen, gleiche Aufgabe je Bahn. Die Marken im Bild folgen diesem kleinen Taktmodell.
+  function race(bursts) {
+    const queue = [0, 0], delivered = [0, 0], crossing = [null, null], inScrew = [0, 0];
+    let firstFinish;
+    for (let tick = 0; tick < 36; tick++) {
+      const feed = bursts ? (tick === 0 || tick === 8 ? 12 : 0) : Number(tick < 24);
+      queue[0] += feed;
+      queue[1] += feed;
+      delivered[0] += inScrew.shift();
+      const intake = Math.min(1, queue[0]);
+      queue[0] -= intake;
+      inScrew.push(intake);
+      if (tick % 6 === 4) {
+        const stroke = Math.min(7, queue[1]);
+        queue[1] -= stroke;
+        delivered[1] += stroke;
+      }
+      for (let side = 0; side < 2; side++) {
+        if (crossing[side] === null && delivered[side] >= 12) crossing[side] = tick;
+      }
+      if (!firstFinish && Math.max(...delivered) >= 12) firstFinish = [...delivered];
+      if (crossing.every(value => value !== null)) return { crossing, firstFinish };
+    }
+    throw new Error('Zielmarke außerhalb des Modellzeitraums.');
+  }
+  function measuringGlass(x, amount) {
+    const g = group(drawing, x, 246);
+    path(g, 'M-25 -53V-4Q-25 0 -21 0H21Q25 0 25 -4V-53', edge, 1.8, wash(blue, 5));
+    for (let i = 0; i < amount; i++) {
+      bead(g, -16.5 + (i % 4) * 11, -6.5 - Math.floor(i / 4) * 10, 4.7, colors[(i >> 2) % 3]);
+    }
+    path(g, 'M-29 -31H-18 M18 -31H29', ink, 2.4);
+    path(g, 'M-35 -34l6 3 -6 3Z', ink, 1, ink);
+  }
+  function duel(bursts) {
+    const result = race(bursts);
+    const g = drawing;
+    path(g, 'M125 204H476 M169 202l-29 -81 M431 202l29 -81', seam, 2);
+    for (const x of [259, 341]) {
+      const h = group(g, x, 44);
+      path(h, 'M-28 -18H28V8L7 29V38H-7V29L-28 8Z', edge, 1.6, wash(blue, 7));
+      for (let i = 0; i < (bursts ? 12 : 6); i++) {
+        bead(h, -19 + i % 6 * 7.6, 3 - Math.floor(i / 6) * 7, 3.3, colors[(i + 1) % 3]);
+      }
+    }
+    path(g, 'M259 82q0 23 -16 39l-15 17 M341 82q0 23 16 39l15 17', seam, 2);
+    const screw = group(g, 246, 173, -144);
+    rect(screw, -1, -17, 161, 34, wash(blue, 8), edge, 8);
+    path(screw, 'M-7 0H166', seam, 5);
+    for (let x = 5; x < 147; x += 22) {
+      path(screw, 'M' + x + ' -14q15 9 2 28l7 0q13 -19 -2 -28Z', edge, 1, wash(blue, 30));
+      bead(screw, x + 13, -7, 3.4, colors[Math.floor(x / 22) % 3]);
+    }
+    bearing(g, 249, 175, 14);
+    const press = group(g, 355, 174, -36);
+    rect(press, 7, -17, 148, 34, wash(amber, 7), edge, 8);
+    const piston = bursts ? 87 : 45;
+    path(press, 'M-6 0H' + piston, edge, 6);
+    rect(press, piston, -14, 8, 28, wash(amber, 50), edge, 2);
+    path(press, 'M124 -15l12 15 M136 0l-12 15', seam, 2);
+    for (let i = 0; i < (bursts ? 6 : 2); i++) {
+      bead(press, piston + 14 + i % 3 * 8, 7 - Math.floor(i / 3) * 8, 3.6, colors[i % 3]);
+    }
+    const wheel = group(g, 335, 190, bursts ? -42 : 38);
+    circle(wheel, 0, 0, 19, metal, edge, 2);
+    for (let i = 0; i < 3; i++) {
+      const a = i * tau / 3;
+      circle(wheel, 10 * Math.cos(a), 10 * Math.sin(a), 4, paper, seam);
+    }
+    bearing(wheel, 0, 0, 4);
+    path(g, 'M120 79q-18 2 -25 28 M480 83q18 2 25 28', edge, 2);
+    for (const [index, x] of [92, 508].entries()) {
+      const stream = index === 1 && bursts ? 6 : 2;
+      for (let i = 0; i < stream; i++) bead(g, x + (i % 2) * 3, 119 + i * 11.6, 3.5, colors[i % 3]);
+      measuringGlass(x, result.firstFinish[index]);
+    }
+    const [screwTick, pressTick] = result.crossing;
+    return (bursts ? 'Zwei Portionen zu zwölf' : 'Eine Kugel pro Takt') + ' je Bahn. Die Schnecke erreicht die Marke in Takt ' + screwTick + ', der Stempel in Takt ' + pressTick + '.';
+  }
+
+  function ringworks(aligned) {
+    const g = drawing, cx = 264, cy = 120;
+    const radii = [43, 74, 105], slots = aligned ? [0, -.025, .02] : [0, .66, -.48];
+    // Rücklauf am Rand. Die frische Ladung kommt von hinten durch die Nabe.
+    path(g, 'M226 243q25 12 77 5l91 -18 M395 37q-59 -23 -111 57', seam, 3);
+    rect(g, 395, 28, 27, 207, metal, edge, 13);
+    for (let i = 0; i < 8; i++) {
+      const y = 44 + i * 23;
+      path(g, 'M398 ' + y + 'l12 6 8 -4', edge, 1.4);
+      if (i % 3 !== 2) bead(g, 409, y + 1, 3.4, colors[i % 3]);
+    }
+    bearing(g, 408.5, 39, 5);
+    bearing(g, 408.5, 222, 5);
+    for (let i = 2; i >= 0; i--) {
+      const r = radii[i], angle = Math.PI / 2 + slots[i], half = .15;
+      const p = a => [cx + r * Math.cos(a), cy + r * Math.sin(a)].join(' ');
+      const arc = 'M' + p(angle + half) + ' A' + r + ' ' + r + ' 0 1 1 ' + p(angle - half);
+      path(g, arc, edge, 6);
+      path(g, arc, metal, 3.1);
+      for (let j = 0; j < 5; j++) {
+        const a = -Math.PI * .92 + j * .67 + slots[i];
+        circle(g, cx + r * Math.cos(a), cy + r * Math.sin(a), 2, paper, edge, .8);
+      }
+      for (let j = 0; j < 21; j++) {
+        const a = .66 + j * .089, rr = r - 7 - (j % 2) * 3;
+        if (Math.abs(a - angle) < .24 || (aligned && j % 3 === 1)) continue;
+        bead(g, cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 3.0, colors[(i + (j % 5 === 0 ? 1 : 0)) % 3]);
+      }
+    }
+    bearing(g, cx, cy, 9);
+    for (const [i, h] of (aligned ? [23, 48, 69, 89] : [25, 50]).entries()) bead(g, cx + (i % 2) * 2, cy + h, 3.3, colors[i % 3]);
+    prize(g, cx, aligned ? 237 : cy + radii[1] - 8, 6.4);
+    return aligned ? 'Drei Schlitze stehen im Fallweg. Die markierte Kugel fällt bis in den Rücklauf.' :
+      'Der mittlere Schlitz ist schon vorbei. Die markierte Kugel landet auf dem zweiten Ring.';
+  }
+
+  function cork(x, y, angle, doubleStripe) {
+    const g = group(drawing, x, y, angle);
+    rect(g, -9, -4.2, 18, 8.4, paper, ink, 3);
+    path(g, 'M-2 -3.4v6.8' + (doubleStripe ? ' M2 -3.4v6.8' : ''), amber, 2.2);
+  }
+  function delta(diverted) {
+    const g = drawing;
+    const north = 'M224 128C280 123 280 69 345 74S414 51 501 53';
+    const south = 'M227 131C284 140 278 187 347 186S430 206 509 212';
+    const inlet = 'M58 108C111 92 143 154 225 130';
+    // Höhenlinien und Sandzungen bilden das sichtbare Relief.
+    for (const [d, tint] of [
+      ['M47 48Q94 39 134 72T216 90Q250 92 272 53T360 37L389 23', 26],
+      ['M49 61Q94 52 132 83T217 103Q250 106 278 64T356 48L396 33', 34],
+      ['M47 170Q101 145 151 184T242 200Q260 198 281 220T365 238', 29],
+      ['M44 185Q102 159 149 198T241 214Q259 211 277 231T351 249', 21],
+      ['M311 134Q347 100 387 116T463 131Q430 160 382 152T311 134Z', 27]
+    ]) path(g, d, wash(amber, tint), 2);
+    const arms = [
+      [inlet, 36], [north, diverted ? 11 : 29], [south, diverted ? 32 : 12],
+      ['M300 88C322 61 339 50 364 62S390 70 406 66', diverted ? 2 : 7],
+      ['M330 185C358 186 367 215 396 213S429 199 446 201', diverted ? 8 : 3]
+    ];
+    for (const [d, width] of arms) path(g, d, wash(amber, 38), width + 8);
+    for (const [d, width] of arms) path(g, d, wash(blue, 48), width);
+    for (const [d, width] of arms) path(g, d, wash(blue, 72), Math.max(1, width / 10));
+    for (const [x, y, r] of [[507, 52, 29], [519, 211, 31]]) {
+      const pool = group(g, x, y, -10);
+      node(pool, 'ellipse', { cx: 0, cy: 0, rx: r * 1.38, ry: r * .64, fill: wash(blue, 50) });
+      path(pool, 'M-10 3q10 3 19 -1 M4 8q6 1 11 -1', wash(blue, 80), 1.2);
+    }
+    const bar = diverted ? 'M238 121Q261 101 291 91Q282 113 266 121Q257 128 238 121Z' :
+      'M240 125Q251 116 262 115Q254 125 240 125Z';
+    path(g, bar, wash(amber, 75), 1.2, wash(amber, 43));
+    for (let i = 0; i < (diverted ? 28 : 9); i++) {
+      const k = i / 28;
+      circle(g, 242 + 41 * k, 122 - k * 23 - (i % 3) * 1.25, 1.3, amber);
+    }
+    for (let i = 0; i < 32; i++) {
+      const t = i / 31;
+      circle(g, 144 + t * 70, 127 + Math.sin(t * Math.PI) * 7 + (i % 4) * 1.3, 1.1, wash(amber, 80));
+    }
+    // Der erste Korken bleibt als Zeuge derselben Einlassstelle in der oberen Bucht.
+    cork(518, 50, -12, false);
+    cork(diverted ? 491 : 477, diverted ? 209 : 55, diverted ? 10 : -11, true);
+    return diverted ? 'Die Sandzunge versperrt den alten Hauptarm. Der zweite Korken mit zwei Streifen treibt in die untere Bucht.' :
+      'Beide Korken nehmen den oberen Arm. Dort mündet noch die stärkste Strömung.';
+  }
+
+  function loom(skipped) {
+    const g = drawing, cx = 104, cy = 119;
+    circle(g, cx, cy, 51, metal, edge, 1.8);
+    circle(g, cx, cy, 34, paper, seam);
+    for (let i = 0; i < 12; i++) {
+      const a = i * tau / 12;
+      const x = cx + 42 * Math.cos(a), y = cy + 42 * Math.sin(a);
+      circle(g, x, y, 6.2, paper, seam);
+      if (!(skipped && i === 9)) bead(g, x, y, 4.6, colors[Math.floor(i / 4)]);
+    }
+    bearing(g, cx, cy, 9);
+    path(g, 'M102 164q4 24 31 24h21q14 0 22 -21l21 -63q7 -21 32 -21h79 M228 83h216', seam, 3);
+    const cols = 34, rows = 12, pitch = 9.2, x0 = 215, y0 = 217;
+    rect(g, x0 - 9, y0 - rows * pitch + 2, cols * pitch + 10, rows * pitch + 10, wash(ink, 3), seam, 4);
+    // Eine Hälfte wird vom linken Rand eingelesen, die andere vom rechten. Der Nocken kehrt den Versatz um.
+    for (let row = 0; row < rows; row++) {
+      const stagger = row < 6 ? row : 12 - row;
+      for (let col = 0; col < cols; col++) {
+        const rightSide = col >= cols / 2;
+        const fromEdge = rightSide ? cols - 1 - col : col;
+        const shift = Number(skipped && rightSide && row >= 5);
+        const color = colors[Math.floor(((fromEdge + stagger + shift) % 12) / 4)];
+        bead(g, x0 + col * pitch, y0 - row * pitch, 3.9, color);
+      }
+    }
+    path(g, 'M203 74h334 M206 91h328', edge, 1.8);
+    for (const x of [285, 449]) {
+      rect(g, x - 13, 69, 26, 13, metal, edge, 3);
+      path(g, 'M' + (x - 6) + ' 83l4 14h4l4 -14Z', edge, 1.1, paper);
+      bead(g, x, 102, 3.8, x > 300 && skipped ? amber : green);
+    }
+    return skipped ? 'Eine leere Tasche am rechten Auslass verschiebt die rechte Musterhälfte ab der sechsten Reihe um eine Perle.' :
+      'Beide Schlitten erhalten dieselbe Farbfolge. Die Diagonalen treffen sich in der Mitte spiegelbildlich.';
+  }
+
+  function markerBall(x, y, r) {
+    circle(drawing, x, y, r, paper, ink, 1.4);
+    path(drawing, 'M' + (x - r * .48) + ' ' + (y - r * .76) + 'q' + r * .71 + ' ' + (r * .7) + ' ' + (r * .9) + ' ' + (r * 1.5), blue, 2);
+  }
+  function bridge(opens) {
+    const g = drawing;
+    path(g, 'M32 126h81l17 12 -17 15H84l-8 49 -46 14 M568 142h-80l-11 13 13 11h30l14 46 37 7', edge, 1.5, metal);
+    for (const [x, flip] of [[81, 1], [517, -1]]) {
+      const crane = node(g, 'g', { transform: 'translate(' + x + ' 0) scale(' + flip + ' 1)' });
+      path(crane, 'M0 126V28h148v10H8v88 M8 63l38 -25 M24 28l13 10 14 -10 14 10 14 -10 14 10 14 -10 14 10 14 -10', seam, 1.8);
+      rect(crane, 103, 25, 24, 17, metal, edge, 3);
+      path(crane, 'M111 42v29 M119 42v29 M105 78V72h20v6', edge, 1.7);
+    }
+    const y = x => 132 + (x - 107) * .043 + 31 * Math.sin(Math.PI * (x - 107) / 380);
+    for (let i = 0; i < 10; i++) {
+      const x1 = 107 + 38 * i, x2 = x1 + 38;
+      let a = [x1, y(x1)], b = [x2, y(x2)];
+      if (opens && i === 4) b = [x1 + 21, a[1] + 39];
+      if (opens && i === 5) a = [x2 - 20, b[1] + 37];
+      path(g, 'M' + a.join(' ') + 'L' + b.join(' '), edge, 9);
+      path(g, 'M' + a.join(' ') + 'L' + b.join(' '), wash(i % 2 ? green : blue, 40), 5.5);
+      bearing(g, a[0], a[1], 3.1);
+      bearing(g, b[0], b[1], 3.1);
+    }
+    for (const [x, yy] of [[108, 132], [487, 148]]) bearing(g, x, yy, 6);
+    markerBall(opens ? 277 : 234, opens ? 182 : y(234) - 12, 8);
+    markerBall(opens ? 306 : 301, opens ? 221 : y(301) - 13, 8);
+    markerBall(527, 133, 8);
+    path(g, 'M174 227l14 16h218l17 -18', seam, 1.6);
+    return opens ? 'Die erste Murmel ist drüben. Zwei weitere belasten denselben Stoß, die mittlere Fuge öffnet sich.' :
+      'Die Laschen greifen beidseitig. Der Steg biegt sich unter der zweiten und dritten Murmel.';
+  }
+
+  const scenes = {
+    duell: { render: duel, variants: ['Gleichmäßiger Zulauf', 'Zwei Schübe'] },
+    ringwerk: { render: ringworks, variants: ['Versetzte Schlitze', 'Drei Schlitze in einer Linie'] },
+    delta: { render: delta, variants: ['Offener Hauptarm', 'Gewachsene Sandbank'] },
+    webstuhl: { render: loom, variants: ['Alle Taschen gefüllt', 'Eine leere Tasche'] },
+    bruecke: { render: bridge, variants: ['Voll eingerastet', 'Einseitig eingerastet'] }
+  };
+  function show(key, variant) {
+    if (!Object.hasOwn(scenes, key)) key = 'duell';
+    const scene = scenes[key];
+    sceneSelect.value = key;
+    variantSelect.replaceChildren(...scene.variants.map((label, index) => new Option(label, String(index))));
+    variantSelect.value = variant === 1 ? '1' : '0';
+    drawing.replaceChildren();
+    const detail = scene.render(variantSelect.value === '1');
+    root.querySelector('title').textContent = sceneSelect.selectedOptions[0].textContent;
+    root.querySelector('desc').textContent = detail;
+    root.querySelector('figcaption').textContent = detail;
+  }
+  function choose(key, variant) {
+    show(key, variant);
+    const api = window.openai;
+    if (api?.setWidgetState) api.setWidgetState({ modelContent: { szene: key, variante: variant } }).catch(() => {});
+  }
+  function restore(saved) {
+    const data = saved?.modelContent;
+    show(data?.szene, data?.variante);
+  }
+  sceneSelect.addEventListener('change', () => choose(sceneSelect.value, 0));
+  variantSelect.addEventListener('change', () => choose(sceneSelect.value, Number(variantSelect.value)));
+  window.addEventListener('openai:set_globals', event => {
+    if ('widgetState' in (event.detail?.globals || {})) restore(event.detail.globals.widgetState);
+  });
+  restore(window.openai?.widgetState);
+})();
+</script>

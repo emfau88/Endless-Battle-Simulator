@@ -55,7 +55,7 @@ R33 bündelt die bisherigen Einzelabnahmen **R18** (Naval), **R20** (Scrap Wars)
 
 | Nr. | Punkt |
 |---|---|
-| R42 | [Szenenvorschlag Kippkaskade](KIPPKASKADE_2026-11-22.md) ansehen. Gefällt die Idee mit den drei Kippschalen und der Glocke, folgt eine kurze Bewegungs- und Klangprobe. |
+| R42 | Aus [fünf Szenenvorschlägen](SZENENIDEEN_2026-11-22.md) eine Idee für eine Bewegungs- und Klangprobe auswählen. Die Kippkaskade ist als Reserve vermerkt. |
 | R10 | Hörbare Vorschau im Simulator (würde jede Abnahme erleichtern) |
 | R27 | Pyramid-Tonspitzen: Standardfall behoben, weitere Klangkombinationen beobachten |
 | R07 | Oberfläche: Qualitätswerte (CRF, Preset, Bitrate) einstellbar |
