@@ -5,7 +5,8 @@ während eine ganze Ladung das Verhalten der Maschine bestimmt. Die folgenden f�
 diesen Wechsel zwischen Einzelteil und Masse. Die Kippkaskade ist separat als Reserve vermerkt.
 
 In der [Bildauswahl](reference/szenenideen.html) lassen sich für jede Szene zwei Situationen vergleichen.
-Die Datei öffnet sich aus der Arbeitskopie direkt im Browser.
+Die Datei öffnet sich aus der Arbeitskopie direkt im Browser. Baureihenfolge, erste Proben und
+Startempfehlung stehen im [Umsetzungsplan für die fünf Szenen](SZENENPLAN_2026-11-22.md).
 
 ## 1 · Schnecke gegen Stempel
 

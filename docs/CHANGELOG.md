@@ -6,6 +6,7 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Was | Commit | Bericht |
 |---|---|---|
+| R42, Umsetzungsplan für alle fünf Szenen mit Startempfehlung, Prototypen und Abnahmekriterien. | Branch `konzept/kippkaskade` | [Szenenplan](SZENENPLAN_2026-11-22.md) |
 | R42, fünf eigenständige Szenenideen ausgearbeitet. Je zwei Verläufe gezeichnet, den unterschiedlichen Ausgang des Förderduells mit einem Taktmodell geprüft und die Kippkaskade als Reserve vermerkt. | Branch `konzept/kippkaskade` | [Ideen und Bildauswahl](SZENENIDEEN_2026-11-22.md) |
 | R42, Kippkaskade. Zwei Momente als Bildentwurf in Hoch- und Querformat gerendert und verglichen. | Branch `konzept/kippkaskade` | [Szenenvorschlag und Bildquelle](KIPPKASKADE_2026-11-22.md) |
 

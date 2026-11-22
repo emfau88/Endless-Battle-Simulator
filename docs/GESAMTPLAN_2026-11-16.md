@@ -1,6 +1,6 @@
 # Gesamtplan: ein Main, sichere Architektur, Ausbau je Szenario
 
-**Zuletzt aktualisiert:** 22.11.2026 (fünf Szenenideen zur Auswahl in Abschnitt 0). **Status:** vom Nutzer am 16.11.2026 freigegeben („freie Hand“),
+**Zuletzt aktualisiert:** 22.11.2026 (Umsetzungsplan für fünf Szenen in Abschnitt 0). **Status:** vom Nutzer am 16.11.2026 freigegeben („freie Hand“),
 Umsetzung läuft.
 
 Die [ROADMAP](ROADMAP.md) bleibt die einzige aktive Aufgabenliste; die Vorhaben dieses Plans stehen dort als
@@ -13,8 +13,9 @@ R31 bis R36. Dieser Plan liefert Begründung, Reihenfolge und Paketbeschreibunge
 
 Drei Zustände: **Erledigt**, **Läuft**, **Offen**. Dazu **Entfällt** für gestrichene Schritte.
 
-**R42 · Neue Szene.** **Erledigt** sind [fünf Vorschläge mit je zwei Prinzipskizzen](SZENENIDEEN_2026-11-22.md).
-Die [Kippkaskade](KIPPKASKADE_2026-11-22.md) liegt als Reserve vor. **Offen** ist die Auswahl für einen bewegten Prototyp.
+**R42 · Neue Szene.** **Erledigt** sind [fünf Szenenentwürfe](SZENENIDEEN_2026-11-22.md) und ihr
+[Umsetzungsplan](SZENENPLAN_2026-11-22.md). Er empfiehlt „Schnecke gegen Stempel“ für die erste Bewegungs-
+und Klangprobe. **Offen** ist die Wahl der Startszene. Die [Kippkaskade](KIPPKASKADE_2026-11-22.md) bleibt Reserve.
 
 ### Block 0 · Sichern und aufräumen (R31)
 
