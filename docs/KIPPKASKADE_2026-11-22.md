@@ -1,7 +1,8 @@
 # Kippkaskade
 
 **Reserveidee.** Die Rückmeldung vom 22.11.2026 war, dass der Glockentreffer zu vorhersehbar wirkt.
-Der Bildentwurf bleibt zum Nachschlagen erhalten. Die [fünf neuen Vorschläge](SZENENIDEEN_2026-11-22.md) stehen zur Auswahl.
+Der Bildentwurf bleibt zum Nachschlagen erhalten. Von den [fünf weiteren Vorschlägen](SZENENIDEEN_2026-11-22.md)
+wurde „Schnecke gegen Stempel“ als Startszene gewählt.
 
 ## Reicht eine Handvoll Murmeln für die Glocke?
 

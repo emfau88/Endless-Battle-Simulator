@@ -82,4 +82,5 @@ Die zehn Prinzipskizzen zeigen je zwei ausgewählte Verläufe. Das Taktbeispiel 
 Die übrigen Situationen sind gezeichnet. In Chromium ließen sich alle zehn Ansichten bei 736 Pixeln Breite
 im hellen Design und bei 320 Pixeln im dunklen Design wechseln. Der Bildvergleich und die beiden Zielzeitenpaare
 wurden geprüft. Für die Ideenauswahl entfielen Simulationstests, Referenz-Hashes und Videoexport.
-Die Entscheidung für einen bewegten Entwurf steht in der [Roadmap unter R42](ROADMAP.md).
+Als Startszene wurde „Schnecke gegen Stempel“ gewählt. Die [Bildprobe](FOERDERDUELL_BILDPROBE_2026-11-22.md)
+zeigt die beiden Formate. Der nächste Schritt steht in der [Roadmap unter R42](ROADMAP.md).

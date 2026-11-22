@@ -19,6 +19,9 @@ aus der Strömung heraus sichtbar und stabil verändert.
 
 ## 1 · Schnecke gegen Stempel
 
+**Gewählte Startszene.** Die [Bildprobe zu Paket 1](FOERDERDUELL_BILDPROBE_2026-11-22.md) liegt
+in beiden Formaten vor. Als Nächstes wird die Bildaufteilung beurteilt.
+
 Jede Bahn bekommt 24 Kugeln. Die zwölfte im Zielglas entscheidet. Diese beiden Läufe aus der
 [Bildauswahl](reference/szenenideen.html) dienen als Vorlage. Ein Takt bezeichnet hier den Maschinentakt.
 
