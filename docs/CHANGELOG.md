@@ -6,6 +6,7 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Was | Commit | Bericht |
 |---|---|---|
+| R42, „Schnecke gegen Stempel“ im Simulator. Rennlogik mit Gleichstand, bewegte Maschinen, drei Klänge sowie Vorlagen für Einzelrennen und Serien. Beide Filmformate exportiert. | `9f62601`, `b4fe612`, `d62d616`, `ffa01b1` | [Rennverläufe und MP4-Prüfung](FOERDERDUELL_2026-11-22.md) |
 | R42, matte Graphitrückwand, gebürstete Stahlschnecke und kupferner Stempel. Größere Kolbenkammer bei 8 zu 7 in beiden Formaten gerendert und mit der ersten Fassung verglichen. | Branch `konzept/kippkaskade` | [Graphit, Stahl und Kupfer](FOERDERDUELL_BILDPROBE_2026-11-22.md#graphit-stahl-und-kupfer) |
 | R42, Startszene „Schnecke gegen Stempel“ gewählt. Zwei eigene Bildaufteilungen für denselben Stand von 8 zu 7 gerendert und verglichen. | Branch `konzept/kippkaskade` | [Bildprobe](FOERDERDUELL_BILDPROBE_2026-11-22.md) |
 | R42, Umsetzungsplan für alle fünf Szenen mit Startempfehlung, Prototypen und Abnahmekriterien. | Branch `konzept/kippkaskade` | [Szenenplan](SZENENPLAN_2026-11-22.md) |

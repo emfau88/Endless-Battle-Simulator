@@ -128,8 +128,8 @@ Richtwert: Der 20-Minuten-Export der Pyramide in 1080p60 lief mit rund 21 Bilder
 
 ## 7 · Tests und Prüflauf
 
-- `scripts/test-ci.mjs` ordnet jede Testdatei über ihren Dateinamen einer von 18 Gruppen zu; der Prüflauf auf GitHub
-  startet jede Gruppe einzeln (`.github/workflows/ci.yml`).
+- `scripts/test-ci.mjs` ordnet jede Testdatei über ihren Dateinamen einer Prüfgruppe zu. GitHub startet
+  jede Gruppe einzeln (`.github/workflows/ci.yml`). Das Förderduell hat eine Szenario- und eine Exportgruppe.
 - **Referenz-Hashes** (`npm run golden`) decken Naval, Kugelfabrik und Mycelium ab. Die anderen Szenarien halten
   ihre Zustandsreferenzen in den eigenen Testdateien; ebenso der Naval-Modus „Ruhiges Duell“ (`test/naval-calm.test.mjs`).
 - Vorlage für den Rahmen eines Szenarios: `test/fixtures/dummy-scenario.js`.

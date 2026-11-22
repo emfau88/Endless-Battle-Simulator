@@ -44,3 +44,6 @@ je drei freien Stellen der Rückwand lagen Rot und Grün im neuen Bild gleichauf
 in jedem Format alle 24 Kugeln je Bahn genau einmal, mit dem Bestand aus der Tabelle. Nach dem Neuladen
 und bei automatischer Formatwahl in einem Handy- bzw. Querformatfenster entstanden bytegleiche PNGs.
 Simulationstests, Referenz-Hashes und Videoexport entfielen bei dieser Standbildprobe.
+
+Die bewegte Szene nutzt dieselbe Maschinenzeichnung. Rennverläufe und fertige Videos sind im
+[Bericht zur Simulatorintegration](FOERDERDUELL_2026-11-22.md) dokumentiert.
