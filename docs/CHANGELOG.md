@@ -6,6 +6,7 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Was | Commit | Bericht |
 |---|---|---|
+| R42, matte Graphitrückwand, gebürstete Stahlschnecke und kupferner Stempel. Größere Kolbenkammer bei 8 zu 7 in beiden Formaten gerendert und mit der ersten Fassung verglichen. | Branch `konzept/kippkaskade` | [Graphit, Stahl und Kupfer](FOERDERDUELL_BILDPROBE_2026-11-22.md#graphit-stahl-und-kupfer) |
 | R42, Startszene „Schnecke gegen Stempel“ gewählt. Zwei eigene Bildaufteilungen für denselben Stand von 8 zu 7 gerendert und verglichen. | Branch `konzept/kippkaskade` | [Bildprobe](FOERDERDUELL_BILDPROBE_2026-11-22.md) |
 | R42, Umsetzungsplan für alle fünf Szenen mit Startempfehlung, Prototypen und Abnahmekriterien. | Branch `konzept/kippkaskade` | [Szenenplan](SZENENPLAN_2026-11-22.md) |
 | R42, fünf eigenständige Szenenideen ausgearbeitet. Je zwei Verläufe gezeichnet, den unterschiedlichen Ausgang des Förderduells mit einem Taktmodell geprüft und die Kippkaskade als Reserve vermerkt. | Branch `konzept/kippkaskade` | [Ideen und Bildauswahl](SZENENIDEEN_2026-11-22.md) |

@@ -1,6 +1,6 @@
 # Gesamtplan: ein Main, sichere Architektur, Ausbau je Szenario
 
-**Zuletzt aktualisiert:** 22.11.2026 (Bildprobe für Schnecke gegen Stempel in Abschnitt 0). **Status:** vom Nutzer am 16.11.2026 freigegeben („freie Hand“),
+**Zuletzt aktualisiert:** 22.11.2026 (Graphitfassung für Schnecke gegen Stempel in Abschnitt 0). **Status:** vom Nutzer am 16.11.2026 freigegeben („freie Hand“),
 Umsetzung läuft.
 
 Die [ROADMAP](ROADMAP.md) bleibt die einzige aktive Aufgabenliste; die Vorhaben dieses Plans stehen dort als
@@ -15,8 +15,9 @@ Drei Zustände: **Erledigt**, **Läuft**, **Offen**. Dazu **Entfällt** für ges
 
 **R42 · Schnecke gegen Stempel.** Aus den [fünf Entwürfen](SZENENIDEEN_2026-11-22.md) hat der Nutzer
 das Förderduell als Startszene gewählt. **Erledigt** sind der [Umsetzungsplan](SZENENPLAN_2026-11-22.md)
-und die [Bildprobe](FOERDERDUELL_BILDPROBE_2026-11-22.md) in Hoch- und Querformat. **Offen** sind die
-Rückmeldung zur Bildaufteilung und danach der Rennablauf. Die [Kippkaskade](KIPPKASKADE_2026-11-22.md) bleibt Reserve.
+und die [Bildprobe in Graphit, Stahl und Kupfer](FOERDERDUELL_BILDPROBE_2026-11-22.md#graphit-stahl-und-kupfer)
+in Hoch- und Querformat. **Offen** sind die Rückmeldung zu diesen Ansichten und danach der Rennablauf.
+Die [Kippkaskade](KIPPKASKADE_2026-11-22.md) bleibt Reserve.
 
 ### Block 0 · Sichern und aufräumen (R31)
 

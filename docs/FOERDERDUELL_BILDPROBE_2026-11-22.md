@@ -18,15 +18,29 @@ zwei benachbarten Messgläsern. Dazwischen sitzt die gemeinsame Anzeige für den
 **Querformat, 1920 × 1080.** Vom Doppelmagazin in der Mitte führen zwei flachere Maschinen nach außen.
 Jedes Messglas steht direkt unter seinem Auslauf. Der eigene Zähler sitzt am Fuß des Glases.
 
-Die [Bildquelle](reference/foerderduell-bildprobe.html) öffnet sich in der Arbeitskopie direkt im Browser.
-Beide PNGs lassen sich dort mit diesem Befehl erzeugen.
+## Graphit, Stahl und Kupfer
+
+Die matte Graphitrückwand bekommt weiches Licht von links oben. Auf der Schnecke folgen feine
+Schliffspuren den silbernen Windungen. Schwungrad und Kolbenfassung tragen satiniertes Kupfer.
+Schmale weiße Reflexe zeigen den Verlauf der Glasrohre. Eine Metallfassung verbindet jedes Rohr mit
+der Maschine. Blau, Honig, Koralle und Elfenbein machen die Kugeln vor der dunklen Fläche erkennbar.
+
+Die Kolbenkammer hat im Bild rund 23 % mehr Innendurchmesser als im ersten Entwurf. Das Schauglas
+vergrößert die sieben bereitliegenden Kugeln um den Faktor 1,18. Eine kleine warme Aufhellung sitzt
+direkt hinter der Ladung. So lässt sich schon beim Stand von 8 zu 7 der nächste Hub erahnen.
+
+Die [Bildquelle](reference/foerderduell-bildprobe.html) wählt beim Öffnen das zum Fenster passende Format.
+Dieser Befehl rendert aus der Arbeitskopie beide PNGs in den lokalen Vergleichsordner im Hauptprojekt.
 
 ```bash
-node scripts/foerderduell-bildprobe.mjs
+node scripts/foerderduell-bildprobe.mjs ../../../output/foerderduell-graphit-2026-11-22
 ```
 
-Die Reviewbilder liegen lokal im Hauptordner unter `output/foerderduell-bildprobe-2026-11-22/` als
-`foerderduell-hoch.png` und `foerderduell-quer.png`. Geprüft wurden die Bildmaße, beide Bilder im
-Größenvergleich, der Kugelbestand und das erneute Rendern in Chromium. Beim Neuladen waren die PNGs
-jeweils bytegleich. Simulationstests, Referenz-Hashes und Videoexport entfielen für die Standbilder.
-Rückmeldungen zu den Ansichten gehören zu [R42](ROADMAP.md).
+Die Dateien heißen `foerderduell-hoch.png` und `foerderduell-quer.png`. Die erste Bildfassung aus
+Commit `f14c919` liegt zum Vergleich unter `output/foerderduell-bildprobe-2026-11-22/`.
+
+**Bildprüfung.** Beide Formate wurden in Originalgröße und als verkleinerte Übersicht verglichen. An
+je drei freien Stellen der Rückwand lagen Rot und Grün im neuen Bild gleichauf. Die Bildquelle zeichnete
+in jedem Format alle 24 Kugeln je Bahn genau einmal, mit dem Bestand aus der Tabelle. Nach dem Neuladen
+und bei automatischer Formatwahl in einem Handy- bzw. Querformatfenster entstanden bytegleiche PNGs.
+Simulationstests, Referenz-Hashes und Videoexport entfielen bei dieser Standbildprobe.
