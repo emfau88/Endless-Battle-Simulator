@@ -396,7 +396,8 @@ async function bootLive() {
     const c = session.cfg;
     scSel.value = c.scenario; $('seed').value = c.seed;
     const production = c.scenario === 'marbleworks';
-    $('btnShortPreset').textContent = production ? 'Short · Mini-Auftrag' : c.scenario === 'waterpark' ? 'Short · 30 Sekunden' : 'Short · 1 Minute';
+    $('btnShortPreset').textContent = production ? 'Short · Mini-Auftrag' : c.scenario === 'foerderduell' ? 'Short · Ein Rennen'
+      : c.scenario === 'waterpark' ? 'Short · 30 Sekunden' : 'Short · 1 Minute';
     $('btnLongPreset').textContent = production ? 'Langvideo · Vollständiger Auftrag' : 'Langvideo · 10 Minuten';
     for (const ctl of session.scenario.controls) {
       const el = $('p-' + ctl.key), v = c.params[ctl.key];

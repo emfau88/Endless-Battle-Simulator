@@ -32,7 +32,9 @@ after(async () => {
 });
 
 for (const kind of ['short', 'long']) {
-  test(`Produktionsweg ${scenario}/${kind}: 1080p30, 3 Sekunden, Ton und herunterladbare MP4/JSON`, async t => {
+  const wholeRace = scenario === 'foerderduell' && kind === 'short';
+  const seconds = wholeRace ? 12.3 : 3;
+  test(`Produktionsweg ${scenario}/${kind}: 1080p30, ${seconds} Sekunden, Ton und herunterladbare MP4/JSON`, async t => {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
     const page = await ctx.newPage(), errors = [];
     page.on('pageerror', e => errors.push(e.message));
@@ -64,8 +66,14 @@ for (const kind of ['short', 'long']) {
       assert.equal(await page.isDisabled('#durationText'), true, 'the Short preset ends with the victory');
       await page.selectOption('#p-videoEnd', 'free');
       assert.equal(await page.isDisabled('#durationText'), false);
+    } else if (wholeRace) {
+      await page.waitForFunction(() => document.querySelector('#durationOut').textContent !== '…');
+      assert.equal(await page.isDisabled('#durationText'), true);
+      assert.equal(await page.evaluate(() => EBS.app.cfg.video.durationSec), seconds);
     } else assert.equal(await page.evaluate(() => EBS.app.cfg.video.durationSec), kind === 'short' ? 60 : 600);
-    await page.fill('#durationText', '3s'); await page.dispatchEvent('#durationText', 'change');
+    if (!wholeRace) {
+      await page.fill('#durationText', '3s'); await page.dispatchEvent('#durationText', 'change');
+    }
     const config = await page.evaluate(() => EBS.app.cfg);
     const [request] = await Promise.all([
       page.waitForRequest(req => req.url() === base + '/api/export' && req.method() === 'POST'), page.click('#btnExport'),
@@ -83,7 +91,7 @@ for (const kind of ['short', 'long']) {
     const meta = JSON.parse(readFileSync(sidecar, 'utf8')), probe = await probeVideo(file);
     assert.deepEqual(meta.config, config, 'Begleitdatei bewahrt die Einstellungen');
     assert.deepEqual(verifyResult({ ...probe, audio: meta.audio, expectedWidth: kind === 'short' ? 1080 : 1920,
-      expectedHeight: kind === 'short' ? 1920 : 1080, expectedFrames: 90, expectedFps: 30, expectedDuration: 3 }), []);
+      expectedHeight: kind === 'short' ? 1920 : 1080, expectedFrames: Math.round(seconds * 30), expectedFps: 30, expectedDuration: seconds }), []);
     assert.equal(meta.audio.lost, 0); assert.equal(meta.video.encoder.preset, 'medium');
     const href = await page.getAttribute('#exportMsg a', 'href'); assert.equal(href, status.url);
     const downloaded = await fetch(base + href); assert.equal(downloaded.status, 200);
