@@ -36,6 +36,7 @@ geprüft** (mit Umfang und Programmstand) und **abgenommen** (laufender Clip wir
 
 R33 bündelt die bisherigen Einzelabnahmen **R18** (Naval), **R20** (Scrap Wars), **R17** (Territory Wars),
 **R25** (Mycelium) und **R30** (Waterpark). Dazu ein Vergleichspaar 30 gegen 60 fps (**R15**).
+Zu R17 gehört jetzt auch die Durchsicht der 16:9-Probe „Meteor und Riese“. [Stand und Zeitpunkte](TERRITORY_GROSSKARTE_2026-11-24.md)
 
 ## 3 · Danach
 

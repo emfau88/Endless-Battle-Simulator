@@ -2,6 +2,12 @@
 
 Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen in der [ROADMAP](ROADMAP.md).
 
+## 24.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| Territory Wars erhält eine zusätzliche 16:9-Großkarte mit 221 Feldern, angekündigten Meteoren und einem neutralen Steinriesen. Die Langvideo-Vorlage mit Seed 46 endet nach 10:04 Minuten. | Branch `territory/meteor-und-riese` | [Ablauf und Prüfung](TERRITORY_GROSSKARTE_2026-11-24.md) |
+
 ## 20.11.2026
 
 | Was | Commit | Bericht |

@@ -1,6 +1,6 @@
 # Gesamtplan: ein Main, sichere Architektur, Ausbau je Szenario
 
-**Zuletzt aktualisiert:** 20.11.2026 (Scrap-Ausbau R40: S1 Teil 1 Short-Karte, danach gestoppt; offene Punkte gesammelt). **Status:** vom Nutzer am 16.11.2026 freigegeben („freie Hand“),
+**Zuletzt aktualisiert:** 24.11.2026 (Territory-Langvideo mit Meteor und Riese). **Status:** vom Nutzer am 16.11.2026 freigegeben („freie Hand“),
 Umsetzung läuft.
 
 Die [ROADMAP](ROADMAP.md) bleibt die einzige aktive Aufgabenliste; die Vorhaben dieses Plans stehen dort als
@@ -12,6 +12,10 @@ R31 bis R36. Dieser Plan liefert Begründung, Reihenfolge und Paketbeschreibunge
 ## 0 · Umsetzungsstand
 
 Drei Zustände: **Erledigt**, **Läuft**, **Offen**. Dazu **Entfällt** für gestrichene Schritte.
+
+**Territory-Langvideo (R17/R36) · Erledigt.** Die zusätzliche Großkarte für 16:9 ist wählbar.
+Seed 46 spielt mit Meteor und neutralem Riesen bis zum Sieg und endet bei 10:04. Offen ist die
+Durchsicht der fertigen 20-Sekunden-Probe. [Bericht](TERRITORY_GROSSKARTE_2026-11-24.md)
 
 ### Block 0 · Sichern und aufräumen (R31)
 

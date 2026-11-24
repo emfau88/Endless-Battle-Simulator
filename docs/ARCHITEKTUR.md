@@ -73,6 +73,8 @@ Anmeldung mit `EBS.registerScenario({ … })`.
 `visible(params)` blendet einen Regler abhängig von anderen aus. `rebuildUi` baut nach der Auswahl die Regler neu
 auf; `resetMix` lädt dabei die Standardmischung der neuen Auswahl (für Modi mit eigener Klangtabelle).
 
+`videoSets` kann einer Auswahl passende Videoeinstellungen mitgeben. Die Territory-Großkarte öffnet dadurch beim Anwenden das Querformat.
+
 Parameternamen dürfen nicht mit Kern-Schlüsseln kollidieren: `version`, `name`, `description`, `scenario`, `seed`,
 `format`, `aspect`, `resolution`, `fps`, `durationSec`, `tempo`, `audio`, `crf`, `preset`, `bitrate`, `hud`,
 `camera` und alles mit dem Präfix `vol.`.

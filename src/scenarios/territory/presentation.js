@@ -91,6 +91,9 @@
       },
       draw(remainder,params) {
         accum=remainder;garrisonMode=params.garrisonMode;
+        // On the large map place march labels against the current frame's
+        // obstacles, even when the previous frames were simulated off-screen.
+        if (params.layout === 'wilds') for (const state of importantMoves.values()) state.labelOffset = null;
         drawLabels();
       },
       displayState() {

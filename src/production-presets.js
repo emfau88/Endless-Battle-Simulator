@@ -3,10 +3,17 @@
 (function () {
   'use strict';
   const labels = { naval: 'Seeschlacht', marble: 'Kugelfabrik', scrap: 'Scrap Wars', mycelium: 'Myzel', pyramid: 'Pyramide', territory: 'Territory Wars / Hex Dominion', marbleworks: 'Marble Works', waterpark: 'Wasserpark', cloudwars: 'Cloud Wars' };
-  EBS.productionPreset = (scenario, kind, seed = 42) => {
+  EBS.productionPreset = (scenario, kind, seed = 42, layout) => {
     if (!Object.hasOwn(labels, scenario) || !['short', 'long'].includes(kind)) throw new Error('Unbekannte Produktionsvorlage.');
     if (scenario === 'marbleworks') return EBS.MarbleProduction.preset(kind, seed);
     const short = kind === 'short';
+    if (scenario === 'territory' && !short && layout === 'wilds') return {
+      version: 1, name: 'Territory Wars – Großkarte mit Meteor und Riese', scenario, seed: 46,
+      params: { layout: 'wilds', repeatRounds: false, videoEnd: 'victory', endPauseSec: 9 },
+      video: { aspect: '16:9', resolution: 1080, fps: 30, durationSec: 600, tempo: .75, audio: true,
+        volume: { master: 100 }, quality: { crf: 20, preset: 'medium', bitrate: null } },
+      view: { hud: true, camera: false },
+    };
     if (scenario === 'waterpark') return {
       version: 1, name: `Wasserpark – ${short ? 'Vier Tiere (30 Sekunden)' : 'Ein Parktag (10 Minuten)'}`,
       scenario, seed,

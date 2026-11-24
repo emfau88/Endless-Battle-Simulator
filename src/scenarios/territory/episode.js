@@ -8,7 +8,7 @@
   const ruleKeys = ['incomeMultiplier', 'aggression', 'offensiveInterval', 'marchDuration'];
   const normalizeParams = (p = {}) => ({
     profile: ['calm', 'balanced', 'intense', 'blitz', 'custom'].includes(p.profile) ? p.profile : 'balanced',
-    layout: ['portrait', 'short'].includes(p.layout) ? p.layout : 'landscape',
+    layout: ['portrait', 'short', 'wilds'].includes(p.layout) ? p.layout : 'landscape',
     incomeMultiplier: clamp(num(p.incomeMultiplier, 1), .5, 2),
     aggression: clamp(num(p.aggression, .5), 0, 1),
     offensiveInterval: clamp(num(p.offensiveInterval, 4), 2, 8),
@@ -91,9 +91,10 @@
     _startRound() {
       this.roundNumber++;
       this.roundSeed = roundSeed(this.seed, this.roundNumber);
-      // The short map is its own rule version; the two original maps keep the archived rules untouched.
-      const Round = this.cfg.layout === 'short' ? EBS.Territory.ShortRound : ObservedRound;
-      if (!Round) throw new Error('Territory: Short-Karte nicht geladen (short.js fehlt).');
+      // Each optional map selects its own rule version.
+      const Round = this.cfg.layout === 'wilds' ? EBS.Territory.WildsRound
+        : this.cfg.layout === 'short' ? EBS.Territory.ShortRound : ObservedRound;
+      if (!Round) throw new Error('Territory: Regeln der gewählten Karte fehlen.');
       this.roundSim = new Round({ seed: this.roundSeed, ...this.cfg });
       Object.defineProperty(this.roundSim, 'emit', { value: (...args) => this._event(...args) });
       this.initialUnits = totalUnits(this.roundSim);

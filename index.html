@@ -131,7 +131,7 @@
       <div class="ctl">
         <label>YouTube-Vorlage für die gewählte Szene</label>
         <div class="row"><button id="btnShortPreset" class="grow">Short · 1 Minute</button><button id="btnLongPreset" class="grow">Langvideo · 10 Minuten</button></div>
-        <div class="hint">1080p, 30 fps, mit Ton. Setzt Szenen- und Videoeinstellungen auf Standardwerte; der Seed bleibt erhalten. Startet noch keinen Export.</div>
+        <div class="hint" id="presetHint">1080p, 30 fps, mit Ton. Setzt Szenen- und Videoeinstellungen auf Standardwerte; der Seed bleibt erhalten. Startet noch keinen Export.</div>
       </div>
       <div class="ctl"><label>Format</label><div class="seg" id="segFormat"></div></div>
       <div class="ctl"><label for="resolution">Auflösung und Bildrate <output id="resolutionOut"></output></label>
@@ -199,6 +199,8 @@
 <script src="src/scenarios/territory/simulation.js"></script>
 <script src="src/scenarios/territory/episode.js"></script>
 <script src="src/scenarios/territory/short.js"></script>
+<script src="src/scenarios/territory/wilds.js"></script>
+<script src="src/scenarios/territory/wilds-art.js"></script>
 <script src="src/scenarios/territory/renderer.js"></script>
 <script src="src/scenarios/territory/units.js"></script>
 <script src="src/scenarios/territory/presentation.js"></script>
