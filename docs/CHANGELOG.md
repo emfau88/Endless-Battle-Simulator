@@ -2,6 +2,13 @@
 
 Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen in der [ROADMAP](ROADMAP.md).
 
+## 24.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| Cloud Wars erhält den zusätzlichen Ablauf Landschaftsreise mit fünf Stationen, ruhiger Kamera, Wasserklang und eigener Neun-Minuten-Vorlage. | `5f35a88` | [Landschaftsreise](CLOUD_LANDSCHAFTSREISE_2026-11-24.md) |
+| Unterschiedliche Hausgrundrisse und Gartennutzungen, fahrende Autos und Lieferwagen auf der Talstraße, Fahrräder am Ufer. Geprüft in 16:9 und 9:16. | `1e0c2aa` | [Darstellung und Prüfung](CLOUD_LANDSCHAFTSREISE_2026-11-24.md) |
+
 ## 20.11.2026
 
 | Was | Commit | Bericht |

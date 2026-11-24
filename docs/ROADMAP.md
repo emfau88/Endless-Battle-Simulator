@@ -93,6 +93,8 @@ R33 bündelt die bisherigen Einzelabnahmen **R18** (Naval), **R20** (Scrap Wars)
 
 Getroffene Entscheidungen stehen im [CHANGELOG](CHANGELOG.md#entscheidungen).
 
+**Cloud Wars · Landschaftsreise (Zusatz zu R38).** Offen ist die Sichtung des 16-Sekunden-Ausschnitts am Marktplatz, insbesondere die Lesbarkeit der Gärten und das Verkehrsaufkommen. Der vollständige Langexport erfolgt auf Auftrag. [Nachweise](CLOUD_LANDSCHAFTSREISE_2026-11-24.md)
+
 ## 7 · Pflege
 
 - IDs werden nie wiederverwendet. **Nächste freie ID: R42.**

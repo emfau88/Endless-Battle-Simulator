@@ -31,6 +31,8 @@ Drei Zustände: **Erledigt**, **Läuft**, **Offen**. Dazu **Entfällt** für ges
 
 ### Blöcke 1 bis 5
 
+**Erledigt am 24.11.2026 · Zusatz zu Cloud Wars (R38).** Die Landschaftsreise führt in neun Minuten durch fünf Orte. Individuelle Wohnhäuser, Gärten, Bahn-, Straßen- und Radverkehr sind umgesetzt. Die Abnahme verwendet einen 16-Sekunden-Ausschnitt der Marktstadt. [Bericht](CLOUD_LANDSCHAFTSREISE_2026-11-24.md)
+
 | Block | Stand | Ergebnis und nächster Schritt |
 |---|---|---|
 | 1 · Architektur (R32) | **Läuft** | A1 erledigt (`ARCHITEKTUR.md`). A2 Vertragstest offen. A4 bis A7 entstehen mit dem ersten Szenario, das sie braucht. |

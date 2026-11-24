@@ -30,6 +30,8 @@ Die folgenden Szenarien und Varianten sind im aktuellen Code vorhanden. Weitere 
 
 [![Cloud Wars im Querformat (Runden mit Morgennebel) und im Hochformat (Short)](docs/images/cloudwars.jpg)](docs/images/cloudwars.jpg)
 
+**Cloud Wars → Ablauf → Landschaftsreise · 9 Minuten** führt vom Mühlendorf über Bahnbrücke, Marktstadt und Schilfinsel zum Seehafen. Der rote Triebwagen hält am Bahnhof, Autos und Lieferwagen folgen der Talstraße, Fahrräder dem Uferweg. Häuser, Gärten und Marktleben hängen vom Seed ab. Die Kamera lässt sich am Marktplatz fest einstellen. Die Vorlage enthält leises Wasser in Stereo. [Produktionsvorlage](presets/production/cloudwars-landscape.json) · [Bericht und Beispiel für einen Ausschnitt](docs/CLOUD_LANDSCHAFTSREISE_2026-11-24.md)
+
 **In Arbeit:** **Marble Factory XL** (`marblexl`) ist eine Produktionslinie mit neun Stationen im Stil der klassischen Kugelfabrik (Waschen, Polieren, Ofen, Farbe, Trocknen, Prüfen, Sortieren). Bewegter Entwurf im Querformat mit fester Übersicht, läuft in Chargen zu 48 Kugeln beliebig lange durch, noch ohne Warteschlangen, Kapitel und Vorlagen; Schalter „Schilder zeigen“ (Standard aus). Stand und Grenzen: [docs/MARBLE_XL_STUFE_1_2026-11-16.md](docs/MARBLE_XL_STUFE_1_2026-11-16.md).
 
 ## Was lässt sich exportieren?
