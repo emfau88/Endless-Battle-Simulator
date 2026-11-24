@@ -20,7 +20,7 @@ function ripples(g,v,lo,hi,t) {
 }
 function wheel(g,v,t) {
   const x=places.mill,y=v.branch(x,true).y;
-  g.save(); g.translate(x,y); 
+  g.save(); g.translate(x,y);
   oval(g,1,1,8.5,4.2,'#766445');
   for(let i=0;i<10;i++){
     const a=t*.72+i*tau/10,sy=Math.sin(a);

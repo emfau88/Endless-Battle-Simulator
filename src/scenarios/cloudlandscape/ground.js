@@ -193,7 +193,7 @@ function fixedPlaces(g,v,lo,hi) {
       tree(g,town+dx,y+dy,4.1,1); rect(g,town+dx-2,y+dy+5.5,4.2,1.3,'#847258');
     }
     const station=pathPoints(town-50,town+50,x=>v.rail(x)-7,2);
-    line(g,station,'#a28d72',6); line(g,station,'#d9c8a9',4); 
+    line(g,station,'#a28d72',6); line(g,station,'#d9c8a9',4);
     for(const dx of [-39,-20,22,40]) rect(g,town+dx,v.rail(town+dx)-10,4.5,1.4,'#735e4c');
   }
   if(lo<port+165 && hi>port-175){
