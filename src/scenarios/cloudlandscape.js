@@ -19,7 +19,10 @@ class LandscapeRenderer extends EBS.CanvasScene {
     const c = this.sim.valley.camera(0, this.world);
     this.film = new L.Film(this.sim.valley, c.scale * this.scale);
   }
-  paint(g) { this.film.draw(g, this.world, this.sim.progress, this.sim.t, this.view.camera, this.view.hud); }
+  paint(g) {
+    const sim = this.sim;
+    this.film.draw(g, this.world, sim.progress, sim.t, this.view.camera, this.view.hud, sim.duration * sim.timeScale);
+  }
   destroy() { this.film.destroy(); super.destroy(); }
 }
 EBS.registerScenario({

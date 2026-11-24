@@ -75,6 +75,38 @@ test('Acht, neun und zehn Minuten erreichen mit jedem Seed alle fünf Orte und d
 });
 
 const digest = value => createHash('sha256').update(value, 'base64').digest('hex');
+test('Hausformen, Gärten und Straßenverkehr gehören zum Seed und zur Straßenführung', async t => {
+  const { page, errors } = await openExportPage(browser, preset);
+  t.after(() => page.close());
+  const rows = await page.evaluate(() => [42, 7, 83].map(seed => {
+    const L = EBS.CloudLandscape, valley = new L.Valley(seed), x = L.places.town + 62;
+    const homes = valley.houses.filter(h => h.urban && h.kind === 'home');
+    const layouts = () => homes.map(h => [h.x, h.y, h.form, h.garden, h.face]);
+    const a = valley.traffic.positions(270, 270), b = valley.traffic.positions(271, 270);
+    const van = a.find(v => v.type === 'post'), moved = b.find(v => v.type === 'post');
+    const bikes = a.filter(v => v.type === 'bike' && Math.abs(v.x - L.places.town) < 150);
+    const plaza = valley.bank(L.places.town, -1) - 86;
+    let crossesStalls = false;
+    for (let sec = 0; sec <= 540; sec += 2) {
+      for (const car of valley.traffic.positions(sec, 270, L.places.town-48, L.places.town+48)) {
+        if (car.type !== 'bike' && Math.abs(car.x-L.places.town)<46 && Math.abs(car.y-plaza)<28) crossesStalls = true;
+      }
+    }
+    return { homes: homes.length, forms: new Set(homes.map(h => h.form)).size, gardens: new Set(homes.map(h => h.garden)).size,
+      oriented: homes.every(h => h.doorstep && Math.abs(h.face) === 1), signature: JSON.stringify(layouts()),
+      onBridge: Math.abs(van.x-x) < 3 && Math.abs(van.y-valley.river(x)) < 1,
+      moved: Math.hypot(moved.x-van.x, moved.y-van.y) > 8,
+      towpath: bikes.some(bike => Math.abs(bike.y-(valley.bank(bike.x,-1)-9))<1), crossesStalls };
+  }));
+  for (const row of rows) {
+    assert.ok(row.homes >= 20 && row.forms >= 5 && row.gardens >= 5);
+    assert.ok(row.oriented && row.onBridge && row.moved && row.towpath);
+    assert.equal(row.crossesStalls, false);
+  }
+  assert.equal(new Set(rows.map(r => r.signature)).size, rows.length);
+  assert.deepEqual(errors, []);
+});
+
 for (const aspect of ['16:9','9:16']) {
   test('Bild nach Sprung über die Streifengrenzen entspricht der Wiedergabe in ' + aspect, async t => {
     const cfg = { ...preset, video: { ...preset.video, aspect, durationSec: 8, resolution: 720 } };

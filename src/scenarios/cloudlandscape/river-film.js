@@ -122,7 +122,7 @@ function sky(g,v,c,width,height,t) {
 }
 class Film {
   constructor(v,density) { this.valley=v; this.ground=new L.Ground(v,density); }
-  draw(g,world,p,t,moving,hud) {
+  draw(g,world,p,t,moving,hud,episodeTime=540) {
     const v=this.valley,c=v.camera(p,world,moving),w=world.w/c.scale,h=world.h/c.scale,lo=c.x-w/2,hi=c.x+w/2;
     g.save(); g.translate(world.w/2,world.h/2); g.scale(c.scale,c.scale);g.translate(-c.x,-c.y);
     this.ground.draw(g,lo,hi); ripples(g,v,lo,hi,t);
@@ -131,6 +131,7 @@ class Film {
     if(lo<places.marsh+120 && hi>places.marsh-120) ducks(g,v,t);
     if(hi>places.port-160) landing(g,v,p);
     const tr=v.train(p); if(tr.x+20>lo && tr.x-40<hi) train(g,v,p);
+    for (const vehicle of v.traffic.positions(t,episodeTime/2,lo,hi)) L.drawVehicle(g,vehicle,t,p);
     sky(g,v,c,w,h,t); g.restore();
     // Morgendunst löst sich auf. Gegen Abend wird das Ufer warm, die Schatten bleiben kühl.
     const dusk=smooth(.70,1,p);

@@ -70,6 +70,18 @@ function paper(g,v) {
   }
   return g.createPattern(can,'repeat');
 }
+function undergrowth(g,v,lo,hi) {
+  const step=8, c=document.createElement('canvas');
+  c.width=(hi-lo)/step+1; c.height=Math.ceil(height/step)+1;
+  const ctx=c.getContext('2d'), pixels=ctx.createImageData(c.width,c.height);
+  for(let j=0;j<c.height;j++) for(let i=0;i<c.width;i++){
+    const n=(j*c.width+i)*4, canopy=woodland(v,lo+i*step,top+j*step);
+    pixels.data[n]=65; pixels.data[n+1]=101; pixels.data[n+2]=73;
+    pixels.data[n+3]=Math.min(135,Math.max(0,canopy-.53)*405);
+  }
+  ctx.putImageData(pixels,0,0);
+  g.drawImage(c,lo-step/2,top-step/2,c.width*step,c.height*step);
+}
 function reeds(g,v,lo,hi) {
   for(let i=Math.floor(lo/11)-1;i<=Math.ceil(hi/11);i++){
     const r=stream(v.seed,'sedge',i),x=i*11+r.range(-3,3),marsh=Math.abs(x-places.marsh)<360;
@@ -229,17 +241,15 @@ class Ground {
       oval(g,x,y,r.range(47,87),r.range(23,50),'rgba(119,145,96,.14)',r.range(-.9,.9));
     }
     fields(g,v,lo,hi);
-    for(let x=lo;x<=hi;x+=16) for(let y=top;y<top+height;y+=22) {
-      const grove=woodland(v,x,y);
-      if(grove>.60) oval(g,x,y,15,12,'rgba(78,116,76,'+Math.min(.5,(grove-.6)*2)+')',.18);
-    }
+    undergrowth(g,v,lo,hi);
     this.grain ||= paper(g,v); g.fillStyle=this.grain; g.fillRect(x0-bleed,top,strip+2*bleed,height);
     water(g,v,lo,hi); reeds(g,v,lo,hi);
     const town=places.town;
     if(lo<town+224 && hi>town-224){
       const a=Math.max(town-224,lo),b=Math.min(town+224,hi);
-      ribbon(g,a,b,x=>v.bank(x,-1)-150,x=>v.bank(x,-1)-13,'#a9ad82');
-      ribbon(g,a,b,x=>v.bank(x,1)+43,x=>v.bank(x,1)+83,'#a7ac7d');
+      const rim=x=>L.smooth(0,43,224-Math.abs(x-town));
+      ribbon(g,a,b,x=>v.bank(x,-1)-86-64*rim(x),x=>v.bank(x,-1)-86+73*rim(x),'#a9ad82');
+      ribbon(g,a,b,x=>v.bank(x,1)+62-19*rim(x),x=>v.bank(x,1)+62+21*rim(x),'#a7ac7d');
     }
     if(lo<places.port+145 && hi>places.port-145){
       const a=Math.max(places.port-144,lo),b=Math.min(places.port+144,hi);

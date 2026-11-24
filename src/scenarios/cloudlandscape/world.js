@@ -17,6 +17,8 @@ class Valley {
     this.soil = r.int(1, 20000);
     this.houses = []; this.lanes = []; this.groves = [];
     this.settlements();
+    this.addresses();
+    this.traffic = new L.RoadTraffic(this);
   }
   river(x) {
     return 32 * Math.sin(x / 266 + this.phase) + 22 * Math.sin(x / 149 + this.bend)
@@ -48,6 +50,21 @@ class Valley {
       - 360 * smooth(3790, 4250, x) + 310 * (1 - smooth(760, 1250, x));
   }
   railAngle(x) { return Math.atan2(this.rail(x + 2) - this.rail(x - 2), 4); }
+  northRoad(x) {
+    const bank = this.bank(x, -1), open = bank - 104 + 21 * Math.sin(x / 113 + this.bend);
+    const village = bank - 109 + 9 * Math.sin(x / 54);
+    const market = this.bank(places.town, -1) - 86;
+    const detour = 1 - smooth(48, 96, Math.abs(x - places.town));
+    const townStreet = lerp(bank - 86, market + 35, detour);
+    return lerp(lerp(open, village, 1 - smooth(410, 650, Math.abs(x - places.mill))),
+      townStreet, 1 - smooth(490, 720, Math.abs(x - places.town)));
+  }
+  southRoad(x) {
+    const bank = this.bank(x, 1);
+    const meadow = 77 + 22 * Math.sin(x / 162) * smooth(235, 460, Math.abs(x - places.town));
+    const marsh = this.branch(x, false);
+    return bank + lerp(meadow, 30, smooth(5600, 6200, x)) + (marsh.inside ? marsh.y-bank : 0);
+  }
   lane(x0, x1, fn, size = 6) {
     const pts = [];
     const count = Math.ceil(Math.abs(x1 - x0) / 12);
@@ -59,14 +76,59 @@ class Valley {
   }
   house(x, y, w, h, angle, kind = 'home') {
     const r = stream(this.seed, 'roof', Math.round(x), Math.round(y));
+    const urban = Math.abs(x - places.town) < 280;
+    const forms = urban ? ['shop','pair','villa','wing','gable','terrace'] : ['cottage','wing','gable','farm','villa','cottage'];
+    const form = forms[r.int(0, forms.length - 1)];
+    const garden = r.int(0, 5);
     this.houses.push({ x, y, w, h, angle, kind, color: roofs[r.int(0, roofs.length - 1)],
-      garden: r.next(), details: r.int(0, 4) });
+      form, garden, urban, face: 1, depth: r.range(urban ? 7 : 12, urban ? 14 : 21), details: r.int(0, 11),
+      accent: r.int(0, 5), bedCount: r.int(2, 4), fence: r.int(0, 3) });
+  }
+  addresses() {
+    // Ein Bauplatz bleibt frei, wenn hier zwei Straßenzüge zu eng zusammenlaufen.
+    const accepted=this.houses.filter(h=>h.kind!=='home');
+    const homes=this.houses.filter(h=>h.kind==='home');
+    for (const h of homes) {
+      if (accepted.some(n=>Math.abs(h.x-n.x)<(h.w+n.w)*.51+1.5 && Math.abs(h.y-n.y)<(h.h+n.h)*.66+3)) continue;
+      const neighbours=accepted.filter(n=>n.kind==='home' && Math.abs(h.x-n.x)<65 && Math.abs(h.y-n.y)<48);
+      const forms=h.urban?['shop','pair','villa','wing','gable','terrace']:['cottage','wing','gable','farm','villa'];
+      const alternatives=forms.filter(f=>!neighbours.some(n=>n.form===f));
+      if(alternatives.length && neighbours.some(n=>n.form===h.form)) h.form=alternatives[h.details%alternatives.length];
+      if(neighbours.some(n=>n.garden===h.garden)) h.garden=(h.garden+2+h.accent)%6;
+      accepted.push(h);
+    }
+    this.houses=accepted;
+    for (const h of this.houses) {
+      if (h.kind !== 'home') continue;
+      let nearest = Infinity;
+      // Der Eingang zeigt zur nächsten Straße. Hinter- und Vorgärten liegen dadurch je nach Parzelle anders.
+      for (const lane of this.lanes) {
+        for (let i=1;i<lane.pts.length;i++) {
+          const [ax,ay]=lane.pts[i-1],[bx,by]=lane.pts[i];
+          if (h.x<Math.min(ax,bx)-65 || h.x>Math.max(ax,bx)+65) continue;
+          const dx=bx-ax,dy=by-ay, f=clamp(((h.x-ax)*dx+(h.y-ay)*dy)/(dx*dx+dy*dy || 1),0,1);
+          const x=ax+f*dx,y=ay+f*dy,dist=(h.x-x)**2+(h.y-y)**2;
+          if (dist>=nearest) continue;
+          nearest=dist;
+          h.face=(-Math.sin(h.angle)*(x-h.x)+Math.cos(h.angle)*(y-h.y))>=0?1:-1;
+          h.doorstep=[x,y];
+        }
+      }
+      const side=-h.face;
+      for (let d=2;d<h.depth;d+=2) {
+        const dist=(h.h*.5+d)*side, gx=h.x-Math.sin(h.angle)*dist, gy=h.y+Math.cos(h.angle)*dist;
+        if (this.houses.some(n=>n!==h && Math.abs(n.x-gx)<(n.w+h.w*.78)*.5 && Math.abs(n.y-gy)<n.h*.60+1.5)
+          || this.wet(gx,gy,1.5) || Math.abs(gy-this.rail(gx))<5) {
+          h.depth=d;break;
+        }
+      }
+    }
   }
   settlements() {
     const { mill, town, marsh, port } = places;
     const r = stream(this.seed, 'settlements');
-    const millRoad = x => this.bank(x, -1) - 109 + 9 * Math.sin(x / 54);
-    this.lane(mill - 490, mill + 430, millRoad);
+    const millRoad = x => this.northRoad(x);
+    this.lane(-1200, town - 530, millRoad, 7);
     for (let i = -4; i <= 3; i++) {
       const x = mill + i * 47 + r.range(-4, 4);
       this.house(x, millRoad(x) - 17, r.range(15, 23), r.range(10, 15), r.range(-0.13, 0.13));
@@ -79,17 +141,19 @@ class Valley {
 
     const main = x => this.bank(x, -1) - 86;
     const back = x => main(x) - 43;
-    this.lane(town - 530, town + 520, main, 10);
+    this.lane(town - 530, town + 520, x => this.northRoad(x), 9);
+    this.lane(town + 520, 8000, x => this.northRoad(x), 6);
     this.lane(town - 167, town + 176, back, 5);
     this.lane(town - 126, town + 218, x => this.bank(x, -1) - 24, 4);
     for (const dx of [-153, -67, 63, 165]) this.cross(town + dx, back(town + dx), this.bank(town + dx, -1) - 22);
-    this.cross(town + 62, main(town + 62), this.bank(town + 62, 1) + 119, 8);
-    this.lane(town - 190, town + 312, x => this.bank(x, 1) + 77, 5);
+    this.cross(town + 62, this.northRoad(town + 62), this.southRoad(town + 62), 8);
+    this.lane(-1200, 8000, x => this.southRoad(x), 7);
     for (let i = -7; i <= 7; i++) {
       const x = town + i * 28;
       for (const row of [-1, 1]) {
         if (Math.abs(i) < 3 || Math.min(...[-153,-67,63,165].map(dx => Math.abs(x - town - dx))) < 9) continue;
-        this.house(x, main(x) + row * 20, r.range(17, 23), r.range(12, 17), Math.atan2(main(x+1)-main(x-1), 2));
+        const hx=x+r.range(-3,3), hy=this.northRoad(hx)+row*r.range(15,21);
+        this.house(hx,hy,r.range(15,23),r.range(11,17),Math.atan2(main(x+1)-main(x-1),2)+r.range(-.13,.13));
       }
       if (i >= -5 && i <= 5 && Math.abs(i) !== 2 && i !== -4) this.house(x + 2, this.bank(x, -1) - 38, r.range(16, 24), 12, -0.07);
       if (i % 2 && i !== 3) this.house(x, this.bank(x, 1) + 57, 21, 14, 0.1);
@@ -99,7 +163,6 @@ class Valley {
     this.cross(town - 64, this.rail(town - 64) - 22, back(town - 64));
     this.house(marsh - 16, this.branch(marsh, false).y + 22, 22, 12, -0.17, 'boathouse');
     const quay = x => this.bank(x, 1) + 30;
-    this.lane(port - 505, port + 430, quay, 7);
     for (let i = -3; i <= 3; i++) {
       const x = port + i * 48;
       this.house(x, quay(x) + 23, r.range(24, 32), r.range(14, 18), Math.atan2(quay(x+1)-quay(x-1),2), i % 2 ? 'store' : 'home');

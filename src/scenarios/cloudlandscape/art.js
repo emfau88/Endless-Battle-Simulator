@@ -52,15 +52,11 @@ function tree(g, x, y, size, type, orchard = false) {
   }
 }
 function building(g, h) {
+  if (h.kind === 'home') { L.home(g,h); return; }
   const { w, x, y, angle, kind } = h, d = h.h, a = w / 2, b = d / 2;
   g.save(); g.translate(x, y); g.rotate(angle);
   const height = kind === 'mill' || kind === 'hall' ? 5 : 3.2;
   poly(g,[[-a,-b],[a+3,-b+2],[a+5,b+height+3],[-a+3,b+height+3]],'rgba(47,45,36,.23)');
-  if (kind === 'home' && h.garden > .32) {
-    rect(g,-a-1,b+height, w+2,8.5,'#8e9b65');
-    line(g,[[-a-1,b+height],[-a-1,b+height+9],[a+1,b+height+9],[a+1,b+height]],'#716e4d',.7);
-    for(let i=0;i<3;i++) rect(g,-a+2,b+height+1.5+i*2.1,w*.52,1.1,i%2?'#9a8055':'#687f50');
-  }
   rect(g,-a,b-2,w,height+2,kind === 'store' ? '#9a7958' : '#d8c8a9');
   for (let i = 0; i < Math.floor(w/6); i++) rect(g,-a+2.6+i*6,b-.1,2.1,2.6,'#526363');
   rect(g,-.9,b-.1,2.2,height,'#79614d');
@@ -82,9 +78,6 @@ function building(g, h) {
     rect(g,-a+2,b-1,w*.33,3.8,'#685c49');
     poly(g,[[-a+1,b-1],[-a+w*.42,b-1],[-a+w*.4,b+1.5],[-a,b+1.5]],'#b49a74');
     for(let i=0;i<3;i++) rect(g,a-7+i*2.7,b+2.4,2.1,2.4,i%2?'#8a6e4f':'#bd9b69');
-  } else if (kind === 'home' && h.details>=2) {
-    poly(g,[[-a+2,1.3],[-a+4,-.9],[-a+6,1.3],[-a+6,3],[-a+2,3]],'#cfb59a');
-    rect(g,-a+3.1,1.2,1.5,1.3,'#596769');
   }
   g.restore();
 }
