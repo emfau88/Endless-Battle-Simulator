@@ -46,13 +46,40 @@
   const DRIVE = { turn: 3.2, spinAngle: Math.PI / 3, spinSpeed: .3, accel: 260, brake: 420, reverse: .5 };
   const BEHAVIOUR = { range: { blaster: [220, 340], rocket: [260, 420] }, coverNear: 60, coverSec: 3, coverMax: 6, coverPause: 4, claimed: 300 };
   // S1 · Short-Karte (nur v4 hochkant, layout short): 540 × 700 statt 540 × 1040, 12 Deckungen (6 Holz, 3 Stein,
-  // 3 Beton), gleiche Waffen und Stationen. Entworfen in Hochformat-Bildkoordinaten, punktsymmetrisch um die Mitte;
+  // 3 Beton), zwei Plattformen für Raketen (siehe SHORT_ITEMS). Entworfen in Hochformat-Bildkoordinaten, punktsymmetrisch um die Mitte;
   // die Mittelinsel ist halb Stein, halb Beton. Umrechnung in die Motorkoordinaten wie bei den Hochformatkarten.
   const SHORT = { w: 540, h: 700,
     half: [[222, 104, 96, 36, 'concrete'], [96, 200, 60, 44, 'wood'], [384, 200, 60, 44, 'wood'], [186, 236, 56, 40, 'wood'], [330, 270, 60, 44, 'stone']],
     centre: [[230, 330, 40, 40, 'stone'], [270, 330, 40, 40, 'concrete']],
-    pads: [[100, 350], [440, 350]], weapons: [[270, 190], [270, 510], [130, 300], [410, 400]],
+    pads: [[100, 350], [440, 350]],
     starts: [[100, 90], [440, 90], [440, 610], [100, 610]] };
+  // S4 · Entschlossen fahren (nur mit den Raketen-Regeln, Short und Schalter items): Einzelne Roboter standen 12,8 %
+  // ihrer Zeit untätig herum und drehten bei gut jedem dritten Zielwechsel um. Deshalb: beim Gegner mindestens
+  // `loyalSec` bleiben; eine Stellung anfahren, `dwell` Sekunden von dort schießen und dann gezielt weiterziehen;
+  // ohne Schusslinie nach `flankAfter` Sekunden umfahren; beim Nachladen die Stellung wechseln; wer `idleSec` lang
+  // steht und nicht schießt, bekommt sofort ein neues Ziel. In der Deckung wird nur noch 0,15 s gewartet.
+  const DECIDE = { loyalSec: 3, dwell: 1.6, flankAfter: .5, idleSec: 1, shift: 70, ahead: .35 };
+  // S2 · Short-Balance (nur auf der Short-Karte), gemessen statt des Startwerts „überall ×1,5“: Solange alle vier
+  // leben, zählt Schaden an Robotern ×2,5 (erster K.o. im Median nach 8 s statt 14 s), zu dritt ×0,5, im Schlussduell
+  // ×0,9 (seit den Raketen-Regeln; vorher beides ×0,55). Im Duell nimmt der Schwächere 20 % weniger, damit es knapp wird. Die Kisten brechen innerhalb von 1,2 s statt
+  // 2,4 s auf. Deckung: nur 0,15 s (bis S4 0,5 s) statt 3 s warten, höchstens 2,5 s unterwegs, danach 6 s Pause. Mit 3 s standen nach
+  // dem ersten K.o. oft alle gleichzeitig still (Hänger bei 51 % der Seeds, jetzt 3 %); der kleinere Schaden gleicht
+  // aus, dass die Runde ohne das Warten sonst nach 22 s vorbei wäre. v4 ohne Short rechnet unverändert.
+  const SHORT_FIGHT = { opening: 2.5, damage: .5, duel: .9, underdog: .8, crateSpread: 1.2, coverSec: .15, coverMax: 2.5, coverPause: 6, ...DECIDE };
+  // S2 · Waffen im Short: Der Blaster ist die Grundwaffe und lädt nach `reload` Sekunden von selbst nach;
+  // niemand ist je unbewaffnet, nichts fällt zu Boden. Das einzige Item ist die Rakete, und sie kommt nur von den zwei
+  // Plattformen: zum ersten Mal nach `first` Sekunden, danach `period` Sekunden nach der Aufnahme. Wer nur den Blaster
+  // hat, holt eine Rakete, wenn der Weg höchstens `fetch` AE lang ist und kein anderer näher dran ist. Nach drei
+  // Raketen ist nach `swap` Sekunden wieder der Blaster da.
+  const SHORT_ITEMS = { reload: 1.4, swap: .5, first: [6, 7.5], period: 9, fetch: 320, fetchWait: 1.2 };
+  // L2 · Dieselben Waffenregeln auf den großen Karten, als eigener Schalter (items: 'rockets', z. B. im Turnier):
+  // Blaster lädt nach, Raketen nur von den zwei Stationen, kurze Deckung wie im Short. Schaden gemessen auf Sunny
+  // Yard quer (120 Runden, nach S4): ×1,8, solange alle vier leben, zu dritt ×0,4, im Duell ×0,8, der Schwächere
+  // 15 % weniger. Im Duell steigt der Schaden je Sekunde um 6 % (höchstens ×3): Duelle über 20 s gibt es damit in
+  // 2 % statt 19 % der Runden. Der erste K.o. fällt im Median nach 10 s statt 15 s, der zweite nach 19 s, die Runde
+  // dauert 31 s (klassisch 31 s); Hänger gar nicht mehr statt in 28 % der Runden. Acht Runden: rund 4:45 Minuten.
+  const ARENA_ITEMS = { reload: 1.4, swap: .5, first: [6, 7.5], period: 9, fetch: 320, fetchWait: 1.2 };
+  const ARENA_FIGHT = { opening: 1.8, damage: .4, duel: .8, underdog: .85, duelRamp: .06, duelMax: 3, coverSec: .15, coverMax: 2.5, coverPause: 6, ...DECIDE };
   // Zwischenspeicher außerhalb des Simulationszustands (Raster, Suchpuffer, Hindernisliste)
   const NAV = new WeakMap(), OBSTACLES = new WeakMap();
   class TacticalRound extends M.Round {
@@ -61,6 +88,7 @@
       this.rulesVersion = 'v4';
       this.portraitView = !!options.portrait;
       if (options.short && this.portraitView) this._shortMap();
+      else if (options.items === 'rockets') this._rocketRules(ARENA_ITEMS, ARENA_FIGHT);
       this.fire = { clear: 0, wood: 0, splash: 0, blocked: 0 };
       for (const r of this.robots) {
         r.targetId = null; r.targetSince = 0; r.hitBy = this.robots.map(() => -99);
@@ -82,11 +110,18 @@
         return { id, x: y, y: W - x - w, w: h, h: w, material, hp, maxHp: hp, alive: true };
       });
       SHORT.pads.forEach((p, i) => { [this.pads[i].x, this.pads[i].y] = point(p); });
-      SHORT.weapons.forEach((p, i) => { [this.pickups[i].x, this.pickups[i].y] = point(p); });
+      this._rocketRules(SHORT_ITEMS, SHORT_FIGHT);
       // Ersatz-Startplätze, falls keine Kistenaufstellung passt
       for (const r of this.robots) { [r.x, r.y] = point(SHORT.starts[r.id]); r.lastX = r.x; r.lastY = r.y; }
     }
 
+    // Raketen-Regeln einschalten (Short-Karte oder Schalter items: 'rockets'): keine freien Startwaffen, beide
+    // Stationen liefern Raketen. items = Waffenwerte, pace = Schaden und Deckungszeiten.
+    _rocketRules(items, pace) {
+      this.items = items; this.pace = pace;
+      this.pads.forEach((pad, i) => { pad.kind = 'rocket'; pad.readyIn = items.first[i]; pad.period = items.period; });
+      this.pickups = [];
+    }
     // ---- K1 · Startkisten ------------------------------------------------
     // Eigener Zufallsstrom nur für die Aufstellung: Die Kampf-Zufallszahlen bleiben unberührt.
     _placeCrates() {
@@ -115,7 +150,7 @@
       this.crateFallback = !chosen;
       if (!chosen) chosen = this.robots.map(r => [r.x, r.y]);
       // Ausbruchszeiten: Seed-Zufall, danach in zeitlicher Reihenfolge mindestens 0,4 s Abstand
-      const times = this.robots.map(() => CRATE.open + rng.next() * CRATE.spread);
+      const times = this.robots.map(() => CRATE.open + rng.next() * (this.shortMap ? SHORT_FIGHT.crateSpread : CRATE.spread));
       const order = times.map((t, i) => i).sort((a, b) => times[a] - times[b] || a - b);
       for (let k = 1; k < order.length; k++) times[order[k]] = Math.max(times[order[k]], times[order[k - 1]] + CRATE.gap);
       const s = CRATE.size;
@@ -128,7 +163,7 @@
     }
     // Fairness: Weg zur nächsten Waffe je Startpunkt zwischen 0,6- und 1,6-mal dem Median
     _fairStarts(pick) {
-      const weapons = this.pickups.filter(p => !p.empty && p.ammo > 0);
+      const loaded = this.pickups.filter(p => !p.empty && p.ammo > 0), weapons = loaded.length ? loaded : this.pads;
       const d = pick.map(([x, y]) => Math.min(...weapons.map(p => this._travel(x, y, p.x, p.y))));
       const sorted = [...d].sort((a, b) => a - b), median = (sorted[1] + sorted[2]) / 2;
       return d.every(v => v >= CRATE.fair[0] * median && v <= CRATE.fair[1] * median);
@@ -180,7 +215,7 @@
     _chooseTarget(r, force = false) {
       const now = this.t, S = FIGHT.score, current = r.targetId === null ? null : this.robots[r.targetId];
       const valid = e => e && e.alive && !e.caged && e.id !== r.id;
-      if (!force && valid(current) && now - r.targetSince < S.loyalSec) return current;
+      if (!force && valid(current) && now - r.targetSince < (this.pace ? this.pace.loyalSec : S.loyalSec)) return current;
       let best = null, score = Infinity;
       for (const e of this.robots) if (valid(e)) {
         let v = this._travel(r.x, r.y, e.x, e.y) / S.distance;
@@ -215,8 +250,53 @@
     }
     _tick(dt) {
       this.tickDt = dt;
+      // Short: Die Plattform lädt erst, wenn ihre Rakete geholt ist
+      if (this.items) for (const pad of this.pads) if (this._padLoaded(pad)) pad.readyIn = pad.period + dt;
       super._tick(dt);
       if (this.phase === 'running') this._updateCrates();
+    }
+    // ---- S2 · Waffen im Short ----------------------------------------------
+    _padLoaded(pad) { return this.pickups.some(p => !p.empty && p.ammo > 0 && Math.hypot(p.x - pad.x, p.y - pad.y) < 40); }
+    // Leeres Magazin: Blaster lädt nach, leerer Raketenwerfer wird wieder zum Blaster. Nichts fällt zu Boden, auch nicht beim K.o.
+    _drop(r, exhausted = false) {
+      if (!this.items) { super._drop(r, exhausted); return; }
+      if (!r.weapon) return;
+      if (!r.alive) { r.weapon = null; return; }
+      const pause = r.weapon.kind === 'rocket' ? this.items.swap : this.items.reload;
+      r.weapon = this._weapon('blaster'); r.cooldown = Math.max(r.cooldown, pause); r.reloadUntil = this.t + r.cooldown; r.thinkIn = 0;
+    }
+    // Aufnahme: Wer den Blaster trägt, tauscht ihn gegen die Rakete
+    _takePickup(r) {
+      if (!this.items) { super._takePickup(r); return; }
+      if (!r.weapon || r.weapon.kind !== 'blaster') return;
+      for (let i = 0; i < this.pickups.length; i++) {
+        const p = this.pickups[i];
+        if (p.empty || p.ammo <= 0 || p.age < .22 || Math.hypot(p.x - r.x, p.y - r.y) > r.r + 15) continue;
+        r.weapon = this._weapon(p.kind, p.ammo); r.cooldown = Math.max(r.cooldown, .28); r.reloadUntil = 0;
+        this.pickups.splice(i, 1); this.stats.pickups++; r.thinkIn = 0;
+        this._effect('pickup', r.x, r.y, r.color, 49, .7);
+        this._event('pickup', `${r.name}: Raketenwerfer`, r.id);
+        return;
+      }
+    }
+    // Rakete holen: nächste geladene (oder gleich fertige) Plattform in Reichweite, die kein näherer Roboter ansteuert.
+    // Für alle vier gleich weit: Mit Ambers Raketen-Vorliebe gewann Amber 360 von 1200 Shorts, Moss nur 248.
+    _rocketGoal(r) {
+      if (!r.weapon || r.weapon.kind !== 'blaster') return null;
+      // Wer schon unterwegs ist, bleibt dabei, solange die Rakete daliegt oder gleich kommt
+      if (r.mode === 'fetch') {
+        const pad = this.pads.find(p => Math.hypot(p.x - r.goalX, p.y - r.goalY) < 30);
+        if (pad && (this._padLoaded(pad) || pad.readyIn <= this.items.fetchWait + .5)) return pad;
+      }
+      let best = null, cost = this.items.fetch;
+      for (const pad of this.pads) {
+        if (!this._padLoaded(pad) && pad.readyIn > this.items.fetchWait) continue;
+        const mine = Math.hypot(pad.x - r.x, pad.y - r.y);
+        if (this.robots.some(o => o !== r && o.alive && !o.caged && o.mode === 'fetch' && Math.hypot(o.goalX - pad.x, o.goalY - pad.y) < 30 && Math.hypot(pad.x - o.x, pad.y - o.y) < mine)) continue;
+        const c = this._travel(r.x, r.y, pad.x, pad.y);
+        if (c < cost) { cost = c; best = pad; }
+      }
+      return best;
     }
     // Der Turm dreht höchstens 5 rad/s; geschossen wird erst, wenn er auf den Vorhaltepunkt zeigt.
     _shoot(r) {
@@ -244,11 +324,23 @@
       r.weapon.ammo--; r.cooldown = spec.cooldown; r.flashUntil = this.t + .11;
       if (r.module) r.cooldown *= EBS.ScrapRules.modules[r.module].cooldown;
       this.stats.shots++; this.fire[line]++;
+      if (this.pace) r.shotAt = this.t;
       this._effect('shot', r.x + Math.cos(angle) * 31, r.y + Math.sin(angle) * 31, r.color, kind === 'rocket' ? 30 : 19, .16, angle);
       if (r.weapon.ammo <= 0) this._drop(r, true);
     }
     _hurtRobot(r, amount, owner, x, y) {
       if (r.caged) return;
+      if (this.pace && r.alive && amount > 0) {
+        const living = this.robots.filter(o => o.alive);
+        const P = this.pace;
+        amount *= living.length >= 4 ? P.opening : living.length === 2 ? P.duel : P.damage;
+        if (living.length === 2) {
+          const other = living[0] === r ? living[1] : living[0];
+          if (r.hp / r.maxHp < other.hp / other.maxHp) amount *= P.underdog;
+          // Große Karte: Ein langes Schlussduell wird härter (ab dem ersten Treffer im Duell je Sekunde mehr Schaden)
+          if (P.duelRamp) { this.duelSince ??= this.t; amount *= Math.min(P.duelMax, 1 + P.duelRamp * (this.t - this.duelSince)); }
+        }
+      }
       if (r.alive && amount > 0 && owner !== r.id && this.robots[owner]) r.hitBy[owner] = this.t;
       super._hurtRobot(r, amount, owner, x, y);
     }
@@ -544,7 +636,7 @@
     // Angreifen: einer von 12 Punkten auf einem Kreis um das Ziel, nach freier Sicht, Deckung in der Nähe und Weg.
     // Flanke: bevorzugt Punkte seitlich der bisherigen Linie. Ohne Sicht von keinem Punkt (auch auf zwei engeren
     // Kreisen) fährt der Roboter auf das Ziel zu, bis sich eine Schusslinie öffnet.
-    _attackGoal(r, target, flank) {
+    _attackGoal(r, target, flank, shift = 0) {
       const band = BEHAVIOUR.range[r.weapon.kind], scale = CHARACTERS[r.id % 4].range;
       const lo = band[0] * scale, hi = band[1] * scale, now = Math.hypot(r.x - target.x, r.y - target.y);
       const radius = clamp(now, lo, hi), bearing = Math.atan2(r.y - target.y, r.x - target.x), blocks = this.blocks.filter(b => b.alive);
@@ -558,10 +650,24 @@
         if (blocks.some(b => distanceToBox(x, y, b) < BEHAVIOUR.coverNear)) v -= .2;
         if (flank) v += .5 * Math.abs(Math.cos(off * Math.PI / 6));
         if (off * r.turnBias > 0 && Math.abs(off) <= 2) v -= .1;
-        if (Math.hypot(x - r.goalX, y - r.goalY) < 40) v -= .15;
+        // shift: gezielt weiterziehen statt auf der Stelle neu zu wählen (Punkte nah am Roboter sind teurer)
+        // und Punkte in Fahrtrichtung sind günstiger als solche im Rücken (weniger Kehrtwenden)
+        if (shift) { if (Math.hypot(x - r.x, y - r.y) < shift) v += .5; v += DECIDE.ahead * Math.abs(angleDiff(Math.atan2(y - r.y, x - r.x), r.heading)) / Math.PI; }
+        else if (Math.hypot(x - r.goalX, y - r.goalY) < 40) v -= .15;
         if (v < score - 1e-9) { score = v; best = [x, y]; }
       }
       return seen && best ? best : [target.x, target.y];
+    }
+    // Bei der Stellung bleiben: gleicher Gegner, Zeit nicht abgelaufen, vom Ziel aus freie Sicht und passender Abstand.
+    // Aufgegeben wird sie beim Nachladen (einmal), nach einem Anstoß und wenn der Roboter angekommen ist, aber keine
+    // Schusslinie hat.
+    _keepGoal(r, target, hidden) {
+      if ((r.mode !== 'attack' && r.mode !== 'flank') || r.goalFor !== target.id || this.t >= r.goalUntil || r.nudge) return false;
+      if (r.reloadUntil > this.t && r.reloadSeen !== r.reloadUntil) { r.reloadSeen = r.reloadUntil; return false; }
+      if (hidden && Math.hypot(r.goalX - r.x, r.goalY - r.y) < PATH.reach + 6) return false;
+      if (this._blocked(r.goalX, r.goalY, target.x, target.y, WEAPONS.blaster.radius)) return false;
+      const band = BEHAVIOUR.range[r.weapon.kind], scale = CHARACTERS[r.id % 4].range, d = Math.hypot(r.goalX - target.x, r.goalY - target.y);
+      return d >= band[0] * scale * .6 && d <= band[1] * scale * 1.25;
     }
     // Deckung: Punkt hinter einem Block, vom stärksten Gegner aus gesehen
     _coverGoal(r) {
@@ -582,23 +688,33 @@
       r.thinkIn = .38 + this.rng.next() * .22;
       const target = this._chooseTarget(r), { w, h, edge } = this.bounds, now = this.t, character = CHARACTERS[r.id % 4];
       let goal = null;
+      const rocket = this.items ? this._rocketGoal(r) : null;
       if (!r.weapon) { r.mode = 'search'; const g = this._weaponGoal(r); if (g) goal = [g.x, g.y]; }
+      else if (rocket) { r.mode = 'fetch'; r.goalUntil = 0; goal = [rocket.x, rocket.y]; }
       else if (target) {
         const hidden = this._blocked(r.x, r.y, target.x, target.y, WEAPONS.blaster.radius);
         r.hiddenSince = hidden ? (r.hiddenSince ?? now) : null;
+        // Short: kürzere Deckung (Zeiten in SHORT_FIGHT), sonst stehen nach dem ersten K.o. alle gleichzeitig still
+        const B = this.pace || BEHAVIOUR;
         const low = r.hp / r.maxHp < character.coverHp || r.weapon.ammo <= 2;
         if (r.mode === 'cover') {
-          if (r.coverUntil === null && Math.hypot(r.goalX - r.x, r.goalY - r.y) < 30) r.coverUntil = now + BEHAVIOUR.coverSec;
-          if ((r.coverUntil !== null && now >= r.coverUntil) || now - r.coverSince > BEHAVIOUR.coverMax) { r.mode = 'attack'; r.coverBlock = now + BEHAVIOUR.coverPause; }
+          if (r.coverUntil === null && Math.hypot(r.goalX - r.x, r.goalY - r.y) < 30) r.coverUntil = now + B.coverSec;
+          if ((r.coverUntil !== null && now >= r.coverUntil) || now - r.coverSince > B.coverMax) { r.mode = 'attack'; r.coverBlock = now + B.coverPause; }
           else goal = [r.goalX, r.goalY];
         } else if (low && now >= r.coverBlock) {
           const c = this._coverGoal(r);
-          if (c) { r.mode = 'cover'; r.coverSince = now; r.coverUntil = null; goal = c; }
+          if (c) { r.mode = 'cover'; r.coverSince = now; r.coverUntil = null; if (this.pace) r.goalUntil = 0; goal = c; }
         }
         if (!goal) {
-          const flank = r.hiddenSince !== null && now - r.hiddenSince >= character.flankAfter;
-          r.mode = flank ? 'flank' : 'attack';
-          goal = this._attackGoal(r, target, flank);
+          const D = this.pace, flank = r.hiddenSince !== null && now - r.hiddenSince >= (D ? D.flankAfter : character.flankAfter);
+          if (D && this._keepGoal(r, target, hidden)) goal = [r.goalX, r.goalY];
+          else {
+            // Raketen-Regeln: neue Stellung anfahren, dort dwell Sekunden bleiben, dann weiterziehen
+            const moving = D && (r.mode === 'attack' || r.mode === 'flank') && r.goalFor === target.id;
+            r.mode = flank ? 'flank' : 'attack';
+            goal = this._attackGoal(r, target, flank, moving ? D.shift : 0);
+            if (D) { r.goalFor = target.id; r.goalUntil = now + Math.hypot(goal[0] - r.x, goal[1] - r.y) / r.speed + D.dwell; r.nudge = false; }
+          }
         }
       } else r.mode = 'idle';
       if (goal) { r.goalX = goal[0]; r.goalY = goal[1]; }
@@ -609,6 +725,10 @@
     // beschleunigen 260 AE/s², bremsen 420 AE/s², Anhalten erlaubt. Beim Befreien rückwärts mit halbem Tempo.
     _steer(r, dt) {
       if (r.caged) return;
+      // Raketen-Regeln: Wer steht und seit idleSec nicht geschossen hat, entscheidet sofort neu (nicht beim Holen)
+      if (this.pace && r.mode !== 'fetch' && Math.hypot(r.vx, r.vy) < 8 && this.t - Math.max(r.shotAt ?? -9, r.nudgedAt ?? -9) > this.pace.idleSec) {
+        r.nudge = true; r.nudgedAt = this.t; r.thinkIn = 0;
+      }
       if (r.thinkIn <= 0) this._think(r);
       r.thinkIn -= dt;
       const want = this._desired(r);
@@ -642,5 +762,5 @@
     }
   }
 
-  EBS.ScrapTactics = { Round: TacticalRound, CRATE, FIGHT, CHARACTERS, PATH, DRIVE, BEHAVIOUR, SHORT };
+  EBS.ScrapTactics = { Round: TacticalRound, CRATE, FIGHT, CHARACTERS, PATH, DRIVE, BEHAVIOUR, SHORT, SHORT_FIGHT, SHORT_ITEMS, ARENA_ITEMS, ARENA_FIGHT, DECIDE };
 })();
