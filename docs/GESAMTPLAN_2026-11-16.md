@@ -14,8 +14,9 @@ R31 bis R36. Dieser Plan liefert Begründung, Reihenfolge und Paketbeschreibunge
 Drei Zustände: **Erledigt**, **Läuft**, **Offen**. Dazu **Entfällt** für gestrichene Schritte.
 
 **Territory-Langvideo (R17/R36) · Erledigt.** Die zusätzliche Großkarte für 16:9 ist wählbar.
-Seed 46 spielt mit Meteor und neutralem Riesen bis zum Sieg und endet bei 10:04. Offen ist die
-Durchsicht der fertigen 20-Sekunden-Probe. [Bericht](TERRITORY_GROSSKARTE_2026-11-24.md)
+Seed 46 spielt mit Meteor und neutralem Riesen bis zum Sieg und endet bei 10:04. Der Riese durchquert zwei
+gegenüberliegende Bergpässe. Sechs kurze Sprechblasen kennzeichnen betroffene HQs. Die Marschglocke ist aus.
+Offen ist die Durchsicht der 20-Sekunden-Montage mit dem neuen Ton. [Bericht](TERRITORY_GROSSKARTE_2026-11-24.md)
 
 ### Block 0 · Sichern und aufräumen (R31)
 

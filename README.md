@@ -32,8 +32,9 @@ Die folgenden Szenarien und Varianten sind im aktuellen Code vorhanden. Weitere 
 
 Für ein Langvideo in **Territory Wars** unter „Kartenform“ die **Großkarte · Meteor und Riese (Langvideo 16:9)**
 auswählen und „Karte anwenden“ drücken. Die zugehörige Langvideo-Vorlage lädt Seed 46. Auf 221 Hexfeldern
-treibt ein neutraler Steinriese Truppen zum Rückzug. Ein Schatten kündigt den Meteor an, sein Krater sperrt
-vorübergehend einen Weg zur Zitadelle. Mit Ergebnisanzeige dauert die Vorlage **10:04 Minuten**.
+tritt ein neutraler Steinriese hinter den Randbergen hervor, verdrängt Truppen und verschwindet am gegenüberliegenden Pass.
+Ein Schatten kündigt den Meteor an, sein Krater sperrt vorübergehend einen Weg zur Zitadelle. Sechsmal reagiert
+ein betroffenes Hauptquartier mit einer kleinen Gesichtsblase. Truppenmärsche laufen lautlos. Mit Ergebnisanzeige dauert die Vorlage **10:04 Minuten**.
 Andere Seeds ergeben andere Verläufe. [Bericht und Zeitpunkte](docs/TERRITORY_GROSSKARTE_2026-11-24.md)
 
 **In Arbeit:** **Marble Factory XL** (`marblexl`) ist eine Produktionslinie mit neun Stationen im Stil der klassischen Kugelfabrik (Waschen, Polieren, Ofen, Farbe, Trocknen, Prüfen, Sortieren). Bewegter Entwurf im Querformat mit fester Übersicht, läuft in Chargen zu 48 Kugeln beliebig lange durch, noch ohne Warteschlangen, Kapitel und Vorlagen; Schalter „Schilder zeigen“ (Standard aus). Stand und Grenzen: [docs/MARBLE_XL_STUFE_1_2026-11-16.md](docs/MARBLE_XL_STUFE_1_2026-11-16.md).

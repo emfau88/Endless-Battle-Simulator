@@ -100,4 +100,5 @@ gemeinsamen Generator stumm; Ereigniston entsteht im Export. Offene persönliche
 
 Die optionale Regelversion `territory-wilds-v1` erweitert die Auswahl um eine Querformatkarte mit
 221 Feldern. Ein neutraler Riese löst Rückzüge aus, ein angekündigter Meteor unterbricht einen Weg
-zur Zitadelle. [Zeitpunkte, Filmvorlage und Prüfungen](TERRITORY_GROSSKARTE_2026-11-24.md)
+zur Zitadelle. Der Riese nutzt zwei gegenüberliegende Bergpässe. Nur unmittelbar betroffene HQs zeigen
+gelegentlich eine Gesichtsblase. Normale Truppenmärsche laufen lautlos. [Zeitpunkte, Filmvorlage und Prüfungen](TERRITORY_GROSSKARTE_2026-11-24.md)

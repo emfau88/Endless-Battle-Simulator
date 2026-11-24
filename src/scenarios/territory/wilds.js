@@ -71,23 +71,35 @@
     return result.reverse();
   }
 
-  function giantRoute(r) {
-    const rng = r.giantRng, bounds = r.mapBounds, avoid = r.meteor?.tile;
-    const ground = r.tiles.filter(t => t.terrain !== 'mountain' && t.hq < 0 && t.id !== avoid);
-    const angle = rng.range(0, Math.PI * 2), co = Math.cos(bounds.angle), si = Math.sin(bounds.angle);
+  const giantGround = r => r.tiles.filter(t => t.terrain !== 'mountain' && t.hq < 0 && t.id !== r.meteor?.tile);
+
+  function giantEnds(bounds, ground, angle) {
+    const co = Math.cos(bounds.angle), si = Math.sin(bounds.angle);
     const u = .86 * bounds.halfU * Math.cos(angle), v = .86 * bounds.halfV * Math.sin(angle);
     const x = u * co + v * si, z = -u * si + v * co;
     const nearest = (x, z) => ground.reduce((best, t) =>
       (t.x-x)**2 + (t.z-z)**2 < (best.x-x)**2 + (best.z-z)**2 ? t : best);
+    return [nearest(-x, -z), nearest(x, z)];
+  }
+
+  function giantRoute(r) {
+    const rng = r.giantRng, ground = giantGround(r), avoid = r.meteor?.tile;
+    const [entry, exit] = giantEnds(r.mapBounds, ground, rng.range(0, Math.PI * 2));
     const center = r.tiles[r.lookup.get('0,0')];
     const front = ground.filter(t => distance(t, center) <= 5 && t.owner >= 0 &&
       t.neighbors.some(id => r.tiles[id].owner >= 0 && r.tiles[id].owner !== t.owner));
     const via = front.length ? front[rng.int(0, front.length-1)] : center;
-    const first = path(r, nearest(-x, -z), via, avoid), second = path(r, via, nearest(x, z), avoid);
+    const first = path(r, entry, via, avoid), second = path(r, via, exit, avoid);
     return first.length && second.length ? first.concat(second.slice(1)) : [];
   }
 
   class WildsRound extends T.ObservedRound {
+    giantEntryTile() {
+      // The approach is visible just before the first garrison can react.
+      // Reading the upcoming heading must never advance the encounter stream.
+      const preview = new EBS.RNG(this.giantRng.s);
+      return giantEnds(this.mapBounds, giantGround(this), preview.range(0, Math.PI * 2))[0];
+    }
     reset(seed = this.seed) {
       super.reset(seed);
       buildBoard(this);
@@ -172,5 +184,72 @@
       }
     }
   }
+  // Cosmetic decisions use the observed event and video clock. A skipped
+  // render frame, the export speed and the four factions' RNGs play no part.
+  class HqReactions {
+    constructor() {
+      this.last = null;
+      this.lastFor = [];
+      this.giantSeen = false;
+    }
+
+    observe(e, r) {
+      if (e.type === 'giant_arrival') this.giantSeen = false;
+      if (this.last && e.videoTime - this.last.at < 65) return;
+      let team, kind, target = e.tile;
+      const tile = r.tiles[e.tile];
+      switch (e.type) {
+        case 'giant_retreat':
+          if (this.giantSeen || e.amount < 4) return;
+          team = e.faction; kind = 'watch';
+          break;
+        case 'meteor_warning': {
+          // A neutral, empty pass has nobody to warn. A column already on
+          // this road can still belong to a different faction than the tile.
+          const traffic = r.moves.filter(m => m.from === tile.id || m.to === tile.id);
+          const column = traffic.sort((a, b) => b.amount - a.amount || a.id - b.id)[0];
+          team = tile.supplied && tile.owner >= 0 ? tile.owner : column?.owner;
+          kind = 'alarm';
+          break;
+        }
+        case 'dispatch': {
+          if (e.move.kind !== 'attack') return;
+          const home = r.tiles[e.move.to];
+          if (home.hq < 0 || home.hq === e.team || e.move.amount < Math.max(6, home.units * r.defense(home))) return;
+          team = home.hq; kind = 'alarm'; target = e.move.from;
+          break;
+        }
+        case 'battle':
+          if (tile.hq < 0 || tile.hq !== e.previous || tile.owner !== e.previous || tile.units > 4 || e.p < 6) return;
+          team = tile.hq; kind = 'relief'; target = e.move.from;
+          break;
+        case 'outpost': {
+          if (e.previous < 0) return;
+          const holdings = [0, 0, 0, 0];
+          for (const t of r.tiles) if (t.owner >= 0) holdings[t.owner]++;
+          if (holdings[e.team] >= holdings[e.previous]) return;
+          team = e.team; kind = 'smirk';
+          break;
+        }
+        case 'hq':
+          team = e.team; kind = 'smirk';
+          break;
+        default: return;
+      }
+      if (!r.factions[team]?.alive || e.videoTime - (this.lastFor[team] ?? -Infinity) < 95) return;
+      this.last = { team, kind, target, at: e.videoTime };
+      this.lastFor[team] = e.videoTime;
+      if (e.type === 'giant_retreat') this.giantSeen = true;
+    }
+
+    visible(videoTime) {
+      if (!this.last) return null;
+      const age = videoTime - this.last.at;
+      if (age < 0 || age >= 2.2) return null;
+      const opacity = Math.min(1, age / .14, (2.2 - age) / .24);
+      return { ...this.last, opacity, zoom: .88 + .12 * Math.min(1, age / .18) };
+    }
+  }
   T.WildsRound = WildsRound;
+  T.HqReactions = HqReactions;
 })();

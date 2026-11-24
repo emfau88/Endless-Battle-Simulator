@@ -78,6 +78,7 @@
       // The round clock stops with the result, the picture does not: colour changes of the
       // last conquest, flags and effects finish in video time (generator steps since the result).
       const after = r.phase === 'finished' ? Math.max(0, s.step - s.resultStep) / 60 * s.timeScale : 0;
+      const reaction = !l.portrait && this.view.hud && l.mode !== 'off' ? s.hqReactions?.visible(s.step / 60) : null;
       if (p.layout === 'wilds') {
         const crater = r.meteor?.closed ? r.meteor.tile : -1;
         if (this.lastCrater !== crater) { this.hexView.lastSignature = ''; this.lastCrater = crater; }
@@ -89,16 +90,19 @@
       if (p.layout === 'wilds') {
         g.save(); g.translate(l.x, l.y);
         g.beginPath(); g.rect(0, 0, l.w, l.h); g.clip();
-        EBS.Territory.drawWilds(g, r, this.hexView, r.time + remainder);
+        EBS.Territory.drawWilds(g, r, this.hexView, r.time + remainder, after);
         g.restore();
       }
       // The slim frame draws its own, larger name plates; numbers and routes stay with the full view.
-      if (l.mode !== 'slim') { this.overlay.draw(remainder, p); g.drawImage(this.labelCanvas, l.x, l.y, l.w, l.h); }
+      if (l.mode !== 'slim') {
+        this.overlay.draw(remainder, p, reaction);
+        g.drawImage(this.labelCanvas, l.x, l.y, l.w, l.h);
+      }
       if (l.mode === 'full') {
         if (this.view.hud) this.hud(g);
         if (p.showWinner && r.phase === 'finished') this.winner(g);
       } else if (l.mode === 'slim' && this.view.hud) {
-        EBS.Territory.drawSlim(g, { sim: s, world: this.world, layout: l, view: this.hexView, remainder });
+        EBS.Territory.drawSlim(g, { sim: s, world: this.world, layout: l, view: this.hexView, remainder, reaction });
       }
     }
     hud(g) {
@@ -177,13 +181,16 @@
   // Fast rules for the short map. Not part of the archived source profiles.
   const BLITZ = { label: 'Blitz (Short)', filmTempo: 2, incomeMultiplier: 2, aggression: 1, offensiveInterval: 2, marchDuration: 1.5 };
   const PROFILES = { ...HexSim.PROFILES, blitz: BLITZ };
-  const CLASSIC_AUDIO = { ceilingDb: -3, events: {
-    dispatch: { label: 'Marsch', samples: ['synth:chime'], gain: .09, semis: -12, detune: .3 },
+  const FIELD_SOUNDS = {
     battle: { label: 'Gefecht', samples: ['impactMetal_light_000','impactMetal_light_001'], gain: .15, semis: -3, detune: .5 },
     capture: { label: 'Eroberung', samples: ['synth:scrap-pickup'], gain: .15, semis: -7 },
     build: { label: 'Bunkerbau', samples: ['impactWood_medium_000'], gain: .16, semis: -3 },
     hq: { label: 'Hauptquartier gefallen', samples: ['synth:scrap-stone-break'], gain: .26, semis: -4 },
     victory: { label: 'Sieg', samples: ['synth:myco-pling'], gain: .24, semis: -5 },
+  };
+  const CLASSIC_AUDIO = { ceilingDb: -3, events: {
+    dispatch: { label: 'Marsch', samples: ['synth:chime'], gain: .09, semis: -12, detune: .3 },
+    ...FIELD_SOUNDS,
   } };
   /* Short map: soft sounds at a fixed, quiet level (no loudness boost) and a
    * plan that lets only the important events sound. `gap` is the shortest
@@ -197,7 +204,8 @@
     hq: { label: 'Krone gefallen', samples: ['synth:myco-pop'], gain: .50, semis: -9 },
     victory: { label: 'Sieg', samples: ['synth:myco-pling'], gain: .32, semis: -5 },
   } };
-  const WILDS_AUDIO = { ...CLASSIC_AUDIO, events: { ...CLASSIC_AUDIO.events,
+  const WILDS_AUDIO = { ceilingDb: -3, events: { ...FIELD_SOUNDS,
+    capture: { label: 'Eroberung', samples: ['mw-soft-switch-0', 'mw-soft-switch-1'], gain: .12, semis: -4 },
     meteor_warning: { label: 'Meteor nähert sich', samples: ['synth:wind'], gain: .18, semis: -4 },
     meteor_impact: { label: 'Meteoreinschlag', samples: ['synth:thunder'], gain: .44, semis: -4 },
     giant_arrival: { label: 'Riese erscheint', samples: ['synth:thunder'], gain: .20, semis: -8 },

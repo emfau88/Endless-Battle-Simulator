@@ -102,7 +102,7 @@
     }
   }
 
-  function drawNames(g, round, view, layout) {
+  function drawNames(g, round, view, layout, reaction) {
     g.save(); g.font = `800 34px ${FONT}`; g.textBaseline = 'middle'; g.textAlign = 'center';
     for (const f of round.factions) {
       if (!f.alive) continue;
@@ -113,14 +113,20 @@
       g.beginPath(); g.roundRect(x - w / 2, y - h / 2, w, h, 12); g.fillStyle = PLATE; g.fill();
       g.lineWidth = 2.5; g.strokeStyle = team.color + 'b0'; g.stroke();
       g.fillStyle = team.color; g.fillText(team.name, x, y + 2);
+      if (reaction?.team === f.id) {
+        const tile = round.tiles[reaction.target];
+        const look = view.project(tile.x, tile.height, tile.z).x < p.x ? -1 : 1;
+        const plate = {x: x-w/2, y: y-h/2, w, h};
+        EBS.Territory.drawHqBubble(g, plate, layout, layout.w / 1000, reaction, team.color, look);
+      }
     }
     g.restore();
   }
 
   /* layout: full frame { x, y, w, h, portrait }. remainder: unfinished part of a rule tick. */
-  EBS.Territory.drawSlim = function (g, { sim, world, layout, view, remainder }) {
+  EBS.Territory.drawSlim = function (g, { sim, world, layout, view, remainder, reaction }) {
     const r = sim.roundSim, cx = world.w / 2, portrait = layout.portrait;
-    drawNames(g, r, view, layout);
+    drawNames(g, r, view, layout, reaction);
     drawRings(g, sim, remainder, view, layout);
     // Portrait: caption line at the very top, the share bar right below it, both above the map.
     drawShares(g, r, cx, portrait ? 180 : 46, portrait ? world.w * .76 : world.w * .42);

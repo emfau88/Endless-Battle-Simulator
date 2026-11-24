@@ -48,7 +48,7 @@
     for(const f of sim.factions){const t=sim.getTile(f.focusTile);if(!f.alive||!t||f.focusUntil<sim.time||t.owner===f.id)continue;ctx.beginPath();for(let k=0;k<6;k++){const a=Math.PI/6+k*Math.PI/3,p=view.project(t.x+Math.cos(a)*.77,t.height+.08,t.z+Math.sin(a)*.77);if(k===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);}ctx.closePath();ctx.strokeStyle=TEAMS[f.id].color+'bd';ctx.stroke();}
     ctx.restore();
   }
-  function drawLabels() {
+  function drawLabels(reaction) {
     ctx.setTransform(size.dpr,0,0,size.dpr,0,0);ctx.clearRect(0,0,size.w,size.h);drawnGarrisons=[];drawnMovements=[];drawnRoutes=[];if(!sim||!view)return;syncOverlayState();const mobile=outputFormat==='portrait',scale=overlayScale();
     drawFocusTargets();
     for(const {move:m} of importantMoves.values())drawRoute(m);
@@ -60,7 +60,19 @@
       const az=view.camera?.azimuth||0,p=view.project(t.x+Math.sin(az)*.38,t.height+.06,t.z+Math.cos(az)*.38);if(!p)continue;
       garrisonRects.push(badge(String(Math.floor(t.units)),p.x,p.y+3*scale,t.owner>=0?TEAMS[t.owner].color:'#aab8a4',{small:mobile,alpha:t.owner>=0?1:.88}));drawnGarrisons.push(t.id);
     }
-    for(const f of sim.factions){if(!f.alive)continue;const t=sim.tiles[f.hq],p=view.project(t.x,t.height+2.15,t.z);if(!p||!Number.isFinite(p.x))continue;hqRects.push(badge(TEAMS[f.id].name,p.x,p.y-8*scale,TEAMS[f.id].color,{hq:true,small:mobile}));}
+    for (const f of sim.factions) {
+      if (!f.alive) continue;
+      const t = sim.tiles[f.hq], p = view.project(t.x,t.height+2.15,t.z);
+      if (!p || !Number.isFinite(p.x)) continue;
+      const color = TEAMS[f.id].color;
+      const plate = badge(TEAMS[f.id].name,p.x,p.y-8*scale,color,{hq:true,small:mobile});
+      hqRects.push(plate);
+      if (reaction?.team === f.id) {
+        const target = sim.tiles[reaction.target];
+        const look = view.project(target.x, target.height, target.z).x < p.x ? -1 : 1;
+        hqRects.push(EBS.Territory.drawHqBubble(ctx, plate, size, scale, reaction, color, look));
+      }
+    }
     const occupied=[...hqRects],time=sim.time+(sim.phase==='running'?accum:0);
     for(const state of importantMoves.values()){
       const m=state.move,a=sim.tiles[m.from],b=sim.tiles[m.to],u=clamp((time-m.start)/m.duration,0,1),p=view.project(a.x+(b.x-a.x)*u,a.height+(b.height-a.height)*u+.19,a.z+(b.z-a.z)*u);if(!p)continue;
@@ -89,12 +101,12 @@
         labels.width=Math.round(w*dpr);labels.height=Math.round(h*dpr);
         for(const state of importantMoves.values())state.labelOffset=null;
       },
-      draw(remainder,params) {
+      draw(remainder,params,reaction) {
         accum=remainder;garrisonMode=params.garrisonMode;
         // On the large map place march labels against the current frame's
         // obstacles, even when the previous frames were simulated off-screen.
         if (params.layout === 'wilds') for (const state of importantMoves.values()) state.labelOffset = null;
-        drawLabels();
+        drawLabels(reaction);
       },
       displayState() {
         return {garrisonMode,garrisonTileIds:[...drawnGarrisons],importantMoveIds:[...importantMoves.keys()],

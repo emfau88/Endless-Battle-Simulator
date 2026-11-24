@@ -6,7 +6,8 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Was | Commit | Bericht |
 |---|---|---|
-| Territory Wars erhält eine zusätzliche 16:9-Großkarte mit 221 Feldern, angekündigten Meteoren und einem neutralen Steinriesen. Die Langvideo-Vorlage mit Seed 46 endet nach 10:04 Minuten. | Branch `territory/meteor-und-riese` | [Ablauf und Prüfung](TERRITORY_GROSSKARTE_2026-11-24.md) |
+| Auf der Territory-Großkarte tritt der Riese hinter einem Randberg hervor und geht hinter dem gegenüberliegenden Berg ab. Betroffene HQs reagieren kurz mit Gesichtern. Die Marschglocke ist aus, Eroberungen haben einen leisen Klick. | PR #50 | [Bergpässe, Reaktionen und Ton](TERRITORY_GROSSKARTE_2026-11-24.md#bergpässe-hq-reaktionen-und-ton) |
+| Territory Wars erhält eine zusätzliche 16:9-Großkarte mit 221 Feldern, angekündigten Meteoren und einem neutralen Steinriesen. Die Langvideo-Vorlage mit Seed 46 endet nach 10:04 Minuten. | `ec2b293` | [Ablauf und Prüfung](TERRITORY_GROSSKARTE_2026-11-24.md) |
 
 ## 20.11.2026
 

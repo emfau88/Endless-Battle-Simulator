@@ -87,6 +87,7 @@
         tile: tileId ?? null, round: this.roundNumber, roundSeed: this.roundSeed, roundTime: this.roundSim.time, ...details };
       this.eventDigest = fnv1a(this.eventDigest + '|' + JSON.stringify(e));
       this.events.push(e);
+      this.hqReactions?.observe(e, this.roundSim);
     }
     _startRound() {
       this.roundNumber++;
@@ -96,6 +97,7 @@
         : this.cfg.layout === 'short' ? EBS.Territory.ShortRound : ObservedRound;
       if (!Round) throw new Error('Territory: Regeln der gewählten Karte fehlen.');
       this.roundSim = new Round({ seed: this.roundSeed, ...this.cfg });
+      if (this.cfg.layout === 'wilds') this.hqReactions = new EBS.Territory.HqReactions();
       Object.defineProperty(this.roundSim, 'emit', { value: (...args) => this._event(...args) });
       this.initialUnits = totalUnits(this.roundSim);
       this.phase = 'running'; this.pauseUntil = 0; this.resultStep = 0; this.accumulator = 0;

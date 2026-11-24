@@ -26,21 +26,47 @@ test('Großkarte ist eine eigene Langvideo-Vorlage, die Standardkarten behalten 
   assert.equal(make().roundSim.rules, 'territory-wilds-v1');
   assert.equal(make(46, {}).roundSim.giant, undefined);
   assert.equal(scenario.audioForParams({layout:'landscape'}).events.meteor_impact, undefined);
-  assert.ok(scenario.audioForParams(file.params).events.meteor_impact);
+  const sounds = scenario.audioForParams(file.params).events;
+  assert.ok(sounds.meteor_impact && sounds.giant_arrival && sounds.battle && sounds.victory);
+  assert.equal(sounds.dispatch, undefined);
+  assert.ok(!Object.values(sounds).some(def => def.samples.includes('synth:chime')));
+  assert.ok(!sounds.capture.samples.includes('synth:scrap-pickup'));
+  assert.deepEqual(plain(scenario.audioForParams({layout:'landscape'}).events.dispatch.samples), ['synth:chime']);
+  assert.ok(scenario.audioForParams({layout:'short'}).events.dispatch);
 });
 
 test('Meteor schließt und öffnet Wege, der neutrale Riese verdrängt echte Kolonnen, die Vorlage endet nach zehn Minuten', () => {
   const sim = make(), r = sim.roundSim, original = r.tiles.map(t => [...t.neighbors]);
   let cursor = 0, impacts = 0, clears = 0, arrivals = 0, retreats = 0, previousStart = -Infinity;
+  const reactions = [], lastFor = new Map();
   for (let i = 0; i < 12*60*60 && sim.phase === 'running'; i++) {
     sim.stepOnce();
+    const reaction = sim.hqReactions.last;
+    if (reaction && reactions.at(-1) !== reaction) {
+      assert.ok(r.factions[reaction.team].alive);
+      assert.ok(reaction.at - (reactions.at(-1)?.at ?? -Infinity) >= 65);
+      assert.ok(reaction.at - (lastFor.get(reaction.team) ?? -Infinity) >= 95);
+      assert.equal(sim.hqReactions.visible(reaction.at + 1).team, reaction.team);
+      assert.equal(sim.hqReactions.visible(reaction.at + 2.21), null);
+      lastFor.set(reaction.team, reaction.at);
+      reactions.push(reaction);
+    }
     while (cursor < sim.events.length) {
       const e = sim.events[cursor++], tile = r.tiles[e.tile];
       switch (e.type) {
         case 'meteor_warning':
           assert.ok(e.roundTime - previousStart > 100); previousStart = e.roundTime;
           assert.equal(tile.hq, -1); assert.notEqual(tile.terrain, 'outpost');
-          assert.ok(!r.giant?.route.includes(tile.id)); break;
+          assert.ok(!r.giant?.route.includes(tile.id));
+          if (impacts === 0) {
+            assert.equal(tile.owner, -1);
+            assert.ok(!r.moves.some(m => m.from === tile.id || m.to === tile.id));
+            assert.notEqual(reaction?.at, e.videoTime);
+          } else {
+            assert.equal(reaction.at, e.videoTime); assert.equal(reaction.team, tile.owner);
+            assert.equal(reaction.kind, 'alarm');
+          }
+          break;
         case 'meteor_impact':
           impacts++; assert.equal(r.meteor.closed, true); assert.equal(tile.neighbors.length, 0);
           assert.equal(r.moves.some(m => m.from === tile.id || m.to === tile.id), false);
@@ -66,6 +92,9 @@ test('Meteor schließt und öffnet Wege, der neutrale Riese verdrängt echte Kol
     }
   }
   assert.equal(impacts, 2); assert.equal(clears, 2); assert.equal(arrivals, 3); assert.equal(retreats, 17);
+  assert.ok(reactions.length >= 5 && reactions.length <= 8);
+  assert.equal(reactions[0].kind, 'watch'); assert.equal(reactions[0].team, 2);
+  assert.ok(reactions.some(cue => cue.kind === 'smirk'));
   assert.equal(sim.completedRounds, 1); check(sim);
   const plan = scenario.createExportPlan(EBS.normalizeConfig(file), world);
   let result;
@@ -78,6 +107,7 @@ test('Großkarte wiederholt denselben Seed und leitet neue Runden und Ereignisse
   const sim = make(46, {...file.params,repeatRounds:true}), replay = make(46, {...file.params,repeatRounds:true});
   for (let i = 0; i < 605*60; i++) { sim.stepOnce(); replay.stepOnce(); }
   assert.equal(sim.roundNumber, 2); assert.equal(sim.stateHash(), replay.stateHash());
+  assert.equal(sim.hqReactions.last, null);
   const next = make(EBS.Territory.roundSeed(46, 2));
   assert.equal(sim.roundSeed, next.roundSeed);
   assert.equal(sim.roundSim.nextGiant, next.roundSim.nextGiant);
