@@ -25,6 +25,7 @@
     supportsCamera:false,supportsClips:true,
     videoDefaults:{resolution:1080,fps:30,quality:{crf:20,preset:'medium'}},
     hasNaturalDuration:cfg=>cfg.params.mode==='single',
+    shouldReplayPreview:sim=>sim.cfg.mode==='single' && sim.step*sim.timeScale>=sim.roundLength,
     durationLabel:{pending:'Zieleinlauf wird berechnet …',complete:'Eine vollständige Runde mit 1,5 Sekunden Ergebnis bei Normaltempo.'},
     createExportPlan(cfg) {
       if(cfg.params.mode!=='single') return null;

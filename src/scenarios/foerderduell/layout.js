@@ -64,9 +64,11 @@
   // Ein Kugelmittelpunkt liegt vor der schrägen Metallfläche. Der Berührpunkt
   // liegt etwas zur Kamera hin, nicht direkt im tiefsten Querschnitt.
   function augerGeometry(lane,r) {
+    // Orthografischer Blick auf das obere Wellenende. Die Kugel bleibt eine Kugel.
+    const depthScale=-.55, axisScale=Math.sqrt(1-depthScale*depthScale);
     const pitch=(lane.outletU-lane.inletU)/F.Auger.span;
-    const tip=lane.rad-.24*r, trough=lane.rad-1.10*r, halfGauge=.11*r;
-    const rise=pitch/(2*Math.PI);
+    const tip=lane.rad-.24*r, trough=lane.rad-1.10*r, halfGauge=.11*r*axisScale;
+    const rise=pitch/(axisScale*2*Math.PI);
     let lo=0, hi=Math.asin(r/trough);
     for(let i=0;i<32;i++) {
       const angle=(lo+hi)/2, s=trough*Math.sin(angle);
@@ -74,12 +76,13 @@
       else hi=angle;
     }
     const angle=(lo+hi)/2;
-    const axialGap=Math.sqrt(r*r-(trough*Math.sin(angle))**2)+halfGauge;
-    const lead=rise*angle+axialGap;
+    const axialGap=axisScale*Math.sqrt(r*r-(trough*Math.sin(angle))**2)+halfGauge;
+    const lead=axisScale*rise*angle+axialGap;
     const origin=lane.inletU+pitch*F.Auger.support(0,0)-lead;
     // Die Windung endet am letzten Berührpunkt. Die Welle reicht weiter bis ins Lager.
     const end=lane.inletU+pitch*F.Auger.outlet-axialGap;
-    return {pitch,origin,tip,trough,halfGauge,shaft:.51*r, start:12, end, axleEnd:lane.axes.length-13};
+    return {pitch,origin,tip,trough,halfGauge,depthScale,axisScale,shaft:.51*r,
+      start:12, end, axleEnd:lane.axes.length+2};
   }
   function seat(i,r) {
     const row=i<1?0:i<3?1:i<6?2:i<10?3:i<15?4:i<20?5:6;
@@ -118,11 +121,11 @@
     }
     if(phase==='machine') {
       if(i===0) {
-        const {pitch,trough}=layout.screw, p=F.Auger.pose(ball,beat);
+        const {pitch,trough,depthScale}=layout.screw, p=F.Auger.pose(ball,beat);
         const v=lerp(lerp(rad,-trough,p.drop),-rad,p.spill);
         // Beim Einfallen läuft die Kugel auf der Vorderseite um die feste Wellenachse.
         const depth=p.drop<1 ? Math.sqrt(Math.max(0,trough*trough-v*v)) : 0;
-        return [...axes.at(inletU+p.x*pitch,v),r,depth];
+        return [...axes.at(inletU+p.x*pitch+depthScale*depth,v),r,depth];
       }
       const [row,col]=chamber[ball.slot];
       const seat=axes.at(axes.length*.48+r*(.22+F.chamberLens*(1+row*1.75)),col*r*F.chamberLens);

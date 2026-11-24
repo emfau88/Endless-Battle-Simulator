@@ -521,7 +521,10 @@ async function bootLive() {
     if (running) {
       acc += dt * speed;
       let n = 0;
-      while (acc >= DT && n < 40 * speed) { session.step(); acc -= DT; n++; }
+      while (acc >= DT && n < 40 * speed) {
+        if (session.scenario.shouldReplayPreview?.(session.sim)) session.start(session.cfg);
+        session.step(); acc -= DT; n++;
+      }
       if (n >= 40 * speed) acc = 0;
     }
     if (running || renderDirty) {

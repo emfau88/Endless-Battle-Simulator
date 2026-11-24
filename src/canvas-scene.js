@@ -4,12 +4,14 @@
 (function () {
   'use strict';
   EBS.CanvasScene = class CanvasScene {
-    constructor({ world, renderScale }) {
+    constructor({ world, renderScale, canvas }) {
       this.world = world; this.scale = renderScale;
-      this.canvas = document.createElement('canvas');
+      this.canvas = canvas || document.createElement('canvas');
       this.canvas.width = Math.round(world.w * renderScale);
       this.canvas.height = Math.round(world.h * renderScale);
       this.ctx = this.canvas.getContext('2d', { alpha: false });
+      // In einer eingebetteten 2D-Vorschau ist dieser Canvas selbst die Ausgabe.
+      if (canvas) return;
       this.texture = PIXI.Texture.from(this.canvas);
       const sprite = new PIXI.Sprite(this.texture);
       sprite.width = world.w; sprite.height = world.h;
@@ -20,11 +22,11 @@
       this.ctx.setTransform(this.scale, 0, 0, this.scale, 0, 0);
       this.paint(this.ctx);
       this.ctx.restore();
-      this.texture.source.update();
+      this.texture?.source.update();
     }
     destroy() {
-      this.root.destroy({ children: true });
-      this.texture.destroy(true);
+      this.root?.destroy({ children: true });
+      this.texture?.destroy(true);
       this.canvas.width = this.canvas.height = 1;
     }
   };

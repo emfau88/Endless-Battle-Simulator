@@ -21,6 +21,8 @@
       <desc id="simcascade-bildtext"></desc>
       <g data-zeichnung=""></g>
     </svg>
+    <canvas hidden role="img" aria-label="Schnecke gegen Stempel. Bewegte Simulation mit zwei Zielgläsern."></canvas>
+    <button hidden type="button" class="btn btn-ghost" data-wiedergabe></button>
     <figcaption class="text-small" aria-live="polite"></figcaption>
   </figure>
 </div>
@@ -39,8 +41,18 @@
   }
   #simcascade-ideenwahl figure { margin: calc(var(--font-size-base, 1rem) * .75) 0 0; }
   #simcascade-ideenwahl svg { display: block; width: 100%; height: auto; stroke-linecap: round; stroke-linejoin: round; }
+  #simcascade-ideenwahl canvas { display: block; width: 100%; height: auto; }
+  #simcascade-ideenwahl [hidden] { display: none; }
   #simcascade-ideenwahl figcaption { margin-top: calc(var(--font-size-base, 1rem) * .5); }
 </style>
+<script src="../../src/core.js"></script>
+<script src="../../src/canvas-scene.js"></script>
+<script src="../../src/scenarios/foerderduell/auger.js"></script>
+<script src="../../src/scenarios/foerderduell/simulation.js"></script>
+<script src="../../src/scenarios/foerderduell/art.js"></script>
+<script src="../../src/scenarios/foerderduell/layout.js"></script>
+<script src="../../src/scenarios/foerderduell/auger-view.js"></script>
+<script src="../../src/scenarios/foerderduell/renderer.js"></script>
 <script>
 (() => {
   'use strict';
@@ -48,6 +60,8 @@
   const drawing = root.querySelector('[data-zeichnung]');
   const sceneSelect = root.querySelector('[name="szene"]');
   const variantSelect = root.querySelector('[name="variante"]');
+  const movie = root.querySelector('canvas'), playback = root.querySelector('[data-wiedergabe]');
+  let releaseMovie, selectedKey, selectedVariant;
   const paper = 'var(--papier)', ink = 'var(--tinte)', edge = 'var(--kante)';
   const seam = 'var(--fuge)', metal = 'var(--metall)', gold = 'var(--gold)';
   const blue = 'var(--wasser)', amber = 'var(--ton)', green = 'var(--glas)';
@@ -86,83 +100,38 @@
     circle(parent, x, y, r * .52, 'none', ink, 1.1);
   }
 
-  // Zwei Bahnen, gleiche Aufgabe je Bahn. Die Marken im Bild folgen diesem kleinen Taktmodell.
-  function race(bursts) {
-    const queue = [0, 0], delivered = [0, 0], crossing = [null, null], inScrew = [0, 0];
-    let firstFinish;
-    for (let tick = 0; tick < 36; tick++) {
-      const feed = bursts ? (tick === 0 || tick === 8 ? 12 : 0) : Number(tick < 24);
-      queue[0] += feed;
-      queue[1] += feed;
-      delivered[0] += inScrew.shift();
-      const intake = Math.min(1, queue[0]);
-      queue[0] -= intake;
-      inScrew.push(intake);
-      if (tick % 6 === 4) {
-        const stroke = Math.min(7, queue[1]);
-        queue[1] -= stroke;
-        delivered[1] += stroke;
-      }
-      for (let side = 0; side < 2; side++) {
-        if (crossing[side] === null && delivered[side] >= 12) crossing[side] = tick;
-      }
-      if (!firstFinish && Math.max(...delivered) >= 12) firstFinish = [...delivered];
-      if (crossing.every(value => value !== null)) return { crossing, firstFinish };
-    }
-    throw new Error('Zielmarke außerhalb des Modellzeitraums.');
-  }
-  function measuringGlass(x, amount) {
-    const g = group(drawing, x, 246);
-    path(g, 'M-25 -53V-4Q-25 0 -21 0H21Q25 0 25 -4V-53', edge, 1.8, wash(blue, 5));
-    for (let i = 0; i < amount; i++) {
-      bead(g, -16.5 + (i % 4) * 11, -6.5 - Math.floor(i / 4) * 10, 4.7, colors[(i >> 2) % 3]);
-    }
-    path(g, 'M-29 -31H-18 M18 -31H29', ink, 2.4);
-    path(g, 'M-35 -34l6 3 -6 3Z', ink, 1, ink);
-  }
   function duel(bursts) {
-    const result = race(bursts);
-    const g = drawing;
-    path(g, 'M125 204H476 M169 202l-29 -81 M431 202l29 -81', seam, 2);
-    for (const x of [259, 341]) {
-      const h = group(g, x, 44);
-      path(h, 'M-28 -18H28V8L7 29V38H-7V29L-28 8Z', edge, 1.6, wash(blue, 7));
-      for (let i = 0; i < (bursts ? 12 : 6); i++) {
-        bead(h, -19 + i % 6 * 7.6, 3 - Math.floor(i / 6) * 7, 3.3, colors[(i + 1) % 3]);
+    const F = EBS.Foerderduell;
+    const sim = new F.Simulation({ seed: 42, params: { mode: 'series', supply: bursts ? 'bursts' : 'steady' } });
+    const renderer = new F.Renderer({ world: EBS.ASPECTS['16:9'], renderScale: .5, sim, canvas: movie, view: { hud: true } });
+    // Beim Öffnen sind die ersten Kugeln bereits in den Maschinen.
+    for (let i = 0; i < 2 * EBS.PHYS_HZ; i++) sim.stepOnce();
+    renderer.draw();
+    let request = 0, last = null, remainder = 0;
+    function frame(now) {
+      if (last !== null && !document.hidden) remainder += Math.min(.1, (now - last) / 1000);
+      last = now;
+      if (remainder >= EBS.DT) {
+        while (remainder >= EBS.DT) { sim.stepOnce(); remainder -= EBS.DT; }
+        renderer.draw();
       }
+      request = requestAnimationFrame(frame);
     }
-    path(g, 'M259 82q0 23 -16 39l-15 17 M341 82q0 23 16 39l15 17', seam, 2);
-    const screw = group(g, 246, 173, -144);
-    rect(screw, -1, -17, 161, 34, wash(blue, 8), edge, 8);
-    path(screw, 'M-7 0H166', seam, 5);
-    for (let x = 5; x < 147; x += 22) {
-      path(screw, 'M' + x + ' -14q15 9 2 28l7 0q13 -19 -2 -28Z', edge, 1, wash(blue, 30));
-      bead(screw, x + 13, -7, 3.4, colors[Math.floor(x / 22) % 3]);
+    function play(playing) {
+      cancelAnimationFrame(request);
+      last = null;
+      request = playing ? requestAnimationFrame(frame) : 0;
+      playback.textContent = playing ? 'Animation anhalten' : 'Animation abspielen';
     }
-    bearing(g, 249, 175, 14);
-    const press = group(g, 355, 174, -36);
-    rect(press, 7, -17, 148, 34, wash(amber, 7), edge, 8);
-    const piston = bursts ? 87 : 45;
-    path(press, 'M-6 0H' + piston, edge, 6);
-    rect(press, piston, -14, 8, 28, wash(amber, 50), edge, 2);
-    path(press, 'M124 -15l12 15 M136 0l-12 15', seam, 2);
-    for (let i = 0; i < (bursts ? 6 : 2); i++) {
-      bead(press, piston + 14 + i % 3 * 8, 7 - Math.floor(i / 3) * 8, 3.6, colors[i % 3]);
-    }
-    const wheel = group(g, 335, 190, bursts ? -42 : 38);
-    circle(wheel, 0, 0, 19, metal, edge, 2);
-    for (let i = 0; i < 3; i++) {
-      const a = i * tau / 3;
-      circle(wheel, 10 * Math.cos(a), 10 * Math.sin(a), 4, paper, seam);
-    }
-    bearing(wheel, 0, 0, 4);
-    path(g, 'M120 79q-18 2 -25 28 M480 83q18 2 25 28', edge, 2);
-    for (const [index, x] of [92, 508].entries()) {
-      const stream = index === 1 && bursts ? 6 : 2;
-      for (let i = 0; i < stream; i++) bead(g, x + (i % 2) * 3, 119 + i * 11.6, 3.5, colors[i % 3]);
-      measuringGlass(x, result.firstFinish[index]);
-    }
-    const [screwTick, pressTick] = result.crossing;
+    playback.onclick = () => play(!request);
+    play(!matchMedia('(prefers-reduced-motion: reduce)').matches);
+    releaseMovie = () => {
+      cancelAnimationFrame(request);
+      playback.onclick = null;
+      renderer.destroy();
+      sim.destroy();
+    };
+    const [screwTick, pressTick] = sim.round.crossings;
     return (bursts ? 'Zwei Portionen zu zwölf' : 'Eine Kugel pro Takt') + ' je Bahn. Die Schnecke erreicht die Marke in Takt ' + screwTick + ', der Stempel in Takt ' + pressTick + '.';
   }
 
@@ -328,10 +297,16 @@
   };
   function show(key, variant) {
     if (!Object.hasOwn(scenes, key)) key = 'duell';
+    variant = variant === 1 ? 1 : 0;
+    if (key === selectedKey && variant === selectedVariant) return;
+    selectedKey = key; selectedVariant = variant;
+    if (releaseMovie) { releaseMovie(); releaseMovie = null; }
+    root.querySelector('svg').toggleAttribute('hidden', key === 'duell');
+    movie.hidden = playback.hidden = key !== 'duell';
     const scene = scenes[key];
     sceneSelect.value = key;
     variantSelect.replaceChildren(...scene.variants.map((label, index) => new Option(label, String(index))));
-    variantSelect.value = variant === 1 ? '1' : '0';
+    variantSelect.value = String(variant);
     drawing.replaceChildren();
     const detail = scene.render(variantSelect.value === '1');
     root.querySelector('title').textContent = sceneSelect.selectedOptions[0].textContent;

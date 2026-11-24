@@ -67,14 +67,14 @@ test('Szenenauswahl, Vorlagen und identische Bilder bei Wiedergabe und Zeitsprun
         const beat=ball.enter+(ball.exit-ball.enter)*n/360;
         const p=F.position(ball,balls,0,beat,l,r,0), z=p[3];
         const dx=p[0]-l.lane.root[0], dy=p[1]-l.lane.root[1];
-        const x=dx*c+dy*b, v=-dx*b+dy*c, turns=F.Auger.turnsAt(beat);
+        const x=dx*c+dy*b-s.depthScale*z, v=-dx*b+dy*c, turns=F.Auger.turnsAt(beat);
         let nearest=Math.hypot(v,z)-s.shaft;
         for(let i=0;i<=300;i++) {
           const u=x+r*(i/100-1.5);
           if(u<s.start || u>s.end) continue;
           const a=F.augerAngle(s,u,turns), screen=-Math.cos(a), depth=Math.sin(a);
           const radius=Math.max(s.shaft,Math.min(s.tip,v*screen+z*depth));
-          const axial=Math.max(0,Math.abs(x-u)-s.halfGauge);
+          const axial=Math.max(0,Math.abs(x-u)-s.halfGauge)/s.axisScale;
           nearest=Math.min(nearest,Math.hypot(axial,radius*screen-v,radius*depth-z));
         }
         minimum=Math.min(minimum,nearest/r);
@@ -91,4 +91,68 @@ test('Szenenauswahl, Vorlagen und identische Bilder bei Wiedergabe und Zeitsprun
     assert.ok(sample.minimum>=.999 && sample.contactError<.002,JSON.stringify(sample));
     assert.ok(sample.contacts>200 && sample.outletSamples>20,JSON.stringify(sample));
   }
+});
+
+test('Nabe dreht in beiden Formaten, Einzelrennen und Ideenansicht spielen im Browser weiter', async t=>{
+  const browser=await launchBrowser({gpu:false});
+  t.after(()=>browser.close());
+  const page=await browser.newPage(), errors=[];
+  page.on('pageerror',err=>errors.push(err.message));
+  await page.goto(pathToFileURL(INDEX).href+'?scenario=foerderduell&paused=1');
+  await page.waitForFunction(()=>window.EBS?.app?.sim);
+  const samples=await page.evaluate(()=>{
+    const app=EBS.app, F=EBS.Foerderduell, results=[];
+    for(const aspect of ['9:16','16:9']) {
+      app.session.start(EBS.normalizeConfig({scenario:'foerderduell',video:{aspect}}));
+      const renderer=app.session.renderer, lane=renderer.layout.lanes[0], s=lane.screw;
+      const scale=renderer.fit*renderer.scale, radius=.54*1.14*s.tip;
+      const mark=s.origin+Math.round(((s.end+s.start)/2-s.origin)/s.pitch)*s.pitch;
+      for(const dt of [0,7,14,17,20,27]) {
+        while(app.sim.step<146+dt) app.session.step();
+        renderer.draw();
+        const turns=F.Auger.turnsAt(app.sim.beat), angle=-2*Math.PI*turns;
+        const brassAt=(u,v)=>{
+          const [x,y]=lane.axes.at(u,v);
+          const [red,green,blue]=renderer.ctx.getImageData(Math.round(x*scale),Math.round(y*scale),1,1).data;
+          return red>170 && red>green+18 && green>blue+25;
+        };
+        const onHub=a=>brassAt(s.axleEnd+s.depthScale*radius*Math.sin(a),-radius*Math.cos(a));
+        const a=F.augerAngle(s,mark,turns), z=Math.sin(a), bladeRadius=.77*s.tip;
+        const blade=brassAt(mark+s.halfGauge+s.depthScale*bladeRadius*z,-bladeRadius*Math.cos(a));
+        results.push({aspect,dt,hub:onHub(angle),otherArm:onHub(angle+2*Math.PI/3),
+          blade,visible:z>.72?true:z<-.98?false:null});
+      }
+    }
+    return results;
+  });
+  for(const sample of samples) {
+    assert.ok(sample.hub && !sample.otherArm,JSON.stringify(sample));
+    if(sample.visible!==null) assert.equal(sample.blade,sample.visible,JSON.stringify(sample));
+  }
+
+  await page.evaluate(()=>{
+    const app=EBS.app;
+    app.session.start(EBS.productionPreset('foerderduell','short'));
+    while(app.sim.step<app.sim.roundLength-3) app.session.step();
+    window.finishedShort=app.sim;
+    app.setRunning(true);
+  });
+  await page.waitForFunction(()=>EBS.app.sim!==window.finishedShort && EBS.app.sim.step>1);
+  assert.equal(await page.evaluate(()=>EBS.app.cfg.params.mode),'single');
+
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.goto(pathToFileURL(join(ROOT,'docs','reference','szenenideen.html')).href);
+  const canvas=page.locator('canvas'), button=page.locator('[data-wiedergabe]');
+  assert.ok(await canvas.isVisible());
+  assert.equal(await button.textContent(),'Animation abspielen');
+  await canvas.evaluate(c=>{ window.firstIdeaFrame=c.toDataURL(); });
+  await button.click();
+  await page.waitForFunction(()=>document.querySelector('canvas').toDataURL()!==window.firstIdeaFrame);
+  await button.click();
+  assert.equal(await button.textContent(),'Animation abspielen');
+  await page.selectOption('[name=variante]','1');
+  assert.match(await page.textContent('figcaption'),/Zwei Portionen/);
+  await page.selectOption('[name=szene]','ringwerk');
+  assert.ok(await canvas.isHidden() && await button.isHidden());
+  assert.deepEqual(errors,[]);
 });

@@ -90,6 +90,10 @@
         }
       }
       g.drawImage(this.glass.canvas,0,0,w,h);
+      const screw=lanes[0];
+      g.save(); g.translate(...screw.lane.root); g.rotate(screw.axes.angle);
+      F.drawAugerEnd(g,screw.screw,turns);
+      g.restore();
       if(!this.view.hud) return;
       const [x,y,size]=frame.title;
       g.textAlign='center'; g.textBaseline='alphabetic';
