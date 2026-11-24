@@ -6,6 +6,7 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 
 | Was | Commit | Bericht |
 |---|---|---|
+| R42, die Drehung an Nabe und Schneckenblatt ist bei Normaltempo sichtbar. Die Ideenauswahl spielt beide Zuläufe im Simulator ab. | `26aa7cc` | [Drehprobe und physikalische Grenzen](FOERDERDUELL_SCHNECKE_2026-11-24.md#sichtbare-drehung-im-simulator) |
 | R42, die Windung schiebt die Kugeln der Förderschnecke. Drehung, Flankenkontakt und Übergabe ins Fallrohr geprüft. | `caac7c8` | [Nahaufnahme und Kontaktmessung](FOERDERDUELL_SCHNECKE_2026-11-24.md) |
 
 ## 22.11.2026

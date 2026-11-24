@@ -5,7 +5,8 @@ während eine ganze Ladung das Verhalten der Maschine bestimmt. Die folgenden f�
 diesen Wechsel zwischen Einzelteil und Masse. Die Kippkaskade ist separat als Reserve vermerkt.
 
 In der [Bildauswahl](reference/szenenideen.html) lassen sich für jede Szene zwei Situationen vergleichen.
-Die Datei öffnet sich aus der Arbeitskopie direkt im Browser. Baureihenfolge, erste Proben und
+Das Förderduell läuft dort mit der Simulation und der Zeichnung des Rennens. Die übrigen vier Entwürfe haben je zwei Standbilder.
+Die HTML-Datei öffnet sich in der Arbeitskopie direkt im Browser. Baureihenfolge, erste Proben und
 Startempfehlung stehen im [Umsetzungsplan für die fünf Szenen](SZENENPLAN_2026-11-22.md).
 
 ## 1 · Schnecke gegen Stempel
@@ -20,11 +21,11 @@ Im **Short** stehen die Gläser nebeneinander. Die zwölfte Kugel gewinnt. Der s
 volles Glas unter der Schnecke, während auf der anderen Seite der Kolben gerade ausholt. Im **Langvideo**
 kommen Lieferungen aus klar erkennbaren Farbschichten in Wellen. Beide Seiten bekommen pro Runde denselben Zulauf.
 
-Für diesen Favoriten rechnet die Bildauswahl ein kleines Beispiel. Die Schnecke nimmt pro Takt eine Kugel auf,
-die zwei Takte später herausfällt. Der Stempel entleert ab Takt 4 alle sechs Takte bis zu sieben Kugeln.
+Die Bildauswahl spielt wahlweise ein Rennen mit stetigem Zulauf oder mit zwei Schüben. Die Schnecke nimmt
+pro Takt eine verfügbare Kugel auf. Der Stempel entleert ab Takt 4 alle sechs Takte bis zu sieben Kugeln.
 Bei 24 einzeln zugeführten Kugeln erreicht die Schnecke den Strich in Takt 13, der Stempel in Takt 16.
 Bei zwei Schüben zu zwölf in Takt 0 und 8 erreicht der Stempel den Strich in Takt 10, die Schnecke in Takt 13.
-Takt 0 ist jeweils der Start. Die Werte beschreiben dieses Beispiel.
+Die Werte gelten für das Rennmodell mit Seed 42. Der Film hält am Ende des entscheidenden Takts an.
 
 ## 2 · Ringwerk
 

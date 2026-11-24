@@ -1,6 +1,6 @@
 # Gesamtplan: ein Main, sichere Architektur, Ausbau je Szenario
 
-**Zuletzt aktualisiert:** 24.11.2026 (Kontakt der Förderschnecke in Abschnitt 0). **Status:** vom Nutzer am 16.11.2026 freigegeben („freie Hand“),
+**Zuletzt aktualisiert:** 24.11.2026 (Drehung und Kugelführung der Förderschnecke in Abschnitt 0). **Status:** vom Nutzer am 16.11.2026 freigegeben („freie Hand“),
 Umsetzung läuft.
 
 Die [ROADMAP](ROADMAP.md) bleibt die einzige aktive Aufgabenliste; die Vorhaben dieses Plans stehen dort als
@@ -18,7 +18,9 @@ das Förderduell als Startszene gewählt. **Erledigt** sind der [Umsetzungsplan]
 und die [Bildprobe in Graphit, Stahl und Kupfer](FOERDERDUELL_BILDPROBE_2026-11-22.md#graphit-stahl-und-kupfer).
 Rennlogik, bewegte Szene, Ton und beide Produktionsvorlagen sind auf dem Szenenbranch integriert und
 [mit MP4-Ausgaben geprüft](FOERDERDUELL_2026-11-22.md). Die Schnecke schiebt die Kugeln mit ihrer
-rotierenden Windung. Der [Kontaktbericht](FOERDERDUELL_SCHNECKE_2026-11-24.md) enthält die Messungen und die neue Nahaufnahme.
+rotierenden Windung. In beiden Formaten sieht man die Nabe und die Messingmarken am Blatt umlaufen.
+Die [Ideenauswahl](reference/szenenideen.html) spielt beide Zuläufe ab. Die Modellannahme einer unten geführten Kugel
+und die Messung der Drehung stehen im [Kontaktbericht](FOERDERDUELL_SCHNECKE_2026-11-24.md#sichtbare-drehung-im-simulator).
 **Offen** sind die Nutzerabnahme der Bewegung und die Freigabe für den Merge.
 Die [Kippkaskade](KIPPKASKADE_2026-11-22.md) bleibt Reserve.
 

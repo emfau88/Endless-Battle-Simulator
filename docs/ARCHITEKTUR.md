@@ -87,11 +87,13 @@ Parameternamen dürfen nicht mit Kern-Schlüsseln kollidieren: `version`, `name`
 - Bei Matter.js vor `Engine.create`: `Common._nextId = 0; Common._seed = 0;`. In `destroy()` aufräumen
   (`Events.off`, `Composite.clear`, `Engine.clear`).
 - Objekte fest begrenzen (Pools); nichts wächst mit der Laufzeit.
+- Ein Szenario kann mit `shouldReplayPreview(sim)` im laufenden Simulator ein Einzelrennen nach der Ergebnisanzeige neu starten. Der Export endet gemäß Exportplan.
 
 **Renderer:** `root` (PixiJS-Container), `draw()`, `destroy()` (eigene Texturen freigeben).
 
 - Eigenes Layout für 9:16 und 16:9.
 - Statische Grafik einmal in Texturen vorzeichnen, bewegte Teile als Sprites.
+- Dieselbe `CanvasScene` kann in einer HTML-Vorschau direkt auf einen übergebenen 2D-Canvas zeichnen. So verwendet die Ideenauswahl den Renderer des Förderduells.
 - Texte im Video englisch.
 
 ## 5 · Ton
