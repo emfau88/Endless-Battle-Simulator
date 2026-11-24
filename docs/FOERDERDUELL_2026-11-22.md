@@ -1,5 +1,8 @@
 # Schnecke gegen Stempel im Simulator
 
+Am 24. November wurde die Förderschnecke korrigiert. Die neuen Filmproben und Kontaktmessungen
+stehen im [Bericht zur rotierenden Windung](FOERDERDUELL_SCHNECKE_2026-11-24.md).
+
 Stand 22. November 2026. Die Szene ist unter `foerderduell` auswählbar. Der Short filmt ein
 Einzelrennen mit Ergebnis. In der Rennserie beginnen beide Bahnen jede Runde mit derselben neuen
 Lieferfolge. Die [Bildprobe](FOERDERDUELL_BILDPROBE_2026-11-22.md) und die Szene nutzen dieselbe

@@ -2,6 +2,12 @@
 
 Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen in der [ROADMAP](ROADMAP.md).
 
+## 24.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| R42, die Windung schiebt die Kugeln der Förderschnecke. Drehung, Flankenkontakt und Übergabe ins Fallrohr geprüft. | `caac7c8` | [Nahaufnahme und Kontaktmessung](FOERDERDUELL_SCHNECKE_2026-11-24.md) |
+
 ## 22.11.2026
 
 | Was | Commit | Bericht |

@@ -1,6 +1,6 @@
 # Gesamtplan: ein Main, sichere Architektur, Ausbau je Szenario
 
-**Zuletzt aktualisiert:** 22.11.2026 (Simulatorintegration von Schnecke gegen Stempel in Abschnitt 0). **Status:** vom Nutzer am 16.11.2026 freigegeben („freie Hand“),
+**Zuletzt aktualisiert:** 24.11.2026 (Kontakt der Förderschnecke in Abschnitt 0). **Status:** vom Nutzer am 16.11.2026 freigegeben („freie Hand“),
 Umsetzung läuft.
 
 Die [ROADMAP](ROADMAP.md) bleibt die einzige aktive Aufgabenliste; die Vorhaben dieses Plans stehen dort als
@@ -17,7 +17,9 @@ Drei Zustände: **Erledigt**, **Läuft**, **Offen**. Dazu **Entfällt** für ges
 das Förderduell als Startszene gewählt. **Erledigt** sind der [Umsetzungsplan](SZENENPLAN_2026-11-22.md)
 und die [Bildprobe in Graphit, Stahl und Kupfer](FOERDERDUELL_BILDPROBE_2026-11-22.md#graphit-stahl-und-kupfer).
 Rennlogik, bewegte Szene, Ton und beide Produktionsvorlagen sind auf dem Szenenbranch integriert und
-[mit MP4-Ausgaben geprüft](FOERDERDUELL_2026-11-22.md). **Offen** sind die Nutzerabnahme und die Freigabe für den Merge.
+[mit MP4-Ausgaben geprüft](FOERDERDUELL_2026-11-22.md). Die Schnecke schiebt die Kugeln mit ihrer
+rotierenden Windung. Der [Kontaktbericht](FOERDERDUELL_SCHNECKE_2026-11-24.md) enthält die Messungen und die neue Nahaufnahme.
+**Offen** sind die Nutzerabnahme der Bewegung und die Freigabe für den Merge.
 Die [Kippkaskade](KIPPKASKADE_2026-11-22.md) bleibt Reserve.
 
 ### Block 0 · Sichern und aufräumen (R31)
