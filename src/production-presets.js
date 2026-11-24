@@ -4,6 +4,8 @@
   'use strict';
   const labels = { naval: 'Seeschlacht', marble: 'Kugelfabrik', scrap: 'Scrap Wars', mycelium: 'Myzel', pyramid: 'Pyramide', territory: 'Territory Wars / Hex Dominion', marbleworks: 'Marble Works', waterpark: 'Wasserpark', cloudwars: 'Cloud Wars' };
   EBS.productionPreset = (scenario, kind, seed = 42) => {
+    const mode = EBS.scenarioModes?.get(scenario)?.get(kind);
+    if (mode) return mode.presetForMode(kind, seed);
     if (!Object.hasOwn(labels, scenario) || !['short', 'long'].includes(kind)) throw new Error('Unbekannte Produktionsvorlage.');
     if (scenario === 'marbleworks') return EBS.MarbleProduction.preset(kind, seed);
     const short = kind === 'short';
