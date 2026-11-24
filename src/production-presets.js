@@ -9,7 +9,7 @@
     const short = kind === 'short';
     if (scenario === 'foerderduell') return {
       version: 1, name: short ? 'Schnecke gegen Stempel – Zwei Schübe' : 'Schnecke gegen Stempel – Rennserie',
-      scenario, seed, params: { mode: short ? 'single' : 'series', supply: short ? 'bursts' : 'mixed' },
+      scenario, seed, params: { mode: short ? 'single' : 'series', supply: short ? 'bursts' : 'mixed', rulesVersion: EBS.Foerderduell.Auger.rulesVersion },
       video: { aspect: short ? '9:16' : '16:9', resolution: 1080, fps: 30, durationSec: short ? 12.3 : 600,
         tempo: 1, audio: true, volume: { master: 100 }, quality: { crf: 20, preset: 'medium', bitrate: null } },
       view: { hud: true, camera: false },

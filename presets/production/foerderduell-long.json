@@ -5,7 +5,8 @@
   "seed": 42,
   "params": {
     "mode": "series",
-    "supply": "mixed"
+    "supply": "mixed",
+    "rulesVersion": "contact-v2"
   },
   "video": {
     "aspect": "16:9",

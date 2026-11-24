@@ -1,7 +1,7 @@
 (function () {
   'use strict';
   const F=EBS.Foerderduell;
-  const defaults={mode:'single',supply:'bursts'};
+  const defaults={mode:'single',supply:'bursts',rulesVersion:F.Auger.rulesVersion};
   const audio={
     limiterReleaseMs:25,
     events:{
@@ -13,7 +13,7 @@
   EBS.registerScenario({
     id:'foerderduell',title:'Schnecke gegen Stempel',defaults,
     normalizeParams(p) {
-      return { mode:p.mode==='series'?'series':'single',
+      return { rulesVersion:F.Auger.rulesVersion, mode:p.mode==='series'?'series':'single',
         supply:['mixed','bursts','steady','packets'].includes(p.supply)?p.supply:defaults.supply };
     },
     controls:[

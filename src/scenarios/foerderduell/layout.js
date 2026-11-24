@@ -50,15 +50,37 @@
     const lanes=frame.lanes.map((lane,i)=>{
       const side=i?1:-1, axes=F.laneAxes(lane), len=axes.length, rad=r*(i?F.pressRadius:3);
       const fx=frame.feeder[0]+side*r*(F.magazineWidth+F.magazineGap)/2, fy=frame.feeder[1]+r*10+7;
-      const inletU=len*(i ? .53 : .17), outletU=len-12;
+      const inletU=len*(i ? .53 : .17), outletU=i ? len-12 : len-2.7*r;
       const inlet=pipe([[fx,fy],[fx,fy+26],axes.at(inletU,-side*(rad+23)),axes.at(inletU,-side*rad)],r*2.38);
       const [cx,floor]=lane.cup, lip=floor-r*26.3;
       const outlet=pipe([axes.at(outletU,side*rad),axes.at(outletU,side*(rad+16)),...lane.bends,[cx,lip]],r*2.35);
-      return {lane,side,axes,rad,inletU,outletU,inlet,outlet,fx,fy,lip,floor};
+      const geometry={lane,side,axes,rad,inletU,outletU,inlet,outlet,fx,fy,lip,floor};
+      if(i===0) geometry.screw=augerGeometry(geometry,r);
+      return geometry;
     });
     return {frame,lanes,portrait};
   }
   const slots=[0,-1,1,-2,0,2,-3,-1,1,3,-4,-2,0,2,4,-4,-2,0,2,4,-3,-1,1,3];
+  // Ein Kugelmittelpunkt liegt vor der schrägen Metallfläche. Der Berührpunkt
+  // liegt etwas zur Kamera hin, nicht direkt im tiefsten Querschnitt.
+  function augerGeometry(lane,r) {
+    const pitch=(lane.outletU-lane.inletU)/F.Auger.span;
+    const tip=lane.rad-.24*r, trough=lane.rad-1.10*r, halfGauge=.11*r;
+    const rise=pitch/(2*Math.PI);
+    let lo=0, hi=Math.asin(r/trough);
+    for(let i=0;i<32;i++) {
+      const angle=(lo+hi)/2, s=trough*Math.sin(angle);
+      if(rise*Math.sqrt(r*r-s*s)>s*trough*Math.cos(angle)) lo=angle;
+      else hi=angle;
+    }
+    const angle=(lo+hi)/2;
+    const axialGap=Math.sqrt(r*r-(trough*Math.sin(angle))**2)+halfGauge;
+    const lead=rise*angle+axialGap;
+    const origin=lane.inletU+pitch*F.Auger.support(0,0)-lead;
+    // Die Windung endet am letzten Berührpunkt. Die Welle reicht weiter bis ins Lager.
+    const end=lane.inletU+pitch*F.Auger.outlet-axialGap;
+    return {pitch,origin,tip,trough,halfGauge,shaft:.51*r, start:12, end, axleEnd:lane.axes.length-13};
+  }
   function seat(i,r) {
     const row=i<1?0:i<3?1:i<6?2:i<10?3:i<15?4:i<20?5:6;
     return [slots[i]*r,-r*(.92+1.76*row)];
@@ -95,11 +117,12 @@
       return [...p,r];
     }
     if(phase==='machine') {
-      const u=unit((beat-ball.enter)/(ball.exit-ball.enter));
       if(i===0) {
-        const low=side*rad*(.45+.07*Math.sin(u*Math.PI*4));
-        const y=lerp(lerp(-side*rad,low,smooth(u/.15)),side*rad,smooth((u-.83)/.17));
-        return [...axes.at(lerp(inletU,outletU,u),y),r];
+        const {pitch,trough}=layout.screw, p=F.Auger.pose(ball,beat);
+        const v=lerp(lerp(rad,-trough,p.drop),-rad,p.spill);
+        // Beim Einfallen läuft die Kugel auf der Vorderseite um die feste Wellenachse.
+        const depth=p.drop<1 ? Math.sqrt(Math.max(0,trough*trough-v*v)) : 0;
+        return [...axes.at(inletU+p.x*pitch,v),r,depth];
       }
       const [row,col]=chamber[ball.slot];
       const seat=axes.at(axes.length*.48+r*(.22+F.chamberLens*(1+row*1.75)),col*r*F.chamberLens);
@@ -115,5 +138,5 @@
     const p=d<=outlet.length ? outlet.at(d) : [layout.lane.cup[0],lip+d-outlet.length];
     return [...p,r];
   }
-  Object.assign(F,{layout,discharged,position,smooth});
+  Object.assign(F,{layout,augerGeometry,discharged,position,smooth});
 })();

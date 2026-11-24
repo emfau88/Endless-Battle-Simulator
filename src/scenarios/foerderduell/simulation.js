@@ -34,7 +34,7 @@
     let take = -1;
     for (const [id, ready] of supply.entries()) {
       take = Math.max(ready, take + 1);
-      auger.push({ id, ready, depart: take - .85, enter: take - .30, exit: take + 1.30, land: take + 2.68 });
+      auger.push(F.Auger.load(id, ready, take));
     }
     // Ein Hub nimmt höchstens sieben der bereits gelieferten Kugeln in ihrer Eingangsreihenfolge mit.
     let previousDepart = -2, previousStroke = -2;
@@ -117,7 +117,7 @@
         for (const ball of lane) bins[stage(ball, this.beat)]++;
         return bins;
       });
-      return { t: this.t, step: this.step, round: this.roundIndex + 1, supply: this.round.profile, counts,
+      return { rulesVersion: F.Auger.rulesVersion, t: this.t, step: this.step, round: this.roundIndex + 1, supply: this.round.profile, counts,
         scores: [...this.scores], result: this.result, wins: { ...this.wins },
         summary: 'Runde ' + (this.roundIndex+1) + ' · ' + names[this.round.profile] + ' · ' +
           (this.result ? labels[this.result] + (this.result === 'tie' ? '' : ' gewinnt') : this.scores.join(' zu ')) };
@@ -132,7 +132,7 @@
       return { ok: !errors.length, errors };
     }
     stateHash() {
-      return fnv1a(JSON.stringify([this.seed, this.cfg, this.timeScale, this.step, this.roundIndex, this.roundStart,
+      return fnv1a(JSON.stringify([F.Auger.rulesVersion, this.seed, this.cfg, this.timeScale, this.step, this.roundIndex, this.roundStart,
         this.beat, this.round.supply, this.round.colors, this.cueIndex, this.eventSeq, this.scores, this.result, this.wins])).toString(16);
     }
     destroy() {}

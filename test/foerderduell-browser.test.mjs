@@ -55,4 +55,40 @@ test('Szenenauswahl, Vorlagen und identische Bilder bei Wiedergabe und Zeitsprun
     return [session.app.canvas.width,session.app.canvas.height,session.sim.checkInvariants().ok];
   });
   assert.deepEqual(square,[1080,1080,true]); assert.deepEqual(errors,[]);
+
+  const clearances=await page.evaluate(()=>{
+    const F=EBS.Foerderduell, balls=F.buildRound(42,0,'steady').lanes[0], ball=balls[4];
+    return ['9:16','16:9','1:1'].map(aspect=>{
+      const {frame,lanes}=F.layout(EBS.ASPECTS[aspect]), l=lanes[0], s=l.screw, r=frame.r;
+      const c=Math.cos(l.axes.angle), b=Math.sin(l.axes.angle);
+      let minimum=Infinity, contactError=0, contacts=0, outletSamples=0;
+      // Abtastung der gezeichneten, endlich langen Metallfläche gegen die gezeichnete Kugel.
+      for(let n=0;n<360;n++) {
+        const beat=ball.enter+(ball.exit-ball.enter)*n/360;
+        const p=F.position(ball,balls,0,beat,l,r,0), z=p[3];
+        const dx=p[0]-l.lane.root[0], dy=p[1]-l.lane.root[1];
+        const x=dx*c+dy*b, v=-dx*b+dy*c, turns=F.Auger.turnsAt(beat);
+        let nearest=Math.hypot(v,z)-s.shaft;
+        for(let i=0;i<=300;i++) {
+          const u=x+r*(i/100-1.5);
+          if(u<s.start || u>s.end) continue;
+          const a=F.augerAngle(s,u,turns), screen=-Math.cos(a), depth=Math.sin(a);
+          const radius=Math.max(s.shaft,Math.min(s.tip,v*screen+z*depth));
+          const axial=Math.max(0,Math.abs(x-u)-s.halfGauge);
+          nearest=Math.min(nearest,Math.hypot(axial,radius*screen-v,radius*depth-z));
+        }
+        minimum=Math.min(minimum,nearest/r);
+        if(F.Auger.pose(ball,beat).contact) {
+          contacts++;
+          contactError=Math.max(contactError,Math.abs(nearest/r-1));
+        }
+        if(beat>ball.release) outletSamples++;
+      }
+      return {aspect,minimum,contactError,contacts,outletSamples};
+    });
+  });
+  for(const sample of clearances) {
+    assert.ok(sample.minimum>=.999 && sample.contactError<.002,JSON.stringify(sample));
+    assert.ok(sample.contacts>200 && sample.outletSamples>20,JSON.stringify(sample));
+  }
 });

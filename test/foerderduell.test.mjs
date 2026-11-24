@@ -5,11 +5,47 @@ import vm from 'node:vm';
 
 const context = vm.createContext({});
 context.window = context;
-for (const file of ['core.js', 'scenarios/foerderduell/simulation.js']) {
+for (const file of ['core.js', 'scenarios/foerderduell/auger.js', 'scenarios/foerderduell/simulation.js']) {
   vm.runInContext(readFileSync(new URL('../src/' + file, import.meta.url), 'utf8'), context);
 }
 const F = context.EBS.Foerderduell;
 const make = (seed, supply, mode='single', timeScale=1) => new F.Simulation({seed, params:{supply,mode},timeScale});
+
+test('Erst die Flanke fördert bergauf, eine Umdrehung trägt genau eine Steigung', () => {
+  const {load,pose,turnsAt,support,outlet,span}=F.Auger;
+  for(const take of [0,5,21]) {
+    const b=load(take,take,take);
+    const intake=pose(b,b.enter+.12), loose=pose(b,b.enter+.30);
+    assert.ok(intake.drop>0 && intake.drop<1 && intake.x===0);
+    assert.ok(loose.x<0 && !loose.contact);
+    const from=b.enter+.52, carried=pose(b,from);
+    assert.ok(carried.contact);
+    for(let i=0;i<60;i++) {
+      const t=from+i/60, p=pose(b,t);
+      assert.ok(p.contact);
+      assert.ok(Math.abs(p.x-support(turnsAt(t),b.pocket))<1e-10);
+    }
+    assert.ok(Math.abs(pose(b,from+.5).x-carried.x-1)<1e-10);
+    assert.ok(pose(b,b.release-.001).x<outlet && pose(b,b.release-.001).contact);
+    assert.ok(pose(b,b.release+.001).x>outlet && !pose(b,b.release+.001).contact);
+    assert.ok(Math.abs(pose(b,b.exit).x-span)<1e-10);
+  }
+});
+
+test('Bei stillstehender Welle rollt die Kugel zur Flanke zurück und wird erst beim Anfahren weitergeschoben', () => {
+  const {roll,support}=F.Auger, stoppedAt=1.75, pocket=0;
+  const rest=support(stoppedAt,pocket), dt=1/54;
+  let state={x:rest,speed:2}, peak=rest;
+  for(let step=0;step<80;step++) {
+    state=roll(state.x,state.speed,dt,stoppedAt,stoppedAt,pocket);
+    peak=Math.max(peak,state.x);
+    assert.ok(state.x>=rest);
+  }
+  assert.ok(peak>rest+.30 && peak<rest+.35);
+  assert.deepEqual([state.x,state.speed,state.contact],[rest,0,true]);
+  const restart=roll(state.x,state.speed,dt,stoppedAt,stoppedAt+2*dt,pocket);
+  assert.ok(restart.contact && restart.x>rest && Math.abs(restart.speed-2)<1e-10);
+});
 
 for (const [supply, seed, ticks, winner] of [
   ['steady',42,[13,16],'auger'], ['bursts',42,[13,10],'piston'], ['packets',24,[22,22],'tie']

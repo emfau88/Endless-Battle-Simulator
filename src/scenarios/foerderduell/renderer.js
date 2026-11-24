@@ -11,15 +11,6 @@
     g.setTransform(scale,0,0,scale,0,0); g.lineCap=g.lineJoin='round';
     return {canvas,g};
   }
-  // Ein zusätzliches Gewinde deckt die Verschiebung um genau eine Steigung ab.
-  function screwStrip(lane,scale) {
-    const length=lane.axes.length, pitch=(length-37)/5.65, radius=lane.rad;
-    const w=length+pitch+4,h=2*radius+8, layer=surface(w,h,scale);
-    layer.g.translate(0,h/2);
-    const a=lane.axes.angle, lit=.35*Math.sin(a)-.94*Math.cos(a)>0;
-    F.art(layer.g,lit).helix(length+pitch,radius-4,6.65);
-    return {canvas:layer.canvas,w:layer.canvas.width/scale,h:layer.canvas.height/scale,pitch,center:h/2};
-  }
   function marbleSprites(r,scale) {
     const half=r+3, size=half*2;
     return Array.from({length:4},(_,i)=>{
@@ -33,14 +24,13 @@
     constructor(ctx) {
       super(ctx);
       this.sim=ctx.sim; this.view=ctx.view; this.layout=F.layout(ctx.world);
-      const {frame,lanes}=this.layout;
+      const {frame}=this.layout;
       this.fit=Math.min(ctx.world.w/frame.w,ctx.world.h/frame.h);
       const scale=this.fit*ctx.renderScale;
       this.board=surface(frame.w,frame.h,scale);
       this.glass=surface(frame.w,frame.h,scale);
       this.paintBoard(this.board.g,this.glass.g);
       this.art=F.art(this.ctx);
-      this.screw=screwStrip(lanes[0],scale);
       this.beads=marbleSprites(frame.r,scale*F.chamberLens);
     }
     paintBoard(g,front) {
@@ -70,13 +60,11 @@
       g.translate((this.world.w-this.fit*w)/2,(this.world.h-this.fit*h)/2);
       g.scale(this.fit,this.fit); g.lineJoin=g.lineCap='round';
       g.drawImage(this.board.canvas,0,0,w,h);
-      const beat=sim.beat;
+      const beat=sim.beat, turns=F.Auger.turnsAt(beat);
       for(const [i,l] of lanes.entries()) {
         g.save(); g.translate(...l.lane.root); g.rotate(l.axes.angle);
         if(i===0) {
-          const s=this.screw, shift=((beat+1)*1.6%1)*s.pitch;
-          g.beginPath(); g.rect(12,-l.rad+2,l.axes.length-27,2*l.rad-4); g.clip();
-          g.drawImage(s.canvas,shift-s.pitch,-s.center,s.w,s.h);
+          F.drawAugerHalf(g,l.screw,turns,false);
         } else {
           const phase=((beat-3.86)%6+6)%6;
           const angle=phase<.46 ? Math.PI*F.smooth(phase/.46) : Math.PI*(1+F.smooth((phase-.46)/.62));
@@ -86,11 +74,19 @@
         }
         g.restore();
         const balls=sim.round.lanes[i], shifted=F.discharged(balls,beat);
+        const foreground=[];
         for(const ball of balls) {
           const pos=F.position(ball,balls,i,beat,l,r,shifted);
           if(!pos) continue;
-          const sprite=this.beads[sim.round.colors[ball.id]], zoom=pos[2]/r;
-          g.drawImage(sprite.canvas,pos[0]-sprite.half*zoom,pos[1]-sprite.half*zoom,sprite.size*zoom,sprite.size*zoom);
+          const sprite=this.beads[sim.round.colors[ball.id]];
+          if(!i && pos[3]>r) foreground.push([pos,sprite]);
+          else this.drawMarble(g,pos,sprite);
+        }
+        if(i===0) {
+          g.save(); g.translate(...l.lane.root); g.rotate(l.axes.angle);
+          F.drawAugerHalf(g,l.screw,turns,true);
+          g.restore();
+          for(const [pos,sprite] of foreground) this.drawMarble(g,pos,sprite);
         }
       }
       g.drawImage(this.glass.canvas,0,0,w,h);
@@ -107,8 +103,12 @@
       else for(const [i,l] of lanes.entries()) art.score(l.lane.cup[0],l.floor+49,l.side,sim.scores[i],.95);
     }
     destroy() {
-      for(const layer of [this.board,this.glass,this.screw,...this.beads]) layer.canvas.width=layer.canvas.height=1;
+      for(const layer of [this.board,this.glass,...this.beads]) layer.canvas.width=layer.canvas.height=1;
       super.destroy();
+    }
+    drawMarble(g,pos,sprite) {
+      const zoom=pos[2]/this.layout.frame.r;
+      g.drawImage(sprite.canvas,pos[0]-sprite.half*zoom,pos[1]-sprite.half*zoom,sprite.size*zoom,sprite.size*zoom);
     }
   }
   F.Renderer=Renderer;
