@@ -6,8 +6,9 @@ Dieser Bericht wird je Paket fortgeschrieben.
 | Paket | Stand |
 |---|---|
 | Plan | **Erledigt** (25.11.) |
-| V0 Vorschau-Bilder | **Erledigt** (25.11.). Die Stilwahl des Nutzers steht aus. |
-| M1 bis M9 | **Offen** |
+| V0 Vorschau-Bilder | **Erledigt** (25.11.). Der Nutzer hat **Stil A „Holz & Abendlicht“** gewählt. |
+| M1 Physik-Kern | **Erledigt** (25.11.) |
+| M2 bis M9 | **Offen** |
 
 ---
 
@@ -77,7 +78,52 @@ Dieser Bericht wird je Paket fortgeschrieben.
   - Ein missverständlicher Starttor-Arm ist entfernt.
 - Keine Tests und kein Export, weil kein Szenario-Code geändert wurde.
 
-### Frage an den Nutzer
+### Stilwahl
 
-Welcher Stil: **A** (Empfehlung), **B** oder **C**? Ebenso möglich sind Mischungen, zum Beispiel A mit dem
-Leuchten aus C.
+Am 25.11. hat der Nutzer **Stil A** gewählt („Ja Stil A“). Die Referenzbilder liegen unter `docs/reference/`:
+[Querformat](reference/knockout-stil-a-16x9.jpg) und [Hochformat](reference/knockout-stil-a-9x16.jpg).
+
+---
+
+## M1 · Physik-Kern (25.11.2026)
+
+**Umfang:**
+
+- `src/scenarios/knockout/detmath.js`: Sinus und Kosinus mit festem Ergebnis, nur aus Grundrechenarten.
+  - Bereichsreduktion mit geteiltem π/2.
+  - Polynome aus fdlibm.
+  - Abweichung zu `Math.sin` und `Math.cos` unter 1e-14.
+- `src/scenarios/knockout/physics.js`: Kreise gegen Kapseln und Kreise untereinander.
+  - 4 Teilschritte je Simulationsschritt, also 240 Hz.
+  - Spekulative Kontakte und sequenzielle Impulse mit 8 Durchgängen.
+  - Rückprall nur bei echten Stößen.
+  - Lagekorrektur nach dem Bewegen.
+  - Rollreibung einer Vollkugel.
+  - Kinematische Körper mit `pose(t)`.
+  - Förderband über die Oberflächengeschwindigkeit.
+  - Raster für feste Bahnteile.
+  - Liste der harten Stöße für den Ton.
+
+**Startwerte:**
+
+| Größe | Wert |
+|---|---|
+| Schwerkraft | 1600 E/s² |
+| Höchstgeschwindigkeit | 1500 E/s |
+| Rückprall Bahn | 0,25 |
+| Rückprall Murmel gegen Murmel | 0,45 |
+| Reibung | 0,25 |
+| Rückprall erst ab | 70 E/s |
+
+**Messung (`test/knockout-physics.test.mjs`, 7 Tests grün):**
+
+- Rollen auf 6°, 12° und 18°: Die Beschleunigung liegt innerhalb von 3 % bei 5/7 · g · sin θ, die Murmel rollt ohne
+  zu rutschen.
+- Zehn Murmeln in einer Mulde: Nach 6 s schneller als 4 E/s ist keine mehr. Keine dringt in die Bahn oder in eine
+  andere ein.
+- 300 Schüsse mit 1500 E/s schräg gegen eine Bahn von 12 E Stärke: Keiner geht durch.
+- Ein drehendes Kreuz schiebt eine Murmel mit.
+- Förderband: Die Murmel fährt physikalisch richtig mit 2/7 der Bandgeschwindigkeit und rollt dabei rückwärts.
+  Für die Bahnen gilt deshalb: Ein Band muss etwa 3,5-mal so schnell laufen, wie die Murmeln fahren sollen.
+- Gleicher Aufbau ergibt dieselben Bits.
+- Der Vergleich Node gegen Chromium folgt im Browser-Test, sobald das Szenario angemeldet ist.

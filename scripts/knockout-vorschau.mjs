@@ -47,6 +47,12 @@ try {
     const ga = all.getContext('2d'); ga.imageSmoothingQuality = 'high';
     sheets.forEach((c, i) => ga.drawImage(c, 0, i * Math.round(c.height * k), Math.round(c.width * k), Math.round(c.height * k)));
     files['alle-stile.jpg'] = all.toDataURL('image/jpeg', 0.88).split(',')[1];
+    // Kleine Referenzbilder des gewählten Stils A für docs/reference/
+    for (const [format, w, h] of [['16x9', 960, 540], ['9x16', 540, 960]]) {
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(canvases['A' + format], 0, 0, w, h);
+      files[`knockout-stil-a-${format}.jpg`] = c.toDataURL('image/jpeg', 0.82).split(',')[1];
+    }
     return files;
   }, LABELS);
   if (errors.length) throw errors[0];
