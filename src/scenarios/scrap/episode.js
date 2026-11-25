@@ -7,7 +7,7 @@
   const { clamp, num, bool, hashSeed, fnv1a } = EBS.util;
   const EVENT_LIMIT = 4096;
   const normalizeParams = (p = {}) => withShort(p, {
-    rulesVersion: p.rulesVersion === 'v4' ? 'v4' : p.arena === 'sunshine' ? 'v3' : ['v2','v3'].includes(p.rulesVersion) ? p.rulesVersion : 'classic',
+    rulesVersion: p.rulesVersion === 'v4' || p.arena === 'jungle' ? 'v4' : p.arena === 'sunshine' ? 'v3' : ['v2','v3'].includes(p.rulesVersion) ? p.rulesVersion : 'classic',
     episodeMode: p.episodeMode === 'tournament' ? 'tournament' : 'endless',
     arena: Object.hasOwn(EBS.ScrapRules.arenas, p.arena) ? p.arena : 'yard',
     workshop: p.episodeMode === 'tournament' && bool(p.workshop, false),
@@ -18,7 +18,8 @@
   function withShort(p, out) {
     if (p.layout === 'short' && out.rulesVersion === 'v4' && out.arena === 'sunshine') out.layout = 'short';
     // L2 · Raketen-Regeln als Schalter (nur Taktik-Arena). Ohne den Schalter fehlt der Schlüssel ebenfalls.
-    if (p.items === 'rockets' && out.rulesVersion === 'v4') out.items = 'rockets';
+    // D1 · Die Dschungel-Karte gibt es nur in der Taktik-Arena und immer mit den Raketen-Regeln.
+    if ((p.items === 'rockets' || out.arena === 'jungle') && out.rulesVersion === 'v4') out.items = 'rockets';
     return out;
   }
   const SHORT_END_SEC = 2.5;
@@ -59,8 +60,9 @@
         full: true, kind: 'portrait', short: true };
     }
     if (params.rulesVersion === 'v3' || params.rulesVersion === 'v4') {
-      const portrait=h>w, aw=portrait?EBS.ScrapMaterials.height:EBS.ScrapMaterials.width;
-      const ah=portrait?EBS.ScrapMaterials.width:EBS.ScrapMaterials.height, top=portrait?132:80;
+      // Kartengröße je Arena (R42: Dschungel 1352 × 702, sonst 1040 × 540); die Karte füllt das Bild unter der Kopfleiste
+      const portrait=h>w, size=EBS.ScrapTactics.arenaSize(params.arena), aw=portrait?size.h:size.w;
+      const ah=portrait?size.w:size.h, top=portrait?132:80;
       const scale=Math.min((w-24)/aw,(h-top-12)/ah),width=aw*scale,height=ah*scale;
       return { x:(w-width)/2,y:top+(h-top-12-height)/2,width,height,size:Math.min(width,height),
         scale,arenaW:aw,arenaH:ah,full:true,kind:portrait?'portrait':w>h?'landscape':'square' };

@@ -80,6 +80,18 @@
   // dauert 31 s (klassisch 31 s); Hänger gar nicht mehr statt in 28 % der Runden. Acht Runden: rund 4:45 Minuten.
   const ARENA_ITEMS = { reload: 1.4, swap: .5, first: [6, 7.5], period: 9, fetch: 320, fetchWait: 1.2 };
   const ARENA_FIGHT = { opening: 1.8, damage: .4, duel: .8, underdog: .85, duelRamp: .06, duelMax: 3, coverSec: .15, coverMax: 2.5, coverPause: 6, ...DECIDE };
+  // D1 · Dschungel-Karte „Jungle Ruins“ (eigene Arena, nur Taktik-Arena, immer mit den Raketen-Regeln): 1352 × 702 statt
+  // 1040 × 540, also 30 % größer bei gleichem Seitenverhältnis. Ein Viertel ist entworfen und wird an beiden Achsen
+  // gespiegelt: Tempelecke (L aus Beton), Holz-Barrikade vor dem Seitentor (reicht bis zur Mittellinie), Felsblock,
+  // Holzstapel (L), Mauerrest an der Wand. 28 Deckungen (12 Holz, 8 Stein, 8 Beton). Drei Raketen-Plattformen: zwei
+  // außen, eine umkämpft in der Tempelmitte. Engste Durchfahrt 96 AE.
+  const JUNGLE = { w: 1352, h: 702,
+    quarter: [[516, 211, 100, 40, 'concrete'], [516, 251, 40, 44, 'concrete'], [364, 300, 56, 51, 'wood'],
+      [120, 236, 64, 64, 'stone'], [280, 120, 96, 44, 'wood'], [280, 164, 44, 40, 'wood'], [470, 18, 56, 70, 'stone']],
+    pads: [[110, 351], [1242, 351], [676, 351]],
+    starts: [[190, 90], [1162, 90], [1162, 612], [190, 612]] };
+  const JUNGLE_ITEMS = { ...ARENA_ITEMS, first: [6, 7.5, 11] };
+  const JUNGLE_FIGHT = { ...ARENA_FIGHT };
   // Zwischenspeicher außerhalb des Simulationszustands (Raster, Suchpuffer, Hindernisliste)
   const NAV = new WeakMap(), OBSTACLES = new WeakMap();
   class TacticalRound extends M.Round {
@@ -88,6 +100,7 @@
       this.rulesVersion = 'v4';
       this.portraitView = !!options.portrait;
       if (options.short && this.portraitView) this._shortMap();
+      else if (this.arena === 'jungle') this._jungleMap();
       else if (options.items === 'rockets') this._rocketRules(ARENA_ITEMS, ARENA_FIGHT);
       this.fire = { clear: 0, wood: 0, splash: 0, blocked: 0 };
       for (const r of this.robots) {
@@ -113,6 +126,21 @@
       this._rocketRules(SHORT_ITEMS, SHORT_FIGHT);
       // Ersatz-Startplätze, falls keine Kistenaufstellung passt
       for (const r of this.robots) { [r.x, r.y] = point(SHORT.starts[r.id]); r.lastX = r.x; r.lastY = r.y; }
+    }
+    // ---- D1 · Dschungel-Karte ---------------------------------------------
+    _jungleMap() {
+      const { w: W, h: H } = JUNGLE, pieces = [];
+      for (const [mx, my] of [[false, false], [true, false], [true, true], [false, true]])
+        for (const [x, y, w, h, material] of JUNGLE.quarter) pieces.push([mx ? W - x - w : x, my ? H - y - h : y, w, h, material]);
+      this.jungleMap = true; this.bounds = { w: W, h: H, edge: M.edge };
+      this.blocks = pieces.map(([x, y, w, h, material], id) => {
+        const hp = M.materials[material].hp;
+        return { id, x, y, w, h, material, hp, maxHp: hp, alive: true };
+      });
+      this.pads = JUNGLE.pads.map(([x, y]) => ({ x, y, kind: 'rocket', readyIn: 0, period: 0 }));
+      this._rocketRules(JUNGLE_ITEMS, JUNGLE_FIGHT);
+      // Ersatz-Startplätze, falls keine Kistenaufstellung passt
+      for (const r of this.robots) { [r.x, r.y] = JUNGLE.starts[r.id]; r.lastX = r.x; r.lastY = r.y; }
     }
 
     // Raketen-Regeln einschalten (Short-Karte oder Schalter items: 'rockets'): keine freien Startwaffen, beide
@@ -762,5 +790,8 @@
     }
   }
 
-  EBS.ScrapTactics = { Round: TacticalRound, CRATE, FIGHT, CHARACTERS, PATH, DRIVE, BEHAVIOUR, SHORT, SHORT_FIGHT, SHORT_ITEMS, ARENA_ITEMS, ARENA_FIGHT, DECIDE };
+  EBS.ScrapTactics = { Round: TacticalRound, CRATE, FIGHT, CHARACTERS, PATH, DRIVE, BEHAVIOUR, SHORT, SHORT_FIGHT, SHORT_ITEMS, ARENA_ITEMS, ARENA_FIGHT, DECIDE,
+    JUNGLE, JUNGLE_ITEMS, JUNGLE_FIGHT,
+    // Kartengröße je Arena (Motorkoordinaten, quer); alle bisherigen Karten haben 1040 × 540
+    arenaSize: arena => arena === 'jungle' ? { w: JUNGLE.w, h: JUNGLE.h } : { w: M.width, h: M.height } };
 })();

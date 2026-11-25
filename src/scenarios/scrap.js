@@ -38,6 +38,8 @@
   // S1 · Short: Schilder 1,4-fach, Einstiegstext 2,5 s bei 22 % der Bildhöhe
   // S2: Der Sieger erscheint 0,3 s nach dem letzten K.o., damit die Zeitlupe der Explosion frei bleibt
   const SHORT_ART = { labels: 1.4, introSec: 2.5, introY: .22, winnerDelay: .3, winnerFade: .25, plankStay: 1, plankGone: 1.8, ringSec: .7 };
+  // D1 · Dschungel-Karte: Die Karte ist 30 % größer und wird kleiner gezeigt, Namensschilder und Abzeichen deshalb 25 % größer
+  const JUNGLE_ART = { labels: 1.25 };
   class ArenaRenderer extends ScrapArena.Renderer {
     _scorchEvents() {
       const s = this.episode, marks = [];
@@ -445,7 +447,7 @@
       g.restore();
     }
     _effect(g, e, under = false) {
-      if (e.type === 'break' && e.material) { EBS.ScrapMaterialArt.breakEffect(g, e, under, this.sunny); return; }
+      if (e.type === 'break' && e.material) { EBS.ScrapMaterialArt.breakEffect(g, e, under, this.sunny, this.palette); return; }
       if (e.type === 'shot') return; // The weapon supplies its muzzle flash.
       if (!['hit', 'blast', 'ko'].includes(e.type)) { super._effect(g, e, under); return; }
       const fx = EBS.ScrapEffectsArt;
@@ -538,7 +540,11 @@
       this.arena = new ArenaRenderer(this.arenaCanvas, { dpr: 1, quality: 1 });
       this.arena.episode = this.sim;
       this.arena.materialArena=!!this.layout.full;
-      this.arena.sunny=ctx.sim.cfg.arena==='sunshine';
+      // Tageslicht-Look: Sunny Yard und (R42) Jungle Ruins; der Dschungel hat eigenen Boden, eigene Deckungen und Trümmerfarben
+      this.jungle = ctx.sim.cfg.arena === 'jungle';
+      this.arena.sunny=ctx.sim.cfg.arena==='sunshine'||this.jungle;
+      if (this.jungle) this.arena.palette = EBS.ScrapJungleArt.palette;
+      this.labelScale = this.layout.short ? SHORT_ART.labels : this.jungle ? JUNGLE_ART.labels : 1;
       const size = this.layout.full ? 1 : Math.round(this.layout.size * ctx.renderScale);
       this.arena.setSize(size, size);
     }
@@ -694,14 +700,17 @@
       g.save();box(g,l.x,l.y,l.width,l.height,16);g.clip();
       g.translate(l.x+l.width/2,l.y+l.height/2);g.scale(l.scale*c.zoom,l.scale*c.zoom);g.translate(-cx,-cy);
       g.lineCap='round';g.lineJoin='round';g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
-      const sunny=s.cfg.arena==='sunshine',floorKey=`${sunny?r.seed:'map'}:${l.arenaW}:${l.arenaH}:${s.cfg.arena}`;
-      if(this.materialFloorKey!==floorKey) {this.materialFloor=art.floor(r.seed,l.arenaW,l.arenaH,sunny,s.cfg.arena);this.materialFloorKey=floorKey;}
+      const jungle=this.jungle,sunny=s.cfg.arena==='sunshine'||jungle,floorKey=`${s.cfg.arena==='sunshine'?r.seed:'map'}:${l.arenaW}:${l.arenaH}:${s.cfg.arena}`;
+      const blockArt=jungle?EBS.ScrapJungleArt.block:(b,cache)=>art.block(b,cache,sunny);
+      if(this.materialFloorKey!==floorKey) {
+        this.materialFloor=jungle?EBS.ScrapJungleArt.floor(l.arenaW,l.arenaH,r):art.floor(r.seed,l.arenaW,l.arenaH,sunny,s.cfg.arena);this.materialFloorKey=floorKey;
+      }
       g.drawImage(this.materialFloor,0,0,l.arenaW,l.arenaH);
       this.arena._drawScorches(g,mapPoint);
       if(sunny)for(const b of blocks)if(b.alive) {
-        const t=art.block(b,this.arena._blocks,true);g.drawImage(t.shadow,b.x-t.pad,b.y-t.pad,t.width,t.height);
+        const t=blockArt(b,this.arena._blocks);g.drawImage(t.shadow,b.x-t.pad,b.y-t.pad,t.width,t.height);
       }
-      for(const b of blocks)if(!b.alive)art.rubble(g,b,sunny);
+      for(const b of blocks)if(!b.alive)art.rubble(g,b,sunny,this.arena.palette);
       this._paintCrates(g,r,portrait,sunny,'under');
       for(const pad of r.pads) {
         const occupied=r.pickups.some(p=>!p.empty&&p.ammo>0&&Math.hypot(p.x-pad.x,p.y-pad.y)<40);
@@ -712,7 +721,7 @@
       // Short: Geladene Waffen stehen als drehende Münzen da (von Anfang an, nichts fällt vom Himmel)
       for(const p of r.pickups){if(this.rocketLook&&sunny)EBS.ScrapDaylightArt.coin(g,mapPoint(p),r.t);else this.arena._pickup(g,mapPoint(p),r.t);}
       for(const b of blocks)if(b.alive) {
-        const t=art.block(b,this.arena._blocks,sunny);g.drawImage(t.canvas,b.x-t.pad,b.y-t.pad,t.width,t.height);
+        const t=blockArt(b,this.arena._blocks);g.drawImage(t.canvas,b.x-t.pad,b.y-t.pad,t.width,t.height);
       }
       this._paintCrates(g,r,portrait,sunny,'top');
       for(const robot of [...shown.filter(p=>!p.alive),...shown.filter(p=>p.alive&&!p.caged)])this.arena._robot(g,robot,r.t);
@@ -721,10 +730,12 @@
       for(const p of r.projectiles)this.arena._projectile(g,mapPoint(p));
       for(const e of effects)this.arena._effect(g,e);
       fx.puffs(g,scene.smoke);
+      // D1 · Blätterdach am Rand: über Robotern und Effekten, unter den Namensschildern
+      if(jungle)g.drawImage(EBS.ScrapJungleArt.canopy(l.arenaW,l.arenaH),0,0,l.arenaW,l.arenaH);
       // Short: Beim Nachladen füllen sich die Magazinpunkte wieder (nur Anzeige, auf Kopien der Roboter)
       const reload=r.items?r.items.reload:0;
       const labelled=r.items?robots.map(o=>o.weapon&&o.reloadUntil>r.t?{...o,weapon:{...o.weapon,ammo:o.weapon.maxAmmo*Math.max(0,1-(o.reloadUntil-r.t)/reload)}}:o):robots;
-      this.arena._labels(g,labelled,l.arenaW,l.arenaH,l.short?SHORT_ART.labels:1);
+      this.arena._labels(g,labelled,l.arenaW,l.arenaH,this.labelScale);
       if(this.rocketLook){this._weaponBadges(g,robots,l.arenaW,l.arenaH);this._pickupRings(g,scene.rings);}
       g.restore();
       // Short: keine Kopfleiste, kein Rundenbanner; nur Einstiegstext und Sieger
@@ -892,7 +903,7 @@
     }
     // Short: Wer Raketen trägt, bekommt die Raketen-Münze links an sein Namensschild
     _weaponBadges(g, robots, width, height) {
-      const k = this.layout.short ? SHORT_ART.labels : 1;
+      const k = this.labelScale;
       for (const { robot, x, y } of this.arena._labelLayout(robots, width, height, k))
         if (robot.weapon && robot.weapon.kind === 'rocket') EBS.ScrapDaylightArt.badge(g, x - 7 * k, y + 8 * k, 'rocket', .5 * k, 1);
     }
@@ -980,7 +991,7 @@
       e.cover = best.material; e.nx = side ? Math.sign(cx) || 1 : 0; e.ny = side ? 0 : Math.sign(cy) || 1;
     }
     _usesDarkMaterialArt() {
-      return ['v3','v4'].includes(this.sim.cfg.rulesVersion) && this.sim.cfg.arena !== 'sunshine';
+      return ['v3','v4'].includes(this.sim.cfg.rulesVersion) && !['sunshine', 'jungle'].includes(this.sim.cfg.arena);
     }
     _materialResultProgress(final = false) {
       const s = this.sim;
@@ -1124,7 +1135,8 @@
       const legendX=wide?240:this.world.w-326;
       ['wood','stone','concrete'].forEach((key,i)=>{
         const m=EBS.ScrapMaterials.materials[key],x=legendX+i*72;
-        box(g,x,46,9,9,1);g.fillStyle=s.cfg.arena==='sunshine'?EBS.ScrapMaterialArt.sunnyColors[key]:m.color;g.fill();text(g,key.toUpperCase(),x+14,51,10,'#9caeb6');
+        const jungle=s.cfg.arena==='jungle',colors=jungle?EBS.ScrapJungleArt.palette:s.cfg.arena==='sunshine'?EBS.ScrapMaterialArt.sunnyColors:null;
+        box(g,x,46,9,9,1);g.fillStyle=colors?colors[key]:m.color;g.fill();text(g,jungle?EBS.ScrapJungleArt.names[key]:key.toUpperCase(),x+14,51,10,'#9caeb6');
       });
       const start=wide?480:12,y=wide?9:70,gap=12,ww=(this.world.w-start-12-gap*3)/4;
       r.robots.forEach((robot,i)=>{
@@ -1214,13 +1226,13 @@
     defaults: { rulesVersion: 'v3', episodeMode: 'endless', arena: 'yard', workshop: false, repeatRounds: true, endPauseSec: 3, soundMix: 'classic', layout: 'standard', items: 'classic' },
     controls: [
       { key: 'episodeMode', label: 'Format', type: 'select', options: [['endless', 'Freie Videolänge'], ['tournament', 'Turnier · 8 Runden + Finale']], restart: true },
-      { key: 'rulesVersion', label: 'Arena / Kampfregeln', type: 'select', enabled: p => p.arena !== 'sunshine' || p.rulesVersion === 'v4', options: [['v4', 'Taktik-Arena · Startkisten, Zielwahl, Wegfindung'], ['v3', 'Große Arena · Holz, Stein, Beton'], ['v2', 'Bisherige Arena · flüssiger Kampf'], ['classic', 'Originalprototyp']], restart: true },
-      { key: 'arena', label: 'Arena', type: 'select', options: [['yard', 'Scrapyard · ausgewogen'], ['foundry', 'Foundry · Deckungsgassen'], ['crossroads', 'Crossroads · offenes Zentrum'], ['sunshine', 'Sunny Yard · Tageslicht / Deckungsgassen']], restart: true },
+      { key: 'rulesVersion', label: 'Arena / Kampfregeln', type: 'select', enabled: p => p.arena !== 'jungle' && (p.arena !== 'sunshine' || p.rulesVersion === 'v4'), options: [['v4', 'Taktik-Arena · Startkisten, Zielwahl, Wegfindung'], ['v3', 'Große Arena · Holz, Stein, Beton'], ['v2', 'Bisherige Arena · flüssiger Kampf'], ['classic', 'Originalprototyp']], restart: true },
+      { key: 'arena', label: 'Arena', type: 'select', options: [['yard', 'Scrapyard · ausgewogen'], ['foundry', 'Foundry · Deckungsgassen'], ['crossroads', 'Crossroads · offenes Zentrum'], ['sunshine', 'Sunny Yard · Tageslicht / Deckungsgassen'], ['jungle', 'Jungle Ruins · Dschungel-Tempel, 30 % größer, nur Raketen (Taktik-Arena)']], restart: true },
       // Short: nur Taktik-Arena auf Sunny Yard und nur im Hochformat; sonst bleibt das normale Bild.
       { key: 'layout', label: 'Bildaufbau', type: 'select', enabled: p => p.rulesVersion === 'v4' && p.arena === 'sunshine',
         options: [['standard', 'Normal · Kopfleiste, ganze Arena'], ['short', 'Short · kleine Karte, ohne Kopfleiste, eine Runde (nur Hochformat)']], restart: true },
-      // Raketen-Regeln: nur Taktik-Arena. Im Short gelten sie immer.
-      { key: 'items', label: 'Waffen', type: 'select', enabled: p => p.rulesVersion === 'v4' && p.layout !== 'short',
+      // Raketen-Regeln: nur Taktik-Arena. Im Short und auf Jungle Ruins gelten sie immer.
+      { key: 'items', label: 'Waffen', type: 'select', enabled: p => p.rulesVersion === 'v4' && p.layout !== 'short' && p.arena !== 'jungle',
         options: [['classic', 'Klassisch · Startwaffen und zwei Stationen'], ['rockets', 'Nur Raketen · Blaster lädt nach, Raketen von den zwei Stationen']], restart: true },
       { key: 'workshop', label: 'Werkstatt (experimentell, ein Modul je Roboter)', type: 'check', enabled: p => p.episodeMode === 'tournament', restart: true },
       { key: 'repeatRounds', label: 'Weitere Runden spielen', type: 'check', enabled: p => p.episodeMode !== 'tournament', restart: true },

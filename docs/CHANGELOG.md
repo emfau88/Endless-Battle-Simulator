@@ -2,6 +2,13 @@
 
 Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen in der [ROADMAP](ROADMAP.md).
 
+## 25.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| R42, Scrap Wars, D1: neue Karte „Jungle Ruins“ fürs Langvideo, nach Vorschau vom Nutzer gewählt (Bild 1, Tempelruine). Eigene Arena `jungle` nur in der Taktik-Arena und immer mit den Raketen-Regeln. Karte 1352 × 702 (30 % größer, gleiches Seitenverhältnis), 28 Deckungen, drei Raketen-Plattformen (außen und in der Tempelmitte), engste Durchfahrt 96 AE. Eigene Zeichnung (`jungle-art.js`): Gras, Erdwege, Tempelplatten, Sonnenrad, bewachsene Mauer, Blätterdach über den Robotern, Deckungen mit Moos und Ranken; Schilder 25 % größer, Legende WOOD / ROCK / TEMPLE. Gemessen auf 400 Runden: Siege 25/27/25/24 %, keine Hänger, untätig 5,2 %, Runde im Median 32,8 s; Tempo der großen Karte passt ohne Änderung. Neue Testdatei `test/scrap-jungle.test.mjs`. Karten-Hashes und `npm run golden` unverändert. 20-Sekunden-Probe lokal. | Branch `scrap/dschungel` | [Bericht](SCRAP_LANGVIDEO_DSCHUNGEL_2026-11-25.md) |
+| R40, Scrap Wars: PR #48 (Raketen-Regeln, L2, S4 und die Nachträge zum Short) mit Freigabe des Nutzers als Merge-Commit auf `main`. | `8f9d2b3` | [offene Punkte](SCRAP_OFFENE_PUNKTE_2026-11-20.md) |
+
 ## 22.11.2026
 
 | Was | Commit | Bericht |
