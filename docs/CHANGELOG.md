@@ -2,6 +2,12 @@
 
 Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen in der [ROADMAP](ROADMAP.md).
 
+## 25.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| R43, Marble Knockout: Plan für ein neues Szenario, ein Murmel-Ausscheidungsrennen. Regel „12 marbles, 10 stages, the last one is out“, Finale zu dritt mit Podest; Shorts mit 8 Murmeln auf 3 Bahnen. Baukasten aus 29 Elementen in fünf Familien (Grundbahn, Drehen, Takt, Level verändert sich, Ausscheiden), zehn Bahnen mit Hauptelement und gesuchtem Moment, drei Short-Fassungen, Drehbuch und Casting Bahn für Bahn, eigener Physik-Kern mit gleichem Ergebnis in Node und Chromium, Stilbibel mit drei Varianten für die Vorschau, Ton, Pakete V0 und M1 bis M9. Kein Code geändert. | Branch `murmelrennen/plan` | [Plan](MARBLE_KNOCKOUT_PLAN_2026-11-25.md) |
+
 ## 22.11.2026
 
 | Was | Commit | Bericht |
