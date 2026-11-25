@@ -2,6 +2,12 @@
 
 Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen in der [ROADMAP](ROADMAP.md).
 
+## 25.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| R42, neues Szenario **Endless Burrow (in Arbeit)**, Paket P1: Simulation und Darstellung. Würmer in Draufsicht fressen Gartenfutter und kleinere Würmer (Kopf trifft Körper, ab dem 1,2-Fachen der Masse), Beute bleibt als Bröckchen liegen und schlüpft nach 3–7 s klein wieder; Unterhalt lässt Riesen schrumpfen, Führung wechselt. Acht Wurmarten im Stil „Warme Erde“ aus der Vorschau, Tunnel aus den Spuren, Biss- und Schlüpf-Effekte nur vom Ereignisalter abhängig, Rangliste im Querformat, Einstieg „WHO WILL RULE / THE BURROW?“ im Hochformat. Drei Regler, Clip-Export. Neue Testdateien `burrow-simulation` und `burrow-browser` mit eigener CI-Gruppe `burrow`; Bild nach Zeitsprung pixelgleich. Noch ohne Ton und Vorlagen. | Branch `burrow/p1-simulation` | [Bericht](BURROW_2026-11-25.md) |
+
 ## 22.11.2026
 
 | Was | Commit | Bericht |
