@@ -4,6 +4,8 @@
  * Jeder Abschnitt endet in einer Schleuse mit Quote (level.js): Wer durch die Lichtschranke ins Becken fällt, ist
  * weiter; ist das Becken voll, schließt der Deckel, und alle übrigen sind raus. Nach der Freigabe fällt das Feld in den
  * nächsten Abschnitt. Der bisherige Ablauf „Bahn für Bahn“ (simulation.js) bleibt unberührt.
+ * Der letzte Abschnitt (ab G3) endet statt in einer Schleuse an einer Ziellinie: Platz 1 ist Sieger, Platz 2 unter
+ * 0,3 s dahinter gibt PHOTO FINISH, das Video endet endHold Sekunden nach dem Sieg.
  *
  * Die Kamera ist Simulationszustand (camera.js) und folgt dem Rennstand: in der ersten Hälfte eines Abschnitts der
  * Spitzengruppe mit Vorschau, in der zweiten Hälfte dem Kampf an der Schnittlinie samt Becken, beim Schließen hält sie
@@ -57,6 +59,7 @@
       });
       this.runners.forEach((u) => { this.progress(u); u.best = u.prog; });
       this.leader = -1; this.leadChanges = 0; this.order = []; this.cut = Infinity; this.endAt = -1; this.noteLeader = -2; this.leaderSince = 0;
+      this.winnerRt = 0; this.finalGap = -1;
       this.cam = null; this.phase = 'ready'; this.phaseT = 0; this.raceStart = 0;
       this.enterSection(0);
       // Kamera: steht zu Beginn schon richtig (kein Anfahren im ersten Bild)
@@ -76,9 +79,10 @@
       const sec = this.sections[i];
       this.secNo = i; this.stageNo = i; this.sec = sec; this.spec = sec;
       const n = this.runners.filter((u) => !u.out).length;
-      this.nIn = n; this.keep = sec.placeholder ? n : Math.min(sec.keep, n); this.needOut = n - this.keep;
+      // Finale (Ziellinie statt Schleuse): niemand muss raus, gewertet wird die Reihenfolge im Ziel
+      this.nIn = n; this.keep = sec.placeholder || sec.fin ? n : Math.min(sec.keep, n); this.needOut = n - this.keep;
       this.outHere = 0; this.placeCount = 0; this.closeT = -1; this.releaseT = -1;
-      this.secT = this.t; this.secRt = this.world.t; this.final = false;
+      this.secT = this.t; this.secRt = this.world.t; this.final = !!sec.fin; this.winnerT = -1; this.winner = -1;
       this.sampleNo = -1; for (const u of this.runners) u.hist = [];  // Ränge der letzten 2 s (für `+n PLACES!`)
       this.trapsClosed = this.needOut === 0;
       if (this.trapsClosed) this.closeTrapsOf(sec);
@@ -118,7 +122,7 @@
     setPhase(p) { this.phase = p; this.phaseT = 0; }
 
     raceLogic(h) {
-      const sec = this.sec, sch = sec.sch, rt = this.world.t, R = this.r;
+      const sec = this.sec, sch = sec.sch, fin = sec.fin, rt = this.world.t, R = this.r;
       for (const u of this.runners) {
         const m = u.pm;
         if (!m.active) continue;
@@ -135,6 +139,10 @@
             u.finished = true; u.finishT = rt - h + f * h; u.place = ++this.placeCount;
             this.emit('finish', m.x, m.y, u.place, Math.min(11, u.place - 1));
           }
+        } else if (!u.finished && fin && m.collide) {
+          // Ziel im Finale: Kreuzung der Ziellinie (Zeit genau interpoliert)
+          const s = fin.sense || fin, f = crossing(m.px, m.py, m.x, m.y, s.ax, s.ay, s.bx, s.by);
+          if (f >= 0) this.arrive(u, rt - h + f * h);
         }
         if (!u.finished) {
           this.progress(u);
@@ -152,6 +160,10 @@
         if (this.placeCount >= this.cut) this.close();
         else if (rt - this.secRt > RULES.stageLimit) { this.stats.timeUp++; this.close(); }
         else this.checkSlow();
+      }
+      if (fin && this.winnerT < 0) {
+        if (rt - this.secRt > RULES.stageLimit) { this.stats.timeUp++; this.endAt = this.t; }
+        else this.checkSlowFinal();
       }
       if (sch && this.closeT >= 0 && this.releaseT < 0 && this.t >= this.closeT + this.R.release) this.release();
       // Nachzügler, die lange nach dem Schließen noch unterwegs sind, verschwinden durch eine Klappe
@@ -177,6 +189,31 @@
       for (const u of late) { u.out = true; u.late = true; this.markOut(u, 'late'); }
       if (late.length) this.emit('knockout', late[0].pm.x, late[0].pm.y, 0, late[0].rid);
       this.ranking();
+    }
+    /** Zieleinlauf im Finale (t in Bahnzeit). Platz 1 ist Sieger; liegt Platz 2 weniger als 0,3 s dahinter, gibt es
+     *  die Einblendung PHOTO FINISH. Das Video endet endHold Sekunden nach dem Sieg. */
+    arrive(u, t) {
+      const m = u.pm;
+      u.finished = true; u.finishT = t; u.place = ++this.placeCount;
+      this.emit('finish', m.x, m.y, u.place, Math.min(11, u.place - 1));
+      if (u.place === 1) {
+        this.winner = u.rid; this.winnerT = this.t; this.winnerRt = t; this.endAt = this.t + this.R.endHold;
+        this.emit('winner', m.x, m.y, 1, u.rid); this.notes.push({ kind: 'winner', t: this.t, rid: u.rid });
+        this.chapterLog.push({ t: this.t, title: 'Winner' });
+      } else if (u.place === 2) {
+        const gap = t - this.winnerRt;
+        this.finalGap = gap;
+        if (gap < 0.3) this.notes.push({ kind: 'photo', t: this.t, gap });
+      }
+    }
+    /** Zeitlupe im Finale: die beiden Ersten liegen kurz vor dem Ziel weniger als slowGapFinal auseinander. */
+    checkSlowFinal() {
+      if (this.cfg.slowmo === 'off' || this.placeCount > 0) return;
+      const live = this.runners.filter((u) => !u.out && !u.finished).sort((a, b) => b.prog - a.prog);
+      if (live.length < 2) return;
+      const [a, b] = live, end = this.sec.p1, D = RULES.slowZone * 2 * this.r;
+      const va = Math.sqrt(a.pm.vx * a.pm.vx + a.pm.vy * a.pm.vy) + 1;
+      if (end - a.prog < D && end - b.prog < D && (a.prog - b.prog) / va < RULES.slowGapFinal) this.triggerSlow('final');
     }
     /** Freigabe: Boden auf, das Feld fällt in den nächsten Abschnitt. */
     release() {
@@ -227,7 +264,7 @@
     /** Kurze Einblendungen (Plan 1.2, Regel 10): `NEW LEADER: BLUE` oder `+6 PLACES!`, höchstens eine je 4 s, nur
      *  solange die Schleuse offen ist. Ränge werden alle 0,5 s verglichen (Sprung = Gewinn über die letzten 2 s). */
     headlines() {
-      if (this.phase !== 'race' || this.closeT >= 0 || this.sec.placeholder) return;
+      if (this.phase !== 'race' || this.closeT >= 0 || this.sec.placeholder || this.winnerT >= 0) return;
       const no = Math.floor((this.t - this.secT) / 0.5);
       if (no === this.sampleNo) return;
       this.sampleNo = no;
@@ -279,6 +316,11 @@
       if (sch && this.closeT >= 0 && this.releaseT < 0) {
         const bx = sch.box;
         return { x: (bx.x0 + bx.x1) / 2, y: (bx.y0 + bx.y1) / 2, z: Math.min(1, zfit(bx.x1 - bx.x0, bx.y1 - bx.y0)), hold: true };
+      }
+      if (sec.fin && this.winnerT >= 0) {
+        // Nach dem Sieg: Ziel und Schiene stehen still im Bild
+        const f = sec.fin, [qx, qy] = LV.pointAt(path, sec.p1);
+        return { x: (qx + f.ax) / 2, y: qy - 0.1 * this.H, z: 1, hold: true };
       }
       const live = this.runners.filter((u) => !u.out && !u.finished && u.pm.active).sort((a, b) => b.prog - a.prog);
       if (!live.length) {
@@ -362,8 +404,10 @@
       return {
         t: this.t, step: this.step, phase: this.phase, stage: this.secNo, stages: this.level.stages || this.sections.length, title: this.sec.title,
         alive, rt: this.world.t, out: this.outList.map((i) => this.roster[i].name), order: this.order.map((i) => this.roster[i].name),
-        ended: this.phase === 'end', level: this.level.id,
-        summary: `Gesamtlevel ${this.level.title} (in Arbeit) · Abschnitt ${this.secNo + 1} · ${this.sec.title} · ${alive} im Rennen`,
+        ended: this.phase === 'end', level: this.level.id, winner: this.winner >= 0 ? this.roster[this.winner].name : null,
+        // „in Arbeit“, solange das Level noch einen Platzhalter-Abschnitt hat; nach dem Sieg der Name
+        summary: `Gesamtlevel ${this.level.title}${this.sections.some((s) => s.placeholder) ? ' (in Arbeit)' : ''} · Abschnitt ${this.secNo + 1} · ${this.sec.title} · `
+          + (this.winner >= 0 ? `${this.roster[this.winner].name} gewinnt` : `${alive} im Rennen`),
       };
     }
     destroy() {}

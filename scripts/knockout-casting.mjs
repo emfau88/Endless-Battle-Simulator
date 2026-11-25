@@ -11,6 +11,9 @@
 //
 // Langvideo (M8): Drehbuch Bahn für Bahn für die Geschichte aus dem Plan (Abschnitt 4), je Grund-Seed:
 //   node scripts/knockout-casting.mjs --long [--from 1 --to 3 --tries 30]
+//
+// Gesamtlevel (R43 Teil 2): ganzes Level je Seed, Prüfpunkte unten bei castLevelMain:
+//   node scripts/knockout-casting.mjs --level tower [--from 1 --to 200]
 import { loadKnockout, makeSim } from './knockout-lab.mjs';
 
 const argv = process.argv.slice(2);
@@ -227,4 +230,49 @@ function castLongMain() {
   }
 }
 
-if (argv.includes('--long')) castLongMain(); else castShortMain();
+// ===================================================================== Gesamtlevel (R43 Teil 2, G3 und G6)
+// Ein Seed ist vollständig, wenn
+//   1. das Video höchstens 40 s lang ist (Short)   2. eine Schleuse knapp schließt (unter CUT d) oder jemand stürzt
+//   3. das Finale knapp ist (Platz 1 und 2 unter 0,8 s oder Zeitlupe)   4. die Führung im Finale wechselt
+//   5. niemand einen Anstoß braucht oder festsitzt     6. mit --gold: GOLD erreicht das Finale
+//   node scripts/knockout-casting.mjs --level tower [--from 1 --to 200 --top 12 --cut 1.5 --gold --list --best 24]
+function castLevelMain() {
+  const id = arg('level', 'tower'), spec = EBS.KnockoutLevels.LEVELS[id], aspect = spec.format === 'short' ? '9:16' : '16:9';
+  const MAX_LEN = spec.format === 'short' ? 40 : 600, GAP = 0.8, CUT = Number(arg('cut', 1.5)), gold = argv.includes('--gold'), rows = [];
+  for (let seed = from; seed <= to; seed++) {
+    const sim = makeSim(EBS, { seed, aspect, params: { mode: 'level' } });
+    const last = sim.sections.length - 1;
+    let leads = 0, lastLead = -1, cand = -1, held = 0, sample = 0, f0 = -1;
+    while (sim.phase !== 'end' && sim.t < 120) {
+      sim.stepOnce();
+      if (sim.secNo !== last || sim.winnerT >= 0) continue;
+      if (f0 < 0) f0 = sim.t;
+      // Führung alle 0,25 s ab 1,5 s im Finale; ein Wechsel zählt, wenn die neue Spitze 1 s vorn bleibt (wie M7)
+      if (sim.t - f0 >= 1.5 && ++sample % 15 === 0) {
+        if (sim.leader === cand) held++; else { cand = sim.leader; held = 1; }
+        if (held === 4 && cand !== lastLead) { if (lastLead >= 0) leads++; lastLead = cand; }
+      }
+    }
+    const len = sim.phase === 'end' ? sim.t : Infinity, gap = sim.finalGap >= 0 ? sim.finalGap : Infinity;
+    const falls = sim.roster.filter((m) => m.how === 'fell').length, cut = Math.min(...sim.cuts.map((c) => c.gap), Infinity);
+    const nudges = sim.runners.reduce((a, u) => a + u.nudges, 0) + 10 * (sim.stats.stuck + sim.stats.timeUp);
+    const goldIn = sim.roster.some((m) => m.name === 'GOLD' && m.alive);
+    const checks = [len <= MAX_LEN, cut < CUT || falls >= 1, gap < GAP || sim.slow.finalDone, leads >= 1, nudges === 0, !gold || goldIn];
+    rows.push({ seed, len, gap, cut, leads, falls, goldIn, slow: sim.slow.finalDone, winner: sim.winner >= 0 ? sim.roster[sim.winner].name : '-', checks, complete: checks.every(Boolean), ok: sim.checkInvariants().ok });
+  }
+  const good = rows.filter((r) => r.complete), pct = (n) => `${n} von ${rows.length} (${Math.round(n / rows.length * 100)} %)`;
+  console.log(`Gesamtlevel ${spec.title}, Seeds ${from}–${to}: vollständig bei ${pct(good.length)}.`);
+  [`Länge bis ${MAX_LEN} s`, `knapper Schnitt (< ${CUT} d) oder Sturz`, `Finale knapp (< ${GAP} s oder Zeitlupe)`, 'Führungswechsel im Finale', 'ohne Anstoß und Festsitzen', 'GOLD im Finale (nur --gold)']
+    .forEach((l, i) => console.log(`  ${l.padEnd(36)} ${pct(rows.filter((r) => r.checks[i]).length)}`));
+  const lens = rows.map((r) => r.len).filter(Number.isFinite).sort((a, b) => a - b);
+  console.log(`  Länge Median ${lens[lens.length >> 1]?.toFixed(1)} s (kürzeste ${lens[0]?.toFixed(1)} s) · Invarianten verletzt: ${rows.filter((r) => !r.ok).length}`);
+  const score = (r) => r.len + 10 * Math.min(r.gap, 2);
+  good.sort((a, b) => score(a) - score(b));
+  const best = Number(arg('best', 24));
+  if (argv.includes('--list')) console.log(`\nBeste ${best} Seeds:\n` + JSON.stringify(good.slice(0, best).map((r) => r.seed).sort((a, b) => a - b)));
+  const f = (v) => (Number.isFinite(v) ? v.toFixed(2).padStart(5) : '  –  ');
+  console.log('\n Seed | Länge | Abstand 1–2 | Schnitt | Wechsel | Stürze | GOLD | Sieger');
+  for (const r of good.slice(0, top)) console.log(`${String(r.seed).padStart(5)} | ${r.len.toFixed(1).padStart(5)} | ${f(r.gap)} s${r.slow ? ' Z' : '  '}  | ${f(r.cut)} d | ${String(r.leads).padStart(7)} | ${String(r.falls).padStart(6)} | ${r.goldIn ? ' ja ' : ' –  '} | ${r.winner}`);
+}
+
+if (argv.includes('--long')) castLongMain(); else if (argv.includes('--level')) castLevelMain(); else castShortMain();

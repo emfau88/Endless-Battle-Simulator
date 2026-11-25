@@ -58,7 +58,9 @@
     el.bodies.push(el.lid);
     el.lidAt = lidF;
     // Klappboden: Platten von der Einlauf- zur Rückwand, Scharnier am Einlauf-Ende; offen klappen sie nach unten
-    const nf = Math.max(2, Math.round(wi / (2.2 * d))), fvx = (xf - xn) / nf, fvy = (ybFar - ybNear) / nf;
+    // Eine Klappe je gut zwei Murmelbreiten; ein kleines Becken (TOP 4) hat nur eine: Zwei offene Klappen hingen dort
+    // so dicht nebeneinander, dass eine Murmel zwischen ihnen klemmte.
+    const nf = Math.max(1, Math.round(wi / (2.2 * d))), fvx = (xf - xn) / nf, fvy = (ybFar - ybNear) / nf;
     const floorF = (t) => (el.openAt < 0 ? 0 : ease((t - el.openAt) / FLOOR_SEC));
     for (let i = 0; i < nf; i++) {
       const hx = xn + i * fvx, hy = ybNear + i * fvy, sx = fvx - dir * 2, sy2 = fvy * (fvx - dir * 2) / fvx;
@@ -107,8 +109,9 @@
         const q = pts[pts.length - 1];
         if (!q || q[0] !== p[0] || q[1] !== p[1]) pts.push(p);
       }
+      // fin: Ziellinie statt Schleuse (letzter Abschnitt, Sieger)
       sections.push({ i, id: s.id, title: s.title, world: s.world, hazard: !!s.hazard, placeholder: !!s.placeholder,
-        els: [e0, b.elements.length], sch: out.sch || null, frame: out.frame || null, from, to: pts.length - 1, keep: spec.quota[i] });
+        els: [e0, b.elements.length], sch: out.sch || null, fin: out.fin || null, frame: out.frame || null, from, to: pts.length - 1, keep: spec.quota[i] });
     });
     b.setPath(pts);
     const cum = b.path.cum;

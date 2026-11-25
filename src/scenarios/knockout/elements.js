@@ -140,7 +140,9 @@
     }
     /** Start-Regal: Murmeln liegen nebeneinander auf einer Reihe kleiner Klappen, die beim Start alle aufgehen. */
     /** flaps: Zahl der Klappen. Offen hängen sie fast senkrecht; kurze Klappen lassen darunter Platz für Murmeln. */
-    dropShelf({ x0, x1, y, n, flaps }) {
+    /** pad: Abstand der äußeren Startplätze von den Seitenwänden (Standard 0). Ohne Rand lag die äußerste Murmel links
+     *  genau über dem Scharnier der ersten Klappe an der Wand und klemmte dort beim Öffnen fest. */
+    dropShelf({ x0, x1, y, n, flaps, pad = 0 }) {
       const r = this.r, rad = this.rad, k = flaps || Math.max(2, Math.round((x1 - x0) / (2.6 * this.d))), fw = (x1 - x0) / k;
       this.wall([[x0 - rad, y + rad], [x0 - rad, y - 2.4 * r]]); this.wall([[x1 + rad, y + rad], [x1 + rad, y - 2.4 * r]]);
       const el = { type: 'gate', kind: 'shelf', x: (x0 + x1) / 2, y, s0: 0, s1: 0, at: -1, bodies: [], mode: 'manual' };
@@ -154,10 +156,10 @@
       }
       this._add(el);
       // Plätze: der Erste der Vorrunde in die Mitte, dann nach außen
-      const step = (x1 - x0) / n, mid = (n - 1) / 2, idx = [];
+      const step = (x1 - x0 - 2 * pad) / n, mid = (n - 1) / 2, idx = [];
       for (let i = 0; i < n; i++) idx.push(i);
       idx.sort((a, b) => Math.abs(a - mid) - Math.abs(b - mid) || a - b);
-      this.start = { x: el.x, y, dir: 0, slots: idx.map((s) => [x0 + step * (s + 0.5), y - rad - r - 0.5]), gate: el };
+      this.start = { x: el.x, y, dir: 0, slots: idx.map((s) => [x0 + pad + step * (s + 0.5), y - rad - r - 0.5]), gate: el };
       return el;
     }
     /** Deckel unter einem Loch: liegt verborgen tiefer und fährt beim Schließen der Fallen hoch (E4). */
@@ -214,11 +216,14 @@
       this.zone(x, y, R - rad - fl - this.r - 2, R + rad + this.r + 4);
       return this._add({ type: 'drum', x, y, R, gaps, gapW: gw, rps, bodies: [body] });
     }
-    /** B4 Ringausbruch: Ringe mit je einem Schlitz, gegeneinander drehend; Eintritt von vorn in den innersten. */
-    rings({ x, y, radii, rps = [0.2, -0.15, 0.1], slotW, phases }) {
+    /** B4 Ringausbruch: Ringe mit je einem Schlitz, gegeneinander drehend; Eintritt von vorn in den innersten.
+     *  slots: Schlitze je Ring (Liste, Standard 1), gleichmäßig verteilt. */
+    rings({ x, y, radii, rps = [0.2, -0.15, 0.1], slotW, phases, slots }) {
       const rad = this.rad * 0.7, sw = slotW || this.d * 1.5, bodies = [];
       radii.forEach((R, i) => {
-        const shapes = ringShapes(R, rad, [{ at: 0, w: sw + 2 * rad }], 2, Math.max(36, Math.round(R / 7)));
+        const ns = slots ? slots[i] : 1, gaps = [];
+        for (let k = 0; k < ns; k++) gaps.push({ at: k * TAU / ns, w: sw + 2 * rad });
+        const shapes = ringShapes(R, rad, gaps, 2, Math.max(36, Math.round(R / 7)));
         const ph = (phases ? phases[i] : i * 2.1) + this.phase(1 / Math.abs(rps[i])) * TAU * Math.abs(rps[i]), w = TAU * rps[i];
         bodies.push(this._body(shapes, (t) => ({ x, y, a: ph + w * t }), { look: 'ring', tag: 'ring' }));
       });

@@ -4,8 +4,9 @@
  * Welt-Koordinaten; c = { W, H, r, d, T, n, short, keep, i, prev } (W, H: Größe der Welt, keep: Plätze in der
  * Schleuse, prev: Ergebnis des vorigen Abschnitts). Rückgabe { path, sch, entry, exit, frame }.
  *
- * Stand Paket G1: je Level der erste Abschnitt mit echter Physik und Schleuse, danach eine Auffangschale
- * („TO BE CONTINUED“). Plan: docs/MARBLE_KNOCKOUT_GESAMTLEVEL_PLAN_2026-11-25.md, Abschnitte 2 und 3.
+ * Stand Paket G3: THE TOWER komplett (drei Abschnitte, Ziel und Sieger). THE GAUNTLET hat den ersten Abschnitt mit
+ * Schleuse, danach eine Auffangschale („TO BE CONTINUED“). Plan: docs/MARBLE_KNOCKOUT_GESAMTLEVEL_PLAN_2026-11-25.md,
+ * Abschnitte 2 und 3.
  * Maßregeln aus den Proben der Bahnen gelten weiter: zwischen Stift und Wand gut 1,4 d frei, unter einem Trichterhals
  * rund 2 d Luft, von oben beregnete Drehkreuze tragen ein Dach (sonst bleiben Murmeln darauf liegen).
  */
@@ -53,8 +54,9 @@
   // einem Drehkreuz, zwei Rückläufe zum Trichter, kurze Rampe in die Schleuse.
   function towerDrop(b, c) {
     const d = c.d, cx = 540;
-    b.wall([[20, 110], [20, 2560]]); b.wall([[1060, 110], [1060, 2560]]);
-    b.dropShelf({ x0: 78, x1: 1002, y: 260, n: c.n, flaps: 8 });
+    // Turmwände über alle Abschnitte, bis zum unteren Rand der Welt
+    b.wall([[20, 110], [20, 5560]]); b.wall([[1060, 110], [1060, 5560]]);
+    b.dropShelf({ x0: 78, x1: 1002, y: 260, n: c.n, flaps: 8, pad: 12 });   // Rand: links klemmte sonst eine am Scharnier
     const bumpers = [[330, 750], [750, 750], [540, 1030]];
     b.pegField({ x0: 120, y0: 470, cols: 11, rows: 11, dx: 84, dy: 70, rad: d * 0.16,
       skip: (x, y) => bumpers.some(([bx, by]) => (x - bx) ** 2 + (y - by) ** 2 < 90 * 90) });
@@ -75,9 +77,68 @@
     const path = [[cx, 230], [cx, apex], [cx, 1720], [xn, 1790], ...sch.path];
     return { path, sch, exit: [sch.cx, sch.floorY] };
   }
-  function towerSoon(b, c) {
-    const x = c.prev.exit[0];
-    return catchTray(b, c, [[30, 2380], [300, 2500], [860, 2510], [1050, 2380]], [290, 2390], [[x, c.prev.exit[1] + 10], [x, 2480]]);
+  // 2 · FALLING FLOORS (8 → TOP 4): drei wandernde Böden zwischen zwei inneren Wänden. Jeder fällt zu einer Wand hin
+  // ab und endet dort offen; die Lücke zur Wand geht mit dem Gleiten auf und zu. Die oberen zwei haben ein Loch als
+  // Abkürzung. Darunter ein steiles Sims mit einem Loch (Sturz = raus; der Deckel schließt, sobald vier raus sind),
+  // dann die Schleuse links.
+  // Abweichungen vom Plan nach Messung (je 8 Läufe): vier Böden mit 8° dauerten im Median 28 s statt rund 10; ein
+  // Pendelhammer über dem Sims staute in jeder Fassung das Feld und warf immer genau die ersten vier ins Loch. Ohne
+  // Hammer, mit drei Böden zu 10° und einer flachen Kante am Loch: 9,4 s, meist ein bis zwei Stürze, kein Hänger.
+  function towerFloors(b, c) {
+    const d = c.d, cx = 540, [x0, y0] = c.prev.exit;
+    // Abstand 250: An der Wand, wo ein Boden tief endet und der nächste hoch beginnt, muss eine Murmel durchpassen.
+    const xl = 110, xr = 970, kF = tand(10), ys = [2370, 2620, 2870], dirs = [1, -1, 1];
+    b.wall([[xl, 2200], [xl, ys[2] + 120]]); b.wall([[xr, 2200], [xr, ys[2] - 40]]);
+    // Loch im obersten Boden im Landebereich, im mittleren kurz nach der Mitte; der unterste hat keins
+    const holes = [3 * d, 1.5 * d, undefined];
+    b.floors({ xl, xr, travel: 3 * d, periods: [1.8, 2.2, 2.6],
+      levels: ys.map((y, i) => ({ y, dir: dirs[i], slope: 10, hole: holes[i] })) });
+    const fl = (i, x) => ys[i] + dirs[i] * (x - cx) * kF;              // Oberfläche von Boden i (ohne Gleiten)
+    // Sims von der rechten Wand nach links (10°), Loch mit flacher Kante (langsame Murmeln fallen hinein), Schleuse
+    const Ly = ys[2] + 260, kL = tand(10), at = (x) => Ly + (1050 - x) * kL, h = 560, hw = 1.45 * d, ex = 430;
+    b.track([[1050, at(1050)], [h + hw / 2 + 0.6 * d, at(h + hw / 2 + 0.6 * d)], [h + hw / 2, at(h + hw / 2) - 0.05 * d]]);
+    b.track([[h - hw / 2, at(h - hw / 2)], [ex, at(ex)]]);
+    b.pit(h - 2.2 * d, h + 2.2 * d, at(h) + 6, at(h) + 2.4 * d, { kill: true, depth: 1.1 * d });
+    b.lid({ x0: h - hw / 2 + b.rad, y0: at(h - hw / 2), x1: h + hw / 2 - b.rad, y1: at(h + hw / 2) });
+    const sch = LV.schleuse(b, c, { ex, ey: at(ex), dir: -1, slope: 6, keep: c.keep, outLen: 1.4 * d, pitW: 2.4, sign: 'out' });
+    const o = 0.8 * d, pl = xl + 60, pr = xr - 60;
+    const path = [[x0, y0 + 10], [x0, fl(0, x0) - o], [pr, fl(0, pr) - o], [pr, fl(1, pr) - o], [pl, fl(1, pl) - o],
+      [pl, fl(2, pl) - o], [pr, fl(2, pr) - o], [pr, at(pr) - 0.7 * d], ...sch.path];
+    return { path, sch, entry: c.prev.exit, exit: [sch.cx, sch.floorY] };
+  }
+  // 3 · FINAL (4 → 1): Trichter in einen Kanal von vorn in die Ringe (Ringausbruch), darunter eine Fangbahn, die
+  // Steilabfahrt mit zwei Mulden (kleine Schanzen) und die offene Zielgerade ohne Engstelle. Hinter dem Ziel eine
+  // Schiene, in der die Murmeln in Zielreihenfolge liegen bleiben.
+  function towerFinal(b, c) {
+    const d = c.d, cx = 540, [x0, y0] = c.prev.exit;
+    // Trichter über die ganze Breite (12°) bis zum Kanal; Kanalwände vorn, bis in den innersten Ring
+    const Fy = y0 + 120, k12 = tand(12), nl = cx - 0.8 * d, nr = cx + 0.8 * d, ny = Fy + (nl - 30) * k12;
+    b.track([[30, Fy], [nl, ny]]); b.track([[1050, Fy], [nr, ny]]);
+    const cy = ny + 5 * d + 80;
+    b.wall([[nl, ny], [nl, cy - 0.6 * d]], { front: true }); b.wall([[nr, ny], [nr, cy - 0.6 * d]], { front: true });
+    // Zwei Ringe, der äußere mit zwei Schlitzen: Drei Ringe mit je einem Schlitz hielten die Spitze 4 bis 8 s fest
+    b.rings({ x: cx, y: cy, radii: [2.2 * d, 5.0 * d], rps: [0.3, -0.2], slots: [1, 2], slotW: 1.5 * d });
+    // Fangbahn unter den Ringen nach links (12°); am Ende 80 Luft zur Wand zum Durchfallen
+    const kA = tand(12), yA = cy + 300, rowA = (x) => yA + (1050 - x) * kA, xa = 120;
+    b.track([[1050, rowA(1050)], [xa, rowA(xa)]]);
+    // Steilabfahrt nach rechts (13°) mit zwei Mulden: kurz steiler (22°), dann ein kurzer Gegenhang (10°)
+    // (endet 90 vor der Wand: mit 50 Luft klemmte dort eine Murmel zwischen Bahnende und Wand)
+    const kB = tand(13), kD = tand(22), kU = tand(10), B = [[30, rowA(xa) + 130]];
+    const run = (x, kk) => { const [px, py] = B[B.length - 1]; B.push([x, py + (x - px) * kk]); };
+    run(330, kB); run(400, kD); run(470, -kU); run(640, kB); run(710, kD); run(780, -kU); run(950, kB);
+    b.track(B);
+    const rowB = (x) => { for (let i = 1; i < B.length; i++) if (x <= B[i][0]) return B[i - 1][1] + (B[i][1] - B[i - 1][1]) * (x - B[i - 1][0]) / (B[i][0] - B[i - 1][0]); return B[B.length - 1][1]; };
+    // Zielgerade nach links (5°), offen; Ziel bei xf, dahinter die Schiene bis an die Wand (mit 3° und Ziel bei 380
+    // war das Finale gut 1 s länger und die Einläufe seltener knapp)
+    const kC = tand(5), yC = B[B.length - 1][1] + 120, rowC = (x) => yC + (1050 - x) * kC, xf = 460, xe = 60;
+    b.track([[1050, rowC(1050)], [xf, rowC(xf)], [xe, rowC(xf) + (xf - xe) * tand(1.5)]]);
+    b.wall([[xe, rowC(xf) + (xf - xe) * tand(1.5)], [xe, rowC(xf) - 1.4 * d]]);
+    const lo = rowC(xf) - b.rad, hi = lo - 3 * d;
+    b.finishLine({ ax: xf, ay: hi, bx: xf, by: lo });
+    const o = 0.7 * d;
+    const path = [[x0, y0 + 10], [cx, ny - 0.3 * d], [cx, cy], [cx, rowA(cx) - o], [xa, rowA(xa) - o], [60, rowB(60) - o],
+      ...B.slice(1).map(([x]) => [x, rowB(x) - o]), [1000, rowC(1000) - o], [xf, rowC(xf) - o]];
+    return { path, fin: b.finish, entry: c.prev.exit, exit: null };
   }
 
   // ======================================================================= THE GAUNTLET (Langvideo)
@@ -126,10 +187,13 @@
       id: 'tower', title: 'THE TOWER', hook: 'PICK YOUR COLOR!', format: 'short',
       r: 28, T: 20, field: FIELD16, quota: [8, 4, 1],
       rules: { ready: 0.4, release: 0.5, look: 0.22, endHold: 2.6, lateMax: 5 },
-      bounds: { x0: 0, y0: 0, x1: 1080, y1: 2600 },
+      // Unter dem Ziel rund 500 frei: So steht das Ziel am Ende bei drei Vierteln der Bildhöhe, nicht am Rand
+      bounds: { x0: 0, y0: 0, x1: 1080, y1: 5560 },
+      gold: [540, 4960, 1100],                                             // goldener Schimmer ums Ziel
       sections: [
         { id: 'drop', title: 'THE DROP', world: 'dusk', build: towerDrop },
-        { id: 'soon', title: 'TO BE CONTINUED', world: 'petrol', placeholder: true, build: towerSoon },
+        { id: 'floors', title: 'FALLING FLOORS', world: 'ice', hazard: true, build: towerFloors },
+        { id: 'final', title: 'FINAL', world: 'gold', build: towerFinal },
       ],
     },
     gauntlet: {

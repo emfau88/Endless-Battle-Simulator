@@ -1,11 +1,10 @@
 {
   "version": 1,
-  "name": "Marble Knockout – Short (Pick your color!)",
+  "name": "Marble Knockout – Short (The Tower)",
   "scenario": "knockout",
-  "seed": 47,
+  "seed": 59,
   "params": {
-    "mode": "race",
-    "short": "A",
+    "mode": "level",
     "slowmo": "on",
     "marks": "on",
     "display": "on",

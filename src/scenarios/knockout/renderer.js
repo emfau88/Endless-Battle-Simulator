@@ -207,6 +207,7 @@
       const sim = this.sim, cam = sim.cam, W = sim.W, H = sim.H, st = sim.stage, rt = sim.world.t, r = sim.r;
       const rate = sim.phase === 'race' ? sim.slowAt(sim.t) : 1, marks = sim.cfg.marks !== 'off';
       const v = CAM.view(cam, 2);
+      const ty0 = Math.floor(v.y0 / TILE), ty1 = Math.floor(v.y1 / TILE), tx0 = Math.floor(v.x0 / TILE), tx1 = Math.floor(v.x1 / TILE);
       // Hintergrund in drei Ebenen: Tiefenverlauf (Welt), Lichtflecken und Punkte (0,15-fach), Gerüst (0,5-fach)
       g.save(); g.translate(W / 2, H / 2); g.scale(cam.z, cam.z); g.translate(-cam.x, -cam.y);
       A.levelDepth(g, v, sim.bounds.y1, sim.level.gold);
@@ -215,11 +216,12 @@
       this.layer(g, 0.5, (lv) => A.scaffold(g, lv));
       g.save();
       g.translate(W / 2, H / 2); g.scale(cam.z, cam.z); g.translate(-cam.x, -cam.y);
-      for (let iy = Math.floor(v.y0 / TILE); iy <= Math.floor(v.y1 / TILE); iy++) {
-        for (let ix = Math.floor(v.x0 / TILE); ix <= Math.floor(v.x1 / TILE); ix++) {
+      for (let iy = ty0; iy <= ty1; iy++) {
+        for (let ix = tx0; ix <= tx1; ix++) {
           g.drawImage(this.tile(ix, iy), ix * TILE - BLEED, iy * TILE - BLEED, TILE + 2 * BLEED, TILE + 2 * BLEED);
         }
       }
+      if (st.finish) A.finishLine(g, st.finish, sim.T);
       for (const el of st.elements) if (seen(el, v)) A.drawElement(g, el, sim, rt, sim.t);
       for (const sec of sim.sections) if (sec.sch && hit(sec.sch.box, v)) this.lamps(g, sec);
       const runners = sim.runners;
@@ -240,6 +242,8 @@
         const danger = racing && !u.out && !u.finished && u.rank > sim.cut ? 0.75 + 0.25 * Math.sin(sim.t * TAU * 1.6) : 0;
         A.marble(g, m.x, m.y, r, M.name, M.color, m.a, { crown: lead && marks, danger: marks ? danger : 0, noShadow: !m.collide, band: M.band });
       }
+      // Glitzern an der Ziellinie für jede, die gerade durch ist (nur im Finale; in den Schleusen heißt „finished“ drin)
+      if (st.finish && sim.sec.fin) for (const u of runners) if (u.finished && !u.out) A.glitter(g, st.finish, rt - u.finishT, u.rid);
       for (const { p, b } of this.pitBox) if (p.kill && hit(b, v)) A.killPit(g, p);
       for (const { tr, b } of this.tracks) if (tr.front && hit(b, v)) A.drawTrack(g, tr);
       g.restore();
@@ -314,16 +318,17 @@
           // Schon im ersten Bild voll sichtbar (Vorschaubild des Shorts)
           A.text(g, sim.hook || 'PICK YOUR COLOR!', W / 2, H * 0.42, 96, { align: 'center', weight: 900, spacing: 1, outline: true, alpha: fade(sim.t + 0.01, 0.01, 2.6, 0.5), max: W * 0.9 });
         } else if (!sec.placeholder && since >= 0 && since < 2.2) {
+          // Finale: groß FINAL, darunter wie viele um den Sieg fahren
           const k = fade(since, 0.15, 1.5, 0.5);
-          A.text(g, `${sim.nIn} → TOP ${sim.keep}`, W / 2, H * 0.42, 112, { align: 'center', weight: 900, spacing: 2, outline: true, alpha: k, max: W * 0.9 });
-          A.text(g, sec.title, W / 2, H * 0.42 + 76, 40, { align: 'center', weight: 800, spacing: 5, color: A.S.sub, alpha: k, max: W * 0.9 });
+          A.text(g, sec.fin ? 'FINAL' : `${sim.nIn} → TOP ${sim.keep}`, W / 2, H * 0.42, 112, { align: 'center', weight: 900, spacing: 2, outline: true, alpha: k, max: W * 0.9 });
+          A.text(g, sec.fin ? `${sim.nIn} MARBLES. ONE WINNER.` : sec.title, W / 2, H * 0.42 + 76, 40, { align: 'center', weight: 800, spacing: 5, color: A.S.sub, alpha: k, max: W * 0.9 });
         }
       } else {
         const no = sim.secNo + 1, n = lv.stages || sim.sections.length;
-        if (sim.phase !== 'end' && !sec.placeholder) {
+        if (sim.phase !== 'end' && !sec.placeholder && sim.winnerT < 0) {
           A.text(g, `STAGE ${no}/${n}`, 56, 80, 46, { weight: 900, spacing: 1 });
           A.text(g, sec.title, 58, 122, 28, { weight: 800, spacing: 3, color: A.S.sub });
-          A.text(g, `${alive} LEFT · TOP ${sim.keep}`, 1790, 80, 46, { weight: 900, align: 'right', spacing: 1 });
+          A.text(g, sec.fin ? `${alive} LEFT · ONE WINS` : `${alive} LEFT · TOP ${sim.keep}`, 1790, 80, 46, { weight: 900, align: 'right', spacing: 1 });
         }
         A.outTube(g, sim, 1856, 178, 1012, 56);
         if (sim.phase !== 'end' && sim.cfg.bar !== 'off') this.courseBar(g);
@@ -341,9 +346,16 @@
       if (traps.length) A.text(g, 'TRAPS CLOSED', W / 2, short ? H * 0.62 : H * 0.58, short ? 56 : 40, { align: 'center', weight: 900, spacing: 3, color: '#b8f5c8', alpha: fade(now - traps[0].t, 0.15, 1.2, 0.45) });
       // Kurze Einblendung: neue Führende oder großer Sprung (höchstens eine je 4 s, aus dem Zustand)
       const hl = sim.notes.filter((x) => (x.kind === 'leader' || x.kind === 'jump') && now - x.t < 2.2).pop();
-      if (hl && !(hl.kind === 'leader' && sim.leader !== hl.rid)) {             // Führung schon wieder verloren: weg
+      if (hl && sim.winnerT < 0 && !(hl.kind === 'leader' && sim.leader !== hl.rid)) {   // Führung schon wieder verloren: weg
         const name = sim.roster[hl.rid].name, line = hl.kind === 'leader' ? `NEW LEADER: ${name}` : `${name} +${hl.n} PLACES!`;
         A.text(g, line, W / 2, short ? H * 0.2 : 176, short ? 54 : 34, { align: 'center', weight: 900, spacing: 3, outline: true, color: hl.kind === 'leader' ? '#ffe9a8' : '#c9f3ff', alpha: fade(now - hl.t, 0.15, 1.6, 0.45), max: W * 0.9 });
+      }
+      // Sieg: groß der Name, bei knappem Einlauf darunter PHOTO FINISH (beides aus dem Zustand, bis zum Ende)
+      if (sim.winnerT >= 0 && sim.winner >= 0) {
+        const k = fade(now - sim.winnerT, 0.2, 99, 0.3), y = short ? H * 0.42 : H * 0.46;
+        A.text(g, `${sim.roster[sim.winner].name} WINS!`, W / 2, y, short ? 120 : 96, { align: 'center', weight: 900, spacing: 2, outline: true, alpha: k, color: '#fff3c4', max: W * 0.9 });
+        const ph = sim.notes.find((x) => x.kind === 'photo');
+        if (ph) A.text(g, 'PHOTO FINISH', W / 2, y + (short ? 92 : 74), short ? 52 : 40, { align: 'center', weight: 900, spacing: 6, outline: true, color: '#c9f3ff', alpha: fade(now - ph.t, 0.15, 99, 0.3) });
       }
     }
   }

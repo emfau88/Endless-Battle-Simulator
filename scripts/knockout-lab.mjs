@@ -113,7 +113,12 @@ if (isMain) {
       }
       const raceT = closeT - sim.R.ready, outs = sim.outList.map((i) => sim.roster[i].name + (sim.roster[i].how !== 'late' ? `(${sim.roster[i].how})` : ''));
       const nudges = sim.runners.reduce((s, u) => s + u.nudges, 0), cut = sim.cuts[0], cs = sim.camStats;
-      console.log(`Seed ${seed}: Schleuse zu bei ${closeT.toFixed(1)} s, Ende ${sim.t.toFixed(1)} s, ${Date.now() - t0} ms · Aus ${outs.join(',')} · Schnitt ${cut ? cut.gap.toFixed(2) + ' d' : '-'} · ` +
+      // Weitere Schleusen und Finale (ab G3)
+      if (sim.cuts.length > 1) sum.later = (sum.later || []).concat(sim.cuts.slice(1).map((c) => c.gap));
+      const more = sim.cuts.slice(1).map((c) => `S${c.sec + 1} zu ${c.t.toFixed(1)} s (Schnitt ${c.gap.toFixed(2)} d)`).join(', ');
+      const win = sim.winner >= 0 ? `Sieger ${sim.roster[sim.winner].name} bei ${sim.winnerT.toFixed(1)} s, Abstand ${sim.finalGap >= 0 ? sim.finalGap.toFixed(2) + ' s' : '-'}` : 'kein Sieger';
+      if (sim.winner >= 0) { (sum.win = sum.win || []).push(sim.winnerT); if (sim.finalGap >= 0) (sum.fgap = sum.fgap || []).push(sim.finalGap); }
+      console.log(`Seed ${seed}: Schleuse zu bei ${closeT.toFixed(1)} s${more ? ', ' + more : ''}, ${win}, Ende ${sim.t.toFixed(1)} s, ${Date.now() - t0} ms · Aus ${outs.join(',')} · Schnitt ${cut ? cut.gap.toFixed(2) + ' d' : '-'} · ` +
         `Platzwechsel ${swaps} (${(swaps / Math.max(1, raceT) * 10).toFixed(0)} je 10 s, längste Ruhe ${quiet.toFixed(1)} s) · Führungswechsel ${sim.leadChanges} · Stöße ${nudges} · festgefahren ${sim.stats.stuck} · Zeitlupe ${sim.stats.slowmo} · ` +
         `Führende im Bild ${(100 * cs.leaderIn / Math.max(1, cs.frames)).toFixed(0)} % · Aus im Bild ${cs.outsIn}/${cs.outs}${errors.length ? '  FEHLER: ' + errors.slice(0, 3).join(' | ') : ''}`);
       sum.stuck += sim.stats.stuck; sum.nudges += nudges; sum.errs += errors.length; sum.close.push(closeT); if (cut) sum.gap.push(cut.gap);
@@ -124,6 +129,8 @@ if (isMain) {
       console.log(`${runs} Läufe: Schleuse zu Median ${med(sum.close).toFixed(1)} s · Schnitt Median ${med(sum.gap).toFixed(2)} d, unter 1 d: ${sum.gap.filter((g) => g < 1).length}/${sum.gap.length} · ` +
         `Platzwechsel je 10 s Median ${med(sum.swaps).toFixed(0)} · längste Ruhe max ${Math.max(...sum.quiet).toFixed(1)} s · Führende im Bild Median ${(100 * med(sum.leadIn)).toFixed(0)} % · ` +
         `Aus im Bild ${sum.outsIn}/${sum.outs} · Stöße ${sum.nudges} · festgefahren ${sum.stuck} · Fehler ${sum.errs}`);
+      if (sum.win) console.log(`  Sieg (Median) ${med(sum.win).toFixed(1)} s, längster ${Math.max(...sum.win).toFixed(1)} s · Abstand 1–2 Median ${med(sum.fgap || []).toFixed(2)} s, unter 0,3 s: ${(sum.fgap || []).filter((g) => g < 0.3).length}/${sum.win.length}` +
+        (sum.later ? ` · spätere Schleusen: Schnitt Median ${med(sum.later).toFixed(2)} d, unter 1 d: ${sum.later.filter((g) => g < 1).length}/${sum.later.length}` : ''));
     }
   } else if (cmd === 'stage' || cmd === 'race') {
     const runs = Number(arg('runs', 1)), seed0 = Number(arg('seed', 1));

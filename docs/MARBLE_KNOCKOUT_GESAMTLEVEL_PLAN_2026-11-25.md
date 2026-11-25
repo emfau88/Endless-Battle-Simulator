@@ -150,6 +150,10 @@ zwischen der Letzten drinnen und der Ersten draußen), längste Zeit ohne Platzw
 **Maße:** Bildbreite 1080 E, Murmelradius 28 E (d = 56), 16 Murmeln. Der Turm ist genau so breit wie das Bild und
 rund sechs Bildschirme hoch (rund 11 500 E). Die Kamera fährt nur senkrecht.
 
+> **Stand G3 (25.11.):** Gebaut ist der Turm 5560 E hoch (knapp drei Bildschirme). Abschnitt 2 hat drei Böden und
+> keinen Hammer, das Finale zwei Ringe. Die Gründe und Messwerte stehen im
+> [Bericht](MARBLE_KNOCKOUT_2026-11-25.md#g3--the-tower-komplett-casting-vorlage-short--turm-25112026).
+
 ```
  ┌──────────── 1080 ────────────┐   Bildschirm
  │ START: 16 Murmeln im Käfig   │   0
@@ -387,7 +391,7 @@ nachgezogen.
 |---|---|---|
 | **G1** | Grundlage: Level aus Abschnitten, Schleuse mit Quote, Ablauf `course: 'level'`, Kamera-Regie in der Simulation (beide Fassungen), Bild mit Kamera, neue Felder mit 16 und 20 Murmeln; je Level der erste Abschnitt mit echter Physik | **Stopp mit Probeclips:** je Format 20 s vom ersten Abschnitt, im Querformat in beiden Kamera-Fassungen, dazu die Farbtafel. Der Nutzer wählt die Kamera fürs Querformat und sagt, ob Action und Feldgröße passen. **Stand 25.11.: erledigt, gewählt ist die Fahrt** ([Bericht](MARBLE_KNOCKOUT_2026-11-25.md#g1--gesamtlevel-grundlage-und-erste-abschnitte-25112026)). |
 | G2 | Bild fertig: Kacheln, Hintergrund-Ebenen, Gerüst, Tiefe, Lampenreihe, Streckenleiste, Einblendungen; Ton nach Bildlage; Zustand sichern und laden | Seek-Prüfung pixelgleich an zwölf Zeitpunkten je Format, Node = Chromium, Kamera-Kennzahlen. **Stand 25.11.: erledigt**, Seek-Prüfung an sechs Zeitpunkten je Format ([Bericht](MARBLE_KNOCKOUT_2026-11-25.md#g2--gesamtlevel-bild-fertig-ton-nach-bildlage-sichern-und-laden-25112026)) |
-| G3 | THE TOWER komplett, Short-Casting, Vorlage „Short · Turm“ | 20-s-Probe vom Anfang |
+| G3 | THE TOWER komplett, Short-Casting, Vorlage „Short · Turm“ | 20-s-Probe vom Anfang. **Stand 25.11.: erledigt**, mit Abweichungen nach Messung (drei Böden ohne Hammer, zwei Ringe, Turm knapp drei Bildschirme hoch); Proben vom Anfang und vom Finale ([Bericht](MARBLE_KNOCKOUT_2026-11-25.md#g3--the-tower-komplett-casting-vorlage-short--turm-25112026)) |
 | G4 | THE GAUNTLET Abschnitte 1 bis 5 mit Fallschacht, Hebe-Rad und Einsturz-Strecke | 100 Läufe bis zur fünften Schleuse ohne Hänger |
 | G5 | Abschnitte 6 bis 10 mit Weiche und Finale, Einstiegsflug, Podest | 100 ganze Läufe ohne Hänger, Länge rund 6 min |
 | G6 | Drehbuch-Casting fürs Gesamtlevel, Kapitel, Vorlage „Langvideo · Gesamtlevel“ | 20-s-Proben: Einstieg mit Flug, eine Schleuse, Finale |

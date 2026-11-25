@@ -1,4 +1,5 @@
-// Marble Knockout · Gesamtlevel (R43 Teil 2, Paket G1): Level-Bau, Schleuse mit Quote, Kamera und Wiederholbarkeit.
+// Marble Knockout · Gesamtlevel (R43 Teil 2, ab Paket G1): Level-Bau, Schleuse mit Quote, Ziel und Sieger, Kamera
+// und Wiederholbarkeit.
 // Plan: docs/MARBLE_KNOCKOUT_GESAMTLEVEL_PLAN_2026-11-25.md, Abschnitte 4 bis 6. Läuft ohne Browser.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,7 +17,7 @@ const canvas = () => ({ width: 1, height: 1, getContext: () => stub() });
 function load() {
   const context = vm.createContext({ console, document: { createElement: canvas } }); context.window = context;
   const root = new URL('../', import.meta.url);
-  for (const p of [...FILES, 'src/canvas-scene.js', 'src/scenarios/knockout/art.js', 'src/scenarios/knockout/renderer.js', 'src/scenarios/knockout.js']) {
+  for (const p of [...FILES, 'src/canvas-scene.js', 'src/scenarios/knockout/art.js', 'src/scenarios/knockout/renderer.js', 'src/scenarios/knockout.js', 'src/production-presets.js']) {
     vm.runInContext(readFileSync(new URL(p, root), 'utf8'), context, { filename: p });
   }
   return context.EBS;
@@ -46,7 +47,12 @@ test('Level-Bau: Abschnitte schließen an, Ideallinie steigt, jede Schleuse hat 
       const sec = secs[i];
       assert.ok(sec.p1 > sec.p0, `${s.level.id} ${sec.id}: Ideallinie`);
       if (i > 0) assert.ok(sec.p0 >= secs[i - 1].p1 - 1e-6, 'Fortschritt fällt nicht zurück');
-      if (!sec.placeholder) {
+      if (sec.fin) {
+        // Finale: Ziellinie statt Schleuse, nur als letzter Abschnitt
+        assert.equal(i, secs.length - 1, `${s.level.id}: Finale ist der letzte Abschnitt`);
+        assert.equal(sec.sch, null);
+        assert.equal(sec.keep, 1);
+      } else if (!sec.placeholder) {
         assert.ok(sec.els[1] > sec.els[0], `${s.level.id} ${sec.id}: Bausteine`);
         assert.ok(sec.sch, `${sec.id}: Schleuse`);
         assert.equal(sec.sch.lamps.length, sec.keep);
@@ -97,22 +103,40 @@ for (const [name, world, params, seeds] of [['Turm (9:16)', PORT, {}, [1, 2]], [
   test(`Ablauf ${name}: Schleuse schließt bei voller Quote, gibt frei, Kamera zeigt jedes Aus`, () => {
     for (const seed of seeds) {
       const { s, closedAt, releasedAt, alive0 } = run(seed, params, world);
-      const keep = s.sections[0].keep;
+      const keep = s.sections[0].keep, locks = s.sections.filter((x) => x.sch), fin = s.sections.find((x) => x.fin);
+      const left = locks[locks.length - 1].keep;                        // so viele kommen hinter der letzten Schleuse an
       assert.equal(s.phase, 'end', `Seed ${seed} endet`);
       assert.ok(closedAt > 0, 'Schleuse geschlossen');
       assert.ok(releasedAt >= closedAt + s.R.release - 1e-9, 'Freigabe nach der Pause');
       assert.equal(alive0, keep, `Seed ${seed}: TOP ${keep}`);
-      assert.equal(s.roster.filter((m) => m.alive).length, keep);
-      assert.equal(s.outList.length, s.roster.length - keep);
+      assert.equal(s.roster.filter((m) => m.alive).length, left);
+      assert.equal(s.outList.length, s.roster.length - left);
       assert.equal(s.stats.stuck, 0, 'niemand bleibt hängen');
       assert.equal(s.stats.timeUp, 0, 'kein Zeitlimit nötig');
       assert.equal(s.camStats.outsIn, s.camStats.outs, 'jedes Aus im Bild');
       assert.ok(s.camStats.leaderIn / s.camStats.frames > 0.9, `Spitze im Bild ${(100 * s.camStats.leaderIn / s.camStats.frames).toFixed(0)} %`);
-      assert.ok(s.t < 40, `Länge erster Abschnitt ${s.t.toFixed(1)} s`);
-      assert.equal(s.cuts.length, 1);
+      assert.ok(s.cuts.length >= 1 && s.cuts.length <= locks.length);
+      if (fin) {
+        // Komplettes Level: ein Sieger, das Video endet kurz danach (Short höchstens 45 s)
+        assert.ok(s.winner >= 0 && s.roster[s.winner].alive, `Seed ${seed}: Sieger`);
+        assert.ok(Math.abs(s.t - (s.winnerT + s.R.endHold)) < 2 * s.dt, 'Ende nach dem Halt');
+        assert.ok(s.t < 45, `Länge ${s.t.toFixed(1)} s`);
+      } else assert.ok(s.t < 40, `Länge erster Abschnitt ${s.t.toFixed(1)} s`);
     }
   });
 }
+
+test('Vorlage „Short“ (seit G3): der Turm auf einem geprüften Seed mit Fotofinish, Datei gleich Oberfläche', () => {
+  const p = JSON.parse(JSON.stringify(EBS.productionPreset('knockout', 'short')));
+  assert.deepEqual(p, JSON.parse(readFileSync(new URL('../presets/production/knockout-short.json', import.meta.url), 'utf8')));
+  assert.equal(p.params.mode, 'level');
+  assert.ok(EBS.Knockout.TOWER_CAST.includes(p.seed));
+  const s = create(p.seed, p.params, PORT);
+  while (s.phase !== 'end' && s.t < 60) s.stepOnce();
+  assert.ok(s.t <= 40, `Länge ${s.t.toFixed(1)} s`);
+  assert.ok(s.finalGap >= 0 && s.finalGap < 0.3 && s.notes.some((n) => n.kind === 'photo'), `Fotofinish ${s.finalGap.toFixed(3)} s`);
+  assert.equal(s.runners.reduce((a, u) => a + u.nudges, 0), 0, 'kein Anstoß');
+});
 
 test('Gleicher Seed ergibt denselben Lauf samt Kamera, anderer Seed einen anderen', () => {
   const go = (seed, world) => { const s = create(seed, {}, world); for (let i = 0; i < 60 * 12; i++) s.stepOnce(); return [s.stateHash(), s.placeCount, s.outList.join()]; };
@@ -151,7 +175,8 @@ test('Drehbuch: ein anderer Seed für einen späteren Abschnitt ändert nichts d
 test('Zeichnen verändert den Zustand nicht (LevelPainter mit leerem Zeichenkontext)', () => {
   for (const world of [PORT, LAND]) {
     const sim = create(4, {}, world), painter = new EBS.KnockoutRender.LevelPainter(sim, 1), g = stub();
-    for (const t of [0.5, 5, 11, 14]) {
+    // bis ins Finale (Turm: Ziel, Sieger, PHOTO FINISH aus dem Zustand)
+    for (const t of [0.5, 5, 11, 14, 30, 39]) {
       while (sim.t < t && sim.phase !== 'end') sim.stepOnce();
       const before = sim.stateHash(), seq = sim.eventSeq;
       painter.paint(g); painter.paint(g);

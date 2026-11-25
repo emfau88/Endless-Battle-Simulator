@@ -206,6 +206,13 @@ const SHORT_CAST = {
 /** Nächster geprüfter Short-Seed ab seed (sonst der erste der Liste). */
 const castShortSeed = (seed, short = 'A') => { const list = SHORT_CAST[short] || SHORT_CAST.A; return list.find((s) => s >= seed) ?? list[0]; };
 
+// Gesamtlevel THE TOWER (G3, scripts/knockout-casting.mjs --level tower, Seeds 1–200): 23 vollständig (höchstens 40 s,
+// knappe Schleuse oder Sturz, knappes Finale, Führungswechsel im Finale, niemand braucht einen Anstoß). Davon hier
+// die mit echtem Fotofinish (Platz 1 und 2 unter 0,3 s, Einblendung PHOTO FINISH).
+const TOWER_CAST = [4, 9, 59, 109, 125, 137, 149, 182];
+/** Nächster geprüfter Turm-Seed ab seed (sonst der erste der Liste). */
+const castTowerSeed = (seed) => TOWER_CAST.find((s) => s >= seed) ?? TOWER_CAST[0];
+
 // Langvideo-Drehbücher (M8, scripts/knockout-casting.mjs --long): je Grund-Seed ein Seed pro Bahn. Geschichte: Die
 // Außenseiterin entkommt dreimal knapp und kommt ins Finale, der frühe Spitzenreiter stürzt auf Bahn 7 am Hammer,
 // das Finale entscheidet ein Fotofinish (unter 0,3 s). Das Drehbuch gilt nur zusammen mit seinem Grund-Seed
@@ -222,5 +229,5 @@ const LONG_CAST = [
 /** Drehbuch zum Grund-Seed (sonst das erste, die Empfehlung). */
 const castLong = (seed) => LONG_CAST.find((c) => c.seed === seed) || LONG_CAST[0];
 
-EBS.Knockout = { normalizeParams, simWorld, SHORT_CAST, castShortSeed, LONG_CAST, castLong };
+EBS.Knockout = { normalizeParams, simWorld, SHORT_CAST, castShortSeed, TOWER_CAST, castTowerSeed, LONG_CAST, castLong };
 })();

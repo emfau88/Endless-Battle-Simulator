@@ -120,13 +120,16 @@
     const px = 640, py = 470, pw = 24, bh = 14;
     g.save(); g.globalAlpha = 0.38;
     const c0 = Math.floor(v.x0 / px) - 1, c1 = Math.floor(v.x1 / px) + 1, r0 = Math.floor(v.y0 / py) - 1, r1 = Math.floor(v.y1 / py) + 1;
-    // Streben zuerst (hinter Stützen und Balken)
-    g.strokeStyle = '#4a321d'; g.lineWidth = 12; g.lineCap = 'butt';
+    // Streben zuerst (hinter Stützen und Balken). Als gefülltes Viereck, nicht als dicker Strich: Einen Strich glättete
+    // Chromium im ersten Bild einer neuen Gegend etwas anders als in den Bildern danach (Seek-Regel, G3).
+    g.fillStyle = '#4a321d';
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
       const h = hash(c * 17 + 3, r * 29 + 11);
       if (h > 0.34) continue;
       const x0 = c * px, y0 = r * py, flip = h < 0.17;
-      g.beginPath(); g.moveTo(x0 + pw / 2, flip ? y0 + bh : y0 + py); g.lineTo(x0 + px - pw / 2, flip ? y0 + py : y0 + bh); g.stroke();
+      const ax = x0 + pw / 2, ay = flip ? y0 + bh : y0 + py, bx = x0 + px - pw / 2, by = flip ? y0 + py : y0 + bh;
+      const L = Math.hypot(bx - ax, by - ay), nx = (-(by - ay) / L) * 6, ny = ((bx - ax) / L) * 6;
+      g.beginPath(); g.moveTo(ax + nx, ay + ny); g.lineTo(bx + nx, by + ny); g.lineTo(bx - nx, by - ny); g.lineTo(ax - nx, ay - ny); g.closePath(); g.fill();
     }
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
       if (hash(c * 5 + 41, r * 13 + 7) < 0.22) continue;                 // fehlender Querbalken

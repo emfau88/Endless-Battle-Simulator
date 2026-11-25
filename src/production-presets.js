@@ -27,15 +27,17 @@
         volume: { master: 100 }, quality: { crf: 20, preset: 'medium', bitrate: null } },
       view: { hud: true, camera: false },
     };
-    // Marble Knockout: Short in Fassung A („Pick your color!“, 8 Murmeln, 3 Bahnen) auf einem geprüften Casting-Seed;
+    // Marble Knockout: Short als Gesamtlevel THE TOWER (16 Murmeln, eine Fahrt durch den Turm, Ziel mit Fotofinish)
+    // auf einem geprüften Casting-Seed (seit G3; das Rennen Bahn für Bahn bleibt über „Ablauf“ wählbar);
     // Langvideo mit 12 Murmeln auf 10 Bahnen nach einem gecasteten Drehbuch (Grund-Seed und ein Seed je Bahn).
-    // Beide enden mit dem Podest (40 s und 300 s sind nur Startwerte).
+    // Beide enden mit dem Rennende (40 s und 300 s sind nur Startwerte).
     if (scenario === 'knockout') {
       const cast = short ? null : EBS.Knockout.castLong(seed);
       return {
-        version: 1, name: `${labels[scenario]} – ${short ? 'Short (Pick your color!)' : 'Langvideo (10 Bahnen, Drehbuch)'}`,
-        scenario, seed: short ? EBS.Knockout.castShortSeed(seed, 'A') : cast.seed,
-        params: { mode: 'race', short: 'A', slowmo: 'on', marks: 'on', display: 'on', videoEnd: 'finish', ...(cast ? { script: cast.script.slice() } : {}) },
+        version: 1, name: `${labels[scenario]} – ${short ? 'Short (The Tower)' : 'Langvideo (10 Bahnen, Drehbuch)'}`,
+        scenario, seed: short ? EBS.Knockout.castTowerSeed(seed) : cast.seed,
+        params: short ? { mode: 'level', slowmo: 'on', marks: 'on', display: 'on', videoEnd: 'finish' }
+          : { mode: 'race', short: 'A', slowmo: 'on', marks: 'on', display: 'on', videoEnd: 'finish', script: cast.script.slice() },
         video: { aspect: short ? '9:16' : '16:9', resolution: 1080, fps: 30, durationSec: short ? 40 : 300, tempo: 1, audio: true,
           volume: { master: 100 }, quality: { crf: 20, preset: 'medium', bitrate: null } },
         view: { hud: true, camera: false },

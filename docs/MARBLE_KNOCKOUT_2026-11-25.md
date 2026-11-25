@@ -17,7 +17,8 @@ Dieser Bericht wird je Paket fortgeschrieben.
 | M9 Abschluss und Geschmacksfragen | **Erledigt** (25.11.) |
 | Teil 2: Gesamtlevel mit Kamerafahrt | **Plan erledigt** (25.11.): [MARBLE_KNOCKOUT_GESAMTLEVEL_PLAN_2026-11-25.md](MARBLE_KNOCKOUT_GESAMTLEVEL_PLAN_2026-11-25.md). Der Nutzer will vor dem ganzen Export je ein spannendes Gesamtlevel mit viel Action. |
 | G1 Gesamtlevel: Grundlage und erste Abschnitte | **Erledigt** (25.11.). Der Nutzer hat für das Querformat die Kamera **„Fahrt“** gewählt. |
-| G2 Bild fertig, Ton nach Bildlage, Sichern und Laden | **Erledigt** (25.11.). G3 bis G7 offen. |
+| G2 Bild fertig, Ton nach Bildlage, Sichern und Laden | **Erledigt** (25.11.) |
+| G3 THE TOWER komplett, Casting, Vorlage „Short · Turm“ | **Erledigt** (25.11.). G4 bis G7 offen. |
 
 ---
 
@@ -587,6 +588,7 @@ Am 25.11. hat der Nutzer **Stil A** gewählt („Ja Stil A“). Die Referenzbild
   Bausteine. Querformat: Langvideo mit 12 Murmeln auf 10 Bahnen. Hochformat: Short mit 8 Murmeln auf 3 Bahnen,
   Fassung A, B oder C.
 - Vorlagen-Knöpfe „Short · drei Bahnen“ (Fassung A, Seed 47) und „Langvideo · 10 Bahnen“ (Seed 3 mit Drehbuch).
+  Seit G3 heißt der Short-Knopf „Short · Turm“ und startet das Gesamtlevel THE TOWER (siehe Abschnitt G3).
 - Kommandozeile, der ganze Export nur auf Auftrag:
 
   ```bash
@@ -842,3 +844,112 @@ node scripts/knockout-frames.mjs --mode level --aspect 16:9 --seed 2 --times 2,5
 - `test/knockout.test.mjs`: 8 Tests grün, der alte Ablauf ist unverändert.
 - Nicht gelaufen: die übrigen Browser-Tests (alter Ablauf unberührt), `npm run golden` (keine Änderung an Physik
   oder altem Ablauf), Scrap-Hashes, voller `npm test`.
+
+---
+
+## G3 · THE TOWER komplett, Casting, Vorlage „Short · Turm“ (25.11.2026)
+
+**Umfang:**
+
+- **Abschnitt 2 `FALLING FLOORS` (8 → TOP 4):**
+  - Drei wandernde Böden zwischen zwei inneren Wänden. Jeder fällt zu einer Wand hin ab und endet dort offen. Die
+    oberen zwei haben ein Loch als Abkürzung.
+  - Darunter ein Sims mit einem Loch (Sturz = raus) und einer flachen Kante, dann die Schleuse links.
+- **Abschnitt 3 `FINAL` (4 → 1):**
+  - Trichter über die ganze Breite in einen Kanal, der von vorn in zwei Drehringe führt (Ringausbruch).
+  - Darunter eine Fangbahn, dann eine Steilabfahrt mit zwei Mulden und die offene Zielgerade mit Ziellinie.
+- **Ziel und Sieger im Ablauf:**
+  - Wer die Ziellinie kreuzt, bekommt seinen Platz. Platz 1 ist Sieger, das Video endet 2,6 s danach.
+  - Liegt Platz 2 weniger als 0,3 s dahinter, erscheint `PHOTO FINISH`.
+  - Zeitlupe, wenn die beiden Ersten kurz vor dem Ziel dicht beieinander liegen. Die Kamera hält am Ende auf dem Ziel.
+- **Bild:**
+  - Ziellinie, Glitzern beim Zieldurchgang.
+  - Karte `FINAL` mit `4 MARBLES. ONE WINNER.`, dann `PINK WINS!` und gegebenenfalls `PHOTO FINISH`.
+  - Unter dem Ziel liegen rund 500 Einheiten frei. So steht das Ziel am Ende bei drei Vierteln der Bildhöhe statt am
+    unteren Rand.
+- **Startregal:** Die äußeren Startplätze haben jetzt einen kleinen Rand zur Wand. Vorher klemmte in zwei von drei
+  Läufen die Murmel ganz links am Scharnier der ersten Klappe und brauchte nach 3,6 s einen Anstoß.
+- **Gerüst im Hintergrund:** Die schrägen Streben sind jetzt gefüllte Vierecke statt dicker Striche (gleiche Form).
+  Einen dicken Strich glättete Chromium im ersten Bild einer neuen Gegend etwas anders als in den Bildern danach. Die
+  Seek-Prüfung im Finale hat das gezeigt (Abweichung höchstens 20 von 255 an den Kanten der Streben).
+- **Casting:** `scripts/knockout-casting.mjs --level tower` prüft ganze Läufe. Ein Seed ist vollständig, wenn:
+  - das Video höchstens 40 s lang ist;
+  - eine Schleuse knapp schließt (unter 1,5 Murmelbreiten) oder jemand stürzt;
+  - das Finale knapp ist (unter 0,8 s oder Zeitlupe);
+  - die Führung im Finale wechselt;
+  - niemand einen Anstoß braucht.
+- **Vorlage:** Der Knopf „Short“ heißt jetzt „Short · Turm (rund 38 Sekunden)“ und startet den Turm.
+  - Seeds kommen aus der Liste `TOWER_CAST`: die acht vollständigen Seeds mit echtem Fotofinish.
+  - Die Vorlage nimmt Seed 59.
+  - Das Rennen „Bahn für Bahn“ bleibt über „Ablauf“ wählbar.
+
+**Abweichungen vom Plan (nach Messung, je 8 Läufe):**
+
+| Plan | Messung | Jetzt |
+|---|---|---|
+| Vier wandernde Böden | Abschnitt 2 dauerte im Median 28 s statt rund 10 | drei Böden mit 10° |
+| Pendelhammer über dem Sims | staute in jeder Fassung das Feld und warf immer genau die ersten vier ins Loch | kein Hammer; flache Kante am Loch, meist ein bis zwei Stürze |
+| Drei Ringe im Finale | hielten die Spitze 4 bis 8 s fest | zwei Ringe, der äußere mit zwei Schlitzen |
+| Zielgerade mit 3° | Finale gut 1 s länger, selten knapp | 5°, Ziel etwas weiter vorn |
+| Turm rund 11 500 Einheiten hoch | — | 5560 Einheiten (knapp drei Bildschirme) |
+
+**Messwerte (Labor, 12 Läufe, Seeds 1 bis 12):**
+
+| | Turm (9:16) |
+|---|---|
+| Schleuse 1 zu (Median) | 11,6 s |
+| Abstand an der Schnittlinie, Schleuse 1 / Schleuse 2 (Median) | 3,2 / 4,6 Murmelbreiten |
+| Sieg (Median, längster) | 33,9 s, 37,0 s |
+| Abstand Platz 1 zu 2 (Median), unter 0,3 s | 1,39 s, 3 von 12 |
+| Platzwechsel je 10 s (Median) | 270 |
+| Längste Zeit ohne Platzwechsel (größter Wert) | 6,5 s |
+| Führende im Bild / Aus im Bild | 100 % / 144 von 144 |
+| Stöße / festgefahren / Fehler | 0 / 0 / 0 |
+
+**Casting (Seeds 1 bis 200):** 23 vollständig (12 %).
+
+| Prüfpunkt | erfüllt |
+|---|---|
+| Länge bis 40 s | 95 % |
+| knappe Schleuse oder Sturz | 84 % |
+| Finale knapp | 25 % |
+| Führungswechsel im Finale | 61 % |
+| ohne Anstoß | 99 % |
+
+Die Länge liegt im Median bei 37,4 s. Fotofinish unter 0,3 s haben die Seeds 4, 9, 59, 109, 125, 137, 149 und 182.
+
+**Proben (lokal, Seed 59 aus der Vorlage):**
+
+- `output/knockout-lab/g3-tower-start-20s.mp4`: die ersten 20 s.
+- `output/knockout-lab/g3-tower-end-20s.mp4`: 19,5 bis 39,5 s, das Finale mit `PINK WINS!` und `PHOTO FINISH`.
+- Dazu die Bildblätter `g3-tower-sheet.jpg` und `g3-tower-end.jpg`.
+
+```bash
+node export.mjs --scenario knockout --seed 59 --param mode=level --param videoEnd=free --duration 20 --aspect 9:16 --out output/knockout-lab/g3-tower-start-20s.mp4
+node export.mjs --config presets/production/knockout-short.json --clip-start 19.5 --clip-duration 20 --out output/knockout-lab/g3-tower-end-20s.mp4
+```
+
+**Grenzen:**
+
+- Das ganze Short wurde nicht exportiert (nur auf Auftrag).
+- Nur jeder vierte Lauf hat ein knappes Finale. Das Casting gleicht das aus: Die Vorlage nimmt nur Seeds mit
+  Fotofinish.
+- Die Schnittlinie an Schleuse 1 ist nie knapper als 1 Murmelbreite. Spannung an den Schleusen kommt eher über Stürze
+  und die Zeitlupe.
+- Weiter offen aus G1: Nachzügler rollen nach dem Schließen langsam über den Deckel.
+
+**Nachweise:**
+
+- `test/knockout-level.test.mjs`: 10 Tests grün. Neu:
+  - Der Turm läuft bis zum Sieger, das Ende kommt 2,6 s nach dem Sieg, höchstens 45 s.
+  - Die Vorlage „Short“ gleicht der Datei. Ihr Seed steht in `TOWER_CAST`, endet mit Fotofinish und braucht keinen
+    Anstoß.
+  - Das Zeichnen verändert den Zustand auch im Finale nicht.
+- `test/knockout-browser.test.mjs`, Tests „Gesamtlevel (G2)“ und „Short (M7)“: grün in gut 3 min.
+  - Die Seek-Prüfung im Turm hat jetzt zwei Zeitpunkte im Finale (26 s und 31,4 s, kurz nach dem Sieg). Das Bild
+    nach einem Sprung gleicht dem nach durchgehender Wiedergabe.
+  - Die Vorlagen-Dateien gleichen der Oberfläche.
+- `test/knockout.test.mjs`: 8 Tests grün, der alte Ablauf ist unverändert.
+- `npm run golden`: identisch mit der Referenz. Neue Schalter an Ringen und Startregal (`slots`, `pad`) ändern ohne
+  Angabe nichts.
+- Nicht gelaufen: Scrap-Hashes (Scrap unberührt), voller `npm test`.

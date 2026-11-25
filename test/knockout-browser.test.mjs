@@ -39,8 +39,8 @@ test('Short (M7): Chromium rechnet dieselben Hochformat-Rennen wie Node; Vorlage
         const file = JSON.parse(readFileSync(new URL(`../presets/production/knockout-${kind}.json`, import.meta.url), 'utf8'));
         assert.deepEqual(await page.evaluate((k) => EBS.productionPreset('knockout', k), kind), file, `knockout/${kind}: Datei und Oberfläche`);
       }
-      // Die Short-Vorlage nimmt einen geprüften Casting-Seed
-      assert.ok(await page.evaluate(() => EBS.Knockout.SHORT_CAST.A.includes(EBS.productionPreset('knockout', 'short', 1).seed)));
+      // Die Short-Vorlage ist seit G3 der Turm auf einem geprüften Casting-Seed
+      assert.ok(await page.evaluate(() => EBS.Knockout.TOWER_CAST.includes(EBS.productionPreset('knockout', 'short', 1).seed)));
     }
     await page.close();
     assert.deepEqual(web, node, `Short ${short}`);
@@ -70,10 +70,12 @@ test('Seek-Regel: Sprung und durchgehende Wiedergabe ergeben dasselbe Bild (zwö
 });
 
 // Ein Gesamtlevel-Bild kostet ohne Grafikkarte knapp 3 s; darum sechs Zeitpunkte je Format und drei Bilder Vorlauf.
+// Turm (ab G3): zwei Zeitpunkte im Finale, der letzte kurz nach dem Sieg (Seed 3 gewinnt bei 31,1 s: Ziel, Glitzern,
+// Siegerzeile).
 test('Gesamtlevel (G2): Chromium rechnet wie Node; Seek-Regel mit Kamera an sechs Zeitpunkten je Format', async () => {
   const EBS = loadKnockout();
   for (const [aspect, seed, marks] of [
-    ['9:16', 3, [0.4, 2.6, 5.2, 7.7, 10.2, 12.6]],
+    ['9:16', 3, [0.4, 5.2, 10.2, 12.6, 26.0, 31.4]],
     ['16:9', 3, [0.4, 4.1, 7.2, 10.3, 13.4, 16.6]],
   ]) {
     const sim = makeSim(EBS, { seed, aspect, params: { mode: 'level' } }), node = [];
