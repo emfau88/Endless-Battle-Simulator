@@ -15,7 +15,8 @@ Dieser Bericht wird je Paket fortgeschrieben.
 | M7 Short-Bahnen, Casting, Vorlagen | **Erledigt** (25.11.) |
 | M8 Langvideo-Drehbuch, Vorlage, Finalprobe | **Erledigt** (25.11.) |
 | M9 Abschluss und Geschmacksfragen | **Erledigt** (25.11.) |
-| Teil 2: Gesamtlevel mit Kamerafahrt | **Plan erledigt** (25.11.): [MARBLE_KNOCKOUT_GESAMTLEVEL_PLAN_2026-11-25.md](MARBLE_KNOCKOUT_GESAMTLEVEL_PLAN_2026-11-25.md). Der Nutzer will vor dem ganzen Export je ein spannendes Gesamtlevel mit viel Action. G1 läuft, G2 bis G7 offen. |
+| Teil 2: Gesamtlevel mit Kamerafahrt | **Plan erledigt** (25.11.): [MARBLE_KNOCKOUT_GESAMTLEVEL_PLAN_2026-11-25.md](MARBLE_KNOCKOUT_GESAMTLEVEL_PLAN_2026-11-25.md). Der Nutzer will vor dem ganzen Export je ein spannendes Gesamtlevel mit viel Action. |
+| G1 Gesamtlevel: Grundlage und erste Abschnitte | **Erledigt** (25.11.), Stopp: Der Nutzer wählt die Kamera fürs Querformat. G2 bis G7 offen. |
 
 ---
 
@@ -634,3 +635,126 @@ Am 25.11. hat der Nutzer **Stil A** gewählt („Ja Stil A“). Die Referenzbild
 
 - Der Name in der Oberfläche trägt noch „(in Arbeit)“, bis der Nutzer Short und Langvideo abgenommen hat.
 - Weder Short noch Langvideo sind ganz exportiert; es gibt nur die 20-s-Proben.
+
+---
+
+## G1 · Gesamtlevel: Grundlage und erste Abschnitte (25.11.2026)
+
+Teil 2 nach dem [Gesamtlevel-Plan](MARBLE_KNOCKOUT_GESAMTLEVEL_PLAN_2026-11-25.md). Wunsch des Nutzers: vor dem ganzen
+Export je ein spannendes Gesamtlevel mit Kamerafahrt, mit viel Action und vielen Murmeln.
+
+**Umfang:**
+
+- **Neuer Ablauf** „Gesamtlevel mit Kamerafahrt (in Arbeit)“ (`mode=level`) in eigener Datei
+  `src/scenarios/knockout/levelsim.js`. Das Format wählt das Level: Hochformat **THE TOWER** (16 Murmeln, r 28),
+  Querformat **THE GAUNTLET** (20 Murmeln, r 24).
+  - Abweichung vom Plan: Dort stand `course: 'level'` in `simulation.js`. Als eigene Klasse bleibt der alte Ablauf
+    „Bahn für Bahn“ sicher unverändert. Physik, Ton, Zeitlupe und Stöße übernimmt die neue Klasse vom alten Ablauf.
+- **Level-Bau** (`level.js`): Alle Abschnitte stehen in einer Physikwelt und werden in Welt-Koordinaten gebaut. Der
+  Bau prüft, dass jeder Abschnitt an den vorigen anschließt (höchstens 1 E Versatz), und legt eine Ideallinie über das
+  ganze Level.
+- **Schleuse** am Ende jedes Abschnitts: Becken mit Lichtschranke, eine Lampe je Platz, Rückwand, Deckel, Aus-Rinne mit
+  Grube `OUT`, Klappboden.
+  - Wer durch die Lichtschranke fällt, ist weiter. Quote = kleinerer Wert aus Plätzen und Feld minus Stürze.
+  - Ist die Quote voll, fährt der Deckel in 0,3 s zu. Alle anderen sind raus und rollen über den Deckel ins Aus.
+  - Nach 0,5 s (Turm) bzw. 1,2 s (Gauntlet) klappt der Boden in 0,25 s auf, das Feld fällt in den nächsten Abschnitt.
+  - Nachzügler, die 5 bzw. 6 s nach dem Schließen noch rollen, verschwinden durch eine Klappe.
+  - Planwerte waren Deckel 0,25 s und Boden 0,6 s offen; gebaut ist, was in den Proben ruhig aussah.
+- **Kamera** (`camera.js`) als Simulationszustand (Seek-Regel): Ruhezone, kritisch gedämpfte Feder, Höchsttempo,
+  langsamer und begrenzter Zoom, nie außerhalb der Welt. Regie:
+  - Start auf dem Regal.
+  - Erste Hälfte eines Abschnitts: Spitzengruppe mit Vorschau nach vorn.
+  - Zweite Hälfte: Kampf um den letzten freien Platz zusammen mit dem Becken.
+  - Beim Schließen hält sie auf der Schleuse.
+  - Querformat mit Schalter „Kamera“: **Fahrt** (folgt dem Feld) oder **Abschnitte** (ganzer Abschnitt fest im Bild,
+    gleitet bei der Freigabe weiter, darf dafür bis Zoom 0,62 heraus). Das Short hat nur die Fahrt, ohne
+    Seitwärtsbewegung.
+- **Bild** (`LevelPainter` in `renderer.js`):
+  - Hintergrund, Bahnen und Stifte liegen in Welt-Kacheln zu 512 E, bewegte Teile werden je Bild gezeichnet.
+  - Einblendungen englisch: Lockruf, Titelkarte, `STAGE 1`, `20 LEFT · TOP 17`, `RED, NAVY & BROWN ARE OUT`,
+    `8 ARE OUT`.
+  - Roter Ring für alle unter der Schnittlinie, Krone für die Führende.
+- **Ton:** Ereignisse tragen Bild- und Weltlage. Klänge außerhalb des Bildes sind leiser: ×0,25 bis eine halbe
+  Bildbreite daneben, sonst ×0,1.
+- **Murmeln:** 20 Farben.
+  - Fünf tragen ein weißes Band (NAVY, SKY, LILAC, MAROON, TEAL), SILVER ist metallisch.
+  - YELLOW ist heller und zitroniger (`#f2ec3a`). Das beantwortet Frage 10 aus M9, gilt aber nur im Gesamtlevel.
+- **Erster Abschnitt „THE DROP“ je Level:**
+  - Turm: Regal, Nagelfeld über die ganze Breite mit drei Bumpern, Dach mit zwei Drehkreuzen, zwei Rückläufe, Rampe
+    (10°) in die Schleuse `TOP 8`.
+  - Gauntlet: Regal, Nagelwand mit drei Bumpern, zwei Trichter auf eine gemeinsame Spur, Nagelkasten, Rampe (7°) in
+    die Schleuse `TOP 17`.
+  - Danach je eine Auffangschale „TO BE CONTINUED“, bis die übrigen Abschnitte gebaut sind.
+- **Abweiser an den Wänden der Nagelfelder:** kurze Schrägen in jeder versetzten Reihe.
+  - Ohne sie fielen im Turm in jedem Lauf die zwei äußeren Murmeln an der Wand entlang durch, ohne einen Stift zu
+    berühren (24 von 24 in 12 Läufen).
+  - Mit Abweisern: 0. Von der Spitze bis zum nächsten Stift bleibt über 1,4 d frei.
+- **Werkzeuge:**
+  - `node scripts/knockout-lab.mjs level --runs 12 --aspect 9:16` (Messwerte je Lauf, `--cam sections` fürs
+    Querformat).
+  - `scripts/knockout-frames.mjs --mode level --cam ride|sections`.
+  - Neu: `scripts/knockout-colors.mjs` (Farbtafel).
+
+**In den Proben gefunden und geändert:**
+
+- Turm: Mit 6° Rampe stauten sich die Murmeln unter dem Trichterhals. Jetzt 10°.
+- Gauntlet: Ein Drehkreuz auf der gemeinsamen Spur ließ die Murmeln nur einzeln durch; das Feld stand rund 10 s in
+  einer Reihe. Jetzt ein Nagelkasten statt des Drehkreuzes (Abweichung vom Plan).
+- Gauntlet: Das Regal lag unter der Anzeige oben. Die Welt reicht jetzt höher, die Start-Kamera steht tiefer.
+- Gauntlet: Eine schon qualifizierte Murmel sprang aus der Auffangschale. Die Schale hat links jetzt eine hohe Wand.
+
+**Messwerte (Labor, 12 Läufe je Format, Seeds 1 bis 12, Kamera „Fahrt“):**
+
+| | Turm (9:16) | Gauntlet (16:9) |
+|---|---|---|
+| Schleuse zu (Median) | 11,6 s | 16,1 s |
+| Abstand Letzte drinnen zu Erster draußen (Median, in Murmelbreiten) | 3,5 | 4,0 |
+| Platzwechsel je 10 s (Median) | 264 | 297 |
+| Längste Zeit ohne Platzwechsel (größter Wert) | 1,0 s | 3,5 s |
+| Führende im Bild (Median) | 100 % | 100 % |
+| Aus im Bild | 96 von 96 | 36 von 36 |
+| Stöße / festgefahren / Fehler | 5 / 0 / 0 | 0 / 0 / 0 |
+
+- Platzwechsel: alle 0,5 s die Summe der Rangänderungen, halbiert.
+- Führungswechsel je Lauf (Stichprobe aus je 6 Läufen): Turm 11 bis 24, Gauntlet 13 bis 20.
+- Die Physik hängt nicht an der Kamera. Mit „Abschnitte“ sind alle Werte gleich, auch Führende und jedes Aus im Bild.
+
+**Probeclips (lokal unter `output/knockout-lab/`, Seed 1, mit Ton):**
+
+| Clip | Datei | Länge | Ton |
+|---|---|---|---|
+| Turm, 9:16, Fahrt | `g1-tower-20s.mp4` | 14,8 s (der Lauf endet nach dem ersten Abschnitt) | −23,3 LUFS |
+| Gauntlet, 16:9, Fahrt | `g1-gauntlet-fahrt-20s.mp4` | 20 s | −23,6 LUFS |
+| Gauntlet, 16:9, Abschnitte | `g1-gauntlet-abschnitte-20s.mp4` | 20 s | −23,6 LUFS |
+| Farbtafel aller Murmeln in Videogröße | `g1-colors.png` | | |
+
+Befehl, zum Beispiel für die Fassung „Abschnitte“ (`videoEnd=free` begrenzt den Clip auf `--duration`):
+
+```bash
+node export.mjs --scenario knockout --seed 1 --param mode=level --param cam=sections --param videoEnd=free --duration 20 --aspect 16:9 --out output/knockout-lab/g1-gauntlet-abschnitte-20s.mp4
+```
+
+**Grenzen:**
+
+- Je Level steht nur der erste Abschnitt, danach die Auffangschale. Der Turm-Lauf endet darum nach rund 15 s.
+- Der Kampf um den letzten Platz ist noch nicht knapp: im Median 3,5 bzw. 4 Murmelbreiten Abstand, nie unter 1.
+  Knappe Entscheidungen kommen mit dem Casting (G3, G6).
+- In G2 folgen: Tiefen-Ebenen, Streckenleiste, Ton nach Bildlage im Stereo, Sichern und Laden, Node = Chromium und
+  die Seek-Prüfung mit Kamera.
+- Nachzügler rollen nach dem Schließen langsam über den Deckel; im Clip sind einige am Ende noch zu sehen.
+- Die Vorlagen-Knöpfe zeigen weiter auf „Bahn für Bahn“ (Plan: bis G3 bzw. G6).
+
+**Nachweise:**
+
+- `test/knockout-level.test.mjs`, neu, 7 Tests grün in rund 24 s:
+  - Einstellungen und Level-Bau.
+  - Ablauf Turm (Seeds 1 und 2) und Gauntlet in beiden Kamera-Fassungen. In jedem Schritt geprüft: Zoom im Rahmen
+    und langsam, Tempo begrenzt, Bild nie außerhalb der Welt. Dazu Quote, Freigabe, jedes Aus im Bild, kein Hänger.
+  - Gleicher Seed ergibt denselben Hash samt Kamera.
+  - Zeichnen verändert den Zustand nicht.
+- `test/knockout.test.mjs`: 8 Tests grün, der alte Ablauf ist unverändert.
+- `npm run golden`: identisch mit der Referenz (36 Fälle).
+- Nicht gelaufen: Browser-Test mit Kamera (kommt in G2), Scrap-Hashes (Scrap unberührt), voller `npm test`.
+
+**Stopp:** Der Nutzer wählt die Kamera fürs Querformat (Fahrt oder Abschnitte) und sagt, ob Action und Feldgröße
+passen. Danach geht es mit G2 weiter.

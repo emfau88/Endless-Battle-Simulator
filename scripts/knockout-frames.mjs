@@ -13,7 +13,7 @@ const arg = (n, d) => { const i = argv.indexOf('--' + n); return i >= 0 && argv[
 const aspect = arg('aspect', '16:9'), mode = arg('mode', 'gallery');
 const times = arg('times', '1,3,6,10').split(',').map(Number);
 const out = resolve(arg('out', `output/knockout-lab/${mode}-${arg('element', arg('stage', 'x'))}-${aspect.replace(':', 'x')}.jpg`));
-const params = { mode, element: arg('element', 'all'), stage: Number(arg('stage', 0)), short: arg('short', 'A'), slowmo: 'on', field: Number(arg('field', 0)) || undefined };
+const params = { mode, element: arg('element', 'all'), stage: Number(arg('stage', 0)), short: arg('short', 'A'), slowmo: 'on', field: Number(arg('field', 0)) || undefined, cam: arg('cam', 'ride') };
 const scale = Number(arg('scale', 0.5)), cols = Number(arg('cols', aspect === '9:16' ? 4 : 2));
 
 const browser = await launchBrowser({ gpu: false });
@@ -31,8 +31,10 @@ try {
       params = { ...params, element: ids[0] }; times = ids.map(() => times[0]);
       var sims = ids.map((id) => new EBS.KnockoutSim.KnockoutSimulation({ seed, params: { ...params, element: id }, world }));
     }
-    let sim = each ? sims[0] : new EBS.KnockoutSim.KnockoutSimulation({ seed, params, world });
-    let P = new EBS.KnockoutRender.Painter(sim, scale);
+    // Gesamtlevel (Teil 2): eigener Ablauf und Painter mit Kamera
+    const level = params.mode === 'level';
+    let sim = each ? sims[0] : level ? new EBS.KnockoutLevelSim.KnockoutLevelSimulation({ seed, params, world }) : new EBS.KnockoutSim.KnockoutSimulation({ seed, params, world });
+    let P = level ? new EBS.KnockoutRender.LevelPainter(sim, scale) : new EBS.KnockoutRender.Painter(sim, scale);
     const fw = Math.round(world.w * scale), fh = Math.round(world.h * scale), rows = Math.ceil(times.length / cols), head = 26;
     const sheet = document.createElement('canvas'); sheet.width = cols * fw + (cols + 1) * 8; sheet.height = rows * (fh + head) + (rows + 1) * 8;
     const sg = sheet.getContext('2d'); sg.fillStyle = '#111'; sg.fillRect(0, 0, sheet.width, sheet.height);

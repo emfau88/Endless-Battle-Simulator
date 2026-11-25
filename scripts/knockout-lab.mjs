@@ -8,7 +8,8 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 export const FILES = ['src/core.js', 'src/scenarios/knockout/detmath.js', 'src/scenarios/knockout/physics.js', 'src/scenarios/knockout/elements.js',
-  'src/scenarios/knockout/gallery.js', 'src/scenarios/knockout/stages.js', 'src/scenarios/knockout/simulation.js'];
+  'src/scenarios/knockout/gallery.js', 'src/scenarios/knockout/stages.js', 'src/scenarios/knockout/simulation.js',
+  'src/scenarios/knockout/camera.js', 'src/scenarios/knockout/level.js', 'src/scenarios/knockout/levels.js', 'src/scenarios/knockout/levelsim.js'];
 
 /** Lädt die Knockout-Module in einen eigenen Kontext und gibt EBS zurück. */
 export function loadKnockout(root = new URL('../', import.meta.url)) {
@@ -19,6 +20,7 @@ export function loadKnockout(root = new URL('../', import.meta.url)) {
 export const WORLD = { '16:9': { w: 1920, h: 1080 }, '9:16': { w: 1080, h: 1920 } };
 export function makeSim(EBS, { seed = 1, aspect = '16:9', params = {} } = {}) {
   const p = { mode: 'race', short: 'A', stage: 0, element: 'all', slowmo: 'on', ...params };
+  if (p.mode === 'level') return new EBS.KnockoutLevelSim.KnockoutLevelSimulation({ seed, params: p, world: WORLD[aspect] });
   return new EBS.KnockoutSim.KnockoutSimulation({ seed, params: p, world: WORLD[aspect] });
 }
 
@@ -87,6 +89,42 @@ if (isMain) {
     const g = finalGaps.slice().sort((a, b) => a - b);
     console.log(`  Stürze ${falls} · festgefahren ${stuck} · Zeitlimit ${timeUps} · Stöße ${nudges} · sichere Bahnen ${safe} · Finale 1-2 Median ${g.length ? g[Math.floor(g.length / 2)].toFixed(2) : '-'} s, unter 1 s: ${g.filter((x) => x < 1).length}/${g.length}`);
     console.log(problems.length ? `  Auffällig (${problems.length}):\n    ` + problems.slice(0, 40).join('\n    ') : '  Keine Auffälligkeiten.');
+  } else if (cmd === 'level') {
+    // Gesamtlevel (Teil 2): je Lauf Schleusen, Aus, Schnittkampf, Platz- und Führungswechsel, Kamera-Kennzahlen
+    const runs = Number(arg('runs', 1)), seed0 = Number(arg('seed', 1)), sum = { stuck: 0, nudges: 0, errs: 0, close: [], gap: [], swaps: [], quiet: [], leadIn: [], outsIn: 0, outs: 0 };
+    for (let k = 0; k < runs; k++) {
+      const seed = seed0 + k, sim = makeSim(EBS, { seed, aspect, params: { mode: 'level', cam: arg('cam', 'ride') } }), t0 = Date.now();
+      const errors = []; let prev = null, swaps = 0, lastSwap = -1, quiet = 0, closeT = -1;
+      while (sim.phase !== 'end' && sim.t < 300) {
+        sim.stepOnce();
+        if (sim.phase === 'race' && sim.closeT < 0 && sim.step % 30 === 0) {
+          // Platzwechsel: alle 0,5 s die Rangfolge vergleichen (Summe der Rangsprünge / 2 = Überholungen),
+          // längste Zeit ohne jeden Wechsel
+          const now = new Map(sim.order.map((rid, i) => [rid, i]));
+          if (lastSwap < 0) lastSwap = sim.t;
+          if (prev) {
+            let s = 0; for (const [rid, i] of now) if (prev.has(rid)) s += Math.abs(prev.get(rid) - i);
+            if (s > 0) { swaps += s / 2; quiet = Math.max(quiet, sim.t - lastSwap); lastSwap = sim.t; }
+          }
+          prev = now;
+        }
+        if (sim.closeT >= 0 && closeT < 0) closeT = sim.t;
+        if (sim.step % 120 === 0) { const c = sim.checkInvariants(); if (!c.ok) errors.push(...c.errors.map((e) => `${sim.t.toFixed(1)}s ${e}`)); }
+      }
+      const raceT = closeT - sim.R.ready, outs = sim.outList.map((i) => sim.roster[i].name + (sim.roster[i].how !== 'late' ? `(${sim.roster[i].how})` : ''));
+      const nudges = sim.runners.reduce((s, u) => s + u.nudges, 0), cut = sim.cuts[0], cs = sim.camStats;
+      console.log(`Seed ${seed}: Schleuse zu bei ${closeT.toFixed(1)} s, Ende ${sim.t.toFixed(1)} s, ${Date.now() - t0} ms · Aus ${outs.join(',')} · Schnitt ${cut ? cut.gap.toFixed(2) + ' d' : '-'} · ` +
+        `Platzwechsel ${swaps} (${(swaps / Math.max(1, raceT) * 10).toFixed(0)} je 10 s, längste Ruhe ${quiet.toFixed(1)} s) · Führungswechsel ${sim.leadChanges} · Stöße ${nudges} · festgefahren ${sim.stats.stuck} · Zeitlupe ${sim.stats.slowmo} · ` +
+        `Führende im Bild ${(100 * cs.leaderIn / Math.max(1, cs.frames)).toFixed(0)} % · Aus im Bild ${cs.outsIn}/${cs.outs}${errors.length ? '  FEHLER: ' + errors.slice(0, 3).join(' | ') : ''}`);
+      sum.stuck += sim.stats.stuck; sum.nudges += nudges; sum.errs += errors.length; sum.close.push(closeT); if (cut) sum.gap.push(cut.gap);
+      sum.swaps.push(swaps / Math.max(1, raceT) * 10); sum.quiet.push(quiet); sum.leadIn.push(cs.leaderIn / Math.max(1, cs.frames)); sum.outs += cs.outs; sum.outsIn += cs.outsIn;
+    }
+    if (runs > 1) {
+      const med = (a) => { const s = a.slice().sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : NaN; };
+      console.log(`${runs} Läufe: Schleuse zu Median ${med(sum.close).toFixed(1)} s · Schnitt Median ${med(sum.gap).toFixed(2)} d, unter 1 d: ${sum.gap.filter((g) => g < 1).length}/${sum.gap.length} · ` +
+        `Platzwechsel je 10 s Median ${med(sum.swaps).toFixed(0)} · längste Ruhe max ${Math.max(...sum.quiet).toFixed(1)} s · Führende im Bild Median ${(100 * med(sum.leadIn)).toFixed(0)} % · ` +
+        `Aus im Bild ${sum.outsIn}/${sum.outs} · Stöße ${sum.nudges} · festgefahren ${sum.stuck} · Fehler ${sum.errs}`);
+    }
   } else if (cmd === 'stage' || cmd === 'race') {
     const runs = Number(arg('runs', 1)), seed0 = Number(arg('seed', 1));
     for (let k = 0; k < runs; k++) {

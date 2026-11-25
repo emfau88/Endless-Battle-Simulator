@@ -74,6 +74,31 @@
     vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, S.vignette);
     g.fillStyle = vg; g.fillRect(0, 0, W, H);
   }
+  /** Gesamtlevel: Hintergrund in Welt-Koordinaten für den Ausschnitt (x0, y0)–(x1, y1) einer Kachel. Er hängt nur an
+   *  der Lage in der Welt, nie an der Kachel: Nachbarkacheln passen nahtlos. Tiefe: oben warmes Abendlicht, in der Mitte
+   *  Petrol, unten tiefes Blau (Plan Teil 2, Abschnitt 7). */
+  const DEPTH = [[0, '#3c2433'], [0.3, '#1d3a42'], [0.7, '#0f2131'], [1, '#0a1220']];
+  function levelBackground(g, x0, y0, x1, y1, LH) {
+    const lg = g.createLinearGradient(0, 0, 0, Math.max(LH, 2400));
+    for (const [k, c] of DEPTH) lg.addColorStop(k, c);
+    g.fillStyle = lg; g.fillRect(x0, y0, x1 - x0, y1 - y0);
+    g.fillStyle = S.dots;
+    const s = 28, r0 = Math.floor(y0 / s), r1 = Math.ceil(y1 / s), c0 = Math.floor(x0 / s) - 1, c1 = Math.ceil(x1 / s);
+    for (let row = r0; row <= r1; row++) {
+      const y = 14 + row * s, off = ((row % 2) + 2) % 2 * 14;
+      for (let col = c0; col <= c1; col++) { const x = 14 + col * s + off; g.beginPath(); g.arc(x, y, 1.4, 0, TAU); g.fill(); }
+    }
+    // Weiche Lichtflecken auf einem festen Raster (Lage und Größe aus der Hash-Funktion)
+    const cell = 900, gx0 = Math.floor(x0 / cell) - 1, gx1 = Math.floor(x1 / cell) + 1, gy0 = Math.floor(y0 / cell) - 1, gy1 = Math.floor(y1 / cell) + 1;
+    for (let cy = gy0; cy <= gy1; cy++) for (let cx = gx0; cx <= gx1; cx++) {
+      const hx = hash(cx + 101, cy + 7), hy = hash(cy + 13, cx + 211), hr = hash(cx * 3 + 1, cy * 5 + 2);
+      const px = (cx + hx) * cell, py = (cy + hy) * cell, R = 380 + 420 * hr;
+      if (px + R < x0 || px - R > x1 || py + R < y0 || py - R > y1) continue;
+      const rg = g.createRadialGradient(px, py, 0, px, py, R);
+      rg.addColorStop(0, `rgba(255,186,110,${(0.05 + 0.06 * hr).toFixed(3)})`); rg.addColorStop(1, 'rgba(255,186,110,0)');
+      g.fillStyle = rg; g.fillRect(x0, y0, x1 - x0, y1 - y0);
+    }
+  }
   function pit(g, p, H) {
     const x1 = p.x0, x2 = p.x1, y1 = p.y0, y2 = Math.min(p.y1, H + 40), w = Math.ceil(x2 - x1), h = Math.ceil(y2 - y1);
     if (w <= 0 || h <= 0) return;
@@ -344,6 +369,12 @@
         for (const b of el.bodies) woodShapes(g, b, 0);
         g.restore();
         return;
+      case 'schleuse': {
+        // Gesamtlevel: Klappboden aus Holz mit Scharnieren, Deckel aus Metall (nur sichtbar, solange er fährt oder zu ist)
+        for (const b of el.flaps) { woodShapes(g, b, 0); hubDot(g, b.x, b.y, 4.5); }
+        if (el.lid.enabled) metalShapes(g, el.lid, { base: '#c9cfd4' });
+        return;
+      }
       default: {
         for (const b of el.bodies) {
           metalShapes(g, b);
@@ -368,18 +399,29 @@
     g.restore();
   }
   function marble(g, x, y, r, name, color, spin, o = {}) {
-    const base = color, gold = name === 'GOLD';
+    const base = color, gold = name === 'GOLD', silver = name === 'SILVER';
     if (!o.noShadow) {
       g.save(); g.filter = `blur(${(r * 0.2).toFixed(1)}px)`; g.fillStyle = S.marbleShadow;
       g.beginPath(); g.ellipse(x + r * 0.28, y + r * 0.8, r * 0.82, r * 0.3, 0, 0, TAU); g.fill(); g.restore();
     }
     const gr = g.createRadialGradient(x - r * 0.38, y - r * 0.42, r * 0.06, x, y, r * 1.02);
     if (gold) { gr.addColorStop(0, '#fff7cf'); gr.addColorStop(0.3, '#f4cf5c'); gr.addColorStop(0.72, '#c48d1f'); gr.addColorStop(1, '#6a460b'); }
+    else if (silver) { gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.3, '#dfe5ea'); gr.addColorStop(0.7, '#8f9aa3'); gr.addColorStop(1, '#3f474e'); }
     else {
       gr.addColorStop(0, mixA(base, '#ffffff', 0.55)); gr.addColorStop(0.4, base);
       gr.addColorStop(0.86, mixA(base, '#000000', 0.32)); gr.addColorStop(1, mixA(base, '#000000', 0.55));
     }
     g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
+    // Gesamtlevel: weißes Band um die Mitte (Farben mit ähnlichem Nachbarn), dreht mit der Murmel; die Ränder des Bands
+    // werden zur Kugelkante hin dunkler, damit es rund wirkt
+    if (o.band) {
+      g.save(); g.beginPath(); g.arc(x, y, r, 0, TAU); g.clip(); g.translate(x, y); g.rotate(spin);
+      g.fillStyle = 'rgba(250,250,246,0.92)'; g.fillRect(-r, -r * 0.2, 2 * r, r * 0.4);
+      g.restore();
+      const sh = g.createRadialGradient(x - r * 0.2, y - r * 0.25, r * 0.5, x, y, r);
+      sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,0.42)');
+      g.fillStyle = sh; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
+    }
     g.save(); g.beginPath(); g.arc(x, y, r, 0, TAU); g.clip(); g.translate(x, y); g.rotate(spin); g.lineCap = 'round';
     g.strokeStyle = gold ? 'rgba(255,250,220,0.38)' : 'rgba(255,255,255,0.32)'; g.lineWidth = r * 0.17;
     g.beginPath(); g.arc(r * 0.18, r * 0.08, r * 0.56, -0.5, 1.4); g.stroke();
@@ -461,7 +503,7 @@
     g.beginPath(); g.roundRect(x - w / 2, yTop, w, yBottom - yTop, w / 2); g.fillStyle = T.glass; g.fill();
     names.forEach((m, i) => {
       const y = yBottom - 8 - r - i * (2 * r + 3);
-      marble(g, x, y, r, m.name, m.color, hash(i, 9) * TAU, { noShadow: true });
+      marble(g, x, y, r, m.name, m.color, hash(i, 9) * TAU, { noShadow: true, band: m.band });
       text(g, m.name, x - w / 2 - 14, y + 8, 21, { align: 'right', color: S.sub, weight: 800, spacing: 1 });
     });
     g.lineWidth = 2.5; g.strokeStyle = T.edge; g.beginPath(); g.roundRect(x - w / 2, yTop, w, yBottom - yTop, w / 2); g.stroke();
@@ -470,5 +512,6 @@
     text(g, 'OUT', x, yTop - 24, 30, { align: 'center', weight: 900, spacing: 2 });
   }
 
-  EBS.KnockoutArt = { S, WORLDS, hash, text, background, hazard, killPit, lamp, stroke, metalBar, paintStatic, paintFront, drawTrack, drawElement, marble, crown, hatch, trail, shake, glitter, finishLine, outTube, woodShapes, metalShapes, hubDot, alpha, mixA };
+  EBS.KnockoutArt = { S, WORLDS, hash, text, background, hazard, killPit, lamp, stroke, metalBar, paintStatic, paintFront, drawTrack, drawElement, marble, crown, hatch, trail, shake, glitter, finishLine, outTube, woodShapes, metalShapes, hubDot, alpha, mixA,
+    levelBackground, pit, peg, sign };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -39,17 +39,21 @@ function createAudioMixPlan(events, { cfg }) {
     const d = { seq: e.seq, gain: 0, pan: Math.max(-0.35, Math.min(0.35, ((e.x || 0) / W - 0.5) * 0.7)) }; decisions.set(e.seq, d);
     const def = AUDIO_EVENTS[e.type];
     if (!def || volume[e.type] === 0 || volume.master === 0) continue;
-    cand.push({ e, d, minGap: def.minGap || 0, rank: AUDIO_ORDER.indexOf(e.type) });
+    // Gesamtlevel (Ereignisse mit Welt-Lage wx): außerhalb des Bildes leiser, eine halbe Bildbreite daneben 25 %,
+    // weiter weg 10 % (Plan Teil 2, Abschnitt 4). Der bisherige Ablauf bleibt unverändert.
+    const H = W === 1080 ? 1920 : 1080, ox = Math.max(0, -(e.x || 0), (e.x || 0) - W) / W, oy = Math.max(0, -(e.y || 0), (e.y || 0) - H) / H;
+    const far = e.wx === undefined ? 1 : Math.max(ox, oy) === 0 ? 1 : Math.max(ox, oy) <= 0.5 ? 0.25 : 0.1;
+    cand.push({ e, d, far, minGap: def.minGap || 0, rank: AUDIO_ORDER.indexOf(e.type) });
   }
   cand.sort((a, b) => a.e.step - b.e.step || a.rank - b.rank || a.e.seq - b.e.seq);
   const taken = [], free = (step) => { let n = 0; for (let i = taken.length - 1; i >= 0 && n < 3; i--) if (Math.abs(taken[i] - step) < 0.3 * 60) n++; return n < 3; };
   for (const pass of [0, 1]) {
     const last = new Map();
-    for (const { e, d, minGap, rank } of cand) {
+    for (const { e, d, far, minGap, rank } of cand) {
       if ((rank < AUDIO_KEY) !== (pass === 0)) continue;
       const prev = last.get(e.type);
       if ((prev !== undefined && e.step - prev < minGap * 60) || !free(e.step)) continue;
-      d.gain = rank < AUDIO_KEY ? 1 : 0.8; last.set(e.type, e.step); taken.push(e.step);
+      d.gain = (rank < AUDIO_KEY ? 1 : 0.8) * far; last.set(e.type, e.step); taken.push(e.step);
     }
   }
   return { version: 1, profile: 'marbleworks-soft-v1', events: events.map((e) => decisions.get(e.seq)) };
@@ -62,7 +66,7 @@ const defaults = { mode: 'race', short: 'A', stage: 0, element: 'all', slowmo: '
 function normalizeParams(input) {
   const p = { ...defaults, ...input }, stage = Math.round(Number(p.stage));
   const out = {
-    mode: ['race', 'stage', 'gallery'].includes(p.mode) ? p.mode : defaults.mode,
+    mode: ['race', 'level', 'stage', 'gallery'].includes(p.mode) ? p.mode : defaults.mode,
     short: ['A', 'B', 'C'].includes(p.short) ? p.short : defaults.short,
     stage: Number.isFinite(stage) ? Math.max(0, Math.min(LONG.length - 1, stage)) : 0,
     element: p.element === 'all' || GALLERY.some(([id]) => id === p.element) ? p.element : 'all',
@@ -74,6 +78,8 @@ function normalizeParams(input) {
   // Drehbuch: feste Seeds je Bahn (aus dem Casting, Paket M8); nur ganze Zahlen
   if (Array.isArray(p.script) && p.script.every((v) => Number.isInteger(v) && v >= 0)) out.script = p.script.slice(0, 16);
   if (Number.isInteger(p.field) && p.field >= 2 && p.field <= 12) out.field = p.field;
+  // Gesamtlevel (Teil 2): Kamera im Querformat als Fahrt oder in festen Abschnitten (nur in diesem Ablauf gesetzt)
+  if (out.mode === 'level') out.cam = p.cam === 'sections' ? 'sections' : 'ride';
   return out;
 }
 
@@ -91,6 +97,18 @@ class KnockoutScenarioSim extends KS.KnockoutSimulation {
   setParam(k, v) { this.cfg = normalizeParams({ ...this.cfg, [k]: v }); }
   setTimeScale(s) { this.dt = DT * s; this.timeScale = s; }
 }
+/** Gesamtlevel mit Kamerafahrt (R43 Teil 2, in Arbeit): THE TOWER hochkant, THE GAUNTLET quer. */
+class KnockoutLevelScenarioSim extends EBS.KnockoutLevelSim.KnockoutLevelSimulation {
+  constructor({ seed, params, world, timeScale = 1 }) {
+    const w = simWorld(world);
+    super({ seed, params: normalizeParams(params), world: w });
+    this.dt = DT * timeScale; this.timeScale = timeScale;
+    this.audioWorldWidth = w.w;
+  }
+  setParam(k, v) { this.cfg = normalizeParams({ ...this.cfg, [k]: v }); }
+  setTimeScale(s) { this.dt = DT * s; this.timeScale = s; }
+}
+const createSim = (ctx) => (normalizeParams(ctx.params).mode === 'level' ? new KnockoutLevelScenarioSim(ctx) : new KnockoutScenarioSim(ctx));
 
 class KnockoutRenderer extends EBS.CanvasScene {
   constructor({ sim, view, world, renderScale = 1 }) {
@@ -99,7 +117,8 @@ class KnockoutRenderer extends EBS.CanvasScene {
     // Quadrat: Querformat einpassen, Rand oben und unten
     this.fit = Math.min(world.w / sim.W, world.h / sim.H);
     this.ox = (world.w - sim.W * this.fit) / 2; this.oy = (world.h - sim.H * this.fit) / 2;
-    this.painter = new EBS.KnockoutRender.Painter(sim, renderScale * this.fit);
+    const R = EBS.KnockoutRender;
+    this.painter = sim.mode === 'level' ? new R.LevelPainter(sim, renderScale * this.fit) : new R.Painter(sim, renderScale * this.fit);
   }
   paint(g) {
     const w = this.world;
@@ -110,14 +129,18 @@ class KnockoutRenderer extends EBS.CanvasScene {
     this.painter.paint(g);
     g.restore();
   }
-  destroy() { for (const c of [this.painter.cache, this.painter.front]) if (c) c.width = c.height = 1; super.destroy(); }
+  destroy() {
+    for (const c of [this.painter.cache, this.painter.front]) if (c) c.width = c.height = 1;
+    if (this.painter.dispose) this.painter.dispose();
+    super.destroy();
+  }
 }
 
-/** Ganzes Rennen: Videolänge aus dem Ablauf (bis zum Ende des Podests). */
+/** Ganzes Rennen oder Gesamtlevel: Videolänge aus dem Ablauf (bis zum Ende des Podests). */
 function racePlan(cfg, world) {
-  if (cfg.params.mode !== 'race' || cfg.params.videoEnd !== 'finish') return null;
-  const sim = new KnockoutScenarioSim({ seed: cfg.seed, params: cfg.params, world, timeScale: cfg.video.tempo });
-  if (sim.mode !== 'race') return null;
+  if (!['race', 'level'].includes(cfg.params.mode) || cfg.params.videoEnd !== 'finish') return null;
+  const sim = createSim({ seed: cfg.seed, params: cfg.params, world, timeScale: cfg.video.tempo });
+  if (sim.mode !== 'race' && sim.mode !== 'level') return null;
   return { advance() {
     for (let i = 0; i < 3600 && sim.phase !== 'end'; i++) sim.stepOnce();
     if (sim.phase !== 'end' && sim.t < 1500) return { done: false };
@@ -132,8 +155,11 @@ EBS.registerScenario({
   title: 'Marble Knockout (in Arbeit)',
   defaults,
   controls: [
-    { key: 'mode', label: 'Ablauf', type: 'select', restart: true, rebuildUi: true, options: [['race', 'Ganzes Rennen'], ['stage', 'Eine Bahn'], ['gallery', 'Galerie der Bausteine']] },
-    { key: 'short', label: 'Short-Bahnen (hochkant)', type: 'select', restart: true, enabled: (p) => p.mode !== 'gallery',
+    { key: 'mode', label: 'Ablauf', type: 'select', restart: true, rebuildUi: true,
+      options: [['race', 'Ganzes Rennen (Bahn für Bahn)'], ['level', 'Gesamtlevel mit Kamerafahrt (in Arbeit)'], ['stage', 'Eine Bahn'], ['gallery', 'Galerie der Bausteine']] },
+    { key: 'cam', label: 'Kamera im Querformat (Gesamtlevel)', type: 'select', restart: true, visible: (p) => p.mode === 'level',
+      options: [['ride', 'Fahrt: folgt dem Feld'], ['sections', 'Abschnitte: fest, gleitet zum nächsten']] },
+    { key: 'short', label: 'Short-Bahnen (hochkant)', type: 'select', restart: true, enabled: (p) => p.mode === 'race' || p.mode === 'stage',
       options: [['A', 'A: Pick your color'], ['B', 'B: Follow the gold one'], ['C', 'C: Who survives the floors']] },
     { key: 'stage', label: 'Bahn (Eine Bahn, quer)', type: 'select', restart: true, enabled: (p) => p.mode === 'stage',
       options: LONG.map((s, i) => [i, `${i + 1}. ${s.title}`]) },
@@ -147,12 +173,12 @@ EBS.registerScenario({
   supportsCamera: false, supportsClips: true,                     // Der Renderer hält keinen Zustand zwischen Bildern
   audio: { events: AUDIO_EVENTS, mixProfile: 'marbleworks-soft-v1', fixedGainDb: 1, ceilingDb: -6 },
   createAudioMixPlan,
-  hasNaturalDuration: (cfg) => cfg.params.mode === 'race' && cfg.params.videoEnd === 'finish',
+  hasNaturalDuration: (cfg) => ['race', 'level'].includes(cfg.params.mode) && cfg.params.videoEnd === 'finish',
   createExportPlan: (cfg, world) => racePlan(cfg, world),
   durationLabel: { pending: 'Länge des Rennens wird berechnet …', complete: 'Automatisch: bis zum Ende des Rennens.' },
   chapters: (sim) => (sim.chapterLog || []).map((c) => ({ timeSec: c.t / (sim.timeScale || 1), title: c.title })),
   normalizeParams,
-  create: (ctx) => new KnockoutScenarioSim(ctx),
+  create: createSim,
   createRenderer: (ctx) => new KnockoutRenderer(ctx),
   panelStats(sim) {
     if (sim.mode === 'gallery') return [{ key: 'element', label: 'Baustein', value: sim.spec.label }];
