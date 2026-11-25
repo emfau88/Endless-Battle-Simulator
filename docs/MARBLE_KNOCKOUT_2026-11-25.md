@@ -13,7 +13,8 @@ Dieser Bericht wird je Paket fortgeschrieben.
 | M5 Darstellung, Zeitlupe, Seek-Prüfung | **Erledigt** (25.11.) |
 | M6 Ton | **Erledigt** (25.11.) |
 | M7 Short-Bahnen, Casting, Vorlagen | **Erledigt** (25.11.) |
-| M8 und M9 | **Offen** |
+| M8 Langvideo-Drehbuch, Vorlage, Finalprobe | **Erledigt** (25.11.) |
+| M9 Abschluss und Geschmacksfragen | **Offen** |
 
 ---
 
@@ -497,3 +498,78 @@ Am 25.11. hat der Nutzer **Stil A** gewählt („Ja Stil A“). Die Referenzbild
   Ton. 2 Tests grün. Ohne Grafikkarte (wie in der CI) braucht das Querformat 244 s für 90 Bilder; die Zeitgrenze
   ist darum wie bei Marble Works 420 s.
 - Casting: `node scripts/knockout-casting.mjs --short A --from 1 --to 200 --list` (ebenso B und C).
+
+---
+
+## M8 · Langvideo-Drehbuch, Vorlage, Finalprobe (25.11.2026)
+
+**Umfang:**
+
+- **Drehbuch:** Ein Drehbuch ist eine Liste mit einem Seed je Bahn (`params.script`). Es gilt nur zusammen mit seinem
+  Grund-Seed, weil der die Aufstellung festlegt. Die Seitenleiste zeigt `Drehbuch: an`, `an (anderer Seed)` oder `aus`.
+  Ohne Drehbuch läuft jeder Seed wie bisher als freies Rennen.
+- **Geschichte** (Plan, Abschnitt 4):
+  - Eine Außenseiterin entkommt dreimal knapp und steht am Ende auf dem Podest. Knapp heißt: Sie kommt als Letzte
+    durch, weniger als 2,5 Murmelbreiten vor der Murmel, die ausscheidet. Außenseiterin ist die erste so knapp
+    Gerettete auf Bahn 1 bis 3.
+  - Der frühe Spitzenreiter stürzt auf Bahn 7 am Hammer. Spitzenreiter ist eine der drei besten Platzsummen auf
+    Bahn 1 bis 3; mindestens einer davon bleibt bis Bahn 6 im Rennen.
+  - Das Finale entscheidet ein Fotofinish: Platz 1 und 2 trennen weniger als 0,3 s.
+  - Auf jeder Bahn: niemand sitzt fest, kein Zeitlimit, höchstens ein Stoß.
+- **Casting** `node scripts/knockout-casting.mjs --long --from 1 --to 3 --tries 30`:
+  - Bahn für Bahn. Für jede Bahn rechnet das Skript das Rennen mit dem bisherigen Drehbuch bis zum Beginn dieser
+    Bahn und probiert von dort aus Kandidaten-Seeds. Zwischen den Bahnen trägt das Rennen nur Aufstellung,
+    Ausgeschiedene, Zeit und Zeitlupen-Zähler, darum kann jeder Kandidat an dieser Stelle weiterrechnen.
+  - Scheitern Bahn 7 oder das Finale, geht die Suche zurück auf Bahn 6 bzw. Bahn 9 und probiert dort andere gültige
+    Varianten. Höchstens 2500 Probeläufe je Grund-Seed.
+  - Zum Schluss rechnet eine Gegenprobe das ganze Rennen am Stück und prüft die Geschichte noch einmal.
+- **Gecastete Drehbücher** in `LONG_CAST` (`src/scenarios/knockout.js`). Der erste Eintrag ist die Empfehlung.
+- **Vorlage** „Langvideo · 10 Bahnen“: Grund-Seed 3 mit Drehbuch, Name „Marble Knockout – Langvideo (10 Bahnen,
+  Drehbuch)“. Datei und Oberfläche sind gleich. Die Kapitel kommen wie seit M4 aus dem Ablauf.
+
+**Messung: Wie knapp wird ein Finale?**
+
+- 80 Finals (Grund-Seeds 1 und 7, je 40 Final-Seeds): Abstand Platz 1–2 kleinster Wert 0,234 s, 10 % unter 0,33 s,
+  Median 0,96 bis 1,12 s. Keins unter 0,15 s, 5 % unter 0,3 s.
+- Grund: Das zweite Drehkreuz kurz vor dem Ziel lässt die Murmeln nur einzeln durch und zieht das Feld auseinander.
+- Mit der Plan-Schwelle 0,1 s (im Skript zuerst 0,15 s) fand die Suche darum nichts: Grund-Seed 1 scheiterte nach
+  2500 Probeläufen in rund 20 min am Finale. Mit 0,3 s klappt es in 1 bis 2 min.
+
+**Ergebnis (Grund-Seeds 1 bis 3, alle drei vollständig):**
+
+| Grund-Seed | Probeläufe | Außenseiterin, knapp auf Bahn | stürzt auf Bahn 7 | Fotofinish | Podest | Video | Stöße |
+|---|---|---|---|---|---|---|---|
+| **3** (Vorlage) | 182 | YELLOW: 1, 2, 6 | RED | 0,277 s | GOLD, ORANGE, YELLOW | 281,7 s | 0 |
+| 2 | 156 | GREEN: 1, 2, 3 | RED | 0,257 s | BLACK, GREEN, PINK | 275,5 s | 0 |
+| 1 | 206 | GOLD: 1, 3, 6 | CYAN | 0,234 s | PURPLE, LIME, GOLD | 269,2 s | 1 (Bahn 1) |
+
+- Empfehlung Seed 3: kein Stoß, und die dritte knappe Rettung kommt erst in der Mitte des Videos.
+- Rechenzeit: Seed 1 in 116 s, Seeds 2 und 3 zusammen in 195 s.
+- Kapitel von Seed 3: 0:00 The Drop, 0:24 Turnstiles, 1:02 The Wheel, 1:33 Crumbling Bridge, 2:04 Tilt, 2:34 The Drum,
+  3:02 Hammer Alley, 3:27 Shifting Floors, 3:48 Ring Escape, 4:07 Grand Final, 4:33 Podium.
+
+**20-s-Probe vom Finale (Vorlage, Seed 3, Sekunde 254 bis 274, 1920 × 1080, 30 fps, mit Ton):**
+
+- Die drei Finalisten fahren dicht zusammen über Brücke, Kippbrett und Drehkreuz. Zeitlupe am Drehkreuz und im Ziel,
+  dann `GOLD WINS!`.
+- Ton der ganzen Episode: −26,8 LUFS, Spitze −6 dBFS, Begrenzer bis −0,4 dB. Prüfung OK. Export in 29 s (21 Bilder/s).
+- Lokal: `output/knockout-lab/m8-finale-20s.mp4`, Bildbogen `m8-finale-sheet.jpg`.
+- Dazu eine 20-s-Probe der Galerie (Schanze, Drehkreuze, Schaufelrad): `output/knockout-lab/m8-galerie-20s.mp4`.
+
+**Grenzen:**
+
+- Fotofinish heißt hier unter 0,3 s, nicht unter 0,1 s wie im Plan. Knapper ginge es nur mit einem anderen Zieleinlauf
+  im Finale (ohne Drehkreuz kurz vor dem Ziel). Das ist eine Geschmacksfrage.
+- Ein Drehbuch hängt an den Bahnen und der Physik. Jede Änderung dort kann es brechen; dann muss neu gecastet werden.
+  Der Test „Drehbuch“ meldet das.
+- In Seed 3 fahren GOLD und YELLOW zusammen im Finale. Die beiden Farben sehen sich klein im Bild sehr ähnlich.
+- Das Langvideo dauert 4,5 bis 4,7 min statt der geplanten 9 min (wie seit M4).
+- Der ganze Export lief nicht; der kommt nur auf Auftrag.
+
+**Nachweise:**
+
+- `test/knockout.test.mjs`, neuer Test „Drehbuch“: Seed 3 mit Drehbuch am Stück, niemand sitzt fest, YELLOW auf dem
+  Podest, RED stürzt auf Bahn 7, Fotofinish unter 0,3 s, Vorlagen-Datei gleich der Oberfläche. 8 Tests grün in 26 s.
+- Gegenprobe im Casting-Skript für alle drei Drehbücher: „Geschichte hält“.
+- Nicht erneut gelaufen: Browser-Test (der Vorlagen-Vergleich steckt jetzt auch im Node-Test), Vorlagen-Exporttest,
+  `npm run golden` und die Scrap-Hashes. M8 ändert kein anderes Szenario; beide liefen in M7 unverändert.

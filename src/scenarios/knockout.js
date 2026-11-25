@@ -162,6 +162,8 @@ EBS.registerScenario({
       { key: 'alive', label: 'Im Rennen', value: fmtInt(s.alive) },
       { key: 'lead', label: 'Vorne', value: s.order[0] || '–' },
       { key: 'out', label: 'Raus', value: s.out.length ? s.out.join(', ') : '–' },
+      // Drehbuch (M8): feste Seeds je Bahn aus dem Casting; gilt nur mit seinem Grund-Seed
+      { key: 'script', label: 'Drehbuch', value: sim.cfg.script ? (EBS.Knockout.LONG_CAST.some((c) => c.seed === sim.seed) ? 'an' : 'an (anderer Seed)') : 'aus' },
     ];
   },
   panelNote: (sim) => sim.snapshot().summary,
@@ -178,5 +180,21 @@ const SHORT_CAST = {
 /** Nächster geprüfter Short-Seed ab seed (sonst der erste der Liste). */
 const castShortSeed = (seed, short = 'A') => { const list = SHORT_CAST[short] || SHORT_CAST.A; return list.find((s) => s >= seed) ?? list[0]; };
 
-EBS.Knockout = { normalizeParams, simWorld, SHORT_CAST, castShortSeed };
+// Langvideo-Drehbücher (M8, scripts/knockout-casting.mjs --long): je Grund-Seed ein Seed pro Bahn. Geschichte: Die
+// Außenseiterin entkommt dreimal knapp und kommt ins Finale, der frühe Spitzenreiter stürzt auf Bahn 7 am Hammer,
+// das Finale entscheidet ein Fotofinish (unter 0,3 s). Das Drehbuch gilt nur zusammen mit seinem Grund-Seed
+// (Aufstellung). Der erste Eintrag ist die Empfehlung für die Vorlage: ohne Stoß, und die dritte knappe Rettung
+// kommt erst in der Mitte des Videos.
+const LONG_CAST = [
+  // YELLOW entkommt auf Bahn 1, 2 und 6 knapp, RED stürzt auf Bahn 7, Fotofinish 0,277 s, Podest GOLD, ORANGE, YELLOW
+  { seed: 3, script: [3933459010, 2179995249, 158089584, 2882867000, 1028737525, 3419242489, 3721404399, 4281868964, 280307425, 2009495816], underdog: 'YELLOW', leader: 'RED' },
+  // GREEN entkommt auf Bahn 1, 2 und 3 knapp, RED stürzt auf Bahn 7, Fotofinish 0,257 s, Podest BLACK, GREEN, PINK
+  { seed: 2, script: [1296469324, 3194329758, 1671238307, 688202754, 4285078904, 1618655811, 2544194846, 1031947465, 3733490268, 1428153327], underdog: 'GREEN', leader: 'RED' },
+  // GOLD entkommt auf Bahn 1, 3 und 6 knapp, CYAN stürzt auf Bahn 7, Fotofinish 0,234 s, Podest PURPLE, LIME, GOLD; ein Stoß auf Bahn 1
+  { seed: 1, script: [3132729028, 276461215, 3979003516, 2074541184, 3217042755, 3738335172, 1063340469, 776204934, 3160761223, 3041406069], underdog: 'GOLD', leader: 'CYAN' },
+];
+/** Drehbuch zum Grund-Seed (sonst das erste, die Empfehlung). */
+const castLong = (seed) => LONG_CAST.find((c) => c.seed === seed) || LONG_CAST[0];
+
+EBS.Knockout = { normalizeParams, simWorld, SHORT_CAST, castShortSeed, LONG_CAST, castLong };
 })();

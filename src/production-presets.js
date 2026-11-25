@@ -28,15 +28,19 @@
       view: { hud: true, camera: false },
     };
     // Marble Knockout: Short in Fassung A („Pick your color!“, 8 Murmeln, 3 Bahnen) auf einem geprüften Casting-Seed;
-    // Langvideo mit 12 Murmeln auf 10 Bahnen. Beide enden mit dem Podest (40 s und 300 s sind nur Startwerte).
-    if (scenario === 'knockout') return {
-      version: 1, name: `${labels[scenario]} – ${short ? 'Short (Pick your color!)' : 'Langvideo (10 Bahnen)'}`,
-      scenario, seed: short ? EBS.Knockout.castShortSeed(seed, 'A') : seed,
-      params: { mode: 'race', short: 'A', slowmo: 'on', marks: 'on', display: 'on', videoEnd: 'finish' },
-      video: { aspect: short ? '9:16' : '16:9', resolution: 1080, fps: 30, durationSec: short ? 40 : 300, tempo: 1, audio: true,
-        volume: { master: 100 }, quality: { crf: 20, preset: 'medium', bitrate: null } },
-      view: { hud: true, camera: false },
-    };
+    // Langvideo mit 12 Murmeln auf 10 Bahnen nach einem gecasteten Drehbuch (Grund-Seed und ein Seed je Bahn).
+    // Beide enden mit dem Podest (40 s und 300 s sind nur Startwerte).
+    if (scenario === 'knockout') {
+      const cast = short ? null : EBS.Knockout.castLong(seed);
+      return {
+        version: 1, name: `${labels[scenario]} – ${short ? 'Short (Pick your color!)' : 'Langvideo (10 Bahnen, Drehbuch)'}`,
+        scenario, seed: short ? EBS.Knockout.castShortSeed(seed, 'A') : cast.seed,
+        params: { mode: 'race', short: 'A', slowmo: 'on', marks: 'on', display: 'on', videoEnd: 'finish', ...(cast ? { script: cast.script.slice() } : {}) },
+        video: { aspect: short ? '9:16' : '16:9', resolution: 1080, fps: 30, durationSec: short ? 40 : 300, tempo: 1, audio: true,
+          volume: { master: 100 }, quality: { crf: 20, preset: 'medium', bitrate: null } },
+        view: { hud: true, camera: false },
+      };
+    }
     // Territory Short: small map with the hidden story "The last crown"; the video ends three
     // seconds after the result (length is planned from the seed, about half a minute).
     if (scenario === 'territory' && short) return {

@@ -16,7 +16,7 @@ const canvas = () => ({ width: 1, height: 1, getContext: () => stub() });
 function load() {
   const context = vm.createContext({ console, document: { createElement: canvas } }); context.window = context;
   const root = new URL('../', import.meta.url);
-  for (const p of [...FILES, 'src/canvas-scene.js', 'src/scenarios/knockout/art.js', 'src/scenarios/knockout/renderer.js', 'src/scenarios/knockout.js']) {
+  for (const p of [...FILES, 'src/canvas-scene.js', 'src/scenarios/knockout/art.js', 'src/scenarios/knockout/renderer.js', 'src/scenarios/knockout.js', 'src/production-presets.js']) {
     vm.runInContext(readFileSync(new URL(p, root), 'utf8'), context, { filename: p });
   }
   return context.EBS;
@@ -118,6 +118,29 @@ test('Short (M7): drei Fassungen, je drei Bahnen 8 → 5 → 3 → 1, Lockruf, k
   assert.equal(sc.normalizeParams({ short: 'C' }).short, 'C');
   // Hochformat zeigt das Rennen (nicht mehr die Galerie)
   assert.equal(create(1, {}, PORT).mode, 'race');
+});
+
+test('Drehbuch (M8): Außenseiterin im Finale, Spitzenreiter stürzt auf Bahn 7, Fotofinish, niemand hängt', () => {
+  const cast = EBS.Knockout.LONG_CAST[0], sim = create(cast.seed, { script: cast.script });
+  const id = (name) => sim.roster.findIndex((m) => m.name === name);
+  let stuck = 0;
+  while (sim.phase !== 'end' && sim.t < 900) {
+    sim.stepOnce();
+    // Erster Schritt des Zwischenstands: Zähler der gerade beendeten Bahn
+    if (sim.phase === 'result' && sim.phaseT < sim.dt * 1.5) stuck += sim.stats.stuck + sim.stats.timeUp;
+  }
+  assert.equal(sim.phase, 'end');
+  assert.equal(stuck, 0, 'niemand sitzt fest, kein Zeitlimit');
+  assert.ok(sim.podium.includes(id(cast.underdog)), `${cast.underdog} auf dem Podest`);
+  const L = sim.roster[id(cast.leader)];
+  assert.deepEqual([L.outStage, L.how], [6, 'fell'], `${cast.leader} stürzt auf Bahn 7`);
+  const fin = sim.runners.filter((u) => !u.out).sort((a, b) => a.place - b.place);
+  assert.ok(fin[1].finishT - fin[0].finishT < 0.3, `Fotofinish ${(fin[1].finishT - fin[0].finishT).toFixed(3)} s`);
+  // Die Vorlage trägt das Drehbuch; Datei und Oberfläche sind gleich
+  assert.deepEqual(plain(sc.normalizeParams({ script: cast.script }).script), plain(cast.script));
+  const preset = plain(EBS.productionPreset('knockout', 'long'));
+  assert.deepEqual([preset.seed, preset.params.script], [cast.seed, plain(cast.script)]);
+  assert.deepEqual(preset, JSON.parse(readFileSync(new URL('../presets/production/knockout-long.json', import.meta.url), 'utf8')));
 });
 
 test('Export: Länge aus dem Ablauf bis zum Ende des Podests', () => {

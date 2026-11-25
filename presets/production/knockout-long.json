@@ -1,15 +1,27 @@
 {
   "version": 1,
-  "name": "Marble Knockout – Langvideo (10 Bahnen)",
+  "name": "Marble Knockout – Langvideo (10 Bahnen, Drehbuch)",
   "scenario": "knockout",
-  "seed": 42,
+  "seed": 3,
   "params": {
     "mode": "race",
     "short": "A",
     "slowmo": "on",
     "marks": "on",
     "display": "on",
-    "videoEnd": "finish"
+    "videoEnd": "finish",
+    "script": [
+      3933459010,
+      2179995249,
+      158089584,
+      2882867000,
+      1028737525,
+      3419242489,
+      3721404399,
+      4281868964,
+      280307425,
+      2009495816
+    ]
   },
   "video": {
     "aspect": "16:9",
