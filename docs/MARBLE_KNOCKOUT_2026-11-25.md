@@ -8,7 +8,8 @@ Dieser Bericht wird je Paket fortgeschrieben.
 | Plan | **Erledigt** (25.11.) |
 | V0 Vorschau-Bilder | **Erledigt** (25.11.). Der Nutzer hat **Stil A „Holz & Abendlicht“** gewählt. |
 | M1 Physik-Kern | **Erledigt** (25.11.) |
-| M2 bis M9 | **Offen** |
+| M2/M3 Baukasten und Galerie | **Erledigt** (25.11.) |
+| M4 bis M9 | **Offen** |
 
 ---
 
@@ -127,3 +128,74 @@ Am 25.11. hat der Nutzer **Stil A** gewählt („Ja Stil A“). Die Referenzbild
   Für die Bahnen gilt deshalb: Ein Band muss etwa 3,5-mal so schnell laufen, wie die Murmeln fahren sollen.
 - Gleicher Aufbau ergibt dieselben Bits.
 - Der Vergleich Node gegen Chromium folgt im Browser-Test, sobald das Szenario angemeldet ist.
+
+---
+
+## M2/M3 · Baukasten und Element-Galerie (25.11.2026)
+
+**Umfang:**
+
+- `src/scenarios/knockout/elements.js`: ein Builder, der eine Bahn aus Bausteinen zusammensetzt. Feste Teile sind
+  Kapseln im Physik-Kern. Bewegte Teile sind kinematische Körper, deren Lage eine reine Funktion der Bahnzeit ist
+  oder an einem Ereignis hängt (Zeitpunkt im Zustand). Ihre Geschwindigkeit kommt aus der Ableitung der Lage.
+- 21 Elemente:
+
+  | Familie | Elemente |
+  |---|---|
+  | A Grundbahn | Rampe und Zickzack, Trichter, Nagelfeld, Sprungschanze mit Fangnetz, Bumper |
+  | B Drehen | Drehkreuz, Schaufelrad (hebt die Murmeln an), Drehtrommel, Ringausbruch, Kehrarm, Flip-Flop-Weiche |
+  | C Takt | Tor aus der Bahn (Takt oder von Hand), Pendelhammer, Kolben (Katapult-Becher), Plattform nach Schlüsselbildern (Fähre), Förderband mit Richtungswechsel, Falltüren in Seed-Reihenfolge |
+  | D Level verändert sich | Kippbrett, einstürzende Brücke (Zeit oder Auslöser), wandernde Böden, drehende Bühne (Labyrinth) |
+  | E Wertung | Startrinne mit Tor, Ziellinie mit Zieltor; Klappe, Quote, Röhre und Fallen-Schließen folgen mit dem Rennablauf (M4) |
+
+- Physik-Kern ergänzt:
+  - **Ebenen:** Trommel, Ringe und Labyrinth liegen auf einer eigenen Ebene. Eine Murmel fällt „von vorn“ hinein und
+    stößt erst innen mit ihnen zusammen. So gibt es keinen Engpass am Eingang.
+  - **Bumper-Stoß:** eine Mindest-Abprallgeschwindigkeit je Teil.
+- `src/scenarios/knockout/gallery.js`: 21 kleine Bühnen. Murmeln kommen oben herein, laufen durch das Element und
+  fallen unten hinaus; danach kommen sie wieder.
+- Erste Fassung der Zeichnung im Stil A (`art.js`, `renderer.js`).
+- Werkzeuge:
+  - `scripts/knockout-lab.mjs`: Simulation in Node, ohne Browser.
+  - `scripts/knockout-frames.mjs`: Bildblatt aus Chromium, nur nach `output/`.
+
+**Messung (60 s je Element, sechs Murmeln, Seed 1):**
+
+| Element | Runden je Murmel | längste Runde |
+|---|---|---|
+| Nagelfeld | 4–10 | 16 s |
+| Zickzack | 3 | 19 s |
+| Trichter | 31–32 | 4 s |
+| Bumper | 17–19 | 7 s |
+| Sprungschanze | 15–16 | 6 s |
+| Drehkreuz | 4–5 | 19 s |
+| Schaufelrad | 6 | 12 s |
+| Drehtrommel | 2–10 | 51 s |
+| Ringausbruch | 4–5 | 20 s |
+| Kehrarm | 16–17 | 6 s |
+| Flip-Flop | 17 | 6 s |
+| Tor | 6–8 | 10 s |
+| Pendelhammer | 3–14 | 22 s |
+| Kolben | 5–7 | 18 s |
+| Fähre | 5–7 | 15 s |
+| Förderband | 17–18 | 6 s |
+| Falltüren | 12–13 | 9 s |
+| Kippbrett | 6–14 | 27 s |
+| Brücke (baut sich alle 9 s neu auf) | 1–2 je Aufbau | 5 s |
+| Wandernde Böden | 6–7 | 13 s |
+| Labyrinth | 4–6 | 13 s |
+
+**Grenzen:**
+
+- In der Oberfläche erscheint die Galerie erst mit der Anmeldung des Szenarios (M4).
+- D5 (Drehweichen-Raster) ist wie geplant nicht gebaut.
+- Kolben und Fähre kommen in den geplanten Bahnen nicht vor. Sie stehen für spätere Bahnen bereit.
+- In der Drehtrommel kann eine Murmel lange kreisen (bis 51 s in der Galerie). Für Bahn 6 wird das abgestimmt.
+
+**Nachweise:**
+
+- `test/knockout-elements.test.mjs`, 3 Tests grün:
+  - Jedes Element läuft 60 s.
+  - Gleicher Seed ergibt denselben Hash.
+  - Simulation und Bahnen nutzen keine Winkelfunktionen des Browsers, also gleiche Bits in Node und Chromium.
+- `test/knockout-physics.test.mjs` bleibt grün (7 Tests).

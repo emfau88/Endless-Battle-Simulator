@@ -41,15 +41,17 @@
     }
 
     // ------------------------------------------------------------ Aufbau
-    /** Murmel { x, y, r }; gibt das Objekt zurück, das die Simulation weiter liest und setzt. */
-    addMarble({ x, y, r, vx = 0, vy = 0 }) {
-      const m = { id: this.marbles.length, x, y, vx, vy, a: 0, w: 0, r, active: true, collide: true, touch: 0 };
+    /** Murmel { x, y, r }; gibt das Objekt zurück, das die Simulation weiter liest und setzt.
+     *  mask: Ebenen, mit denen sie zusammenstößt (Bit 1 = Grundbahn; Trommel und Ringe liegen auf Bit 2). */
+    addMarble({ x, y, r, vx = 0, vy = 0, mask = 1 }) {
+      const m = { id: this.marbles.length, x, y, vx, vy, a: 0, w: 0, r, mask, active: true, collide: true, touch: 0 };
       this.marbles.push(m); return m;
     }
-    /** Feste Kapsel { ax, ay, bx, by, rad, rest?, fric?, speed?, tag? }; speed = Förderband längs a→b. */
+    /** Feste Kapsel { ax, ay, bx, by, rad, rest?, fric?, speed?, kick?, mask?, tag? }; speed = Förderband längs a→b,
+     *  kick = Mindest-Abprallgeschwindigkeit (Bumper). */
     addStatic(s) {
       const dx = s.bx - s.ax, dy = s.by - s.ay, len = Math.sqrt(dx * dx + dy * dy) || 1;
-      const sh = { ...s, ux: dx / len, uy: dy / len, speed: s.speed || 0, wax: s.ax, way: s.ay, wbx: s.bx, wby: s.by, body: null };
+      const sh = { ...s, ux: dx / len, uy: dy / len, speed: s.speed || 0, kick: s.kick || 0, mask: s.mask || 1, wax: s.ax, way: s.ay, wbx: s.bx, wby: s.by, body: null };
       this.statics.push(sh); this._insert(sh); return sh;
     }
     /** Kinematischer Körper { shapes: [lokale Kapseln], pose(t) → { x, y, a, vx, vy, w }, tag }. */
@@ -57,7 +59,7 @@
       let reach = 0;
       for (const s of def.shapes) for (const [x, y] of [[s.ax, s.ay], [s.bx, s.by]]) reach = Math.max(reach, Math.sqrt(x * x + y * y) + s.rad);
       const b = { tag: def.tag || '', pose: def.pose, enabled: def.enabled !== false, reach, x: 0, y: 0, a: 0, vx: 0, vy: 0, w: 0, c: 1, s: 0,
-        shapes: def.shapes.map((s) => ({ ...s, speed: s.speed || 0, wax: 0, way: 0, wbx: 0, wby: 0, ux: 0, uy: 0, body: null })) };
+        shapes: def.shapes.map((s) => ({ ...s, speed: s.speed || 0, kick: s.kick || 0, mask: s.mask || 1, wax: 0, way: 0, wbx: 0, wby: 0, ux: 0, uy: 0, body: null })) };
       for (const s of b.shapes) s.body = b;
       this.bodies.push(b); this._pose(b, this.t); return b;
     }
@@ -119,6 +121,7 @@
     }
 
     _shapeContact(m, sh, h, margin) {
+      if (!(sh.mask & m.mask)) return;
       const p = this._p;
       closest(sh.wax, sh.way, sh.wbx, sh.wby, m.x, m.y, p);
       const dx = m.x - p[0], dy = m.y - p[1], d = Math.sqrt(dx * dx + dy * dy), gap = d - m.r - sh.rad;
@@ -195,15 +198,15 @@
     _restitution() {
       const M = this.marbles, C = this.contacts, o = this.o;
       for (let k = 0; k < this.n; k++) {
-        const c = C[k];
-        if (c.jn <= 0 || c.vn0 > -o.bounceMin) continue;
-        const A = M[c.i], want = -c.rest * c.vn0;
+        const c = C[k], kick = c.j < 0 ? c.sh.kick : 0;
+        if (c.jn <= 0 || (c.vn0 > -o.bounceMin && !kick)) continue;
+        const A = M[c.i];
         if (c.j < 0) {
-          const vn = (A.vx - c.svx) * c.nx + (A.vy - c.svy) * c.ny;
+          const want = Math.max(-c.rest * c.vn0, kick), vn = (A.vx - c.svx) * c.nx + (A.vy - c.svy) * c.ny;
           if (vn < want) { const dj = want - vn; A.vx += dj * c.nx; A.vy += dj * c.ny; }
-          this.impacts.push({ i: c.i, j: -1, tag: c.sh.tag || '', speed: -c.vn0, x: A.x - c.nx * A.r, y: A.y - c.ny * A.r });
+          this.impacts.push({ i: c.i, j: -1, tag: c.sh.tag || '', speed: Math.max(-c.vn0, kick), x: A.x - c.nx * A.r, y: A.y - c.ny * A.r });
         } else {
-          const B = M[c.j], vn = (A.vx - B.vx) * c.nx + (A.vy - B.vy) * c.ny;
+          const B = M[c.j], want = -c.rest * c.vn0, vn = (A.vx - B.vx) * c.nx + (A.vy - B.vy) * c.ny;
           if (vn < want) { const dj = (want - vn) * 0.5; A.vx += dj * c.nx; A.vy += dj * c.ny; B.vx -= dj * c.nx; B.vy -= dj * c.ny; }
           this.impacts.push({ i: c.i, j: c.j, tag: 'marble', speed: -c.vn0, x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 });
         }
@@ -234,7 +237,7 @@
     /** Kleinster Abstand einer Murmel zu allen Bahnteilen (für Tests und Invarianten). */
     clearance(m) {
       const p = this._p; let best = Infinity;
-      const test = (sh) => { closest(sh.wax, sh.way, sh.wbx, sh.wby, m.x, m.y, p); const dx = m.x - p[0], dy = m.y - p[1]; best = Math.min(best, Math.sqrt(dx * dx + dy * dy) - sh.rad - m.r); };
+      const test = (sh) => { if (!(sh.mask & m.mask)) return; closest(sh.wax, sh.way, sh.wbx, sh.wby, m.x, m.y, p); const dx = m.x - p[0], dy = m.y - p[1]; best = Math.min(best, Math.sqrt(dx * dx + dy * dy) - sh.rad - m.r); };
       for (const sh of this.statics) test(sh);
       for (const b of this.bodies) if (b.enabled) for (const sh of b.shapes) test(sh);
       return best;
