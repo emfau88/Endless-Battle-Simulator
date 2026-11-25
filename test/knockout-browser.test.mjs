@@ -3,6 +3,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { launchBrowser, openExportPage } from '../lib/browser.mjs';
 import { loadKnockout, makeSim } from '../scripts/knockout-lab.mjs';
 
@@ -23,6 +24,27 @@ test('Chromium rechnet dasselbe Rennen wie Node (Zustands-Hash an drei Zeitpunkt
   for (const t of marks) { await page.evaluate((s) => window.exportAPI.simulate(s), t - at); at = t; web.push(await page.evaluate(() => window.exportAPI.hash())); }
   await page.close();
   assert.deepEqual(web, node);
+});
+
+test('Short (M7): Chromium rechnet dieselben Hochformat-Rennen wie Node; Vorlagen-Dateien gleich Oberfläche', async () => {
+  const EBS = loadKnockout();
+  for (const [short, seed] of [['A', 3], ['B', 5], ['C', 7]]) {
+    const sim = makeSim(EBS, { seed, aspect: '9:16', params: { short } }), node = [];
+    for (const t of [12, 30]) { while (sim.step < t * 60) sim.stepOnce(); node.push(sim.stateHash()); }
+    const page = await open(seed, '9:16', { short }), web = [];
+    await page.evaluate(() => window.exportAPI.simulate(12)); web.push(await page.evaluate(() => window.exportAPI.hash()));
+    await page.evaluate(() => window.exportAPI.simulate(18)); web.push(await page.evaluate(() => window.exportAPI.hash()));
+    if (short === 'A') {
+      for (const kind of ['short', 'long']) {
+        const file = JSON.parse(readFileSync(new URL(`../presets/production/knockout-${kind}.json`, import.meta.url), 'utf8'));
+        assert.deepEqual(await page.evaluate((k) => EBS.productionPreset('knockout', k), kind), file, `knockout/${kind}: Datei und Oberfläche`);
+      }
+      // Die Short-Vorlage nimmt einen geprüften Casting-Seed
+      assert.ok(await page.evaluate(() => EBS.Knockout.SHORT_CAST.A.includes(EBS.productionPreset('knockout', 'short', 1).seed)));
+    }
+    await page.close();
+    assert.deepEqual(web, node, `Short ${short}`);
+  }
 });
 
 test('Seek-Regel: Sprung und durchgehende Wiedergabe ergeben dasselbe Bild (zwölf Zeitpunkte)', async () => {

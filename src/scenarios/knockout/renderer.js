@@ -98,10 +98,10 @@
         const keep = sim.final ? 'FINAL' : `${alive} → TOP ${sim.keep}`;
         const since = sim.phase === 'ready' ? sim.phaseT : sim.phase === 'race' ? sim.R.ready + (sim.world.t - sim.raceStart) : 99;
         if (sim.stageNo === 0 && since < 3.2) {
-          A.text(g, sim.hook || 'PICK YOUR COLOR!', W / 2, H * 0.42, 96, { align: 'center', weight: 900, spacing: 1, outline: true, alpha: fade(since, 0.01, 2.6, 0.5) });
+          A.text(g, sim.hook || 'PICK YOUR COLOR!', W / 2, H * 0.42, 96, { align: 'center', weight: 900, spacing: 1, outline: true, alpha: fade(since, 0.01, 2.6, 0.5), max: W * 0.9 });
         } else if (since < 2.2) {
-          A.text(g, keep, W / 2, H * 0.42, 112, { align: 'center', weight: 900, spacing: 2, outline: true, alpha: fade(since, 0.15, 1.5, 0.5) });
-          A.text(g, title, W / 2, H * 0.42 + 76, 40, { align: 'center', weight: 800, spacing: 5, color: A.S.sub, alpha: fade(since, 0.15, 1.5, 0.5) });
+          A.text(g, keep, W / 2, H * 0.42, 112, { align: 'center', weight: 900, spacing: 2, outline: true, alpha: fade(since, 0.15, 1.5, 0.5), max: W * 0.9 });
+          A.text(g, title, W / 2, H * 0.42 + 76, 40, { align: 'center', weight: 800, spacing: 5, color: A.S.sub, alpha: fade(since, 0.15, 1.5, 0.5), max: W * 0.9 });
         }
       }
       // Einblendungen aus dem Zustand: wer raus ist, Fallen zu, Sieger
@@ -110,13 +110,13 @@
       if (outs.length) {
         const names = outs.map((x) => sim.roster[x.rid].name), k = fade(now - outs[0].t, 0.15, 1.4, 0.45);
         const line = names.length === 1 ? `${names[0]} IS OUT` : names.length === 2 ? `${names[0]} & ${names[1]} ARE OUT` : `${names.length} ARE OUT`;
-        A.text(g, line, W / 2, short ? H * 0.56 : H * 0.5, short ? 78 : 64, { align: 'center', weight: 900, spacing: 2, outline: true, alpha: k, color: '#ffd9d4' });
+        A.text(g, line, W / 2, short ? H * 0.56 : H * 0.5, short ? 78 : 64, { align: 'center', weight: 900, spacing: 2, outline: true, alpha: k, color: '#ffd9d4', max: W * 0.9 });
       }
       const traps = sim.notes.filter((x) => x.kind === 'traps' && now - x.t < 1.8);
       if (traps.length) A.text(g, 'TRAPS CLOSED', W / 2, short ? H * 0.62 : H * 0.58, short ? 56 : 40, { align: 'center', weight: 900, spacing: 3, color: '#b8f5c8', alpha: fade(now - traps[0].t, 0.15, 1.2, 0.45) });
       if (sim.final && sim.phase === 'result') {
         const win = sim.runners.find((u) => u.place === 1);
-        if (win) A.text(g, `${sim.roster[win.rid].name} WINS!`, W / 2, short ? H * 0.42 : H * 0.46, short ? 120 : 96, { align: 'center', weight: 900, spacing: 2, outline: true, alpha: fade(sim.phaseT, 0.2, 9, 0.3), color: '#fff3c4' });
+        if (win) A.text(g, `${sim.roster[win.rid].name} WINS!`, W / 2, short ? H * 0.42 : H * 0.46, short ? 120 : 96, { align: 'center', weight: 900, spacing: 2, outline: true, alpha: fade(sim.phaseT, 0.2, 9, 0.3), color: '#fff3c4', max: W * 0.9 });
       }
       if (sim.phase === 'podium' || (sim.phase === 'end' && sim.podium)) this.podium(g);
     }

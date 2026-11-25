@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "name": "Marble Knockout – Short (Pick your color!)",
+  "scenario": "knockout",
+  "seed": 47,
+  "params": {
+    "mode": "race",
+    "short": "A",
+    "slowmo": "on",
+    "marks": "on",
+    "display": "on",
+    "videoEnd": "finish"
+  },
+  "video": {
+    "aspect": "9:16",
+    "resolution": 1080,
+    "fps": 30,
+    "durationSec": 40,
+    "tempo": 1,
+    "audio": true,
+    "volume": {
+      "master": 100
+    },
+    "quality": {
+      "crf": 20,
+      "preset": "medium",
+      "bitrate": null
+    }
+  },
+  "view": {
+    "hud": true,
+    "camera": false
+  }
+}

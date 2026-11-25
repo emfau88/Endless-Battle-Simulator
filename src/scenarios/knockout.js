@@ -79,19 +79,16 @@ function normalizeParams(input) {
 
 /** Simulationswelt: Querformat 1920 × 1080, Hochformat 1080 × 1920; das Quadrat rechnet im Querformat. */
 const simWorld = (world) => (world.h > world.w ? { w: 1080, h: 1920 } : { w: 1920, h: 1080 });
-/** Solange die Short-Bahnen fehlen (Paket M7), zeigt das Hochformat die Galerie. */
-const shortReady = (short) => (EBS.KnockoutStages.short[short] || []).length > 0;
 
 class KnockoutScenarioSim extends KS.KnockoutSimulation {
   constructor({ seed, params, world, timeScale = 1 }) {
-    const cfg = normalizeParams(params), w = simWorld(world);
-    if (w.h > w.w && cfg.mode !== 'gallery' && !shortReady(cfg.short)) cfg.mode = 'gallery';
-    super({ seed, params: cfg, world: w });
+    const w = simWorld(world);
+    super({ seed, params: normalizeParams(params), world: w });
     this.dt = DT * timeScale; this.timeScale = timeScale;
     this.audioWorldWidth = w.w;
   }
-  // Nur Darstellungsschalter wirken sofort; alles andere startet neu (die Galerie-Umleitung bleibt erhalten)
-  setParam(k, v) { const mode = this.cfg.mode; this.cfg = { ...normalizeParams({ ...this.cfg, [k]: v }), mode }; }
+  // Nur Darstellungsschalter wirken sofort; alles andere startet neu
+  setParam(k, v) { this.cfg = normalizeParams({ ...this.cfg, [k]: v }); }
   setTimeScale(s) { this.dt = DT * s; this.timeScale = s; }
 }
 
@@ -170,5 +167,16 @@ EBS.registerScenario({
   panelNote: (sim) => sim.snapshot().summary,
 });
 
-EBS.Knockout = { normalizeParams, simWorld };
+// Short-Casting (M7, scripts/knockout-casting.mjs --list, Seeds 1–200): je Fassung die besten vollständigen Seeds
+// (höchstens 40 s, knappes Finale, Führungswechsel, Sturz auf der Gefahrenbahn, bei B GOLD im Finale, niemand hängt).
+// A: 134 vollständig, davon die besten 24; B: alle 15; C: alle 23.
+const SHORT_CAST = {
+  A: [3, 35, 47, 50, 51, 74, 87, 97, 103, 107, 122, 131, 137, 139, 141, 160, 163, 167, 171, 175, 177, 192, 193, 196],
+  B: [23, 32, 55, 57, 71, 81, 82, 88, 98, 104, 136, 149, 173, 177, 190],
+  C: [15, 32, 42, 53, 56, 58, 64, 69, 81, 95, 99, 104, 105, 106, 128, 131, 133, 136, 139, 160, 182, 185, 199],
+};
+/** Nächster geprüfter Short-Seed ab seed (sonst der erste der Liste). */
+const castShortSeed = (seed, short = 'A') => { const list = SHORT_CAST[short] || SHORT_CAST.A; return list.find((s) => s >= seed) ?? list[0]; };
+
+EBS.Knockout = { normalizeParams, simWorld, SHORT_CAST, castShortSeed };
 })();

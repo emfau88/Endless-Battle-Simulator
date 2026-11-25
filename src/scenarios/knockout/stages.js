@@ -29,11 +29,13 @@
     const back = b.start.floor[0];
     return [over(c, back[0] + c.d, back[1]), over(c, GATE[0], GATE[1])];
   }
-  /** Lichtschranke bei x (Bahn at, Fahrtrichtung dir) mit Tor eine Murmelbreite davor. */
-  function finishAt(b, c, at, x, dir) {
-    const y = at(x), lo = y - b.rad, hi = lo - 3 * c.d;
+  /** Lichtschranke bei x (Bahn at, Fahrtrichtung dir) mit Tor eine Murmelbreite davor. reach: Die unsichtbare
+   *  Erfassung reicht bis zu dieser Höhe hinauf (für Murmeln, die von oben am Strich vorbei ins Ziel fliegen). */
+  function finishAt(b, c, at, x, dir, reach) {
+    const y = at(x), lo = y - b.rad, hi = lo - 3 * c.d, top = reach === undefined ? hi : Math.min(hi, reach);
     const gate = { x: x - dir * c.d, y: at(x - dir * c.d), h: 1.4 * c.r };
-    b.finishLine(dir > 0 ? { ax: x, ay: lo, bx: x, by: hi, gate } : { ax: x, ay: hi, bx: x, by: lo, gate });
+    const sense = top < hi ? (dir > 0 ? { ax: x, ay: lo, bx: x, by: top } : { ax: x, ay: top, bx: x, by: lo }) : undefined;
+    b.finishLine(dir > 0 ? { ax: x, ay: lo, bx: x, by: hi, gate, sense } : { ax: x, ay: hi, bx: x, by: lo, gate, sense });
   }
   /** Ziel mit Auffangkasten: Die Bahn (bis x gebaut) läuft 1,2 d weiter und fällt in einen Kasten. */
   function finishBin(b, c, at, x, dir) {
@@ -265,5 +267,195 @@
     b.setPath(p);
   }, { final: true });
 
-  EBS.KnockoutStages = { long: L, short: { A: [], B: [], C: [] }, gallery: EBS.KnockoutGallery, helpers: { line, row, over, finishAt, finishBin, finishRail, turnstileOn } };
+  // ======================================================================= Short (Hochformat 1080 × 1920, d 60)
+  // Drei Fassungen mit je drei Bahnen (8 → 5 → 3 → 1). Jede Bahn dauert um 10 s; das Ziel ist ein kleiner Becher.
+  // Maßregeln aus den Proben: Kehre mindestens 1,7 d hinter dem Reihenende, zwischen Stift und Wand gut 1,4 d frei,
+  // unter einem Trichterhals rund 2 d Luft, die Ziellinie vor jeder Stelle, an der man in den Becher fallen kann.
+
+  /** Ziel mit kleinem Becher (Short): Die Bahn läuft 1,2 d weiter und fällt in einen Becher der Breite w·d.
+   *  reach: siehe finishAt. */
+  function finishCup(b, c, at, x, dir, w = 4.4, reach) {
+    const d = c.d, xe = x + dir * 1.2 * d, ye = at(xe), yb = ye + 2.4 * d, wo = xe + dir * w * d;
+    finishAt(b, c, at, x, dir, reach);
+    b.track([[x, at(x)], [xe, ye]]);
+    b.wall([[xe, ye], [xe, yb]]); b.track([[xe, yb], [wo, yb]]); b.wall([[wo, yb], [wo, ye - 1.4 * d]]);
+    return [over(c, x, at(x))];
+  }
+  /** Höhe einer Reihe mit steilem Anfang (k1 Grad bis xk), danach flach (k2 Grad). */
+  function bent(xs, ys, xk, k1, k2) {
+    const a = tand(k1), q = tand(k2), yk = ys + Math.abs(xk - xs) * a;
+    return (x) => (Math.abs(x - xs) < Math.abs(xk - xs) ? ys + Math.abs(x - xs) * a : yk + Math.abs(x - xk) * q);
+  }
+  const sstage = (list, id, title, world, build, o = {}) => list.push({ id, title, world, build, ...o });
+
+  // ----------------------------------------------------------------- S-A · PICK YOUR COLOR!
+  const SA = [];
+  // S-A 1 · THE DROP (8 → 5): Regal, Nagelfeld, Trichter, Zickzack mit Drehkreuz.
+  // Zwischen äußerem Stift und Wand gut 1,4 Murmeln Platz, unter dem Trichter knapp 2 Murmeln Luft bis zur steilen
+  // Reihe, Anschlag 1,5 d links der Mitte (sonst klemmt der Trichterausgang am Anschlag).
+  sstage(SA, 'drop', 'THE DROP', 'night', (b, c) => {
+    const d = c.d, cx = 540, x0 = cx - 4.6 * d, x1 = cx + 4.6 * d, ys = 250;
+    b.dropShelf({ x0, x1, y: ys, n: c.n, flaps: 6 });
+    const wl = x0 - b.rad, wr = x1 + b.rad;
+    b.wall([[wl, ys - 50], [wl, 720]]); b.wall([[wr, ys - 50], [wr, 720]]);
+    b.pegField({ x0: cx - 3 * d, y0: 460, cols: 5, rows: 4, dx: 1.5 * d, dy: 66, rad: d * 0.16 });
+    const fy = 820, fw = 0.95 * d;
+    b.track([[wl, 720], [cx - fw, fy]]); b.track([[wr, 720], [cx + fw, fy]]);
+    const xb = cx - 2.27 * d, r1 = bent(xb, fy + 1.95 * d - 2.27 * d * tand(12), cx + 2.27 * d, 12, 7), e1 = 900;
+    b.track([[cx - 1.5 * d, fy + 20], [cx - 1.5 * d + 8, r1(cx - 1.5 * d + 8)], [cx + 2.27 * d, r1(cx + 2.27 * d)], [e1, r1(e1)]]);
+    turn(b, 1010, r1(e1) - 1.6 * d, 1200);
+    const r2 = line(1010, 1180, 6), xf = 330; b.track([[1010, 1180], [xf, r2(xf)]]);
+    turnstileOn(b, c, r2, 620, { rps: 0.5 });
+    const path = [[cx, ys - 20], [cx, 700], [cx, fy + 20], over(c, 640, r1(640)), over(c, e1, r1(e1)), [960, 1080], over(c, 980, r2(980))];
+    path.push(...finishCup(b, c, r2, xf, -1, 3.4));
+    b.setPath(path);
+  });
+  // S-A 2 · CRUMBLING BRIDGE (5 → 3): Schanze auf die Brücke über dem Abgrund (Gefahr).
+  // Anlauf mit 12° bis kurz vor die Schanze: Bei flacherem Anlauf bleiben langsame Murmeln vor der Lippe liegen.
+  sstage(SA, 'bridge', 'CRUMBLING BRIDGE', 'petrol', (b, c) => {
+    const d = c.d;
+    b.startChute({ x: 420, y: 330, dir: 1, slope: 6, n: c.n });
+    const r1 = row(b, 420, 330, 900, 8); turn(b, 1010, r1(900) - 1.6 * d, 620);
+    const r2 = line(1010, 600, 12), xk = 780, lipX = xk - 1.4 * d, lipY = r2(xk) - 0.3 * d;
+    b.track([[1010, 600], [xk, r2(xk)], [lipX, lipY]]);
+    const bx0 = Math.round(lipX - 0.6 * d), by0 = Math.round(lipY + 0.38 * d), bx1 = 250, by1 = by0 + 30;
+    b.bridge({ x0: bx0, y0: by0, x1: bx1, y1: by1, n: 7, trigger: bx0 - 1.5 * d, count: Math.max(1, c.n - 2), delay: 0.6, interval: 0.4, sink: 2 * d });
+    b.pit(bx1 - 20, bx0 + 30, by1 + 2, by1 + 2 * d, { kill: true, depth: 1.0 * d });
+    const r3 = row(b, bx1, by1, 180, 4); turn(b, 70, by1 - 20, 960);
+    const r4 = line(70, 940, 6), xf = 760; b.track([[70, 940], [xf, r4(xf)]]);
+    const p = [[200, 290], over(c, 420, 330), over(c, 900, r1(900)), [960, 520], over(c, 980, r2(980)), over(c, xk, r2(xk)), [bx0, by0 - 0.8 * d], [bx1, by1 - 0.8 * d],
+      over(c, 180, r3(180)), [110, 880], over(c, 110, r4(110))];
+    p.push(...finishCup(b, c, r4, xf, 1, 3.0));
+    b.setPath(p);
+  }, { hazard: true });
+  // S-A 3 · RING ESCAPE (3 → 1): Wer zuerst aus den Ringen bricht und unten ins Ziel rollt, gewinnt.
+  sstage(SA, 'rings', 'RING ESCAPE', 'violet', (b, c) => {
+    const d = c.d, cx = 540, cy = 780;
+    b.startChute({ x: 380, y: 300, dir: 1, slope: 6, n: c.n });
+    b.track([[380, 300], [462, 309]]);
+    b.wall([[cx - 0.8 * d, 380], [cx - 0.8 * d, cy - 0.6 * d]], { front: true }); b.wall([[cx + 0.8 * d, 240], [cx + 0.8 * d, cy - 0.6 * d]], { front: true });
+    b.rings({ x: cx, y: cy, radii: [2.2 * d, 3.6 * d, 5.0 * d], rps: [0.28, -0.21, 0.14], slotW: 1.5 * d });
+    const r2 = line(190, 1180, 4); b.track([[190, 1000], [190, 1180], [760, r2(760)]]);
+    const p = [[200, 260], over(c, 380, 300), [cx, 330], [cx, cy], [cx, cy + 5.6 * d], over(c, 600, r2(600))];
+    p.push(...finishCup(b, c, r2, 760, 1, 3.2));
+    b.setPath(p);
+  });
+  SA.hook = 'PICK YOUR COLOR!';
+
+  // ----------------------------------------------------------------- S-B · FOLLOW THE GOLD ONE!
+  const SB = [];
+  // S-B 1 · THE DRUM (8 → 5): Regal, Trichter, Weiche, beide Wege von vorn in die schaukelnde Trommel.
+  sstage(SB, 'drum', 'THE DRUM', 'plum', (b, c) => {
+    const d = c.d, cx = 540, x0 = cx - 4.6 * d, x1 = cx + 4.6 * d, ys = 230, fy0 = 420, fy1 = 520;
+    b.dropShelf({ x0, x1, y: ys, n: c.n, flaps: 6 });
+    const wl = x0 - b.rad, wr = x1 + b.rad;
+    b.wall([[wl, ys - 50], [wl, fy0]]); b.wall([[wr, ys - 50], [wr, fy0]]);
+    b.track([[wl, fy0], [cx - 0.95 * d, fy1]]); b.track([[wr, fy0], [cx + 0.95 * d, fy1]]);
+    // Weiche 2,4 d unter dem Trichterhals (mit 1,4 d klemmte eine Murmel zwischen Hals und hohem Balkenende)
+    const fy = fy1 + 2.4 * d, R = 3.8 * d, dy = 970, fe = 920;
+    b.flipflop({ x: cx, y: fy, len: 3.2 * d, ang: 0.45 });
+    b.track([[cx - 1.5 * d, fy + 1.2 * d], [150, fy + 1.2 * d + 64]]); turn(b, 70, fy + 0.2 * d, fe + 20);
+    b.track([[cx + 1.5 * d, fy + 1.2 * d], [930, fy + 1.2 * d + 64]]); turn(b, 1010, fy + 0.2 * d, fe + 20);
+    const fl = line(70, fe, 8.2), fr = line(1010, fe, 8.2), xl = cx - R - 20, xr = cx + R + 20;
+    b.track([[70, fe], [xl, fl(xl)]]); b.track([[xl, fl(xl)], [cx - 0.5 * d, fl(cx - 0.5 * d)]], { front: true });
+    b.track([[1010, fe], [xr, fr(xr)]]); b.track([[xr, fr(xr)], [cx + 0.5 * d, fr(cx + 0.5 * d)]], { front: true });
+    b.drum({ x: cx, y: dy, R, gaps: [0, PI], gapW: 1.5 * d, rps: 0.14, fins: 2, finL: 0.9 * d, rock: { amp: 0.5, period: 4.3 } });
+    const r4 = line(1010, 1290, 3), xf = 300; b.track([[1010, 1290], [xf, r4(xf)]]); turn(b, 1010, 1170, 1290);
+    const p = [[cx, ys - 20], [cx, fy0], [cx, fy - 0.8 * d], [cx, dy - 1.5 * d], [cx, dy], [cx, dy + R + 0.5 * d], over(c, 480, r4(480))];
+    // Wer links aus der Trommel fliegt, landet ohne die Bahn direkt im Becher: Die Lichtschranke erfasst darum bis
+    // unter die linke Zulaufbahn (sonst lag die Murmel im Becher, ohne im Ziel zu sein)
+    p.push(...finishCup(b, c, r4, xf, -1, 2.8, fl(xf)));
+    b.setPath(p);
+  });
+  // S-B 2 · HAMMER ALLEY (5 → 3): Sims mit zwei Löchern unter Pendelhämmern, darunter der Abgrund (Gefahr).
+  sstage(SB, 'hammers', 'HAMMER ALLEY', 'slate', (b, c) => {
+    const d = c.d;
+    b.startChute({ x: 420, y: 300, dir: 1, slope: 6, n: c.n });
+    const r1 = row(b, 420, 300, 900, 7); turn(b, 1010, r1(900) - 1.6 * d, 780);
+    b.net([[1002, 740], [900, 772]]);
+    const at = line(900, 772, 6), holes = [740, 470], hw = 1.6 * d;
+    let xs = 900;
+    holes.forEach((h, i) => {
+      const xe = h + hw / 2;
+      b.track([[xs, at(xs)], [xe + 0.6 * d, at(xe + 0.6 * d)], [xe, at(xe) - 0.12 * d]]);
+      xs = h - hw / 2;
+      b.hammer({ px: h + 1.4 * d, py: at(h) - 6 * d, L: 5.6 * d, amp: 0.6, period: 2.4, phase: i * 0.37 });
+      b.pit(h - 2.2 * d, h + 2.2 * d, at(h) + 6, at(h) + 2.4 * d, { kill: true, depth: 1.1 * d });
+      b.lid({ x0: h - hw / 2 + b.rad, y0: at(h - hw / 2), x1: h + hw / 2 - b.rad, y1: at(h + hw / 2) });
+    });
+    // Ziel gleich hinter dem zweiten Loch auf dem Sims
+    const xf = 260; b.track([[xs, at(xs)], [xf, at(xf)]]);
+    const p = [[200, 270], over(c, 420, 300), over(c, 900, r1(900)), [960, 700], over(c, 880, at(880))];
+    p.push(...finishCup(b, c, at, xf, -1, 2.2));
+    b.setPath(p);
+  }, { hazard: true });
+  // S-B 3 · TILT (3 → 1): Eine Reihe hinunter auf die Wippe; wer rechts unten herunterrollt, rollt ins Ziel.
+  sstage(SB, 'tilt', 'TILT', 'dusk', (b, c) => {
+    const d = c.d;
+    b.startChute({ x: 700, y: 520, dir: -1, slope: 6, n: c.n });
+    const r2 = line(700, 520, 6); b.track([[700, 520], [200, r2(200)]]); turn(b, 70, r2(200) - 1.6 * d, 780);
+    b.track([[70, 760], [260, 776]]);
+    // Linker Anschlag bis unter das tiefste Brettende (sonst rollen die Murmeln links unten hinaus)
+    b.wall([[180, 820], [180, 1080]]);
+    b.tilt({ x: 560, y: 940, len: 12 * d, amp: 0.26, period: 6, lips: 0 });
+    // Rechte Wand hoch genug: Vom hohen Brettende fliegen die Murmeln sonst darüber aus dem Bild
+    const r4 = line(1010, 1140, 4), xf = 700; b.track([[1010, 1140], [xf, r4(xf)]]); turn(b, 1010, 700, 1150);
+    const p = [[900, 500], over(c, 700, 520), over(c, 200, r2(200)), [110, 700], over(c, 140, 765),
+      [300, 880], [880, 880], [960, 1060], over(c, 940, r4(940))];
+    p.push(...finishCup(b, c, r4, xf, -1, 3.0));
+    b.setPath(p);
+  });
+  SB.hook = 'FOLLOW THE GOLD ONE!';
+
+  // ----------------------------------------------------------------- S-C · WHO SURVIVES THE FLOORS?
+  const SC = [];
+  // S-C 1 · RED LIGHT, GREEN LIGHT (8 → 5): Zickzack mit Schiebetor.
+  sstage(SC, 'gates', 'RED LIGHT, GREEN LIGHT', 'forest', (b, c) => {
+    const d = c.d, gh = 0.84 * d;
+    b.startChute({ x: 620, y: 260, dir: 1, slope: 6, n: c.n });
+    const r1 = row(b, 620, 260, 900, 6); turn(b, 1010, r1(900) - 1.6 * d, 490);
+    const r2 = line(1010, 470, 8); b.track([[1010, 470], [180, r2(180)]]); turn(b, 70, r2(180) - 1.6 * d, 720);
+    b.gate({ x: 560, y: r2(560), h: gh, open: 1.6, period: 2.8 });
+    const r3 = line(70, 700, 7), xf = 760; b.track([[70, 700], [xf, r3(xf)]]);
+    const p = [[100, 210], over(c, 620, 260), over(c, 900, r1(900)), [960, 420], over(c, 980, r2(980)), over(c, 180, r2(180)), [110, 630], over(c, 110, r3(110))];
+    p.push(...finishCup(b, c, r3, xf, 1, 3.0));
+    b.setPath(p);
+  });
+  // S-C 2 · SHIFTING FLOORS (5 → 3): Turm aus drei wandernden Böden mit Loch und offenem Ende.
+  sstage(SC, 'floors', 'SHIFTING FLOORS', 'ice', (b, c) => {
+    const d = c.d;
+    b.startChute({ x: 660, y: 300, dir: -1, slope: 6, n: c.n });
+    // Reihe endet 2,2 d vor der hohen Turmwand: Die Murmeln prallen ab und fallen auf den obersten Boden
+    const xl = 120, xr = 960, y0 = 560, step = 3.4 * d, r1 = row(b, 660, 300, xl + 2.2 * d, 6), yb = y0 + 2 * step + 1.2 * d;
+    b.wall([[xl, 220], [xl, yb]]); b.wall([[xr, 400], [xr, yb]]);
+    // Unterster Boden ohne Loch: Durch ein Loch dort fiel man links an der Ziellinie vorbei in den Becher
+    b.floors({ xl, xr, travel: 3 * d, periods: [1.8, 2.2, 2.6], levels: [0, 1, 2].map((i) => ({ y: y0 + i * step, dir: i % 2 ? -1 : 1, slope: 7, hole: i < 2 ? (i % 2 ? 1 : -1) * 1.5 * d : undefined })) });
+    // Der unterste Boden öffnet rechts: Reihe darunter von rechts nach links zum Ziel
+    const r5 = line(1000, 1160, 4), xf = 420; b.track([[1000, yb], [1000, 1160], [xf, r5(xf)]]);
+    const p = [[1000, 270], over(c, 660, 300), over(c, 260, r1(260)), [180, y0 - 0.8 * d]];
+    for (let i = 0; i < 3; i++) { const yy = y0 + i * step - 0.8 * d; p.push(i % 2 ? [910, yy + 25] : [180, yy], i % 2 ? [180, yy + 25] : [910, yy + 25]); }
+    p.push([930, 1100], over(c, 930, r5(930)));
+    p.push(...finishCup(b, c, r5, xf, -1, 3.4));
+    b.setPath(p);
+  });
+  // S-C 3 · ROTATING MAZE (3 → 1): Eintritt von vorn in die Mitte; wer zuerst herausfindet, fällt in den Trichter.
+  sstage(SC, 'maze', 'ROTATING MAZE', 'gold', (b, c) => {
+    const d = c.d, cx = 540, cy = 820, R = 6.4 * d;
+    b.startChute({ x: 380, y: 260, dir: 1, slope: 6, n: c.n });
+    b.track([[380, 260], [462, 269]]);
+    b.wall([[cx - 0.7 * d, 330], [cx - 0.7 * d, cy - 0.4 * d]], { front: true }); b.wall([[cx + 0.7 * d, 200], [cx + 0.7 * d, cy - 0.4 * d]], { front: true });
+    b.maze({ x: cx, y: cy, R, rps: 0.12, rings: [0.68, 0.38], spokes: 2 });
+    // Trichter unter der Bühne, Ziel waagerecht im Hals, darunter ein kleiner Becher
+    const fy = 1360, fw = 0.9 * d;
+    // Seitenwände: Wer schnell aus einem Ausgang schießt, prallt zurück in den Trichter statt aus dem Bild
+    b.wall([[40, 760], [40, 1180]]); b.wall([[1040, 760], [1040, 1180]]);
+    b.track([[40, 1180], [cx - fw, fy]]); b.track([[1040, 1180], [cx + fw, fy]]);
+    b.finishLine({ ax: cx - fw, ay: fy + 20, bx: cx + fw, by: fy + 20 });
+    b.wall([[cx - 1.7 * d, fy + 40], [cx - 1.7 * d, fy + 180]]); b.wall([[cx + 1.7 * d, fy + 40], [cx + 1.7 * d, fy + 180]]);
+    b.track([[cx - 1.7 * d, fy + 180], [cx + 1.7 * d, fy + 180]]);
+    b.setPath([[200, 230], over(c, 380, 260), [cx, 300], [cx, cy], [cx, cy + R + d], [cx, fy], [cx, fy + 20]]);
+  });
+  SC.hook = 'WHO SURVIVES THE FLOORS?';
+
+  EBS.KnockoutStages = { long: L, short: { A: SA, B: SB, C: SC }, gallery: EBS.KnockoutGallery, helpers: { line, row, over, finishAt, finishBin, finishRail, finishCup, bent, turnstileOn } };
 })(typeof window !== 'undefined' ? window : globalThis);

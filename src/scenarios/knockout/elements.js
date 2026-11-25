@@ -172,8 +172,9 @@
       return this._add(el);
     }
     /** Ziel: Lichtschranke von a nach b (Murmeln kreuzen sie in Fahrtrichtung). Ein Tor dahinter schließt beim Aus. */
-    finishLine({ ax, ay, bx, by, gate }) {
-      this.finish = { ax, ay, bx, by, gate: gate ? this.gate({ ...gate, mode: 'manual', open0: 1, kind: 'finish' }) : null };
+    /** sense: wahlweise längere, unsichtbare Erfassungsstrecke (gezeichnet wird a–b). */
+    finishLine({ ax, ay, bx, by, gate, sense }) {
+      this.finish = { ax, ay, bx, by, sense, gate: gate ? this.gate({ ...gate, mode: 'manual', open0: 1, kind: 'finish' }) : null };
     }
 
     // ---------------------------------------------------------------- B · Drehen
@@ -381,7 +382,9 @@
         const ti = rel(i), seedA = ((i * 7919) % 13) / 13 - 0.5;
         if (t < ti - wobble) return { x: hx, y: hy, a: deckA };
         if (t < ti) { const u = t - (ti - wobble); return { x: hx, y: hy + 1.5 * u / wobble, a: deckA + 0.05 * sin(TAU * 9 * u) * (0.4 + u / wobble) }; }
-        const u = t - ti;
+        // Mit sink endet der Fall in der Grube: Nach dem Schließen kehrt die Planke von dort zurück, nicht von weit
+        // unten (sonst fegt sie beim Zurückschnellen Murmeln von der Bahn)
+        const u = Math.min(t - ti, sink ? gone : Infinity);
         return { x: hx + seedA * 60 * u, y: hy + 1.5 + 0.5 * g * 1.12 * u * u, a: deckA + seedA * 2.4 * u * u + (seedA > 0 ? 0.3 : -0.3) * u };
       };
       for (let i = 0; i < n; i++) {

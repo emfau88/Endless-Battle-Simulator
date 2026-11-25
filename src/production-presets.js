@@ -2,7 +2,7 @@
 // presets/production carry the same values for CLI use; tests check both paths.
 (function () {
   'use strict';
-  const labels = { naval: 'Seeschlacht', marble: 'Kugelfabrik', scrap: 'Scrap Wars', mycelium: 'Myzel', pyramid: 'Pyramide', territory: 'Territory Wars / Hex Dominion', marbleworks: 'Marble Works', waterpark: 'Wasserpark', cloudwars: 'Cloud Wars' };
+  const labels = { naval: 'Seeschlacht', marble: 'Kugelfabrik', scrap: 'Scrap Wars', mycelium: 'Myzel', pyramid: 'Pyramide', territory: 'Territory Wars / Hex Dominion', marbleworks: 'Marble Works', waterpark: 'Wasserpark', cloudwars: 'Cloud Wars', knockout: 'Marble Knockout' };
   EBS.productionPreset = (scenario, kind, seed = 42) => {
     if (!Object.hasOwn(labels, scenario) || !['short', 'long'].includes(kind)) throw new Error('Unbekannte Produktionsvorlage.');
     if (scenario === 'marbleworks') return EBS.MarbleProduction.preset(kind, seed);
@@ -24,6 +24,16 @@
       scenario, seed: short ? EBS.CloudWars.castSeed(seed) : seed,
       params: { mode: short ? 'short' : 'rounds', display: 'auto', director: 'on', videoEnd: 'victory' },
       video: { aspect: short ? '9:16' : '16:9', resolution: 1080, fps: 30, durationSec: short ? 30 : 600, tempo: 1, audio: true,
+        volume: { master: 100 }, quality: { crf: 20, preset: 'medium', bitrate: null } },
+      view: { hud: true, camera: false },
+    };
+    // Marble Knockout: Short in Fassung A („Pick your color!“, 8 Murmeln, 3 Bahnen) auf einem geprüften Casting-Seed;
+    // Langvideo mit 12 Murmeln auf 10 Bahnen. Beide enden mit dem Podest (40 s und 300 s sind nur Startwerte).
+    if (scenario === 'knockout') return {
+      version: 1, name: `${labels[scenario]} – ${short ? 'Short (Pick your color!)' : 'Langvideo (10 Bahnen)'}`,
+      scenario, seed: short ? EBS.Knockout.castShortSeed(seed, 'A') : seed,
+      params: { mode: 'race', short: 'A', slowmo: 'on', marks: 'on', display: 'on', videoEnd: 'finish' },
+      video: { aspect: short ? '9:16' : '16:9', resolution: 1080, fps: 30, durationSec: short ? 40 : 300, tempo: 1, audio: true,
         volume: { master: 100 }, quality: { crf: 20, preset: 'medium', bitrate: null } },
       view: { hud: true, camera: false },
     };

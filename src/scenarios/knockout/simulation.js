@@ -57,6 +57,8 @@
       for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(rng.next() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
       this.lineup = order;
       this.list = this.mode === 'stage' ? [this.stageSpecs()[params.stage] || this.stageSpecs()[0]] : this.stageSpecs();
+      // Short: Lockruf am Anfang (je Fassung eigener Satz, steht an der Bahnliste)
+      this.hook = this.format === 'short' ? this.stageSpecs().hook || '' : '';
       this.stageNo = -1; this.safeNext = false; this.podium = null;
       this.enterStage(0);
       this.phase = this.format === 'long' && this.mode === 'race' ? 'intro' : 'ready'; this.phaseT = 0;
@@ -228,7 +230,7 @@
         if (u.out || !m.active) continue;
         // Ziel: Kreuzung der Lichtschranke in diesem Schritt (Zeit genau interpoliert)
         if (!u.finished && fin && m.collide) {
-          const f = crossing(m.px, m.py, m.x, m.y, fin.ax, fin.ay, fin.bx, fin.by);
+          const s = fin.sense || fin, f = crossing(m.px, m.py, m.x, m.y, s.ax, s.ay, s.bx, s.by);
           if (f >= 0) {
             u.finished = true; u.finishT = rt - h + f * h; this.finishedCount++;
             // c = Platz − 1: Der Zielton wird je Platz etwas tiefer (Tonleiter im Ton-Eintrag `finish`)

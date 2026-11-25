@@ -42,11 +42,16 @@
     g.save(); g.translate(dx, dy); path(g, pts);
     g.lineWidth = w; g.strokeStyle = color; g.lineCap = cap; g.lineJoin = 'round'; g.stroke(); g.restore();
   }
+  /** o.max: höchste Breite in px; längere Zeilen werden kleiner gesetzt (Hochformat, lange Namen). */
   function text(g, s, x, y, size, o = {}) {
     g.save();
     g.font = `${o.weight || 800} ${size}px ${S.font}`;
     g.textAlign = o.align || 'left'; g.textBaseline = o.baseline || 'alphabetic';
     if ('letterSpacing' in g) g.letterSpacing = (o.spacing || 0) + 'px';
+    if (o.max) {
+      const w = g.measureText(s).width;
+      if (w > o.max) { size = Math.floor(size * o.max / w); g.font = `${o.weight || 800} ${size}px ${S.font}`; }
+    }
     g.globalAlpha = o.alpha === undefined ? 1 : o.alpha;
     g.shadowColor = S.textShadow; g.shadowBlur = size * 0.35; g.shadowOffsetY = size * 0.05;
     if (o.outline) { g.lineWidth = size * 0.14; g.strokeStyle = 'rgba(0,0,0,0.55)'; g.lineJoin = 'round'; g.strokeText(s, x, y); }

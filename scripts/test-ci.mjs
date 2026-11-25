@@ -6,9 +6,9 @@ import { join } from 'node:path';
 
 const root=fileURLToPath(new URL('..',import.meta.url));
 const suites={core:[],audio:[],production:[],marbleworks:[],scrap:[],'scrap-browser':[],mycelium:[],pyramid:[],territory:[],waterpark:[],cloudwars:[],knockout:[], 'export-marbleworks-audio':[],
-  ...Object.fromEntries(['naval','marble','scrap','mycelium','pyramid','territory','marbleworks','cloudwars'].map(id=>['export-'+id,[]]))};
+  ...Object.fromEntries(['naval','marble','scrap','mycelium','pyramid','territory','marbleworks','cloudwars','knockout'].map(id=>['export-'+id,[]]))};
 for(const file of readdirSync(join(root,'test')).filter(f=>f.endsWith('.test.mjs')).sort()) {
-  const exportScenario=/^presets-export-(naval|marble|scrap|mycelium|pyramid|territory|marbleworks|cloudwars)\.test\.mjs$/.exec(file)?.[1];
+  const exportScenario=/^presets-export-(naval|marble|scrap|mycelium|pyramid|territory|marbleworks|cloudwars|knockout)\.test\.mjs$/.exec(file)?.[1];
   // Keep the active-factory replay export out of the already long production job.
   // The Scrap browser/export file gets its own job: with the detailed Scrap art it exceeds the
   // shared 600 s file limit on software rendering.
@@ -22,7 +22,7 @@ const suite=process.argv[2];
 if(suite==='--list')console.log(JSON.stringify(suites,null,2));
 else {
   if(!Object.hasOwn(suites,suite))throw new Error('CI suite must be one of: '+Object.keys(suites).join(', '));
-  const timeout=['production','marbleworks','scrap-browser','export-marbleworks','export-marbleworks-audio'].includes(suite)?1200000:600000;
+  const timeout=['production','marbleworks','scrap-browser','export-marbleworks','export-marbleworks-audio','export-knockout'].includes(suite)?1200000:600000;
   const result=spawnSync(process.execPath,['--test','--test-concurrency=1','--test-timeout='+timeout,
     '--test-reporter=tap',...suites[suite]],{cwd:root,stdio:'inherit'});
   if(result.error)throw result.error;

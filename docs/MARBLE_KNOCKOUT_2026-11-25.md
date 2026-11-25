@@ -10,7 +10,10 @@ Dieser Bericht wird je Paket fortgeschrieben.
 | M1 Physik-Kern | **Erledigt** (25.11.) |
 | M2/M3 Baukasten und Galerie | **Erledigt** (25.11.) |
 | M4 Rennablauf, zehn Bahnen, Anmeldung | **Erledigt** (25.11.) |
-| M5 bis M9 | **Offen** |
+| M5 Darstellung, Zeitlupe, Seek-Prüfung | **Erledigt** (25.11.) |
+| M6 Ton | **Erledigt** (25.11.) |
+| M7 Short-Bahnen, Casting, Vorlagen | **Erledigt** (25.11.) |
+| M8 und M9 | **Offen** |
 
 ---
 
@@ -401,3 +404,96 @@ Am 25.11. hat der Nutzer **Stil A** gewählt („Ja Stil A“). Die Referenzbild
 - `test/knockout.test.mjs`, neuer Test „Ton“: alle Klangdateien vorhanden, Zielton-Platz, höchstens drei Klänge je
   0,3 s, Starttor und Aus hörbar. 6 Tests grün.
 - `test/knockout.test.mjs`, `test/knockout-elements.test.mjs`, `test/knockout-physics.test.mjs`: 15 Tests grün.
+
+---
+
+## M7 · Short-Bahnen, Casting, Vorlagen (25.11.2026)
+
+**Umfang:**
+
+- Drei Short-Fassungen im Hochformat (1080 × 1920, Murmeln mit 60 px Durchmesser), je drei Bahnen, 8 → 5 → 3 → 1.
+  Jede Bahn dauert rund 10 s. Das Ziel ist eine Lichtschranke mit kleinem Becher.
+
+  | Fassung | Lockruf am Anfang | Bahn 1 (8 → 5) | Bahn 2 (5 → 3) | Finale (3 → 1) |
+  |---|---|---|---|---|
+  | A | `PICK YOUR COLOR!` | THE DROP: Regal, Nagelfeld, Trichter, Drehkreuz | CRUMBLING BRIDGE: Schanze auf die Brücke über dem Abgrund | RING ESCAPE: drei gegenläufige Ringe |
+  | B | `FOLLOW THE GOLD ONE!` | THE DRUM: Weiche, schaukelnde Trommel | HAMMER ALLEY: zwei Löcher unter Pendelhämmern | TILT: Wippe |
+  | C | `WHO SURVIVES THE FLOORS?` | RED LIGHT, GREEN LIGHT: Schiebetor | SHIFTING FLOORS: drei wandernde Böden | ROTATING MAZE: drehendes Labyrinth |
+
+- Das Hochformat zeigt jetzt das Rennen. Die Umleitung auf die Galerie ist entfernt.
+- Lange Zeilen (Lockruf, `… IS OUT`, `… WINS!`, Bahntitel) werden auf 90 % der Bildbreite verkleinert.
+- Casting-Skript `scripts/knockout-casting.mjs`: ganze Short-Rennen je Seed ohne Bild und Ton. Ein Seed ist
+  vollständig, wenn
+  - das Video höchstens 40 s lang ist,
+  - das Finale knapp ist (Platz 1 und 2 unter 0,8 s oder Zeitlupe),
+  - die Führung im Finale mindestens einmal wechselt (die neue Spitze muss 1 s vorn bleiben),
+  - auf der Gefahrenbahn mindestens eine Murmel abstürzt (A, B),
+  - bei B die goldene Murmel das Finale erreicht,
+  - keine Murmel einen Stoß braucht oder festsitzt.
+- Die geprüften Seeds stehen in `SHORT_CAST` (`src/scenarios/knockout.js`).
+- Vorlagen:
+  - Knöpfe „Short · drei Bahnen (rund 35 Sekunden)“ und „Langvideo · 10 Bahnen (rund 5 Minuten)“.
+  - Dateien `presets/production/knockout-short.json` (Fassung A, Seed 47) und `knockout-long.json`.
+  - Der Short nimmt den nächsten geprüften Seed der Fassung A. Beide enden mit dem Podest; die Länge ergibt sich aus
+    dem Rennen.
+- CI: neue Gruppe `export-knockout` mit dem Vorlagen-Exporttest (`test/presets-export-knockout.test.mjs`).
+
+**Maßregeln aus den Proben (Hochformat):**
+
+- Zwischen Reihenende und Kehrwand mindestens 1,7 Murmelbreiten.
+- Zwischen äußerem Stift und Wand gut 1,4 Murmelbreiten.
+- Unter einem Trichterhals rund 2 Murmelbreiten Luft bis zur nächsten Bahn.
+- Die Ziellinie liegt vor jeder Stelle, an der eine Murmel in den Becher fallen kann.
+- Schnelle Ausgänge (Labyrinth, Wippe, Turmwand) brauchen Seitenwände, sonst fliegen Murmeln aus dem Bild.
+
+**Unterwegs behoben:**
+
+- Brücke: Nach `TRAPS CLOSED` schnellten gefallene Planken von weit unten zurück und warfen eine Murmel über das
+  Ziel. Der Fall endet jetzt in der Grube, die Planke kehrt von dort zurück.
+- THE DRUM: Wer links aus der Trommel flog, landete ohne Bahn direkt im Becher, ohne die Ziellinie zu kreuzen, und
+  bekam dort Stöße. Die Lichtschranke erfasst jetzt unsichtbar bis unter die linke Zulaufbahn. Ein Dach über dem
+  Becher war der erste Versuch; daran klemmten die Murmeln an der Trommel.
+
+**Messung (Casting, Seeds 1–200 je Fassung):**
+
+| Fassung | vollständig | Länge Median (kürzeste) | Finale knapp | Führungswechsel | Sturz auf Gefahrenbahn | ohne Stoß |
+|---|---|---|---|---|---|---|
+| A | 134 (67 %) | 37,0 s (29,9 s) | 78 % | 94 % | 93 % | 100 % |
+| B | 15 (8 %) | 38,3 s (32,6 s) | 82 % | 28 % | 100 % | 98 % |
+| C | 23 (12 %) | 44,6 s (34,5 s) | 89 % | 87 % | – | 100 % |
+
+- B: Die goldene Murmel erreicht das Finale in 44 % der Seeds.
+- C: Nur 25 % der Rennen sind höchstens 40 s lang.
+- In der Vorlage: A die besten 24, B alle 15, C alle 23.
+
+**Langvideo nach dem Planken-Fix (100 Rennen, Seeds 1–100):**
+
+- Bahnzeiten unverändert, Video 267 / 278 / 291 s (min / Median / max).
+- Ein Hänger: Seed 55, im Finale bleibt eine Murmel vor dem zweiten Drehkreuz liegen und scheidet nach 12 s als
+  Letzte aus. Die Stelle liegt vor der Brücke, der Fix ist also nicht die Ursache. Ohne Zeitlupe kommt sie nach drei
+  Stößen frei. Das Drehbuch-Casting in M8 verwirft solche Seeds.
+
+**20-s-Probe (Short A, Seed 47, 1080 × 1920, 30 fps, mit Ton):**
+
+- Lockruf, THE DROP und der Anfang von CRUMBLING BRIDGE.
+- 324 Ereignisse, −26,3 LUFS, Spitze −7,0 dBFS. Prüfung OK.
+- Lokal: `output/knockout-lab/m7-short-A-seed47.mp4`, Bildbogen `m7-short-A-sheet.jpg`.
+
+**Grenzen:**
+
+- Alle Shorts sind länger als im Plan (25–35 s): A und B im Median 37–38 s, C 45 s. Das ist eine Geschmacksfrage.
+- B: Die Wippe im Finale ergibt selten einen Führungswechsel; darum sind nur 15 Seeds vollständig.
+- B, HAMMER ALLEY: Selten bleibt eine langsame Murmel vor der Lochkante liegen und braucht einen Stoß (4 von 200).
+- Der Short ist mit −26 LUFS etwas leiser als das Langvideo (−24 LUFS), weil weniger klingt.
+- Die Vorlage nimmt Fassung A. B und C wählt man über „Short-Bahnen“ und einen Seed aus `SHORT_CAST`.
+
+**Nachweise:**
+
+- `test/knockout.test.mjs`, neuer Test „Short“: je Fassung drei Bahnen mit 8, 5 und 3 Murmeln, Lockruf, Rennen
+  endet unter 45 s, niemand sitzt fest, Invarianten. 7 Tests grün; mit `knockout-elements` 10 Tests grün.
+- `test/knockout-browser.test.mjs`, neuer Test: Chromium rechnet dieselben Short-Rennen wie Node (A, B, C), die
+  Vorlagen-Dateien gleichen der Oberfläche, die Short-Vorlage nimmt einen Casting-Seed. 4 Tests grün in 12,5 min.
+- `test/presets-export-knockout.test.mjs` (neu): ganzer Produktionsweg über Knopf, Server und Download, je 3 s mit
+  Ton. 2 Tests grün. Ohne Grafikkarte (wie in der CI) braucht das Querformat 244 s für 90 Bilder; die Zeitgrenze
+  ist darum wie bei Marble Works 420 s.
+- Casting: `node scripts/knockout-casting.mjs --short A --from 1 --to 200 --list` (ebenso B und C).

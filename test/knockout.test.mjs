@@ -98,6 +98,28 @@ test('Ton (M6): weiche Klänge, feste Mischung, Dichte begrenzt, Zielton je Plat
   for (const type of ['gate', 'knockout']) assert.ok(on.some((e) => e.type === type), `${type} hörbar`);
 });
 
+test('Short (M7): drei Fassungen, je drei Bahnen 8 → 5 → 3 → 1, Lockruf, kein Festsitzen, Casting-Seeds', () => {
+  const PORT = { w: 1080, h: 1920 }, hooks = { A: 'PICK YOUR COLOR!', B: 'FOLLOW THE GOLD ONE!', C: 'WHO SURVIVES THE FLOORS?' };
+  for (const short of ['A', 'B', 'C']) {
+    const seed = EBS.Knockout.SHORT_CAST[short][0], sim = create(seed, { short }, PORT), left = [];
+    assert.deepEqual([sim.format, sim.list.length, sim.hook], ['short', 3, hooks[short]]);
+    let last = -1;
+    while (sim.phase !== 'end' && sim.t < 90) {
+      sim.stepOnce();
+      if (sim.stageNo !== last) { last = sim.stageNo; left.push(sim.runners.length); }
+      if (sim.step % 300 === 0) { const c = sim.checkInvariants(); assert.ok(c.ok, `${short} ${sim.t.toFixed(1)} s: ${c.errors.join(', ')}`); }
+    }
+    assert.equal(sim.phase, 'end', `${short}: Rennen endet`);
+    assert.deepEqual(left, [8, 5, 3], `${short}: Feldgrößen`);
+    assert.equal(sim.stats.stuck, 0, `${short}: niemand sitzt fest`);
+    assert.ok(sim.runners.some((u) => u.place === 1), `${short}: Sieger`);
+    assert.ok(sim.t < 45, `${short}: Länge ${sim.t.toFixed(1)} s`);
+  }
+  assert.equal(sc.normalizeParams({ short: 'C' }).short, 'C');
+  // Hochformat zeigt das Rennen (nicht mehr die Galerie)
+  assert.equal(create(1, {}, PORT).mode, 'race');
+});
+
 test('Export: Länge aus dem Ablauf bis zum Ende des Podests', () => {
   assert.equal(sc.hasNaturalDuration({ params: sc.normalizeParams({}) }), true);
   assert.equal(sc.hasNaturalDuration({ params: sc.normalizeParams({ videoEnd: 'free' }) }), false);
