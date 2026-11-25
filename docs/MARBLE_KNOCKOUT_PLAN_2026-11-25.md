@@ -396,7 +396,7 @@ Lizenznachweis in `assets/audio/README.md`. Am Ende gibt es eine Hörprobe, das 
 
 Ein Paket ist ein Commit. Gearbeitet wird auf kurzen Branches mit Pull Request und Merge-Commit, das Mergen erst
 nach Freigabe. Nach jedem Paket werden ROADMAP, CHANGELOG, Gesamtplan Abschnitt 0 und der Bericht
-`docs/MARBLE_KNOCKOUT_2026-11-xx.md` nachgezogen.
+[`docs/MARBLE_KNOCKOUT_2026-11-25.md`](MARBLE_KNOCKOUT_2026-11-25.md) nachgezogen.
 
 | Paket | Inhalt | Abnahme |
 |---|---|---|
