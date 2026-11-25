@@ -15,8 +15,8 @@ gemessen und getestet, danach ein Drehbuch-Modus.
 | Paket | Inhalt | Stand |
 |---|---|---|
 | D1 | Karte „Jungle Ruins“ in der Taktik-Arena | **Erledigt** 25.11. |
-| D2 | Drehbuch-Modus: je Runde festlegen, was passiert; Rundenzahl frei | Offen, Inhalt des Drehbuchs kommt vom Nutzer |
-| D3 | Casting der Runden in Chromium, 20-Sekunden-Probe | Offen |
+| D2 | Drehbuch-Modus: je Runde festlegen, was passiert; Rundenzahl frei | **Erledigt** 25.11. (Vorschlag „Comeback“ vom Nutzer freigegeben) |
+| D3 | Casting der Runden in Chromium, 20-Sekunden-Probe | **Erledigt** 25.11. |
 | D4 | Export des ganzen Videos | Nur auf Auftrag |
 
 ## D1 · Karte „Jungle Ruins“ (25.11.2026)
@@ -75,16 +75,89 @@ Ein Turnier mit acht Runden auf Seed 458 dauert rund 5 Minuten (Kapitel 0:00, 0:
 ### Grenzen
 
 - Das Turnier hat fest acht Runden, rund 5 Minuten. Für 8 bis 10 Minuten braucht es D2 (mehr Runden nach Drehbuch).
-- Für die Dschungel-Karte gibt es noch kein Casting; die geprüften Turnier-Seeds gelten für Sunny Yard.
+  Erledigt mit D2.
+- Für die Dschungel-Karte gibt es noch kein Casting; die geprüften Turnier-Seeds gelten für Sunny Yard. Erledigt mit D3
+  (Casting je Runde fürs Drehbuch).
 - Hochkant ist möglich, aber nicht abgestimmt (der Schatten der Randmauer fällt dann von rechts).
 - MOSS (grün) hebt sich auf dem Gras etwas weniger ab als die anderen.
 - Die Vorschau-Kopie und die drei Vorschau-Bilder liegen nur lokal unter `output/scrap-long/dschungel-vorschau/`.
 
-## D2 · Drehbuch-Modus (Vorschlag)
+## D2 · Drehbuch-Modus (25.11.2026)
 
-- Das Drehbuch ist eine Liste mit einer Zeile je Runde. Je Zeile lässt sich festlegen: wer gewinnt, wer zuerst
-  ausscheidet, ob es knapp wird (Sieger unter 20 % Leben) und ob der letzte K.o. durch eine Rakete fällt.
-- Ein Casting-Skript sucht in Chromium für jede Zeile einen Runden-Seed, der genau das liefert, und schreibt die Seeds
-  in die Vorlage. Die Kämpfe bleiben echt simuliert und das Video jederzeit gleich wiederholbar.
-- Rundenzahl frei (12 bis 14 Runden ergeben 8 bis 10 Minuten), Kapitel je Runde wie bisher, Abschluss mit Gesamtstand.
-- Als eigener Modus, damit die bisherigen Turniere unverändert bleiben.
+### Umfang
+
+- **Neuer Schalter „Drehbuch“** (nur im Turnier auf Jungle Ruins): „Ohne“ oder „Comeback“. Die Episode kennt den
+  Schlüssel `script` nur, wenn ein Drehbuch an ist; die Werkstatt ist dann aus. Bisherige Turniere rechnen unverändert.
+- **Das Drehbuch** ist eine Liste in `src/scenarios/scrap/episode.js` (`SCRIPTS`), eine Zeile je Runde. Je Zeile lässt
+  sich festlegen: wer gewinnt, wer als Letzter ausscheidet (Schlussduell), wer zuerst ausscheidet, ob es knapp wird
+  (Sieger am Ende unter 20 % Leben) und ob der letzte K.o. durch eine Rakete fällt. Dazu steht der Runden-Seed aus dem
+  Casting. Jede Runde ist echt simuliert; der Seed ist so gewählt, dass sie genau so ausgeht.
+- **Rundenzahl aus dem Drehbuch:** Kopfleiste „ROUND 7/12“, Kapitel „Round 12 – Final“, Abspann „12 ROUNDS“. Im
+  Abspann steht jetzt auch „1 WIN“ statt „1 WINS“ (gilt ebenso für Sunny Yard).
+- **Vorlage** `presets/scrap-jungle-drehbuch.json`: quer 1080p, 30 fps, Ton „Weich“, 4 s Ergebnis zwischen den Runden.
+  Das Video endet 5 s nach dem Finale.
+- **Casting-Skript** `scripts/scrap-script-casting.mjs`: sucht je Zeile einen passenden Seed und prüft mit `--check`
+  das ganze Drehbuch als Episode.
+
+### Drehbuch „Comeback“
+
+| Runde | Sieger | Festgelegt | Seed | Stand danach (E/Az/Am/M) |
+|---|---|---|---|---|
+| 1 | EMBER | – | 2695 | 1/0/0/0 |
+| 2 | AZURE | – | 37 | 1/1/0/0 |
+| 3 | MOSS | – | 1684 | 1/1/0/1 |
+| 4 | EMBER | knapp | 1154 | 2/1/0/1 |
+| 5 | AZURE | letzter K.o. per Rakete | 1941 | 2/2/0/1 |
+| 6 | EMBER | AMBER scheidet zuerst aus | 516 | 3/2/0/1 |
+| 7 | AMBER | EMBER scheidet zuerst aus | 1842 | 3/2/1/1 |
+| 8 | AMBER | knapp | 2937 | 3/2/2/1 |
+| 9 | AMBER | Schlussduell gegen EMBER, Rakete | 2628 | 3/2/3/1 |
+| 10 | EMBER | AMBER scheidet zuerst aus | 2508 | 4/2/3/1 |
+| 11 | AMBER | Schlussduell gegen AZURE, knapp | 2848 | 4/2/4/1 |
+| 12 (Finale) | AMBER | Schlussduell gegen EMBER, knapp, Rakete | 1892 | 4/2/5/1 |
+
+Kapitel: 0:00, 0:44, 1:28, 2:12, 2:56, 3:39, 4:23, 5:07, 5:51, 6:35, 7:19, 8:03 (Finale). Video 8:57.
+
+## D3 · Casting und Probe (25.11.2026)
+
+### Messwerte
+
+Chromium 148, Seeds 1–3000, je eine Runde quer mit den Optionen der Episode:
+
+- Grundbedingungen erfüllt (ein Sieger, Runde 24–56 s, erster K.o. ab 6 s, Schlussduell ab 5 s, kein Hänger ab
+  1,5 s): 72,5 %. Davon knapp 44,2 %, letzter K.o. per Rakete 49,7 %. Runde im Median 32,9 s.
+- Passende Seeds je Zeile: 40 (Finale) bis 592. Gewählt ist je Zeile der Seed, der am nächsten an 40 s liegt
+  (Finale 48 s); so kommt das Video auf rund 9 Minuten.
+- `--check`: Alle zwölf Runden gehen in der Episode aus wie ihre Zeile, Endstand AMBER 5, EMBER 4, AZURE 2, MOSS 1.
+
+### Prüfungen
+
+- Neue Testdatei `test/scrap-script.test.mjs` (4 Tests): Schalter und Schlüssel, Drehbuch und Spielstand, Episode mit
+  zwölf Runden und Seeds aus dem Drehbuch (ohne Drehbuch weiter acht), im Browser jede Runde gegen ihre Zeile,
+  Endstand, Kapitel und Videolänge.
+- `scrap-script`, `scrap-jungle`, `scrap`, `scrap-hud`, `scrap-long`: 36 von 36 grün; nach der Korrektur im Abspann
+  `scrap` und `scrap-hud` noch einmal grün.
+- `node scripts/scrap-map-hashes.mjs`: 6 × 4 gleich. `npm run golden`: identisch (vor und nach der Korrektur im Abspann).
+- 20-Sekunden-Probe vom Ende des Finales mit Abspann (lokal, nicht im Repository):
+  `output/scrap-long/drehbuch-probe-20s-finale.mp4` (Sekunde 516 bis 536), 1920 × 1080, 30 fps, mit Ton, Prüfung OK.
+- Nicht gelaufen: der volle `npm test` und die Browser-Tests `scrap-browser`, `scrap-short`.
+
+### Grenzen
+
+- Das Drehbuch gilt nur quer. Hochkant werden die Startkisten anders gepaart, die Runden laufen dann anders.
+- Nach jeder Änderung an der Taktik-Arena, den Raketen-Regeln oder der Karte muss neu gecastet werden; der
+  Browser-Test zeigt dann, welche Runde nicht mehr passt.
+- Festgelegt ist, wie eine Runde ausgeht, nicht jeder Schuss. Alle Runden dauern rund 40 s; das ergibt einen
+  gleichmäßigen Takt.
+- Ein neues Drehbuch: Zeilen in `SCRIPTS` eintragen, Casting laufen lassen, Seeds eintragen, Schalter ergänzen.
+
+## Fragen an den Nutzer
+
+1. **Ablauf „Comeback“:** AMBER bleibt sechs Runden ohne Sieg, holt dann auf und gewinnt das Finale knapp per Rakete.
+   Passt das, oder soll das Drehbuch anders laufen (anderer Sieger, mehr oder weniger Runden)?
+2. **Takt:** Alle Runden dauern rund 40 s. Lieber gemischt, also ein paar kurze Runden und längere Höhepunkte?
+3. **MOSS** gewinnt nur eine Runde. Soll MOSS mehr Rollen bekommen?
+4. **Karte:** MOSS (grün) hebt sich auf dem Gras etwas weniger ab; Legende WOOD / ROCK / TEMPLE. Passt das?
+5. **Export:** das ganze Video (8:57) auf Auftrag:
+   `node export.mjs --config presets/scrap-jungle-drehbuch.json --out output/scrap-jungle-drehbuch.mp4`
+   Die Kapitelzeiten stehen danach in der JSON-Datei daneben unter `chaptersText`.

@@ -51,6 +51,10 @@ Alle Pakete des Plans sind gebaut. Offen sind nur noch Urteile und Aufträge des
 - Das 8-bis-10-Minuten-Langvideo mit Drehbuch auf der neuen Karte „Jungle Ruins“ ist ein eigener Punkt (R42,
   [Bericht](SCRAP_LANGVIDEO_DSCHUNGEL_2026-11-25.md)). Die Arbeitskopie `.claude/worktrees/scrap-s1` arbeitet dafür
   jetzt auf dem Branch `scrap/dschungel`.
+- Stand 25.11.: Karte, Drehbuch-Modus und Drehbuch „Comeback“ (12 Runden, 8:57) fertig. Das ganze Video auf Auftrag:
+  `node export.mjs --config presets/scrap-jungle-drehbuch.json --out output/scrap-jungle-drehbuch.mp4`
+  Proben lokal: `output/scrap-long/dschungel-probe-20s-seed458.mp4` (Karte) und
+  `output/scrap-long/drehbuch-probe-20s-finale.mp4` (Ende des Finales). Die Fragen stehen am Ende des Berichts.
 
 ## 3 · Fragen an den Nutzer
 

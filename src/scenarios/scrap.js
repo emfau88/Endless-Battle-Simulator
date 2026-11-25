@@ -595,13 +595,13 @@
       g.strokeStyle = '#ebc37c'; g.lineWidth = 2; g.stroke();
       text(g, 'TOURNAMENT COMPLETE', 500, 214, 26, '#c1d4df', 'center');
       text(g, champions.length === 1 ? `${rows[0].name} WINS` : 'TIED FOR FIRST', 500, 282, 52, '#ffce63', 'center', 800);
-      text(g, '8 ROUNDS  ·  FINAL STANDINGS', 500, 337, 23, '#9eb4bf', 'center');
+      text(g, `${s.totalRounds} ROUNDS  ·  FINAL STANDINGS`, 500, 337, 23, '#9eb4bf', 'center');
       rows.forEach((r, i) => {
         const y = 425 + i * 84, leading = champions.includes(r.id);
         box(g, 158, y - 30, 684, 65, 10); g.fillStyle = leading ? '#2d3e42' : '#1b303c'; g.fill();
         text(g, leading ? '★' : '·', 185, y, 24, '#ffce63');
         text(g, r.name, 232, y, 32, colorOf(r));
-        text(g, `${s.wins[r.id]} WINS`, 808, y, 28, colorOf(r), 'right');
+        text(g, `${s.wins[r.id]} ${s.wins[r.id] === 1 ? 'WIN' : 'WINS'}`, 808, y, 28, colorOf(r), 'right');
       });
       text(g, `${s.draws} DRAW${s.draws === 1 ? '' : 'S'}  ·  SEE YOU IN THE NEXT ARENA`, 500, 793, 21, '#9eb4bf', 'center');
       g.restore();
@@ -628,7 +628,7 @@
       g.fillStyle = bg; g.fillRect(0, 0, w, h);
       // Let the final sparks fade during the end pause without changing the
       // preserved round state, RNGs or event history.
-      const final = s.cfg.episodeMode === 'tournament' && s.completedRounds === 8;
+      const final = s.cfg.episodeMode === 'tournament' && s.completedRounds === s.totalRounds;
       const elapsed = s.phase === 'pause' ? s.cfg.endPauseSec - (s.pauseUntil - s.step) / 60 : final ? 5 - (s.outroUntil - s.step) / 60 : 0;
       const renderState = elapsed > 0 || final ? { ...r, phase: final ? 'running' : r.phase, effects: r.effects.map(e => ({ ...e, age: e.age + elapsed })) } : r;
       this.arena.skipResult = true;
@@ -646,7 +646,7 @@
       else this.workshopPanel(g);
       if (!this.view.hud) return;
       const clock = final ? 'END' : EBS.util.fmtTime(Math.ceil(Math.max(0, r.duration - r.t)));
-      const roundLabel = s.cfg.episodeMode === 'tournament' ? `ROUND ${s.roundNumber}/8${s.roundNumber === 8 ? ' · FINAL' : ''}` : `ROUND ${String(s.roundNumber).padStart(2, '0')}`;
+      const roundLabel = s.cfg.episodeMode === 'tournament' ? `ROUND ${s.roundNumber}/${s.totalRounds}${s.roundNumber === s.totalRounds ? ' · FINAL' : ''}` : `ROUND ${String(s.roundNumber).padStart(2, '0')}`;
       const arenaName = EBS.ScrapRules.arenas[s.cfg.arena].name;
       const status = s.phase === 'running' ? `${r.robots.filter(x => x.alive).length} BOTS ALIVE  /  ${r.stats.destroyed} COVER LOST`
         : s.phase === 'pause' ? `NEXT ROUND IN ${Math.ceil((s.pauseUntil - s.step) / 60)}s` : 'MATCH COMPLETE';
@@ -680,7 +680,7 @@
     }
     paintMaterialArena(g) {
       const s=this.sim,r=s.roundSim,l=this.layout,art=EBS.ScrapMaterialArt,portrait=l.kind==='portrait';
-      const final=s.cfg.episodeMode==='tournament'&&s.completedRounds===8;
+      const final=s.cfg.episodeMode==='tournament'&&s.completedRounds===s.totalRounds;
       // Short: Die Runde steht nach dem Sieg still; die letzten Effekte laufen über die Abspannzeit weiter.
       // In der Zeitlupe (S2) altern sie langsamer: Szenenzeit statt Videozeit.
       const elapsed=l.short?(r.phase==='ended'?Math.max(0,s.sceneTime(s.step)-s.sceneTime(s.outroUntil-EBS.Scrap.SHORT_END_SEC*60)):0)
@@ -1060,7 +1060,7 @@
       const left = 500 - (82 + g.measureText(title).width) / 2;
       this._materialResultIcon(g, winner, left, 250);
       text(g, title, left + 82, 282, 46, color);
-      text(g, '8 ROUNDS  ·  FINAL STANDINGS', 500, 337, 23, '#9eb4bf', 'center');
+      text(g, `${s.totalRounds} ROUNDS  ·  FINAL STANDINGS`, 500, 337, 23, '#9eb4bf', 'center');
       rows.forEach((robot, i) => {
         const y = 425 + i * 84, leading = champions.includes(robot.id), team = colorOf(robot);
         box(g, 158, y - 30, 684, 65, 10); g.fillStyle = leading ? '#2d3e42' : '#1b303c'; g.fill();
@@ -1088,7 +1088,7 @@
     }
     materialHudPolished(g, final) {
       const s = this.sim, r = s.roundSim, wide = this.world.w > 1500;
-      const round = s.cfg.episodeMode === 'tournament' ? `ROUND ${s.roundNumber}/8` : `ROUND ${String(s.roundNumber).padStart(2, '0')}`;
+      const round = s.cfg.episodeMode === 'tournament' ? `ROUND ${s.roundNumber}/${s.totalRounds}` : `ROUND ${String(s.roundNumber).padStart(2, '0')}`;
       const clock = final ? 'END' : EBS.util.fmtTime(Math.ceil(Math.max(0, r.duration - r.t)));
       text(g, 'SCRAP WARS', 24, 27, 24, '#edf1e5');
       text(g, EBS.ScrapRules.arenas[s.cfg.arena].name, 25, 52, 12, '#a1b2b9');
@@ -1126,7 +1126,7 @@
     materialHud(g,final) {
       if (this._usesDarkMaterialArt()) { this.materialHudPolished(g, final); return; }
       const s=this.sim,r=s.roundSim,portrait=this.layout.kind==='portrait',wide=this.world.w>1500;
-      const round=s.cfg.episodeMode==='tournament'?`ROUND ${s.roundNumber}/8`:`ROUND ${String(s.roundNumber).padStart(2,'0')}`;
+      const round=s.cfg.episodeMode==='tournament'?`ROUND ${s.roundNumber}/${s.totalRounds}`:`ROUND ${String(s.roundNumber).padStart(2,'0')}`;
       const clock=final?'END':EBS.util.fmtTime(Math.ceil(Math.max(0,r.duration-r.t)));
       text(g,'SCRAP WARS',24,27,24,'#edf1e5');
       text(g,EBS.ScrapRules.arenas[s.cfg.arena].name,25,52,12,'#a1b2b9');
@@ -1223,7 +1223,7 @@
     id: 'scrap', title: 'Scrap Wars',
     supportsClips: true,
     supportsCamera: false,
-    defaults: { rulesVersion: 'v3', episodeMode: 'endless', arena: 'yard', workshop: false, repeatRounds: true, endPauseSec: 3, soundMix: 'classic', layout: 'standard', items: 'classic' },
+    defaults: { rulesVersion: 'v3', episodeMode: 'endless', arena: 'yard', workshop: false, repeatRounds: true, endPauseSec: 3, soundMix: 'classic', layout: 'standard', items: 'classic', script: 'off' },
     controls: [
       { key: 'episodeMode', label: 'Format', type: 'select', options: [['endless', 'Freie Videolänge'], ['tournament', 'Turnier · 8 Runden + Finale']], restart: true },
       { key: 'rulesVersion', label: 'Arena / Kampfregeln', type: 'select', enabled: p => p.arena !== 'jungle' && (p.arena !== 'sunshine' || p.rulesVersion === 'v4'), options: [['v4', 'Taktik-Arena · Startkisten, Zielwahl, Wegfindung'], ['v3', 'Große Arena · Holz, Stein, Beton'], ['v2', 'Bisherige Arena · flüssiger Kampf'], ['classic', 'Originalprototyp']], restart: true },
@@ -1234,7 +1234,10 @@
       // Raketen-Regeln: nur Taktik-Arena. Im Short und auf Jungle Ruins gelten sie immer.
       { key: 'items', label: 'Waffen', type: 'select', enabled: p => p.rulesVersion === 'v4' && p.layout !== 'short' && p.arena !== 'jungle',
         options: [['classic', 'Klassisch · Startwaffen und zwei Stationen'], ['rockets', 'Nur Raketen · Blaster lädt nach, Raketen von den zwei Stationen']], restart: true },
-      { key: 'workshop', label: 'Werkstatt (experimentell, ein Modul je Roboter)', type: 'check', enabled: p => p.episodeMode === 'tournament', restart: true },
+      // D2 · Drehbuch: feste Runden-Seeds mit festgelegtem Ablauf; nur im Turnier auf der Arena, für die es gecastet ist.
+      { key: 'script', label: 'Drehbuch', type: 'select', enabled: p => p.episodeMode === 'tournament' && p.arena === 'jungle',
+        options: [['off', 'Ohne · Runden laufen frei nach dem Seed'], ['jungle-comeback', 'Comeback · 12 Runden, AMBER holt auf, Finale knapp per Rakete (nur quer)']], restart: true },
+      { key: 'workshop', label: 'Werkstatt (experimentell, ein Modul je Roboter)', type: 'check', enabled: p => p.episodeMode === 'tournament' && !normalizeParams(p).script, restart: true },
       { key: 'repeatRounds', label: 'Weitere Runden spielen', type: 'check', enabled: p => p.episodeMode !== 'tournament', restart: true },
       { key: 'endPauseSec', label: 'Ergebnis zeigen', type: 'range', min: 2, max: 8, step: 1, restart: true, format: v => `${v} s` },
       // Nur Ton im Export; der Neustart baut die Lautstärkeregler für die gewählte Klangtabelle neu auf.
@@ -1242,7 +1245,7 @@
     ],
     // Die Simulation sieht soundMix nicht (eigene Normalisierung in der Episode), ihre Hashes bleiben gleich.
     // layout steht hier immer (für den Schalter); die Episode kennt den Schlüssel nur im Short.
-    normalizeParams: p => { const n = normalizeParams(p); return { ...n, layout: n.layout || 'standard', items: n.items || 'classic', soundMix: soundMixOf(p) }; },
+    normalizeParams: p => { const n = normalizeParams(p); return { ...n, layout: n.layout || 'standard', items: n.items || 'classic', script: n.script || 'off', soundMix: soundMixOf(p) }; },
     durationLabel: cfg => normalizeParams(cfg.params).layout === 'short'
       ? { pending: 'Ablauf des Shorts wird berechnet …', complete: 'Automatisch: eine Runde bis zum Sieg und 2,5 Sekunden Abspann.' } : null,
     audioForParams(p) { return soundMixOf(p) === 'soft-v1' ? SOFT_AUDIO : this.audio; },
@@ -1254,8 +1257,8 @@
     // L1 · Kapitel für die Videobeschreibung: je Runde der Startzeitpunkt im Video. Ein einzelner Start (Short,
     // eine Runde) ergibt keine Kapitel. Der Export schreibt die Liste in die JSON-Begleitdatei.
     chapters(sim) {
-      const tournament = sim.cfg.episodeMode === 'tournament';
-      const list = sim.roundStarts.map(r => ({ timeSec: Number((r.step / 60).toFixed(3)), title: tournament && r.round === 8 ? 'Round 8 – Final' : `Round ${r.round}` }));
+      const tournament = sim.cfg.episodeMode === 'tournament', last = sim.totalRounds;
+      const list = sim.roundStarts.map(r => ({ timeSec: Number((r.step / 60).toFixed(3)), title: tournament && r.round === last ? `Round ${last} – Final` : `Round ${r.round}` }));
       return list.length > 1 ? list : null;
     },
     panelStats(sim) {
