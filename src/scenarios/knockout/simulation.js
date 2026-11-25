@@ -24,7 +24,7 @@
     long: { r: 22, T: 16, intro: 4, ready: 1.6, result: 2.2, podium: 8, keep: null },
     short: { r: 30, T: 20, intro: 0, ready: 0.35, result: 1.1, podium: 2.4, keep: [5, 3, 1] },
     slowRate: 0.35, slowMax: 2, slowCount: 3, slowRamp: 0.25,
-    stuckWindow: 3, stuckMin: 5, stuckOut: 12, stageLimit: 90,
+    stuckWindow: 3, stuckMin: 5, stuckOut: 12, stillSpeed: 40, stageLimit: 90,
     gallery: { marbles: 6, cycle: 14 },
   };
   const PHYS = { gravity: 1600, maxSpeed: 1500 };
@@ -45,7 +45,12 @@
       this.outList = [];                                      // Langvideo: Reihenfolge in der Röhre (Roster-Index)
       if (this.mode === 'gallery') { this.initGallery(); return; }
       // Feld
-      const names = this.format === 'long' ? LONG_FIELD : SHORT_FIELD[params.short] || SHORT_FIELD.A;
+      let names = this.format === 'long' ? LONG_FIELD : SHORT_FIELD[params.short] || SHORT_FIELD.A;
+      // Einzelne Bahn: so viele Murmeln, wie im Rennen dort ankommen (oder field)
+      if (this.mode === 'stage') {
+        const i = params.stage | 0, k = params.field || (this.format === 'long' ? 12 - i : [8, 5, 3][i] || 3);
+        names = names.slice(0, Math.max(2, Math.min(names.length, k)));
+      }
       this.roster = names.map((name, i) => ({ id: i, name, color: COLORS[name], alive: true, outStage: -1, how: '', place: 0 }));
       const rng = new EBS.RNG(EBS.util.hashSeed(this.seed, 'lineup'));
       const order = this.roster.map((m) => m.id);
@@ -83,10 +88,13 @@
       const jr = new EBS.RNG(EBS.util.hashSeed(seed, 'jitter'));
       this.runners = alive.map((rid, k) => {
         const [sx, sy] = this.stage.start.slots[k];
-        const pm = world.addMarble({ x: sx + (jr.next() * 2 - 1) * 1.5, y: sy, r: this.r });
+        const jx = this.stage.start.dir === 0 ? 5 : 1.5;              // Regal: etwas mehr Streuung, sonst liegt man auf Stiften
+        const pm = world.addMarble({ x: sx + (jr.next() * 2 - 1) * jx, y: sy, r: this.r });
         pm.rid = rid; pm.px = pm.x; pm.py = pm.y; pm.zone = -1;
-        return { rid, pm, seg: 0, prog: 0, best: 0, bestT: 0, finished: false, finishT: 0, place: 0, hatchT: -1, out: false, fell: false, nudges: 0 };
+        return { rid, pm, seg: 0, prog: 0, best: 0, idle: 0, finished: false, finishT: 0, place: 0, hatchT: -1, out: false, fell: false, nudges: 0 };
       });
+      this.killPits = this.stage.pits.filter((p) => p.kill);
+      if (this.stage.path) this.runners.forEach((u) => { this.progress(u); u.best = u.prog; });
       // Wieviele scheiden hier aus?
       const n = alive.length, last = i === this.list.length - 1;
       let keep;
@@ -98,10 +106,12 @@
       this.final = spec.final || (this.format === 'short' && i === this.list.length - 1);
       this.keep = this.final ? (this.format === 'short' ? 1 : n) : keep;
       this.needOut = this.final ? 0 : Math.max(0, n - keep);
-      this.outHere = 0; this.trapsClosed = this.safe; this.finishedCount = 0; this.stageEnd = -1; this.hatchAt = -1;
+      this.outHere = 0; this.trapsClosed = this.safe; this.finishedCount = 0; this.placeCount = 0; this.dnfCount = 0; this.stageEnd = -1; this.hatchAt = -1;
       if (this.safe) for (const el of this.stage.elements) if (el.closeTraps) el.closeTraps(0);
       this.leader = -1; this.lastPlace = -1; this.leadChanges = 0;
-      this.stats = { nearMiss: 0, slowmo: 0 };
+      this.stats = { nearMiss: 0, slowmo: 0, stuck: 0, timeUp: 0 };
+      // Kapitel für die Videobeschreibung (Langvideo): Bahnbeginn in Videozeit
+      (this.chapterLog || (this.chapterLog = [])).push({ t: this.t, title: this.final ? 'Grand Final' : `Stage ${i + 1}: ${titleCase(spec.title)}` });
       this.emit('stage', this.W / 2, this.H / 2, i, -1);
     }
 
@@ -147,7 +157,10 @@
       const done = this.runners.filter((u) => !u.out).sort((a, b) => a.place - b.place).map((u) => u.rid);
       this.lineup = done;
       if (this.final) {
-        if (this.format === 'long' && this.mode === 'race') { this.podium = done.slice(0, 3); this.setPhase('podium'); this.emit('podium', this.W / 2, this.H / 2, 0, done[0]); }
+        if (this.format === 'long' && this.mode === 'race') {
+          this.podium = done.slice(0, 3); this.setPhase('podium'); this.emit('podium', this.W / 2, this.H / 2, 0, done[0]);
+          this.chapterLog.push({ t: this.t, title: 'Podium' });
+        }
         else this.setPhase('end');
         return;
       }
@@ -211,21 +224,23 @@
           const f = crossing(m.px, m.py, m.x, m.y, fin.ax, fin.ay, fin.bx, fin.by);
           if (f >= 0) {
             u.finished = true; u.finishT = rt - h + f * h; this.finishedCount++;
-            u.place = this.finishedCount; this.emit('finish', m.x, m.y, u.place, u.rid);
+            u.place = ++this.placeCount; this.emit('finish', m.x, m.y, u.place, u.rid);
             if (this.final && u.place === 1) this.emit('winner', m.x, m.y, 1, u.rid);
           }
         }
-        // Fortschritt und Hängenbleiben
+        // Fortschritt und Hängenbleiben: Nur wer langsam ist und nicht vorankommt, sammelt Wartezeit. In Trommel,
+        // Ringen und Labyrinth (Zone) zählt sie nicht, dort ist Kreisen gewollt.
         if (!u.finished && st.path) {
           this.progress(u);
-          if (u.prog > u.best + RULES.stuckMin) { u.best = u.prog; u.bestT = rt; }
-          else if (m.collide && rt - u.bestT > RULES.stuckWindow * (u.nudges + 1) && u.nudges < 3) {
-            u.nudges++; this.nudge(u);
-          }
-          if (m.collide && rt - u.bestT > RULES.stuckOut) this.stuckOut(u);
+          const v2 = m.vx * m.vx + m.vy * m.vy;
+          if (u.prog > u.best + RULES.stuckMin) { u.best = u.prog; u.idle = 0; }
+          else if (m.collide && m.zone < 0 && v2 < RULES.stillSpeed * RULES.stillSpeed) u.idle += h;
+          if (m.collide && u.idle > RULES.stuckWindow * (u.nudges + 1) && u.nudges < 3) { u.nudges++; this.nudge(u); }
+          if (m.collide && u.idle > RULES.stuckOut) this.stuckOut(u);
         }
-        // Gestürzt: aus dem Bild
-        if (m.y > st.knockoutY || m.x < -4 * R || m.x > this.W + 4 * R) this.fell(u);
+        // Gestürzt: aus dem Bild oder in eine Grube
+        if (m.y > st.knockoutY || m.x < -4 * R || m.x > this.W + 4 * R) { this.fell(u); continue; }
+        if (m.collide) for (const p of this.killPits) if (m.x > p.x0 && m.x < p.x1 && m.y > p.y0 + p.depth && m.y < p.y1) { this.fell(u); break; }
       }
       // Durch die Klappe gefallene Murmeln verschwinden unten
       for (const u of this.runners) if (u.hatchT >= 0 && u.pm.active && u.pm.y > this.H + 3 * R) u.pm.active = false;
@@ -238,7 +253,7 @@
           for (const u of waiting) this.hatch(u);
           if (st.finish && st.finish.gate) st.finish.gate.setOpen(rt, false);
         }
-        if (this.final && this.format === 'short' && this.finishedCount >= 1) this.stageEnd = this.t + 0.6;
+        if (this.final && this.format === 'short' && this.placeCount >= 1) this.stageEnd = this.t + 0.6;
         if (!waiting.length && (this.final || this.outHere >= this.needOut)) this.stageEnd = this.t;
         if (rt - this.raceStart > RULES.stageLimit) this.timeUp();
         this.checkSlow(waiting);
@@ -261,12 +276,16 @@
     nudge(u) {
       const m = u.pm, p = this.stage.path, i = Math.min(u.seg, p.pts.length - 2);
       const ex = p.pts[i + 1][0] - p.pts[i][0], ey = p.pts[i + 1][1] - p.pts[i][1], l = Math.sqrt(ex * ex + ey * ey) || 1;
-      m.vx += ex / l * 160; m.vy += ey / l * 160 - 260;
+      // Längs der Ideallinie und immer etwas zur Seite (sonst hüpft eine Murmel auf einem Stift nur auf und ab)
+      const side = (u.rid + u.nudges) % 2 ? 1 : -1;
+      m.vx += ex / l * 160 + side * 110; m.vy += ey / l * 160 - 260;
       this.emit('nudge', m.x, m.y + this.r, u.nudges, u.rid);
     }
     stuckOut(u) {
-      if (this.final || this.outHere >= this.needOut) return;
-      this.hatch(u);
+      this.stats.stuck++;
+      if (!this.final && this.outHere < this.needOut) { this.hatch(u); return; }
+      // Quote schon erfüllt (oder Finale): Die Murmel zählt als durch, ganz hinten, damit die Bahn endet
+      u.finished = true; u.finishT = Infinity; this.finishedCount++; u.place = 500 + this.finishedCount;
     }
     hatch(u) {
       if (u.out) return;
@@ -276,11 +295,11 @@
     }
     fell(u) {
       const m = u.pm;
-      if (u.out) { m.active = false; return; }
+      if (u.out || u.finished) { m.active = false; return; }
       m.active = false; u.fell = true;
       if (this.final || this.safe) {
-        // Finale und sichere Bahn: Sturz zählt als letzter Platz
-        u.finished = true; u.finishT = Infinity; this.finishedCount++; u.place = this.runners.length; u.dnf = true;
+        // Finale und sichere Bahn: Sturz zählt als letzter Platz (hinter allen, die noch ins Ziel kommen)
+        u.finished = true; u.finishT = Infinity; this.finishedCount++; u.place = 1000 + ++this.dnfCount; u.dnf = true;
         this.emit('fall', m.x, this.H, 0, u.rid);
         return;
       }
@@ -303,8 +322,9 @@
     timeUp() {
       const waiting = this.runners.filter((u) => !u.out && !u.finished).sort((a, b) => b.prog - a.prog);
       const need = Math.max(0, this.needOut - this.outHere);
+      this.stats.timeUp++;
       waiting.slice(waiting.length - need).forEach((u) => this.hatch(u));
-      waiting.slice(0, waiting.length - need).forEach((u) => { u.finished = true; this.finishedCount++; u.place = this.finishedCount; u.finishT = Infinity; });
+      waiting.slice(0, waiting.length - need).forEach((u, k) => { u.finished = true; this.finishedCount++; u.place = 500 + k; u.finishT = Infinity; });
       this.stageEnd = this.t;
     }
     ranking() {
@@ -411,6 +431,8 @@
     }
     destroy() {}
   }
+
+  const titleCase = (s) => s.toLowerCase().replace(/(^|[\s-])([a-z])/g, (_, a, b) => a + b.toUpperCase());
 
   /** Anteil 0..1 entlang p→q, an dem die Strecke a–b gekreuzt wird (in Richtung links→rechts der Linie), sonst −1. */
   function crossing(px, py, qx, qy, ax, ay, bx, by) {

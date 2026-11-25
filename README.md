@@ -32,6 +32,8 @@ Die folgenden Szenarien und Varianten sind im aktuellen Code vorhanden. Weitere 
 
 **In Arbeit:** **Marble Factory XL** (`marblexl`) ist eine Produktionslinie mit neun Stationen im Stil der klassischen Kugelfabrik (Waschen, Polieren, Ofen, Farbe, Trocknen, Prüfen, Sortieren). Bewegter Entwurf im Querformat mit fester Übersicht, läuft in Chargen zu 48 Kugeln beliebig lange durch, noch ohne Warteschlangen, Kapitel und Vorlagen; Schalter „Schilder zeigen“ (Standard aus). Stand und Grenzen: [docs/MARBLE_XL_STUFE_1_2026-11-16.md](docs/MARBLE_XL_STUFE_1_2026-11-16.md).
 
+**In Arbeit:** **Marble Knockout** (`knockout`) ist ein Murmel-Ausscheidungsrennen im Stil „Holz & Abendlicht“: 12 Murmeln, 10 Bahnen, auf jeder scheidet die Letzte aus, das Finale zu dritt endet mit Podest. Die Bahnen: The Drop, Turnstiles, The Wheel, Crumbling Bridge, Tilt, The Drum, Hammer Alley, Shifting Floors, Ring Escape, Grand Final. Eigener Physik-Kern mit gleichem Ergebnis in Node und Chromium. Ablauf „Ganzes Rennen“ (Querformat, Länge automatisch bis zum Podest, Kapitelzeiten), „Eine Bahn“ und „Galerie der Bausteine“ (21 Elemente). Short-Bahnen, Ton und Vorlagen folgen. [Plan](docs/MARBLE_KNOCKOUT_PLAN_2026-11-25.md) · [Bericht](docs/MARBLE_KNOCKOUT_2026-11-25.md)
+
 ## Was lässt sich exportieren?
 
 **Alle acht Szenarien samt Varianten** unterstützen den Videoexport.
@@ -42,7 +44,7 @@ Die folgenden Szenarien und Varianten sind im aktuellen Code vorhanden. Weitere 
 | **Bildformat** | 9:16 und 16:9; zusätzlich 1:1 (nur per Konfiguration / Kommandozeile). Quadrat nutzt teils ein eingepasstes Querformatlayout. |
 | **Qualität** | 720p, 1080p, 1440p oder 4K (kurze Bildseite); 30 oder 60 fps. |
 | **Länge** | Frei von 1 Sekunde bis 4 Stunden. Marble Works kann bis zum Auftragsende + 12 Sekunden Fabrikfinale laufen (bei Zeitlupe länger); Scrap-Turniere enden nach 8 Runden + 5 Sekunden Ergebnisanzeige, Scrap-Shorts 2,5 Sekunden nach dem Sieg. |
-| **Ausschnitte** | Nur **Scrap Wars, Marble Works, Waterpark und Cloud Wars** (Kommandozeilenfunktion). Der Ton stammt aus der vollständigen Episodenmischung. |
+| **Ausschnitte** | Nur **Scrap Wars, Marble Works, Waterpark, Cloud Wars und Marble Knockout** (Kommandozeilenfunktion). Der Ton stammt aus der vollständigen Episodenmischung. |
 | **Einzelbild** | PNG (Skriptfunktion, kein eigener Button in der Oberfläche) |
 | **Einstellungen / Wiederholung** | Einstellungen als JSON speicherbar. Jedes MP4 erhält außerdem eine JSON mit Konfiguration, Seed, Aufnahmeparametern, Prüfsummen und Programmstand. |
 

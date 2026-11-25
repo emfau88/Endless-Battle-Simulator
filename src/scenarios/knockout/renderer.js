@@ -12,7 +12,7 @@
   const fade = (age, inn, hold, out) => (age < 0 ? 0 : age < inn ? age / inn : age < inn + hold ? 1 : age < inn + hold + out ? 1 - (age - inn - hold) / out : 0);
 
   class Painter {
-    constructor(sim, scale = 1) { this.sim = sim; this.scale = scale; this.cache = null; this.key = ''; }
+    constructor(sim, scale = 1) { this.sim = sim; this.scale = scale; this.cache = null; this.key = ''; this.hud = true; }
     setSim(sim) { this.sim = sim; this.key = ''; }
 
     staticLayer() {
@@ -43,12 +43,14 @@
         const danger = racing && sim.lastPlace === u.rid && sim.needOut > sim.outHere ? 0.75 + 0.25 * Math.sin(sim.t * TAU * 1.6) : 0;
         A.marble(g, m.x, m.y, r, M.name, M.color, m.a, { crown: lead && sim.cfg.marks !== 'off', danger: sim.cfg.marks !== 'off' ? danger : 0, noShadow: !m.collide });
       }
+      for (const p of st.pits) if (p.kill) A.killPit(g, p);
       for (const tr of st.tracks) if (tr.front) A.drawTrack(g, tr);
       this.overlay(g);
     }
 
     overlay(g) {
       const sim = this.sim, W = sim.W, H = sim.H, short = sim.format === 'short';
+      if (!this.hud) return;
       if (sim.mode === 'gallery') {
         A.text(g, sim.spec.title, W / 2, short ? 170 : 92, short ? 64 : 52, { align: 'center', weight: 900, spacing: 2 });
         return;
@@ -106,11 +108,10 @@
     podium(g) {
       const sim = this.sim, W = sim.W, H = sim.H, k = Math.min(1, sim.phaseT / 0.5), p = sim.podium || [];
       g.save(); g.globalAlpha = 0.6 * k; g.fillStyle = '#000'; g.fillRect(0, 0, W, H); g.restore();
-      const blocks = [[1, W / 2, 300, '#e3b23c'], [0, W / 2 - 260, 220, '#c8ced4'], [2, W / 2 + 260, 160, '#c58a52']];
+      const blocks = [[0, W / 2, 300, '#e3b23c'], [1, W / 2 - 260, 220, '#c8ced4'], [2, W / 2 + 260, 160, '#c58a52']];
       const base = H * 0.82, r = sim.r * 2.4;
       for (const [i, x, h, col] of blocks) {
         const id = p[i]; if (id === undefined) continue;
-        const hh = h * A.S && k;
         g.save(); g.globalAlpha = k;
         g.fillStyle = col; g.beginPath(); g.roundRect(x - 120, base - h * k, 240, h * k, 10); g.fill();
         A.text(g, String(i + 1), x, base - h * k + 70, 64, { align: 'center', weight: 900, color: 'rgba(0,0,0,0.55)' });
@@ -118,7 +119,6 @@
         A.marble(g, x, base - h * k - r - 4, r, M.name, M.color, 0.3 + i, { crown: i === 0 });
         A.text(g, M.name, x, base - h * k - 2 * r - 40, 40, { align: 'center', weight: 900, spacing: 2 });
         g.restore();
-        void hh;
       }
       A.text(g, 'CHAMPION', W / 2, 150, 72, { align: 'center', weight: 900, spacing: 6, alpha: k, color: '#fff3c4' });
     }

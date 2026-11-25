@@ -3,6 +3,7 @@
 //   node scripts/knockout-lab.mjs gallery [--element turnstile|all] [--seconds 60] [--aspect 16:9]
 //   node scripts/knockout-lab.mjs stage --stage 3 [--seed 1] [--runs 5] [--aspect 16:9]
 //   node scripts/knockout-lab.mjs race [--seed 1] [--runs 1] [--aspect 16:9|9:16] [--short A]
+//   node scripts/knockout-lab.mjs check [--seed 1] [--runs 100]      (viele freie Rennen, Zusammenfassung)
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
@@ -45,10 +46,51 @@ if (isMain) {
       const loops = sim.world.marbles.map((m) => m.loops);
       console.log(`${id.padEnd(10)} Runden ${loops.join(',').padEnd(24)} längste Runde ${worstGap.toFixed(1)} s  ${errors.length ? 'FEHLER ' + errors.slice(0, 2).join(' | ') : 'ok'}  (${Date.now() - t0} ms)`);
     }
+  } else if (cmd === 'check') {
+    // Viele freie Rennen: Ende erreicht, 9 Aus, 3 im Finale, Podest, keine Fehler; Zeiten je Bahn und Auffälliges
+    const runs = Number(arg('runs', 100)), seed0 = Number(arg('seed', 1)), t0 = Date.now();
+    const per = new Map(), lengths = [], problems = [], finalGaps = [];
+    let falls = 0, stuck = 0, timeUps = 0, nudges = 0, safe = 0;
+    for (let k = 0; k < runs; k++) {
+      const seed = seed0 + k, sim = makeSim(EBS, { seed, aspect, params: { mode: 'race', short: arg('short', 'A') } });
+      let stage = -1, stageT0 = 0; const errs = [];
+      while (sim.phase !== 'end' && sim.t < 1500) {
+        sim.stepOnce();
+        if (sim.stageNo !== stage) { stage = sim.stageNo; stageT0 = sim.t; }
+        if (sim.phase === 'result' && sim.phaseT < sim.dt * 1.5) {
+          const s = per.get(stage) || per.set(stage, { title: sim.spec.title, times: [], outs: 0, falls: 0, stuck: 0, timeUp: 0 }).get(stage);
+          s.times.push(sim.world.t); s.stuck += sim.stats.stuck; s.timeUp += sim.stats.timeUp;
+          stuck += sim.stats.stuck; timeUps += sim.stats.timeUp; safe += sim.safe ? 1 : 0;
+          nudges += sim.runners.reduce((a, u) => a + u.nudges, 0);
+          for (const u of sim.runners) if (u.out) { s.outs++; if (u.fell) { s.falls++; falls++; } }
+          if (sim.final) {
+            const fin = sim.runners.filter((u) => u.place < 500).sort((a, b) => a.place - b.place);
+            if (fin.length > 1) finalGaps.push(fin[1].finishT - fin[0].finishT);
+            if (!fin.length) problems.push(`Seed ${seed}: niemand kommt im Finale ins Ziel`);
+          }
+          if (sim.stats.stuck || sim.stats.timeUp) problems.push(`Seed ${seed}: Bahn ${stage + 1} ${sim.spec.title} hängt (${sim.stats.stuck} festgefahren, ${sim.stats.timeUp} Zeitlimit)`);
+        }
+        if (sim.step % 300 === 0) { const c = sim.checkInvariants(); if (!c.ok) errs.push(`${sim.t.toFixed(1)}s ${c.errors[0]}`); }
+      }
+      const outs = sim.outList.length, alive = sim.roster.filter((m) => m.alive).length;
+      if (sim.phase !== 'end') problems.push(`Seed ${seed}: kein Ende nach ${sim.t.toFixed(0)} s`);
+      if (outs !== 9 || alive !== 3) problems.push(`Seed ${seed}: ${outs} Aus, ${alive} im Finale`);
+      if (!sim.podium || sim.podium.length !== 3) problems.push(`Seed ${seed}: kein Podest`);
+      if (errs.length) problems.push(`Seed ${seed}: ${errs.slice(0, 2).join(' | ')}`);
+      lengths.push(sim.t);
+    }
+    const st = (a) => { const s = a.slice().sort((x, y) => x - y); return `${s[0].toFixed(1)} / ${s[Math.floor(s.length / 2)].toFixed(1)} / ${s[s.length - 1].toFixed(1)}`; };
+    console.log(`${runs} Rennen ab Seed ${seed0} in ${((Date.now() - t0) / 1000).toFixed(0)} s · Video min/Median/max ${st(lengths)} s`);
+    for (const [i, s] of [...per.entries()].sort((a, b) => a[0] - b[0])) {
+      console.log(`  ${String(i + 1).padStart(2)} ${s.title.padEnd(18)} Bahnzeit ${st(s.times)} s  Aus ${s.outs} (davon gestürzt ${s.falls})  festgefahren ${s.stuck}  Zeitlimit ${s.timeUp}`);
+    }
+    const g = finalGaps.slice().sort((a, b) => a - b);
+    console.log(`  Stürze ${falls} · festgefahren ${stuck} · Zeitlimit ${timeUps} · Stöße ${nudges} · sichere Bahnen ${safe} · Finale 1-2 Median ${g.length ? g[Math.floor(g.length / 2)].toFixed(2) : '-'} s, unter 1 s: ${g.filter((x) => x < 1).length}/${g.length}`);
+    console.log(problems.length ? `  Auffällig (${problems.length}):\n    ` + problems.slice(0, 40).join('\n    ') : '  Keine Auffälligkeiten.');
   } else if (cmd === 'stage' || cmd === 'race') {
     const runs = Number(arg('runs', 1)), seed0 = Number(arg('seed', 1));
     for (let k = 0; k < runs; k++) {
-      const seed = seed0 + k, params = cmd === 'stage' ? { mode: 'stage', stage: Number(arg('stage', 0)) } : { mode: 'race', short: arg('short', 'A') };
+      const seed = seed0 + k, params = cmd === 'stage' ? { mode: 'stage', stage: Number(arg('stage', 0)), field: Number(arg('field', 0)) || undefined, short: arg('short', 'A') } : { mode: 'race', short: arg('short', 'A') };
       const sim = makeSim(EBS, { seed, aspect, params }), t0 = Date.now(), log = [];
       let stage = -1, stageT0 = 0, errors = [];
       while (sim.phase !== 'end' && sim.t < 1200) {

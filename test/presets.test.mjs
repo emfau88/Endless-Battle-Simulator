@@ -36,7 +36,7 @@ test('Einstellungsdatei bewahrt QualitÃ¤tswerte und Namen; der PC-Exportbefehl Ã
 test('Bestehende Produktionsdateien entsprechen den UI-Vorlagen und definierten Videoeinstellungen', async t => {
   const ctx = await browser.newContext(); t.after(() => ctx.close());
   const page = await ctx.newPage(); await page.goto(base + '?paused=1'); await ready(page);
-  assert.deepEqual(await page.locator('#scenario option').evaluateAll(options => options.map(o => o.value)), [...ids, 'marbleworks', 'waterpark', 'marblexl', 'cloudwars']);
+  assert.deepEqual(await page.locator('#scenario option').evaluateAll(options => options.map(o => o.value)), [...ids, 'marbleworks', 'waterpark', 'marblexl', 'cloudwars', 'knockout']);
   for (const id of ids) for (const kind of ['short', 'long']) {
     const file = JSON.parse(readFileSync(join(ROOT, 'presets', 'production', `${id}-${kind}.json`), 'utf8'));
     const fromUi = await page.evaluate(([id, kind]) => EBS.productionPreset(id, kind), [id, kind]);

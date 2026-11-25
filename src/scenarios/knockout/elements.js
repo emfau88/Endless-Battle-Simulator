@@ -25,8 +25,17 @@
   function kin(fn) {
     return (t) => {
       const p = fn(t), q0 = fn(t - HD), q1 = fn(t + HD);
-      return { x: p.x, y: p.y, a: p.a, vx: (q1.x - q0.x) / (2 * HD), vy: (q1.y - q0.y) / (2 * HD), w: (q1.a - q0.a) / (2 * HD) };
+      return { x: p.x, y: p.y, a: p.a, vx: rate(q0.x, p.x, q1.x, JUMP), vy: rate(q0.y, p.y, q1.y, JUMP), w: rate(q0.a, p.a, q1.a, JUMP_A) };
     };
+  }
+  // Springt die Lage genau zwischen zwei Abtastpunkten (zum Beispiel Planke: Wackeln → Fallen), ergäbe die zentrale
+  // Differenz eine riesige Geschwindigkeit, und das Teil schlüge eine Murmel quer über die Bahn. Dann gilt die glatte
+  // Seite. Glatte Bewegungen und Knicke liegen weit unter den Grenzen und bleiben Bit für Bit gleich.
+  const JUMP = 5000, JUMP_A = 20;
+  function rate(q0, p, q1, lim) {
+    const b = (p - q0) / HD, f = (q1 - p) / HD, d = f - b;
+    if (d > lim || d < -lim) return (f < 0 ? -f : f) < (b < 0 ? -b : b) ? f : b;
+    return (q1 - q0) / (2 * HD);
   }
   /** Kreisbogen als Punktliste (48 Teile je Vollkreis). */
   function arcPts(cx, cy, R, a0, a1, segs) {
@@ -88,8 +97,11 @@
       this.world.addStatic({ ax: x, ay: y, bx: x, by: y, rad, tag: 'bumper', rest: 1.0, kick: 420 });
       this.pegs.push({ x, y, rad, kind: 'bumper' });
     }
-    /** Grube (nur Bild): weicher dunkler Bereich, optional mit Warnstreifen am Rand. */
-    pit(x0, x1, y0, y1, o = {}) { this.pits.push({ x0, x1, y0, y1, stripes: o.stripes !== false }); }
+    /** Grube: weicher dunkler Bereich, optional mit Warnstreifen. kill: Wer tiefer als depth hineinfällt, ist raus
+     *  (Gefahr mitten im Bild, ohne dass der Weg bis zum unteren Rand frei sein muss). */
+    pit(x0, x1, y0, y1, o = {}) {
+      this.pits.push({ x0, x1, y0, y1, stripes: o.stripes !== false, kill: !!o.kill, depth: o.depth || this.d * 1.3 });
+    }
     sign(x, y, text, o = {}) { this.signs.push({ x, y, text, size: o.size || 24, h: o.h || 50 }); }
     /** Ideallinie für Fortschritt und Rangfolge. */
     setPath(pts) {
@@ -126,6 +138,39 @@
       this.start = { x, y, dir, slots, gate, floor: [back, front], ux, uy };
       return front;
     }
+    /** Start-Regal: Murmeln liegen nebeneinander auf einer Reihe kleiner Klappen, die beim Start alle aufgehen. */
+    /** flaps: Zahl der Klappen. Offen hängen sie fast senkrecht; kurze Klappen lassen darunter Platz für Murmeln. */
+    dropShelf({ x0, x1, y, n, flaps }) {
+      const r = this.r, rad = this.rad, k = flaps || Math.max(2, Math.round((x1 - x0) / (2.6 * this.d))), fw = (x1 - x0) / k;
+      this.wall([[x0 - rad, y + rad], [x0 - rad, y - 2.4 * r]]); this.wall([[x1 + rad, y + rad], [x1 + rad, y - 2.4 * r]]);
+      const el = { type: 'gate', kind: 'shelf', x: (x0 + x1) / 2, y, s0: 0, s1: 0, at: -1, bodies: [], mode: 'manual' };
+      el.frac = (t) => (el.at < 0 ? el.s1 : lerp(el.s0, el.s1, ease((t - el.at) / 0.22)));
+      el.setOpen = (t, on) => { const f = el.frac(t); el.s0 = f; el.s1 = on ? 1 : 0; el.at = t; };
+      el.state = () => [el.s0, el.s1, el.at];
+      // Jede Klappe hat ihr Scharnier links und dreht nach unten (positiver Winkel)
+      for (let i = 0; i < k; i++) {
+        const hx = x0 + i * fw;
+        el.bodies.push(this._body([{ ax: 0, ay: 0, bx: fw - 2, by: 0, rad }], (t) => ({ x: hx, y, a: 1.5 * el.frac(t) }), { look: 'trap', tag: 'gate' }));
+      }
+      this._add(el);
+      // Plätze: der Erste der Vorrunde in die Mitte, dann nach außen
+      const step = (x1 - x0) / n, mid = (n - 1) / 2, idx = [];
+      for (let i = 0; i < n; i++) idx.push(i);
+      idx.sort((a, b) => Math.abs(a - mid) - Math.abs(b - mid) || a - b);
+      this.start = { x: el.x, y, dir: 0, slots: idx.map((s) => [x0 + step * (s + 0.5), y - rad - r - 0.5]), gate: el };
+      return el;
+    }
+    /** Deckel unter einem Loch: liegt verborgen tiefer und fährt beim Schließen der Fallen hoch (E4). */
+    lid({ x0, y0, x1, y1, drop }) {
+      const rad = this.rad * 0.8, dy = drop || this.d * 2.5, mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+      const el = { type: 'lid', closedAt: -1, bodies: [] };
+      const f = (t) => (el.closedAt < 0 ? 0 : ease((t - el.closedAt) / 0.5));
+      el.bodies.push(this._body([{ ax: x0 - mx, ay: y0 - my, bx: x1 - mx, by: y1 - my, rad }], (t) => ({ x: mx, y: my + dy * (1 - f(t)), a: 0 }), { look: 'lid', tag: 'lid', enabled: false }));
+      el.update = () => { el.bodies[0].enabled = el.closedAt >= 0; };
+      el.closeTraps = (t) => { if (el.closedAt < 0) el.closedAt = t; };
+      el.state = () => [el.closedAt];
+      return this._add(el);
+    }
     /** Ziel: Lichtschranke von a nach b (Murmeln kreuzen sie in Fahrtrichtung). Ein Tor dahinter schließt beim Aus. */
     finishLine({ ax, ay, bx, by, gate }) {
       this.finish = { ax, ay, bx, by, gate: gate ? this.gate({ ...gate, mode: 'manual', open0: 1, kind: 'finish' }) : null };
@@ -151,17 +196,20 @@
       if (casing) { const Rc = R + (casingGap || this.d + 6) + this.rad; casingPts = arcPts(x, y, Rc, casing[0], casing[1]); this.track(casingPts); }
       return this._add({ type: 'wheel', x, y, R, hubR, paddles, rps, bodies: [body], casing: casingPts });
     }
-    /** B3 Drehtrommel: Ring mit Lücken und Rippen innen; Eintritt von vorn über eine Zone. */
-    drum({ x, y, R, gaps = [0], gapW, rps = 0.15, fins = 6, finL }) {
+    /** B3 Drehtrommel: Ring mit Lücken und Rippen innen; Eintritt von vorn über eine Zone.
+     *  finAt: Winkel der Rippen (sonst gleichmäßig zwischen den Lücken). rock: { amp, period } lässt die Trommel
+     *  zusätzlich schaukeln; das bricht feste Umläufe auf, in denen eine Murmel sonst immer gleich kreist. */
+    drum({ x, y, R, gaps = [0], gapW, rps = 0.15, fins = 6, finL, finAt, rock }) {
       const rad = this.rad * 0.8, gw = gapW || this.d * 1.4;
       const shapes = ringShapes(R, rad, gaps.map((at) => ({ at, w: gw + 2 * rad })), 2);
-      const fl = finL || this.d * 0.7;
-      for (let i = 0; i < fins; i++) {
-        const a = (i + 0.5) * TAU / fins + gaps[0];
+      const fl = finL || this.d * 0.7, angles = finAt || [];
+      if (!finAt) for (let i = 0; i < fins; i++) angles.push((i + 0.5) * TAU / fins + gaps[0]);
+      for (const a of angles) {
         shapes.push({ ax: (R - rad) * cos(a), ay: (R - rad) * sin(a), bx: (R - rad - fl) * cos(a), by: (R - rad - fl) * sin(a), rad: rad * 0.8, mask: 2 });
       }
       const ph = this.phase(1 / Math.abs(rps)) * TAU * Math.abs(rps), w = TAU * rps;
-      const body = this._body(shapes, (t) => ({ x, y, a: ph + w * t }), { look: 'drum', tag: 'drum' });
+      const ra = rock ? rock.amp : 0, rp = rock ? rock.period : 1, rph = rock ? this.phase(rp) : 0;
+      const body = this._body(shapes, (t) => ({ x, y, a: ph + w * t + ra * sin(TAU * (t + rph) / rp) }), { look: 'drum', tag: 'drum' });
       this.zone(x, y, R - rad - fl - this.r - 2, R + rad + this.r + 4);
       return this._add({ type: 'drum', x, y, R, gaps, gapW: gw, rps, bodies: [body] });
     }
@@ -227,6 +275,9 @@
         { ax: -hw / 2, ay: L, bx: hw / 2, by: L, rad: hr },
       ], (t) => ({ x: px, y: py, a: el.angle(t) }), { look: 'hammer', hub: rad * 2.4, tag: 'hammer' }));
       el.closeTraps = (t) => { if (el.closedAt < 0) { el.closedAt = t; const a = swing(t); el.park = (a >= 0 ? 1 : -1) * 1.45; } };
+      // Geparkt hat der Hammer keine Aufgabe mehr. Beim Hochschwenken kann er eine Murmel mitnehmen, die dann in der
+      // Ecke zwischen Stiel und Kopf liegen bliebe: Kurz nach dem Parken stößt er deshalb nicht mehr.
+      el.update = (st) => { el.bodies[0].enabled = !(el.closedAt >= 0 && st.t > el.closedAt + 1.2); };
       el.state = () => [el.closedAt, el.park];
       return this._add(el);
     }
@@ -304,25 +355,26 @@
     // ---------------------------------------------------------------- D · Das Level verändert sich
     /** D1 Kippbrett um (x, y), Länge len, Ausschlag amp, volle Periode period; holes: [[von, bis]] in lokalem x;
      *  posts: [x] kleine Stifte auf dem Brett; lips: Höhe der Endkanten (0 = offen). */
-    tilt({ x, y, len, amp = 0.21, period = 7, phase = 0, holes = [], posts = [], lips = 0 }) {
+    tilt({ x, y, len, amp = 0.21, period = 7, phase = 0, holes = [], posts = [], postH = 0.55, lips = 0 }) {
       const rad = this.rad, shapes = [], cuts = [[-len / 2, len / 2]];
       for (const [h0, h1] of holes) {
         const k = cuts.findIndex(([a, b]) => h0 > a && h1 < b);
         if (k >= 0) { const [a, b] = cuts[k]; cuts.splice(k, 1, [a, h0], [h1, b]); }
       }
       for (const [a, b] of cuts) shapes.push({ ax: a + rad, ay: 0, bx: b - rad, by: 0, rad });
-      for (const px of posts) shapes.push({ ax: px, ay: -rad - this.r * 0.55, bx: px, by: 0, rad: rad * 0.6 });
+      for (const px of posts) shapes.push({ ax: px, ay: -rad - this.r * postH, bx: px, by: 0, rad: rad * 0.6 });
       if (lips) for (const s of [-1, 1]) shapes.push({ ax: s * (len / 2 - rad), ay: -lips, bx: s * (len / 2 - rad), by: 0, rad: rad * 0.8 });
       const ph = phase + this.phase(period);
       const body = this._body(shapes, (t) => ({ x, y, a: amp * sin(TAU * (t + ph) / period) }), { look: 'tilt', hub: rad * 2.2, tag: 'tilt' });
       return this._add({ type: 'tilt', x, y, len, amp, period, holes, bodies: [body] });
     }
     /** D2 Einstürzende Brücke von (x0, y0) nach (x1, y1) mit n Planken. Der Einsturz beginnt bei `start` (Bahnzeit)
-     *  oder, mit trigger = x, wenn die erste Murmel x überquert (+ delay). Von hinten (x0) nach vorn. */
-    bridge({ x0, y0, x1, y1, n = 10, start = 4, trigger, delay = 0, interval = 0.5, wobble = 0.4, g = 1600 }) {
+     *  oder, mit trigger = x, wenn `count` Murmeln x überquert haben (+ delay). Von hinten (x0) nach vorn.
+     *  sink: Planken verschwinden, wenn sie so tief gefallen sind (in einer dunklen Grube). */
+    bridge({ x0, y0, x1, y1, n = 10, start = 4, trigger, count = 1, delay = 0, interval = 0.5, wobble = 0.4, g = 1600, sink }) {
       const rad = this.rad, dx = (x1 - x0) / n, dy = (y1 - y0) / n, pitch = Math.sqrt(dx * dx + dy * dy);
-      const ux = dx / pitch, uy = dy / pitch;
-      const el = { type: 'bridge', x0, y0, x1, y1, n, pitch, ux, uy, startT: trigger === undefined ? start : -1, trigger, interval, wobble, closedAt: -1, bodies: [], homes: [] };
+      const ux = dx / pitch, uy = dy / pitch, gone = sink ? Math.sqrt(2 * sink / (g * 1.12)) : 1.5;
+      const el = { type: 'bridge', x0, y0, x1, y1, n, pitch, ux, uy, startT: trigger === undefined ? start : -1, trigger, count, passed: 0, npassed: 0, interval, wobble, closedAt: -1, bodies: [], homes: [] };
       const deckA = 0;                                                 // Planken liegen lokal schon längs der Brücke
       const rel = (i) => (el.startT < 0 ? Infinity : el.startT + i * interval);
       const fall = (i, t, hx, hy) => {
@@ -350,14 +402,27 @@
       el.wobbling = (i, t) => t >= rel(i) - wobble && t < rel(i) && (el.closedAt < 0 || t < el.closedAt);
       el.update = (st) => {
         if (el.startT < 0 && el.trigger !== undefined) {
-          for (const m of st.marbles) if (m.active && m.collide && (ux > 0 ? m.x > el.trigger : m.x < el.trigger)) { el.startT = st.t + delay; break; }
+          let live = 0;
+          // Auslöser: Kreuzen der Senkrechten x = trigger auf Höhe der Brücke (nicht irgendwo im Bild)
+          const ty = y0 + (y1 - y0) * (el.trigger - x0) / (x1 - x0);
+          st.marbles.forEach((m, k) => {
+            if (!m.active || !m.collide) return;
+            live++;
+            const over = ux > 0 ? m.px <= el.trigger && m.x > el.trigger : m.px >= el.trigger && m.x < el.trigger;
+            if (!(el.passed & (1 << k)) && over && Math.abs(m.y - ty) < 3 * this.d) { el.passed |= 1 << k; el.npassed++; }
+          });
+          // Alle Lebenden durch (zum Beispiel nach einem Aus vorher): dann gleich starten
+          let waiting = 0;
+          st.marbles.forEach((m, k) => { if (m.active && m.collide && !(el.passed & (1 << k))) waiting++; });
+          if (el.npassed > 0 && (el.npassed >= el.count || waiting === 0)) el.startT = st.t + delay;
+          void live;
         }
-        // Fallende Planken weit unten abschalten, zurückkehrende wieder einschalten
-        el.bodies.forEach((b, i) => { b.enabled = !(el.released(i, st.t) && el.closedAt < 0 && st.t - rel(i) > 1.5); });
+        // Fallende Planken unten abschalten, zurückkehrende wieder einschalten
+        el.bodies.forEach((b, i) => { b.enabled = !(el.released(i, st.t) && el.closedAt < 0 && st.t - rel(i) > gone); });
         for (let i = 0; i < n; i++) if (rel(i) <= st.t && rel(i) > st.t - st.dt - 1e-9 && (el.closedAt < 0 || rel(i) <= el.closedAt)) st.emit('plank', el.homes[i][0], el.homes[i][1], i, -1);
       };
       el.closeTraps = (t) => { if (el.closedAt < 0) el.closedAt = t; };
-      el.state = () => [el.startT, el.closedAt];
+      el.state = () => [el.startT, el.closedAt, el.passed];
       return this._add(el);
     }
     /** D3 Wandernde Böden zwischen den Wänden xl..xr: je Boden eine Höhe y, Neigung (+ fällt nach rechts), ein Loch

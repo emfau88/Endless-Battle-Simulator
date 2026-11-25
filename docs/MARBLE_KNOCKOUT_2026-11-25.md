@@ -9,7 +9,8 @@ Dieser Bericht wird je Paket fortgeschrieben.
 | V0 Vorschau-Bilder | **Erledigt** (25.11.). Der Nutzer hat **Stil A „Holz & Abendlicht“** gewählt. |
 | M1 Physik-Kern | **Erledigt** (25.11.) |
 | M2/M3 Baukasten und Galerie | **Erledigt** (25.11.) |
-| M4 bis M9 | **Offen** |
+| M4 Rennablauf, zehn Bahnen, Anmeldung | **Erledigt** (25.11.) |
+| M5 bis M9 | **Offen** |
 
 ---
 
@@ -187,7 +188,7 @@ Am 25.11. hat der Nutzer **Stil A** gewählt („Ja Stil A“). Die Referenzbild
 
 **Grenzen:**
 
-- In der Oberfläche erscheint die Galerie erst mit der Anmeldung des Szenarios (M4).
+- In der Oberfläche erscheint die Galerie erst mit der Anmeldung des Szenarios (M4, inzwischen erledigt).
 - D5 (Drehweichen-Raster) ist wie geplant nicht gebaut.
 - Kolben und Fähre kommen in den geplanten Bahnen nicht vor. Sie stehen für spätere Bahnen bereit.
 - In der Drehtrommel kann eine Murmel lange kreisen (bis 51 s in der Galerie). Für Bahn 6 wird das abgestimmt.
@@ -199,3 +200,108 @@ Am 25.11. hat der Nutzer **Stil A** gewählt („Ja Stil A“). Die Referenzbild
   - Gleicher Seed ergibt denselben Hash.
   - Simulation und Bahnen nutzen keine Winkelfunktionen des Browsers, also gleiche Bits in Node und Chromium.
 - `test/knockout-physics.test.mjs` bleibt grün (7 Tests).
+
+---
+
+## M4 · Rennablauf, zehn Bahnen, Anmeldung (25.11.2026)
+
+**Umfang:**
+
+- `src/scenarios/knockout/stages.js`: die zehn Bahnen des Langvideos als Daten. Jede Bahn hat eine eigene
+  Hintergrundwelt, eine Ideallinie für den Fortschritt und ein Ziel.
+
+  | Bahn | Hauptelement | Aufbau |
+  |---|---|---|
+  | 1 `THE DROP` | Nagelfeld | Regal mit Klappen über dem Nagelfeld, Trichter, zwei Reihen zum Zielbehälter |
+  | 2 `TURNSTILES` | vier Drehkreuze | drei Kreuze in Reihe 1, eins in Reihe 4 (Gegenrichtung), Zickzack |
+  | 3 `THE WHEEL` | Schaufelrad | Bumper-Kasten, dann hebt das Rad die Murmeln zum Ausgang |
+  | 4 `CRUMBLING BRIDGE` | einstürzende Brücke (Gefahr) | Schanze auf die Brücke; sie stürzt hinter dem Feld ein, wenn alle bis auf zwei drüber sind |
+  | 5 `TILT` | Kippbrett | zwei Ampeltore, dann ein langes Kippbrett mit Löchern an beiden Enden |
+  | 6 `THE DRUM` | Drehtrommel | Flip-Flop teilt das Feld, beide Wege münden von vorn in die schaukelnde Trommel |
+  | 7 `HAMMER ALLEY` | Pendelhämmer (Gefahr) | Sims mit drei Löchern, zwei führen ins Aus, eins ins Fangnetz; Deckel schließen nach dem Aus |
+  | 8 `SHIFTING FLOORS` | wandernde Böden | Förderband mit Richtungswechsel, dann ein Turm aus drei Böden |
+  | 9 `RING ESCAPE` | drei gegenläufige Ringe | Eintritt von vorn in die Mitte, Ausbruch durch drei Schlitze |
+  | 10 `GRAND FINAL` | Strecke aus allem | zwei Drehkreuze, Schanze auf die Brücke, Wippe, Drehkreuz vor dem Ziel |
+
+- `src/scenarios/knockout/simulation.js`: der Ablauf eines ganzen Videos.
+  - Einstieg (4 s), je Bahn Aufstellung in der Zielreihenfolge der vorigen Bahn, Start, Rennen, Zwischenstand.
+  - Sind alle bis auf die Letzte durch, schließt das Zieltor und die Letzte fällt durch eine Klappe in die Röhre `OUT`.
+  - Gefahren-Bahnen: Wer in die Grube fällt, ist raus; danach schließen die Fallen (`TRAPS CLOSED`). Fallen zwei
+    zugleich, wird die nächste Bahn zur `SAFE STAGE`.
+  - Hängenbleiben: Nach 3 s ohne Fortschritt ein kleiner Stoß (höchstens drei), nach 12 s gilt die Murmel als Letzte.
+    In Trommel, Ringen und Labyrinth zählt Kreisen nicht als Hängen.
+  - Finale zu dritt: Platz 1 bis 3 nach Zielzeit, ein Sturz zählt als letzter Platz; danach das Podest.
+  - Kapitelzeiten je Bahn für die Videobeschreibung (englisch, zum Beispiel `Stage 4: Crumbling Bridge`).
+- `src/scenarios/knockout.js`: Szenario **„Marble Knockout (in Arbeit)“** in der Oberfläche.
+  - Ablauf: ganzes Rennen, eine Bahn oder Galerie der Bausteine.
+  - Schalter: Short-Bahnen (hochkant), Bahn, Baustein, Zeitlupe, Krone und Warnring, Anzeige, Videoende.
+  - Videoende „mit dem Rennende“: Die Länge wird vor dem Export aus dem Ablauf berechnet (bis zum Ende des Podests).
+  - Ausschnitte (`--clip-start`, `--clip-duration`) sind freigegeben, weil der Renderer keinen Zustand zwischen
+    Bildern hält.
+  - Quadrat 1:1 zeigt das Querformat mit Rand oben und unten. Hochkant zeigt bis zu den Short-Bahnen (M7) die
+    Galerie.
+- Werkzeug: `node scripts/knockout-lab.mjs check --runs 100` fährt viele freie Rennen und fasst sie zusammen.
+
+**Unterwegs behoben:**
+
+- **Finale:** Zwischen Schanze und Brücke lag eine Lücke von gut einer Murmelbreite über der Grube. Alle drei fielen
+  hinein, bevor die Brücke überhaupt einstürzte. Jetzt beginnt die Brücke wie auf Bahn 4 direkt hinter einer flachen
+  Kante. Die Wippe hat keine Pfosten mehr und kippt stärker (0,26 rad, 6 s Takt); vorher pendelte eine einzelne
+  Murmel bis zu 25 s. Die Zielgerade hat 5° statt 3°, sonst schob das Drehkreuz eine langsame Murmel im Takt immer
+  wieder zurück.
+- **Schlag der Planken:** Die Geschwindigkeit bewegter Teile wird aus der Lage kurz davor und danach geschätzt.
+  Springt die Lage genau dazwischen (Planke: Wackeln → Fallen), ergab das über 200 rad/s, und die Planke schlug eine
+  Murmel quer über die Bahn in den Zielbehälter. Jetzt gilt bei einem Sprung die glatte Seite. Für glatte Bewegungen
+  bleibt jede Zahl gleich.
+- **Bahn 1 (`THE DROP`):** Bei der ersten Prüfung mit 100 Rennen blieb in jedem zweiten Rennen eine Murmel hängen.
+  - Fünf breite Klappen ragten offen bis kurz über die erste Stiftreihe. Eine Murmel klemmte zwischen Klappe und
+    Stift. Jetzt sind es zehn schmale Klappen.
+  - Unter dem Trichter staute sich das Feld auf der flachen Reihe. Die Murmel ganz links wartete über 3 s und bekam
+    einen Stoß. Jetzt fällt die Reihe unter dem Trichter mit 12° und wird erst danach flach. Der Trichter endet
+    etwas höher.
+  - In 100 Rennen hängt hier keine Murmel mehr (vorher 51). Die Bahn dauert im Mittel 21 s statt 25 s.
+- **Bahn 7 (`HAMMER ALLEY`):** Die zweite Prüfung zeigte 6 Hänger in 100 Rennen.
+  - Beim Schließen der Fallen schwenken die Hämmer hoch. Dabei nahm einer manchmal eine Murmel mit; sie lag dann
+    für immer in der Ecke zwischen Stiel und Kopf. Jetzt stößt ein Hammer 1,2 s nach dem Schließen nicht mehr, die
+    Murmel fällt zurück auf den Sims.
+  - Eine Murmel, die schräg durch ein Loch fiel, verfehlte die schmale Grube und landete ohne Zieldurchgang im
+    Zielbehälter. Die Gruben unter den Löchern sind jetzt so breit wie 4,4 Murmeln.
+  - Nach der Kehre links blieb oft ein Paar übereinander liegen. Die Landestelle fällt jetzt mit 7°.
+
+**Messung (100 freie Rennen, Seeds 1–100, Querformat):**
+
+| Bahn | Bahnzeit min / Median / max | Aus | davon Sturz |
+|---|---|---|---|
+| 1 `THE DROP` | 19,8 / 20,8 / 22,7 s | 100 | 0 |
+| 2 `TURNSTILES` | 32,8 / 35,6 / 43,9 s | 100 | 0 |
+| 3 `THE WHEEL` | 27,0 / 28,1 / 30,4 s | 100 | 0 |
+| 4 `CRUMBLING BRIDGE` | 27,0 / 28,3 / 32,8 s | 101 | 101 |
+| 5 `TILT` | 25,1 / 28,9 / 34,9 s | 99 | 0 |
+| 6 `THE DRUM` | 17,4 / 22,8 / 29,7 s | 100 | 0 |
+| 7 `HAMMER ALLEY` | 19,1 / 21,5 / 32,3 s | 106 | 106 |
+| 8 `SHIFTING FLOORS` | 14,4 / 17,6 / 21,3 s | 94 | 0 |
+| 9 `RING ESCAPE` | 11,0 / 17,2 / 19,0 s | 100 | 0 |
+| 10 `GRAND FINAL` | 21,5 / 23,1 / 34,1 s | – | – |
+
+- In jedem Rennen scheiden genau neun Murmeln aus. Die Spalte „Aus“ schwankt je Bahn, weil ein Sturz auf einer
+  Gefahren-Bahn die nächste Bahn zur `SAFE STAGE` macht.
+- Festgefahren 0, Zeitlimit 0, Fehler 0. 230 kleine Stöße in 100 Rennen (2,3 je Rennen).
+- Videolänge 266 / 277 / 290 s (min / Median / max). Prüfung in 406 s.
+- Finale: Abstand zwischen Platz 1 und 2 im Median 0,80 s, in 58 von 100 Rennen unter 1 s.
+- Verlauf: erste Prüfung 51 Hänger auf Bahn 1, zweite 6 auf Bahn 7, dritte keiner.
+
+**Grenzen:**
+
+- Ein Rennen dauert rund 4,6 Minuten. Der Plan nannte rund 9 Minuten als Startwert. Längere Bahnen oder mehr Reihen
+  sind möglich; das ist eine der Fragen am Ende.
+- Die Zeitlupe löst in freien Rennen fast nie aus. Ihre Schwelle wird mit der Darstellung (M5) eingestellt.
+- Steht eine Murmel auf einer anderen in einer Ecke, ruht das Paar bis zum ersten Stoß nach 3 s.
+- Short-Bahnen, Ton, Drehbuch und Vorlagen folgen in M6 bis M8.
+
+**Nachweise:**
+
+- `test/knockout.test.mjs`, 5 Tests grün: Anmeldung und Einstellungen, ganzes Rennen mit 10 Bahnen, 9 Aus, Podest
+  und Kapiteln, gleicher Seed gleiches Rennen, Zeichnen ändert den Zustand nicht, Länge aus dem Ablauf.
+- `test/knockout-elements.test.mjs` bleibt grün (3 Tests).
+- Export über die echte Oberfläche: 4 s, 720p, ohne Fehler (lokal `output/knockout-lab/app-probe.mp4`).
+- Szenario-Listen in vier Browser-Tests um `knockout` ergänzt; diese Tests liefen hier nicht.

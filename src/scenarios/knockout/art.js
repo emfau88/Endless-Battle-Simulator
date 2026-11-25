@@ -81,6 +81,13 @@
     q.globalCompositeOperation = 'destination-in'; q.fillStyle = s; q.fillRect(0, 0, w, h);
     g.drawImage(c, x1, y1);
   }
+  /** Gefahren-Grube vor den Murmeln: Wer hineinfällt, verschwindet im Dunkeln. Rand mit Warnstreifen. */
+  function killPit(g, p) {
+    const w = p.x1 - p.x0, h = p.y1 - p.y0, v = g.createLinearGradient(0, p.y0, 0, p.y1);
+    v.addColorStop(0, 'rgba(4,6,10,0)'); v.addColorStop(Math.min(0.9, p.depth / h), 'rgba(4,6,10,0.97)'); v.addColorStop(1, 'rgba(4,6,10,0.97)');
+    g.save(); g.beginPath(); g.roundRect(p.x0, p.y0, w, h, Math.min(18, h / 3)); g.fillStyle = v; g.fill(); g.restore();
+    hazard(g, p.x0 + 10, p.y1 - 9, w - 20, 9);
+  }
   function hazard(g, x, y, w, h) {
     g.save();
     g.beginPath(); g.roundRect(x, y, w, h, Math.min(4, h / 3)); g.fillStyle = '#f2c230'; g.fill(); g.clip();
@@ -159,7 +166,7 @@
   function paintStatic(g, sim, st, world) {
     const W = sim.W, H = sim.H;
     background(g, W, H, world);
-    for (const p of st.pits) { pit(g, p, H); if (p.stripes) hazard(g, p.x0 + 8, Math.min(p.y1, H) - 22, p.x1 - p.x0 - 16, 14); }
+    for (const p of st.pits) { if (p.kill) continue; pit(g, p, H); if (p.stripes) hazard(g, p.x0 + 8, Math.min(p.y1, H) - 22, p.x1 - p.x0 - 16, 14); }
     for (const tr of st.tracks) if (!tr.front && tr.kind !== 'belt') drawTrack(g, tr);
     for (const p of st.pegs) peg(g, p);
     for (const s of st.signs) sign(g, s);
@@ -207,10 +214,16 @@
   function drawElement(g, el, sim, rt, t) {
     switch (el.type) {
       case 'gate': {
+        const f = el.frac(rt);
+        if (el.kind === 'shelf') { for (const b of el.bodies) woodShapes(g, b, 0); for (const b of el.bodies) hubDot(g, b.x, b.y, 5); return; }
+        // Ganz versenkt: nicht zeichnen (es kommt aus der Bahn). Ampel nur bei Takttoren, fest über der Bahn.
         const b = el.bodies[0];
-        metalShapes(g, b, { base: '#c9cfd4' });
-        const f = el.frac(rt), s = b.shapes[0];
-        if (el.kind !== 'finish' || f < 0.99) lamp(g, s.wax, s.way - s.rad - 8, 5.5, f > 0.5 ? 'green' : 'red');
+        if (f < 0.99) metalShapes(g, b, { base: '#c9cfd4' });
+        if (el.kind === 'gate') lamp(g, el.x, el.y - el.h - 30, 6, f > 0.5 ? 'green' : 'red');
+        return;
+      }
+      case 'lid': {
+        for (const b of el.bodies) if (b.enabled) woodShapes(g, b, 0);
         return;
       }
       case 'bridge': {
@@ -259,7 +272,10 @@
         return;
       }
       case 'floors':
+        // Nur zwischen den Turmwänden zeichnen: Die Böden gleiten hinter den Wänden weiter
+        g.save(); g.beginPath(); g.rect(el.xl, -1e4, el.xr - el.xl, 2e4); g.clip();
         for (const b of el.bodies) woodShapes(g, b, 0);
+        g.restore();
         return;
       default: {
         for (const b of el.bodies) {
@@ -353,5 +369,5 @@
     text(g, 'OUT', x, yTop - 24, 30, { align: 'center', weight: 900, spacing: 2 });
   }
 
-  EBS.KnockoutArt = { S, WORLDS, hash, text, background, hazard, lamp, stroke, metalBar, paintStatic, drawTrack, drawElement, marble, crown, hatch, finishLine, outTube, woodShapes, metalShapes, hubDot, alpha, mixA };
+  EBS.KnockoutArt = { S, WORLDS, hash, text, background, hazard, killPit, lamp, stroke, metalBar, paintStatic, drawTrack, drawElement, marble, crown, hatch, finishLine, outTube, woodShapes, metalShapes, hubDot, alpha, mixA };
 })(typeof window !== 'undefined' ? window : globalThis);
