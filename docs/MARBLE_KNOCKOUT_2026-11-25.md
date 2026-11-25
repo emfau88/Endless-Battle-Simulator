@@ -15,7 +15,7 @@ Dieser Bericht wird je Paket fortgeschrieben.
 | M7 Short-Bahnen, Casting, Vorlagen | **Erledigt** (25.11.) |
 | M8 Langvideo-Drehbuch, Vorlage, Finalprobe | **Erledigt** (25.11.) |
 | M9 Abschluss und Geschmacksfragen | **Erledigt** (25.11.) |
-| Teil 2: Gesamtlevel mit Kamerafahrt | **Plan erledigt** (25.11.): [MARBLE_KNOCKOUT_GESAMTLEVEL_PLAN_2026-11-25.md](MARBLE_KNOCKOUT_GESAMTLEVEL_PLAN_2026-11-25.md). Der Nutzer will vor dem ganzen Export je ein spannendes Gesamtlevel. G0 bis G7 offen. |
+| Teil 2: Gesamtlevel mit Kamerafahrt | **Plan erledigt** (25.11.): [MARBLE_KNOCKOUT_GESAMTLEVEL_PLAN_2026-11-25.md](MARBLE_KNOCKOUT_GESAMTLEVEL_PLAN_2026-11-25.md). Der Nutzer will vor dem ganzen Export je ein spannendes Gesamtlevel mit viel Action. G1 läuft, G2 bis G7 offen. |
 
 ---
 
