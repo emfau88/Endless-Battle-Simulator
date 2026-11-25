@@ -78,6 +78,69 @@
    *  der Lage in der Welt, nie an der Kachel: Nachbarkacheln passen nahtlos. Tiefe: oben warmes Abendlicht, in der Mitte
    *  Petrol, unten tiefes Blau (Plan Teil 2, Abschnitt 7). */
   const DEPTH = [[0, '#3c2433'], [0.3, '#1d3a42'], [0.7, '#0f2131'], [1, '#0a1220']];
+  // ---- Gesamtlevel in Ebenen (Paket G2). Alle drei hängen nur an der Lage (Welt bzw. Ebene), nie an der Bildzahl.
+  /** Ebene 0, in Welt-Koordinaten: Tiefenverlauf über die ganze Höhe LH; ganz unten ein goldener Schimmer (Finale). */
+  function levelDepth(g, v, LH, gold) {
+    const lg = g.createLinearGradient(0, 0, 0, Math.max(LH, 2400));
+    for (const [k, c] of DEPTH) lg.addColorStop(k, c);
+    g.fillStyle = lg; g.fillRect(v.x0, v.y0, v.x1 - v.x0, v.y1 - v.y0);
+    if (gold) {
+      const [gx, gy, R] = gold;
+      if (gx + R > v.x0 && gx - R < v.x1 && gy + R > v.y0 && gy - R < v.y1) {
+        const rg = g.createRadialGradient(gx, gy, 0, gx, gy, R);
+        rg.addColorStop(0, 'rgba(255,200,90,0.20)'); rg.addColorStop(1, 'rgba(255,200,90,0)');
+        g.fillStyle = rg; g.fillRect(v.x0, v.y0, v.x1 - v.x0, v.y1 - v.y0);
+      }
+    }
+  }
+  /** Ebene 1, weit hinten (läuft 0,15-fach mit): Punktraster und weiche Lichtflecken. v in Ebenen-Koordinaten;
+   *  pat: Muster des Punktrasters (aus dotPattern). */
+  function levelFar(g, v, pat) {
+    g.fillStyle = pat; g.fillRect(v.x0, v.y0, v.x1 - v.x0, v.y1 - v.y0);
+    const cell = 700, gx0 = Math.floor(v.x0 / cell) - 1, gx1 = Math.floor(v.x1 / cell) + 1, gy0 = Math.floor(v.y0 / cell) - 1, gy1 = Math.floor(v.y1 / cell) + 1;
+    for (let cy = gy0; cy <= gy1; cy++) for (let cx = gx0; cx <= gx1; cx++) {
+      const hx = hash(cx + 101, cy + 7), hy = hash(cy + 13, cx + 211), hr = hash(cx * 3 + 1, cy * 5 + 2);
+      const px = (cx + hx) * cell, py = (cy + hy) * cell, R = 300 + 330 * hr;
+      if (px + R < v.x0 || px - R > v.x1 || py + R < v.y0 || py - R > v.y1) continue;
+      const rg = g.createRadialGradient(px, py, 0, px, py, R);
+      rg.addColorStop(0, `rgba(255,186,110,${(0.05 + 0.06 * hr).toFixed(3)})`); rg.addColorStop(1, 'rgba(255,186,110,0)');
+      g.fillStyle = rg; g.fillRect(px - R, py - R, 2 * R, 2 * R);
+    }
+  }
+  /** Muster für das Punktraster (28 E Abstand, versetzte Reihen). */
+  function dotPattern(g) {
+    const c = document.createElement('canvas'); c.width = 28; c.height = 56;
+    const q = c.getContext('2d'); q.fillStyle = S.dots;
+    for (const [x, y] of [[14, 14], [0, 42], [28, 42]]) { q.beginPath(); q.arc(x, y, 1.4, 0, TAU); q.fill(); }
+    return g.createPattern(c, 'repeat');
+  }
+  /** Ebene 2, Gerüst (läuft 0,5-fach mit): Stützen und Querbalken in dunklem Holz, 38 % Deckkraft, ohne Glanz. Lage
+   *  der Teile aus der Hash-Funktion: Mal fehlt ein Balken, mal kreuzt eine Strebe. v in Ebenen-Koordinaten. */
+  function scaffold(g, v) {
+    const px = 640, py = 470, pw = 24, bh = 14;
+    g.save(); g.globalAlpha = 0.38;
+    const c0 = Math.floor(v.x0 / px) - 1, c1 = Math.floor(v.x1 / px) + 1, r0 = Math.floor(v.y0 / py) - 1, r1 = Math.floor(v.y1 / py) + 1;
+    // Streben zuerst (hinter Stützen und Balken)
+    g.strokeStyle = '#4a321d'; g.lineWidth = 12; g.lineCap = 'butt';
+    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+      const h = hash(c * 17 + 3, r * 29 + 11);
+      if (h > 0.34) continue;
+      const x0 = c * px, y0 = r * py, flip = h < 0.17;
+      g.beginPath(); g.moveTo(x0 + pw / 2, flip ? y0 + bh : y0 + py); g.lineTo(x0 + px - pw / 2, flip ? y0 + py : y0 + bh); g.stroke();
+    }
+    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+      if (hash(c * 5 + 41, r * 13 + 7) < 0.22) continue;                 // fehlender Querbalken
+      const lg = g.createLinearGradient(0, r * py, 0, r * py + bh);
+      lg.addColorStop(0, '#6b4a2b'); lg.addColorStop(1, '#4a321d');
+      g.fillStyle = lg; g.fillRect(c * px, r * py, px, bh);
+    }
+    for (let c = c0; c <= c1; c++) {
+      const lg = g.createLinearGradient(c * px - pw / 2, 0, c * px + pw / 2, 0);
+      lg.addColorStop(0, '#5a3d22'); lg.addColorStop(0.5, '#6b4a2b'); lg.addColorStop(1, '#4a321d');
+      g.fillStyle = lg; g.fillRect(c * px - pw / 2, v.y0, pw, v.y1 - v.y0);
+    }
+    g.restore();
+  }
   function levelBackground(g, x0, y0, x1, y1, LH) {
     const lg = g.createLinearGradient(0, 0, 0, Math.max(LH, 2400));
     for (const [k, c] of DEPTH) lg.addColorStop(k, c);
@@ -513,5 +576,5 @@
   }
 
   EBS.KnockoutArt = { S, WORLDS, hash, text, background, hazard, killPit, lamp, stroke, metalBar, paintStatic, paintFront, drawTrack, drawElement, marble, crown, hatch, trail, shake, glitter, finishLine, outTube, woodShapes, metalShapes, hubDot, alpha, mixA,
-    levelBackground, pit, peg, sign };
+    levelBackground, levelDepth, levelFar, dotPattern, scaffold, pit, peg, sign };
 })(typeof window !== 'undefined' ? window : globalThis);

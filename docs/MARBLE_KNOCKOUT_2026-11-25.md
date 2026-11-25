@@ -16,7 +16,8 @@ Dieser Bericht wird je Paket fortgeschrieben.
 | M8 Langvideo-Drehbuch, Vorlage, Finalprobe | **Erledigt** (25.11.) |
 | M9 Abschluss und Geschmacksfragen | **Erledigt** (25.11.) |
 | Teil 2: Gesamtlevel mit Kamerafahrt | **Plan erledigt** (25.11.): [MARBLE_KNOCKOUT_GESAMTLEVEL_PLAN_2026-11-25.md](MARBLE_KNOCKOUT_GESAMTLEVEL_PLAN_2026-11-25.md). Der Nutzer will vor dem ganzen Export je ein spannendes Gesamtlevel mit viel Action. |
-| G1 Gesamtlevel: Grundlage und erste Abschnitte | **Erledigt** (25.11.), Stopp: Der Nutzer wählt die Kamera fürs Querformat. G2 bis G7 offen. |
+| G1 Gesamtlevel: Grundlage und erste Abschnitte | **Erledigt** (25.11.). Der Nutzer hat für das Querformat die Kamera **„Fahrt“** gewählt. |
+| G2 Bild fertig, Ton nach Bildlage, Sichern und Laden | **Erledigt** (25.11.). G3 bis G7 offen. |
 
 ---
 
@@ -758,3 +759,86 @@ node export.mjs --scenario knockout --seed 1 --param mode=level --param cam=sect
 
 **Stopp:** Der Nutzer wählt die Kamera fürs Querformat (Fahrt oder Abschnitte) und sagt, ob Action und Feldgröße
 passen. Danach geht es mit G2 weiter.
+
+**Entscheidung (25.11.):** Kamera im Querformat ist die **Fahrt**. „Abschnitte“ bleibt als Schalter erhalten. Zu
+Action und Feldgröße gab es keine Antwort; es bleibt bei der Empfehlung (16 und 20 Murmeln).
+
+---
+
+## G2 · Gesamtlevel: Bild fertig, Ton nach Bildlage, Sichern und Laden (25.11.2026)
+
+**Umfang:**
+
+- **Hintergrund in drei Ebenen** (Plan Teil 2, Abschnitt 6). Alle hängen nur an der Lage, nie an der Bildzahl:
+  - Tiefe in Welt-Koordinaten: oben warmes Abendlicht, unten tiefes Blau. Ein goldener Schimmer ist für das Finale
+    vorbereitet (`level.gold`).
+  - Weite Ebene, läuft 0,15-fach mit: Punktraster und weiche Lichtflecken.
+  - Gerüst, läuft 0,5-fach mit: Stützen, Querbalken und Streben aus dunklem Holz, Lage aus der Hash-Funktion. Es
+    steht mit 38 % Deckkraft hinter der Bahn; mit den 60 % aus dem Plan lenkte es zu sehr ab.
+  - Die Kacheln tragen jetzt nur noch die Bahn und sind sonst durchsichtig.
+- **Streckenleiste** (nur Querformat) unten über die Bildbreite: ein Punkt je Murmel auf der Ideallinie, ein Strich je
+  Schleuse, eine rote Linie zwischen dem letzten Platz der Quote und dem ersten Platz draußen.
+- **Einblendungen** im Rennen, englisch:
+  - `NEW LEADER: MINT`: nur wenn die neue Führende die Spitze 1 s hält. Verliert sie sie vorher wieder, verschwindet
+    die Zeile.
+  - `GOLD +12 PLACES!`: wer in 2 s mindestens 5 Plätze gutmacht (Hochformat: 4).
+  - Höchstens eine Zeile je 4 s und nur, solange die Schleuse offen ist.
+- **Ton nach Bildlage:**
+  - Jedes Ereignis trägt seine Lage im Bild und in der Welt. Das Stereo-Panorama kommt aus der Lage im Bild.
+  - Außerhalb des Bildes wird es leiser: bis eine halbe Bildbreite daneben 25 %, weiter weg 10 %.
+  - Die Dichtegrenze aus M6 bleibt (höchstens drei Klänge je 0,3 s).
+  - Abweichung vom Plan: kein neues Ereignis `slot`. Jedes Lämpchen der Schleuse klingt mit dem vorhandenen
+    Ziel-Glockenton, je Platz einen Ton tiefer.
+- **Seed je Abschnitt** (für das Drehbuch-Casting in G6):
+  - Jeder Abschnitt baut mit einem eigenen Zufallsstrom. Der Seed kommt aus Grund-Seed, Abschnitts-Name, Nummer und
+    dem Drehbuch-Wert `params.script[i]`.
+  - Ein anderer Seed für einen späteren Abschnitt ändert nichts davor.
+- **Zustand sichern und laden** (`saveState`, `loadState`):
+  - Gesichert werden Rennstand, Murmeln, Lage der bewegten Körper, Zustand der Bausteine, Kamera und Ereignisse.
+  - Bausteine mit Zustand ohne Eintrag in der Liste `STATE_KEYS` lösen einen Fehler aus. So geht beim Bau neuer
+    Bausteine nichts unbemerkt verloren.
+
+**Messwerte (Labor, 12 Läufe je Format, Seeds 1 bis 12, Kamera „Fahrt“):**
+
+| | Turm (9:16) | Gauntlet (16:9) |
+|---|---|---|
+| Schleuse zu (Median) | 11,9 s | 16,1 s |
+| Abstand Letzte drinnen zu Erster draußen (Median, in Murmelbreiten) | 3,0 | 4,0 |
+| Platzwechsel je 10 s (Median) | 248 | 297 |
+| Längste Zeit ohne Platzwechsel (größter Wert) | 1,5 s | 3,5 s |
+| Führende im Bild (Median) | 100 % | 100 % |
+| Aus im Bild | 96 von 96 | 36 von 36 |
+| Stöße / festgefahren / Fehler | 5 / 0 / 0 | 0 / 0 / 0 |
+
+- Die Turm-Werte haben sich gegenüber G1 leicht verschoben, weil jeder Abschnitt jetzt seinen eigenen Zufallsstrom
+  hat. Der Gauntlet ist gleich geblieben.
+- Ein Bild im Gesamtlevel kostet im Browser ohne Grafikkarte knapp 3 s, im alten Ablauf 1,5 s. Grund sind die
+  bildfüllenden Ebenen. Beim Export mit Grafikkarte fällt das nicht ins Gewicht.
+
+**Bildblatt:** `output/knockout-lab/g2-tower.jpg` und `g2-gauntlet.jpg` (lokal, Seed 2):
+
+```bash
+node scripts/knockout-frames.mjs --mode level --aspect 16:9 --seed 2 --times 2,5,8,11,14,16.5,18,19.5 --out output/knockout-lab/g2-gauntlet.jpg
+```
+
+**Grenzen:**
+
+- Die Seek-Prüfung im Browser läuft an sechs statt zwölf Zeitpunkten je Format. Mit zwölf hätte der Test ohne
+  Grafikkarte über 20 Minuten gedauert.
+- Noch kein neuer Probeclip. Die nächste 20-s-Probe kommt mit dem fertigen Turm (G3).
+- Weiter offen aus G1: Nachzügler rollen nach dem Schließen langsam über den Deckel; die Vorlagen-Knöpfe zeigen noch
+  auf „Bahn für Bahn“.
+
+**Nachweise:**
+
+- `test/knockout-level.test.mjs`: 9 Tests grün. Neu:
+  - Sichern bei 6 s, weiter bis 13 s. Laden in eine neue Simulation und in dieselbe ergibt denselben Hash, dieselben
+    Ausgeschiedenen, Einblendungen und Abschnitte wie das Rennen am Stück.
+  - Drehbuch: Ein anderer Seed für Abschnitt 2 ändert bei 9 s nichts.
+- `test/knockout-browser.test.mjs`, neuer Test „Gesamtlevel (G2)“, grün in rund 4 min:
+  - Chromium rechnet in beiden Formaten bei 5 und 12 s denselben Hash wie Node.
+  - Seek-Regel mit Kamera: An sechs Zeitpunkten je Format gleicht das Bild nach einem Sprung dem Bild nach
+    durchgehender Wiedergabe.
+- `test/knockout.test.mjs`: 8 Tests grün, der alte Ablauf ist unverändert.
+- Nicht gelaufen: die übrigen Browser-Tests (alter Ablauf unberührt), `npm run golden` (keine Änderung an Physik
+  oder altem Ablauf), Scrap-Hashes, voller `npm test`.

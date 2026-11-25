@@ -69,6 +69,41 @@ test('Seek-Regel: Sprung und durchgehende Wiedergabe ergeben dasselbe Bild (zwö
   marks.forEach((t, i) => assert.equal(jump[i], cont[i], `Bild bei ${t} s weicht ab`));
 });
 
+// Ein Gesamtlevel-Bild kostet ohne Grafikkarte knapp 3 s; darum sechs Zeitpunkte je Format und drei Bilder Vorlauf.
+test('Gesamtlevel (G2): Chromium rechnet wie Node; Seek-Regel mit Kamera an sechs Zeitpunkten je Format', async () => {
+  const EBS = loadKnockout();
+  for (const [aspect, seed, marks] of [
+    ['9:16', 3, [0.4, 2.6, 5.2, 7.7, 10.2, 12.6]],
+    ['16:9', 3, [0.4, 4.1, 7.2, 10.3, 13.4, 16.6]],
+  ]) {
+    const sim = makeSim(EBS, { seed, aspect, params: { mode: 'level' } }), node = [];
+    for (const t of [5, 12]) { while (sim.step < t * 60) sim.stepOnce(); node.push(sim.stateHash()); }
+    const a = await open(seed, aspect, { mode: 'level' }), web = [];
+    await a.evaluate(() => window.exportAPI.simulate(5)); web.push(await a.evaluate(() => window.exportAPI.hash()));
+    await a.evaluate(() => window.exportAPI.simulate(7)); web.push(await a.evaluate(() => window.exportAPI.hash()));
+    await a.close();
+    assert.deepEqual(web, node, `${aspect}: Node und Chromium`);
+    // Durchgehend: vor jedem Zeitpunkt jedes Bild zeichnen (Kachel-Speicher füllt sich); Sprung: nur rechnen
+    const c = await open(seed, aspect, { mode: 'level' }), cont = [];
+    let at = 0;
+    for (const t of marks) {
+      const lead = Math.min(0.1, t - at);
+      await c.evaluate((s) => window.exportAPI.simulate(s), t - lead - at);
+      const frames = await c.evaluate((n) => window.exportAPI.renderFrames(n, 1, 'image/png'), Math.round(lead * FPS));
+      cont.push(sha(frames[frames.length - 1])); at = t;
+    }
+    await c.close();
+    const j = await open(seed, aspect, { mode: 'level' }), jump = [];
+    at = 0;
+    for (const t of marks) {
+      await j.evaluate((s) => window.exportAPI.simulate(s), t - 1 / FPS - at);
+      jump.push(sha((await j.evaluate(() => window.exportAPI.renderFrames(1, 1, 'image/png')))[0])); at = t;
+    }
+    await j.close();
+    marks.forEach((t, i) => assert.equal(jump[i], cont[i], `${aspect}: Bild bei ${t} s weicht ab`));
+  }
+});
+
 test('Beide Formate und das Quadrat zeichnen ohne Fehler; Anzeige aus lässt nur die Bahn stehen', async () => {
   for (const [aspect, params] of [['16:9', {}], ['1:1', {}], ['9:16', {}], ['16:9', { mode: 'gallery', element: 'drum' }], ['16:9', { mode: 'stage', stage: 3 }]]) {
     const page = await open(1, aspect, params);

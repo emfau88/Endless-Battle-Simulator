@@ -41,7 +41,11 @@
       // Welt: alle Abschnitte in einem Physik-Kern
       const bo = spec.bounds, d = 2 * this.r, wld = new P.World(PHYS);
       const b = new E.Builder(wld, { r: this.r, T: this.T, W: bo.x1, H: bo.y1, rng: new EBS.RNG(EBS.util.hashSeed(this.seed, 'level', spec.id)) });
-      this.lv = LV.build(spec, b, { W: bo.x1, H: bo.y1, r: this.r, d, T: this.T, n: this.roster.length, short: this.format === 'short' });
+      // Drehbuch: ein Seed je Abschnitt (params.script); ohne Eintrag gilt der Grund-Seed
+      const script = Array.isArray(params.script) ? params.script : null;
+      this.script = script;
+      const rngFor = (i) => new EBS.RNG(EBS.util.hashSeed(this.seed, 'section', spec.id, i, script && script[i] !== undefined ? script[i] : ''));
+      this.lv = LV.build(spec, b, { W: bo.x1, H: bo.y1, r: this.r, d, T: this.T, n: this.roster.length, short: this.format === 'short', rngFor });
       this.world = wld; this.stage = b.result(); this.sections = this.lv.sections; this.bounds = bo;
       this.killPits = this.stage.pits.filter((p) => p.kill);
       const jr = new EBS.RNG(EBS.util.hashSeed(this.seed, 'jitter'));
@@ -52,7 +56,7 @@
         return { rid, pm, seg: 0, prog: 0, best: 0, idle: 0, finished: false, finishT: 0, place: 0, rank: 0, hatchT: -1, out: false, late: false, fell: false, nudges: 0, nudgeT: -1, nx: 0, ny: 0 };
       });
       this.runners.forEach((u) => { this.progress(u); u.best = u.prog; });
-      this.leader = -1; this.leadChanges = 0; this.order = []; this.cut = Infinity; this.endAt = -1;
+      this.leader = -1; this.leadChanges = 0; this.order = []; this.cut = Infinity; this.endAt = -1; this.noteLeader = -2; this.leaderSince = 0;
       this.cam = null; this.phase = 'ready'; this.phaseT = 0; this.raceStart = 0;
       this.enterSection(0);
       // Kamera: steht zu Beginn schon richtig (kein Anfahren im ersten Bild)
@@ -75,6 +79,7 @@
       this.nIn = n; this.keep = sec.placeholder ? n : Math.min(sec.keep, n); this.needOut = n - this.keep;
       this.outHere = 0; this.placeCount = 0; this.closeT = -1; this.releaseT = -1;
       this.secT = this.t; this.secRt = this.world.t; this.final = false;
+      this.sampleNo = -1; for (const u of this.runners) u.hist = [];  // Ränge der letzten 2 s (für `+n PLACES!`)
       this.trapsClosed = this.needOut === 0;
       if (this.trapsClosed) this.closeTrapsOf(sec);
       if (sec.placeholder) this.endAt = this.t + this.R.endHold;
@@ -142,6 +147,7 @@
         if (this.inKill(m) || this.outside(m)) this.fell(u);
       }
       this.ranking();
+      this.headlines();
       if (sch && this.closeT < 0) {
         if (this.placeCount >= this.cut) this.close();
         else if (rt - this.secRt > RULES.stageLimit) { this.stats.timeUp++; this.close(); }
@@ -213,10 +219,33 @@
       list.forEach((u, i) => { u.rank = i + 1; });
       const lead = list.length ? list[0].rid : -1;
       if (lead !== this.leader && this.leader >= 0 && this.phase === 'race') this.leadChanges++;
+      if (lead !== this.leader) this.leaderSince = this.t;
       this.leader = lead; this.order = list.map((u) => u.rid);
       this.cut = this.sec.sch && this.closeT < 0 ? Math.min(this.keep, this.nIn - this.outHere) : Infinity;
       this.lastPlace = list.length > 1 ? list[list.length - 1].rid : -1;
     }
+    /** Kurze Einblendungen (Plan 1.2, Regel 10): `NEW LEADER: BLUE` oder `+6 PLACES!`, höchstens eine je 4 s, nur
+     *  solange die Schleuse offen ist. Ränge werden alle 0,5 s verglichen (Sprung = Gewinn über die letzten 2 s). */
+    headlines() {
+      if (this.phase !== 'race' || this.closeT >= 0 || this.sec.placeholder) return;
+      const no = Math.floor((this.t - this.secT) / 0.5);
+      if (no === this.sampleNo) return;
+      this.sampleNo = no;
+      const live = this.runners.filter((u) => !u.out);
+      let jump = null;
+      for (const u of live) {
+        u.hist.push(u.rank); if (u.hist.length > 5) u.hist.shift();
+        const gain = u.hist.length === 5 ? u.hist[0] - u.rank : 0;
+        if (!u.finished && gain >= (this.format === 'short' ? 4 : 5) && (!jump || gain > jump.gain)) jump = { rid: u.rid, gain };
+      }
+      const last = this.notes.reduce((m, x) => (x.kind === 'leader' || x.kind === 'jump' ? Math.max(m, x.t) : m), -99);
+      if (this.t - last < 4 || this.t - this.secT < 1.5) return;
+      if (this.leader >= 0 && this.leader !== this.noteLeader && this.t - this.leaderSince >= 1) {
+        if (this.noteLeader !== -2) this.notes.push({ kind: 'leader', t: this.t, rid: this.leader });
+        this.noteLeader = this.leader;
+      } else if (jump) this.notes.push({ kind: 'jump', t: this.t, rid: jump.rid, n: jump.gain });
+    }
+
     /** Zeitlupe, wenn um den letzten freien Platz zwei Murmeln knapp vor dem Becken liegen. */
     checkSlow() {
       if (this.cfg.slowmo === 'off') return;
@@ -293,6 +322,41 @@
       return out;
     }
     stateHash() { return P.hashNumbers(this.stateNumbers()); }
+
+    /** Zustand sichern (Plan, Abschnitt 6): Murmeln, Rennstand, Kamera, Zustand der Bausteine und der bewegten
+     *  Körper. Zum Laden in eine neue Simulation mit demselben Grund-Seed; die Abschnitte ab dem aktuellen dürfen
+     *  dort andere Drehbuch-Seeds haben (gesichert werden nur Zustandswerte, nie Bauwerte wie der Takt-Versatz). */
+    saveState() {
+      const json = (v) => JSON.parse(JSON.stringify(v));
+      return {
+        sim: prim(this), slow: { ...this.slow }, stats: { ...this.stats }, camStats: { ...this.camStats },
+        notes: json(this.notes), outList: this.outList.slice(), chapterLog: json(this.chapterLog), cuts: json(this.cuts),
+        order: this.order.slice(), roster: this.roster.map((m) => ({ ...m })),
+        runners: this.runners.map((u) => ({ ...prim(u), hist: u.hist.slice() })),
+        marbles: this.world.marbles.map((m) => prim(m)), worldT: this.world.t,
+        bodies: this.world.bodies.map((b) => [b.enabled, b.x, b.y, b.a, b.vx, b.vy, b.w, b.c, b.s, b.shapes.map((s) => [s.wax, s.way, s.wbx, s.wby, s.ux, s.uy, s.speed])]),
+        elements: this.stage.elements.map((el) => stateOf(el)),
+        cam: prim(this.cam), events: this.events.map((e) => (e ? { ...e } : e)),
+      };
+    }
+    loadState(s) {
+      Object.assign(this, s.sim);
+      this.slow = { ...s.slow }; this.stats = { ...s.stats }; this.camStats = { ...s.camStats };
+      this.notes = JSON.parse(JSON.stringify(s.notes)); this.outList = s.outList.slice(); this.chapterLog = JSON.parse(JSON.stringify(s.chapterLog));
+      this.cuts = JSON.parse(JSON.stringify(s.cuts)); this.order = s.order.slice(); this.roster = s.roster.map((m) => ({ ...m }));
+      this.runners.forEach((u, i) => { Object.assign(u, s.runners[i]); u.hist = s.runners[i].hist.slice(); });
+      this.world.marbles.forEach((m, i) => Object.assign(m, s.marbles[i]));
+      this.world.t = s.worldT;
+      this.world.bodies.forEach((b, i) => {
+        const q = s.bodies[i];
+        [b.enabled, b.x, b.y, b.a, b.vx, b.vy, b.w, b.c, b.s] = q;
+        b.shapes.forEach((sh, k) => { [sh.wax, sh.way, sh.wbx, sh.wby, sh.ux, sh.uy, sh.speed] = q[9][k]; });
+      });
+      this.stage.elements.forEach((el, i) => Object.assign(el, s.elements[i]));
+      Object.assign(this.cam, s.cam);
+      this.events = s.events.map((e) => (e ? { ...e } : e));
+      this.sec = this.spec = this.sections[this.secNo];
+    }
     snapshot() {
       const alive = this.roster.filter((m) => m.alive).length;
       return {
@@ -308,6 +372,24 @@
   for (const k of ['physics', 'sounds', 'slowRate', 'slowAt', 'triggerSlow', 'progress', 'nudge', 'checkInvariants']) KnockoutLevelSimulation.prototype[k] = BASE[k];
 
   const titleCase = (s) => s.toLowerCase().replace(/(^|[\s-])([a-z])/g, (_, a, b) => a + b.toUpperCase());
+  /** Alle einfachen Werte eines Objekts (Zahlen, Wahrheitswerte, Texte). */
+  const prim = (o) => {
+    const r = {};
+    for (const k of Object.keys(o)) { const v = o[k], t = typeof v; if (v === null || t === 'number' || t === 'boolean' || t === 'string') r[k] = v; }
+    return r;
+  };
+  /** Zustandswerte je Baustein-Art. Bauwerte (Lage, Takt, Versatz) bleiben aus der neuen Welt. Eine neue Art mit
+   *  Zustand muss hier eingetragen werden, sonst bricht das Sichern ab. */
+  const STATE_KEYS = {
+    gate: ['s0', 's1', 'at'], lid: ['closedAt'], flipflop: ['side', 'from', 'at', 'cool'], hammer: ['closedAt', 'park'],
+    conveyor: ['pos', 'speed'], trapdoors: ['closedAt'], bridge: ['startT', 'closedAt', 'passed', 'npassed'],
+    schleuse: ['closedAt', 'openAt'],
+  };
+  const stateOf = (el) => {
+    const keys = STATE_KEYS[el.type];
+    if (!keys) { if (el.state || el.update) throw new Error(`Sichern: Baustein „${el.type}“ hat Zustand, aber keine Liste`); return {}; }
+    const r = {}; for (const k of keys) r[k] = el[k]; return r;
+  };
 
   EBS.KnockoutLevelSim = { KnockoutLevelSimulation };
 })(typeof window !== 'undefined' ? window : globalThis);

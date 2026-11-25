@@ -189,7 +189,7 @@
       c = document.createElement('canvas'); c.width = n; c.height = n;
       const g = c.getContext('2d'), v = { x0: ix * TILE - BLEED, y0: iy * TILE - BLEED, x1: (ix + 1) * TILE + BLEED, y1: (iy + 1) * TILE + BLEED };
       g.setTransform(k, 0, 0, k, -v.x0 * k, -v.y0 * k);
-      A.levelBackground(g, v.x0, v.y0, v.x1, v.y1, sim.bounds.y1);
+      // Kacheln sind durchsichtig: Hintergrund und Gerüst liegen in eigenen Ebenen dahinter (paint)
       for (const { p, b } of this.pitBox) {
         if (p.kill || !hit(b, v)) continue;
         A.pit(g, p, sim.bounds.y1 + 400);
@@ -206,9 +206,15 @@
     paint(g) {
       const sim = this.sim, cam = sim.cam, W = sim.W, H = sim.H, st = sim.stage, rt = sim.world.t, r = sim.r;
       const rate = sim.phase === 'race' ? sim.slowAt(sim.t) : 1, marks = sim.cfg.marks !== 'off';
+      const v = CAM.view(cam, 2);
+      // Hintergrund in drei Ebenen: Tiefenverlauf (Welt), Lichtflecken und Punkte (0,15-fach), Gerüst (0,5-fach)
+      g.save(); g.translate(W / 2, H / 2); g.scale(cam.z, cam.z); g.translate(-cam.x, -cam.y);
+      A.levelDepth(g, v, sim.bounds.y1, sim.level.gold);
+      g.restore();
+      this.layer(g, 0.15, (lv) => A.levelFar(g, lv, this.dotPat || (this.dotPat = A.dotPattern(g))));
+      this.layer(g, 0.5, (lv) => A.scaffold(g, lv));
       g.save();
       g.translate(W / 2, H / 2); g.scale(cam.z, cam.z); g.translate(-cam.x, -cam.y);
-      const v = CAM.view(cam, 2);
       for (let iy = Math.floor(v.y0 / TILE); iy <= Math.floor(v.y1 / TILE); iy++) {
         for (let ix = Math.floor(v.x0 / TILE); ix <= Math.floor(v.x1 / TILE); ix++) {
           g.drawImage(this.tile(ix, iy), ix * TILE - BLEED, iy * TILE - BLEED, TILE + 2 * BLEED, TILE + 2 * BLEED);
@@ -243,6 +249,41 @@
       g.fillStyle = vg; g.fillRect(0, 0, W, H);
       if (rate < 1) this.slowmo(g, rate);
       this.levelOverlay(g);
+    }
+
+    /** Hintergrund-Ebene, die f-fach mit der Kamera läuft (Zoom ebenso abgeschwächt). draw(v) zeichnet in
+     *  Ebenen-Koordinaten; v ist der sichtbare Ausschnitt. Hängt nur am Kamera-Zustand (Seek-Regel). */
+    layer(g, f, draw) {
+      const sim = this.sim, cam = sim.cam, W = sim.W, H = sim.H, zf = 1 + (cam.z - 1) * f, hw = W / (2 * zf) + 2, hh = H / (2 * zf) + 2;
+      g.save(); g.translate(W / 2, H / 2); g.scale(zf, zf); g.translate(-cam.x * f, -cam.y * f);
+      draw({ x0: cam.x * f - hw, y0: cam.y * f - hh, x1: cam.x * f + hw, y1: cam.y * f + hh });
+      g.restore();
+    }
+
+    /** Streckenleiste (Langvideo, Plan Abschnitt 3 und 7): Linie über das ganze Level, Striche für die Schleusen, ein
+     *  Punkt je Murmel an ihrer Stelle, rote Schnittlinie zwischen dem letzten freien Platz und dem ersten draußen. */
+    courseBar(g) {
+      const sim = this.sim, W = sim.W, H = sim.H, L = sim.lv.path.length, x0 = (W - 1600) / 2, y = H - 44;
+      const X = (p) => x0 + 1600 * Math.max(0, Math.min(1, p / L));
+      g.save();
+      g.fillStyle = 'rgba(0,0,0,0.28)'; g.beginPath(); g.roundRect(x0 - 22, y - 20, 1644, 40, 20); g.fill();
+      g.fillStyle = A.S.track.base; g.fillRect(x0, y - 2, 1600, 4);
+      g.fillStyle = A.S.track.top;
+      for (const sec of sim.sections) if (sec.sch) g.fillRect(X(sec.p1) - 2, y - 9, 4, 18);
+      g.fillRect(x0 + 1600 - 3, y - 12, 6, 24);
+      const live = sim.runners.filter((u) => !u.out && u.pm.active);
+      if (sim.sec.sch && sim.closeT < 0 && sim.cut < live.length) {
+        const a = live.find((u) => u.rank === sim.cut), b = live.find((u) => u.rank === sim.cut + 1);
+        if (a && b) { g.fillStyle = '#ff5a4e'; g.fillRect((X(a.prog) + X(b.prog)) / 2 - 1.5, y - 14, 3, 28); }
+      }
+      const order = live.slice().sort((p, q) => q.rank - p.rank);
+      for (const u of order) {
+        const M = sim.roster[u.rid], x = X(u.prog), lead = u.rid === sim.leader;
+        g.fillStyle = M.color; g.strokeStyle = 'rgba(0,0,0,0.55)'; g.lineWidth = 2;
+        g.beginPath(); g.arc(x, y, lead ? 10 : 8, 0, TAU); g.fill(); g.stroke();
+        if (M.band) { g.fillStyle = 'rgba(250,250,246,0.9)'; g.fillRect(x - 7, y - 1.5, 14, 3); }
+      }
+      g.restore();
     }
 
     /** Lampenreihe einer Schleuse: grün = belegt, gelb = frei, die letzten drei freien blinken rot; nach dem Schließen
@@ -285,6 +326,7 @@
           A.text(g, `${alive} LEFT · TOP ${sim.keep}`, 1790, 80, 46, { weight: 900, align: 'right', spacing: 1 });
         }
         A.outTube(g, sim, 1856, 178, 1012, 56);
+        if (sim.phase !== 'end' && sim.cfg.bar !== 'off') this.courseBar(g);
         if (sim.phase === 'ready') this.card(g, [lv.title, `${sim.roster.length} MARBLES. ONLY THE FASTEST GO ON.`], fade(sim.phaseT + 0.3, 0.3, sim.R.ready - 0.9, 0.5));
         else if (!sec.placeholder && since >= 0 && since < 1.4) this.card(g, [`STAGE ${no}`, sec.title], fade(since, 0.1, 0.9, 0.4), true);
       }
@@ -297,6 +339,12 @@
       }
       const traps = sim.notes.filter((x) => x.kind === 'traps' && now - x.t < 1.8);
       if (traps.length) A.text(g, 'TRAPS CLOSED', W / 2, short ? H * 0.62 : H * 0.58, short ? 56 : 40, { align: 'center', weight: 900, spacing: 3, color: '#b8f5c8', alpha: fade(now - traps[0].t, 0.15, 1.2, 0.45) });
+      // Kurze Einblendung: neue Führende oder großer Sprung (höchstens eine je 4 s, aus dem Zustand)
+      const hl = sim.notes.filter((x) => (x.kind === 'leader' || x.kind === 'jump') && now - x.t < 2.2).pop();
+      if (hl && !(hl.kind === 'leader' && sim.leader !== hl.rid)) {             // Führung schon wieder verloren: weg
+        const name = sim.roster[hl.rid].name, line = hl.kind === 'leader' ? `NEW LEADER: ${name}` : `${name} +${hl.n} PLACES!`;
+        A.text(g, line, W / 2, short ? H * 0.2 : 176, short ? 54 : 34, { align: 'center', weight: 900, spacing: 3, outline: true, color: hl.kind === 'leader' ? '#ffe9a8' : '#c9f3ff', alpha: fade(now - hl.t, 0.15, 1.6, 0.45), max: W * 0.9 });
+      }
     }
   }
 

@@ -121,6 +121,33 @@ test('Gleicher Seed ergibt denselben Lauf samt Kamera, anderer Seed einen andere
   assert.notEqual(go(5, PORT)[0], go(6, PORT)[0]);
 });
 
+test('Sichern und Laden: Weiterrechnen ergibt denselben Hash wie am Stück, auch nach einem Sprung zurück', () => {
+  for (const world of [PORT, LAND]) {
+    const a = create(9, {}, world);
+    while (a.t < 6) a.stepOnce();
+    const snap = a.saveState(), mid = a.stateHash();
+    while (a.t < 13) a.stepOnce();
+    const end = [a.stateHash(), a.outList.join(), a.notes.length, a.secNo];
+    // in eine neue Simulation laden
+    const b = create(9, {}, world);
+    b.loadState(snap);
+    assert.equal(b.stateHash(), mid, 'gleicher Zustand nach dem Laden');
+    while (b.t < 13) b.stepOnce();
+    assert.deepEqual([b.stateHash(), b.outList.join(), b.notes.length, b.secNo], end);
+    // in dieselbe (schon weitergelaufene) Simulation zurückladen
+    a.loadState(snap);
+    while (a.t < 13) a.stepOnce();
+    assert.deepEqual([a.stateHash(), a.outList.join(), a.notes.length, a.secNo], end);
+  }
+});
+
+test('Drehbuch: ein anderer Seed für einen späteren Abschnitt ändert nichts davor', () => {
+  const s1 = create(4, { script: [0, 11] }, PORT), s2 = create(4, { script: [0, 99] }, PORT);
+  for (let i = 0; i < 60 * 9; i++) { s1.stepOnce(); s2.stepOnce(); }
+  assert.equal(s1.stateHash(), s2.stateHash());
+  assert.notEqual(create(4, { script: [5] }, PORT).sections.length, 0);
+});
+
 test('Zeichnen verändert den Zustand nicht (LevelPainter mit leerem Zeichenkontext)', () => {
   for (const world of [PORT, LAND]) {
     const sim = create(4, {}, world), painter = new EBS.KnockoutRender.LevelPainter(sim, 1), g = stub();

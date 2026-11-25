@@ -85,12 +85,15 @@
   }
 
   /** Baut ein Level (spec aus levels.js) mit dem Builder b. c = { W, H, r, d, T, short } (W, H: Größe der Welt).
+   *  c.rngFor(i): eigener Zufall je Abschnitt (Versatz der bewegten Teile). So ändert ein anderer Abschnitts-Seed im
+   *  Drehbuch nichts in den Abschnitten davor (Plan, Abschnitt 6).
    *  Gibt { sections, path, bounds } zurück; die Ideallinie liegt danach auch im Builder (b.path). */
   function build(spec, b, c) {
     const sections = [], pts = [];
     let prevExit = null, prev = null;
     spec.sections.forEach((s, i) => {
       const e0 = b.elements.length;
+      if (c.rngFor) b.rng = c.rngFor(i);
       const out = s.build(b, { ...c, keep: spec.quota[i], i, prev }) || {};
       prev = out;
       // Anschluss: Der Eingang eines Abschnitts liegt genau unter dem Ausgang des vorigen (höchstens 1 E Abstand)
