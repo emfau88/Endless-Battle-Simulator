@@ -398,6 +398,7 @@
         };
         el.bodies.push(this._body([{ ax: -ux * pitch / 2, ay: -uy * pitch / 2, bx: ux * pitch / 2, by: uy * pitch / 2, rad }], pose, { look: 'plank', tag: 'plank' }));
       }
+      el.relAt = rel;                                                  // für das Bild: Zeitpunkt des Lösens
       el.released = (i, t) => t >= rel(i) && (el.closedAt < 0 || rel(i) <= el.closedAt);
       el.wobbling = (i, t) => t >= rel(i) - wobble && t < rel(i) && (el.closedAt < 0 || t < el.closedAt);
       el.update = (st) => {

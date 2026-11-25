@@ -23,7 +23,7 @@
   const RULES = {
     long: { r: 22, T: 16, intro: 4, ready: 1.6, result: 2.2, podium: 8, keep: null },
     short: { r: 30, T: 20, intro: 0, ready: 0.35, result: 1.1, podium: 2.4, keep: [5, 3, 1] },
-    slowRate: 0.35, slowMax: 2, slowCount: 3, slowRamp: 0.25,
+    slowRate: 0.35, slowMax: 2, slowCount: 3, slowRamp: 0.25, slowZone: 4, slowGap: 0.35, slowGapFinal: 0.8,
     stuckWindow: 3, stuckMin: 5, stuckOut: 12, stillSpeed: 40, stageLimit: 90,
     gallery: { marbles: 6, cycle: 14 },
   };
@@ -40,7 +40,7 @@
       this.events = new Array(512); this.eventSeq = 0;
       this.stages = EBS.KnockoutStages;
       this.mode = params.mode;
-      this.slow = { on: false, from: 0, until: 0, count: 0, rate: 1 };
+      this.slow = { on: false, from: 0, until: 0, count: 0, rate: 1, finalDone: false };
       this.notes = [];                                        // Einblendungen { kind, text, t, c }
       this.outList = [];                                      // Langvideo: Reihenfolge in der Röhre (Roster-Index)
       if (this.mode === 'gallery') { this.initGallery(); return; }
@@ -91,7 +91,7 @@
         const jx = this.stage.start.dir === 0 ? 5 : 1.5;              // Regal: etwas mehr Streuung, sonst liegt man auf Stiften
         const pm = world.addMarble({ x: sx + (jr.next() * 2 - 1) * jx, y: sy, r: this.r });
         pm.rid = rid; pm.px = pm.x; pm.py = pm.y; pm.zone = -1;
-        return { rid, pm, seg: 0, prog: 0, best: 0, idle: 0, finished: false, finishT: 0, place: 0, hatchT: -1, out: false, fell: false, nudges: 0 };
+        return { rid, pm, seg: 0, prog: 0, best: 0, idle: 0, finished: false, finishT: 0, place: 0, hatchT: -1, out: false, fell: false, nudges: 0, nudgeT: -1, nx: 0, ny: 0 };
       });
       this.killPits = this.stage.pits.filter((p) => p.kill);
       if (this.stage.path) this.runners.forEach((u) => { this.progress(u); u.best = u.prog; });
@@ -199,15 +199,22 @@
     // ------------------------------------------------------------ Zeitlupe
     slowRate() {
       const s = this.slow;
-      if (!s.on) return 1;
-      const t = this.t, ramp = RULES.slowRamp;
-      if (t >= s.until) { s.on = false; return 1; }
-      const a = Math.min(1, (t - s.from) / ramp), b = Math.min(1, (s.until - t) / ramp), k = Math.min(a, b);
+      if (s.on && this.t >= s.until) s.on = false;
+      return this.slowAt(this.t);
+    }
+    /** Tempo der Zeitlupe zur Videozeit t, ohne den Zustand zu ändern (auch für das Bild). */
+    slowAt(t) {
+      const s = this.slow;
+      if (!s.on || t >= s.until) return 1;
+      const ramp = RULES.slowRamp, a = Math.min(1, (t - s.from) / ramp), b = Math.min(1, (s.until - t) / ramp), k = Math.min(a, b);
       return 1 - (1 - RULES.slowRate) * E.ease(k);
     }
     triggerSlow(kind) {
       const s = this.slow;
-      if (s.on || s.count >= RULES.slowCount || this.cfg.slowmo === 'off') return;
+      if (s.on || this.cfg.slowmo === 'off') return;
+      // Das Finale hat eine eigene Zeitlupe, unabhängig davon, wie viele es vorher gab
+      if (this.final ? s.finalDone : s.count >= RULES.slowCount) return;
+      if (this.final) s.finalDone = true;
       s.on = true; s.from = this.t; s.until = this.t + RULES.slowMax; s.count++; this.stats.slowmo++;
       this.emit('slowmo', this.W / 2, this.H / 2, 0, -1); void kind;
     }
@@ -279,6 +286,7 @@
       // Längs der Ideallinie und immer etwas zur Seite (sonst hüpft eine Murmel auf einem Stift nur auf und ab)
       const side = (u.rid + u.nudges) % 2 ? 1 : -1;
       m.vx += ex / l * 160 + side * 110; m.vy += ey / l * 160 - 260;
+      u.nudgeT = this.t; u.nx = m.x; u.ny = m.y + this.r;            // für das Bild: Rütteln an dieser Stelle
       this.emit('nudge', m.x, m.y + this.r, u.nudges, u.rid);
     }
     stuckOut(u) {
@@ -338,14 +346,18 @@
     }
     checkSlow(waiting) {
       if (!this.stage.path || this.cfg.slowmo === 'off') return;
-      const end = this.stage.finishProg || this.stage.path.length, D = 3 * 2 * this.r;
+      // Zielbereich 4 d, Abstand unter 0,35 s (mit 3 d und 0,15 s löste sie in zehn Rennen kein einziges Mal aus)
+      const end = this.stage.path.length, D = RULES.slowZone * 2 * this.r;
       // Knapper Kampf um das Weiterkommen (letzte zwei) oder um den Sieg im Finale
       let pair = null;
-      if (this.final && this.finishedCount === 0) pair = waiting.slice().sort((a, b) => b.prog - a.prog).slice(0, 2);
+      // (placeCount statt finishedCount: Ein Sturz im Finale zählt dort mit, soll den Kampf um Platz 1 aber nicht beenden)
+      if (this.final && this.placeCount === 0) pair = waiting.slice().sort((a, b) => b.prog - a.prog).slice(0, 2);
       else if (!this.final && waiting.length === this.needOut - this.outHere + 1 && waiting.length >= 2) pair = waiting.slice().sort((a, b) => b.prog - a.prog).slice(-2);
       if (!pair || pair.length < 2) return;
       const [a, b] = pair, va = Math.sqrt(a.pm.vx ** 2 + a.pm.vy ** 2) + 1;
-      if (end - a.prog < D && end - b.prog < D && (a.prog - b.prog) / va < 0.15) this.triggerSlow('close');
+      // Im Finale großzügiger: Platz 1 und 2 liegen im Median 0,8 s auseinander
+      const gap = this.final ? RULES.slowGapFinal : RULES.slowGap;
+      if (end - a.prog < D && end - b.prog < D && (a.prog - b.prog) / va < gap) this.triggerSlow('close');
     }
 
     // ------------------------------------------------------------ Galerie

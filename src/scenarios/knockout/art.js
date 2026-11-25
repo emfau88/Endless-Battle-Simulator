@@ -8,7 +8,7 @@
 (function (global) {
   'use strict';
   const EBS = global.EBS;
-  const TAU = Math.PI * 2;
+  const TAU = Math.PI * 2, PI_2 = Math.PI / 2;
 
   const S = {
     glow: 'rgba(255,186,110,0.16)', vignette: 'rgba(0,0,0,0.5)', dots: 'rgba(255,255,255,0.045)',
@@ -16,7 +16,7 @@
     track: { base: '#cf9752', top: '#efc584', bottom: '#93602b', grain: 'rgba(96,54,20,0.28)', shadow: 'rgba(0,0,0,0.42)' },
     wall: { base: '#b77f40', top: '#d9a868', bottom: '#7e5223' },
     metal: { light: '#eef2f5', base: '#aeb8bf', dark: '#5f6c75', accent: '#d4a537' },
-    rope: '#4a2f1a', marbleShadow: 'rgba(0,0,0,0.45)',
+    rope: '#8a5c34', marbleShadow: 'rgba(0,0,0,0.45)',
     text: '#ffffff', textShadow: 'rgba(0,0,0,0.6)', sub: 'rgba(255,255,255,0.8)',
     tube: { glass: 'rgba(200,232,240,0.10)', edge: 'rgba(225,242,250,0.6)', cap: '#a8743e' },
     font: '"Segoe UI", "Helvetica Neue", Arial, sans-serif',
@@ -81,12 +81,39 @@
     q.globalCompositeOperation = 'destination-in'; q.fillStyle = s; q.fillRect(0, 0, w, h);
     g.drawImage(c, x1, y1);
   }
-  /** Gefahren-Grube vor den Murmeln: Wer hineinfällt, verschwindet im Dunkeln. Rand mit Warnstreifen. */
+  /** Gefahren-Grube vor den Murmeln: ein weicher Abgrund ohne harte Kanten. Wer tiefer als p.depth fällt, ist dort
+   *  schon fast unsichtbar (die Simulation nimmt die Murmel dann heraus). Seitlich und unten läuft er weich aus. */
   function killPit(g, p) {
-    const w = p.x1 - p.x0, h = p.y1 - p.y0, v = g.createLinearGradient(0, p.y0, 0, p.y1);
-    v.addColorStop(0, 'rgba(4,6,10,0)'); v.addColorStop(Math.min(0.9, p.depth / h), 'rgba(4,6,10,0.97)'); v.addColorStop(1, 'rgba(4,6,10,0.97)');
-    g.save(); g.beginPath(); g.roundRect(p.x0, p.y0, w, h, Math.min(18, h / 3)); g.fillStyle = v; g.fill(); g.restore();
-    hazard(g, p.x0 + 10, p.y1 - 9, w - 20, 9);
+    const pad = 26, dh = p.y1 - p.y0, w = Math.ceil(p.x1 - p.x0 + 2 * pad), h = Math.ceil(dh + pad);
+    if (w <= 0 || dh <= 0) return;
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const q = c.getContext('2d'), v = q.createLinearGradient(0, 0, 0, h), k = Math.min(0.8, p.depth / h), e = Math.max(k + 0.05, (dh - 8) / h);
+    v.addColorStop(0, 'rgba(3,5,9,0)'); v.addColorStop(k * 0.5, 'rgba(3,5,9,0.72)'); v.addColorStop(k, 'rgba(3,5,9,0.97)');
+    v.addColorStop(e, 'rgba(3,5,9,0.97)'); v.addColorStop(1, 'rgba(3,5,9,0)');
+    q.fillStyle = v; q.fillRect(0, 0, w, h);
+    const s = q.createLinearGradient(0, 0, w, 0), f = (1.2 * pad) / w;
+    s.addColorStop(0, 'rgba(0,0,0,0)'); s.addColorStop(f, 'rgba(0,0,0,1)'); s.addColorStop(1 - f, 'rgba(0,0,0,1)'); s.addColorStop(1, 'rgba(0,0,0,0)');
+    q.globalCompositeOperation = 'destination-in'; q.fillStyle = s; q.fillRect(0, 0, w, h);
+    g.drawImage(c, p.x0 - pad, p.y0);
+  }
+  /** Hinter allem: Unter einer Gefahren-Grube öffnet sich ein dunkler Schacht bis zum Bildrand (Bahnen darunter
+   *  bleiben davor sichtbar). Seitlich weich. */
+  function shaft(g, p, H) {
+    const pad = 70, w = Math.ceil(p.x1 - p.x0 + 2 * pad), h = Math.ceil(H - p.y0);
+    if (w <= 0 || h <= 0) return;
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const q = c.getContext('2d'), v = q.createLinearGradient(0, 0, 0, h);
+    v.addColorStop(0, 'rgba(0,2,5,0)'); v.addColorStop(Math.min(0.5, 90 / h), 'rgba(0,2,5,0.55)'); v.addColorStop(1, 'rgba(0,2,5,0.3)');
+    q.fillStyle = v; q.fillRect(0, 0, w, h);
+    const s = q.createLinearGradient(0, 0, w, 0), f = (1.6 * pad) / w;
+    s.addColorStop(0, 'rgba(0,0,0,0)'); s.addColorStop(f, 'rgba(0,0,0,1)'); s.addColorStop(1 - f, 'rgba(0,0,0,1)'); s.addColorStop(1, 'rgba(0,0,0,0)');
+    q.globalCompositeOperation = 'destination-in'; q.fillStyle = s; q.fillRect(0, 0, w, h);
+    g.drawImage(c, p.x0 - pad, p.y0);
+  }
+  /** Teile vor den Murmeln (Gruben, Zulaufrinnen vorn) in eine durchsichtige Leinwand. */
+  function paintFront(g, sim, st) {
+    for (const p of st.pits) if (p.kill) killPit(g, p);
+    for (const tr of st.tracks) if (tr.front) drawTrack(g, tr);
   }
   function hazard(g, x, y, w, h) {
     g.save();
@@ -166,6 +193,7 @@
   function paintStatic(g, sim, st, world) {
     const W = sim.W, H = sim.H;
     background(g, W, H, world);
+    for (const p of st.pits) if (p.kill) shaft(g, p, H);
     for (const p of st.pits) { if (p.kill) continue; pit(g, p, H); if (p.stripes) hazard(g, p.x0 + 8, Math.min(p.y1, H) - 22, p.x1 - p.x0 - 16, 14); }
     for (const tr of st.tracks) if (!tr.front && tr.kind !== 'belt') drawTrack(g, tr);
     for (const p of st.pegs) peg(g, p);
@@ -190,9 +218,10 @@
     gr.addColorStop(0, '#fff2c2'); gr.addColorStop(0.5, S.metal.accent); gr.addColorStop(1, '#8a6a1c');
     g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
   }
-  function woodShapes(g, b, danger) {
+  function woodShapes(g, b, danger, plank) {
     for (const s of b.shapes) {
-      const dx = s.wbx - s.wax, dy = s.wby - s.way, len = Math.hypot(dx, dy), ang = Math.atan2(dy, dx), h = 2 * s.rad, w = len + h;
+      // Planke: so lang wie ihr Abstand, mit kleiner Fuge zur nächsten (sonst sähe die Brücke aus wie eine Bahn)
+      const dx = s.wbx - s.wax, dy = s.wby - s.way, len = Math.hypot(dx, dy), ang = Math.atan2(dy, dx), h = 2 * s.rad, w = plank ? len - 3 : len + h;
       g.save(); g.translate((s.wax + s.wbx) / 2, (s.way + s.wby) / 2); g.rotate(ang);
       g.save(); g.shadowColor = S.track.shadow; g.shadowBlur = h * 0.8; g.shadowOffsetX = h * 0.3; g.shadowOffsetY = h * 0.5;
       g.beginPath(); g.roundRect(-w / 2, -h / 2, w, h, Math.min(4, h / 3)); g.fillStyle = S.track.base; g.fill(); g.restore();
@@ -201,6 +230,7 @@
       g.fillStyle = S.track.bottom; g.fillRect(-w / 2, h * 0.2, w, h * 0.3);
       g.strokeStyle = S.track.grain; g.lineWidth = 1.1;
       g.beginPath(); g.moveTo(-w / 2, 0); g.bezierCurveTo(-w / 6, -h * 0.1, w / 6, h * 0.1, w / 2, 0); g.stroke();
+      if (plank) { g.fillStyle = 'rgba(70,40,15,0.55)'; for (const x of [-w / 2 + 4, w / 2 - 4]) { g.beginPath(); g.arc(x, -h * 0.05, 1.6, 0, TAU); g.fill(); } }
       g.restore();
       if (danger > 0) {
         g.save(); g.shadowColor = 'rgba(255,70,50,0.95)'; g.shadowBlur = 16 * danger;
@@ -227,13 +257,45 @@
         return;
       }
       case 'bridge': {
+        // Hängebrücke: zwei Pfosten mit Warnstreifen und Lämpchen, Seil mit Hängern zu jeder Planke, die noch liegt
+        const span = Math.hypot(el.x1 - el.x0, el.y1 - el.y0), lift = 86, sag = Math.min(46, span * 0.07);
+        const A = [el.x0 - el.ux * 6, el.y0 - lift], B = [el.x1 + el.ux * 6, el.y1 - lift];
+        const ropeY = (x) => { const u = (x - A[0]) / (B[0] - A[0]); return A[1] + (B[1] - A[1]) * u + 4 * sag * u * (1 - u); };
+        for (const [px, py, by] of [[A[0], A[1], el.y0], [B[0], B[1], el.y1]]) {
+          stroke(g, [[px, py], [px, by + 64]], 11, S.wall.bottom); stroke(g, [[px, py], [px, by + 64]], 8, S.wall.base);
+          stroke(g, [[px, py], [px, by + 64]], 2.4, S.wall.top, -2, 0, 'butt');
+        }
+        g.save(); g.lineWidth = 1.5; g.strokeStyle = 'rgba(150,104,62,0.8)';
+        el.bodies.forEach((b, i) => {
+          const s = b.shapes[0], mx = (s.wax + s.wbx) / 2, my = (s.way + s.wby) / 2, [hx, hy] = el.homes[i];
+          if (!b.enabled || Math.abs(mx - hx) > 2 || Math.abs(my - hy) > 3) return;
+          g.beginPath(); g.moveTo(mx, ropeY(mx)); g.lineTo(mx, my - s.rad); g.stroke();
+        });
+        g.restore();
+        g.save(); g.lineWidth = 3.2; g.strokeStyle = S.rope; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(A[0], A[1] + 4); g.quadraticCurveTo((A[0] + B[0]) / 2, (A[1] + B[1]) / 2 + 2 * sag + 4, B[0], B[1] + 4); g.stroke(); g.restore();
         el.bodies.forEach((b, i) => {
           if (!b.enabled) return;
           const s = b.shapes[0];
           if (s.way > sim.H + 60 && s.wby > sim.H + 60) return;
-          const wob = el.wobbling(i, rt) ? 1 : 0;
-          woodShapes(g, b, wob);
+          woodShapes(g, b, el.wobbling(i, rt) ? 1 : 0, true);
         });
+        // Staub, wo sich eine Planke löst
+        for (let i = 0; i < el.n; i++) {
+          const age = rt - el.relAt(i);
+          if (!(age >= 0 && age < 0.9) || !el.released(i, rt)) continue;
+          const [hx, hy] = el.homes[i];
+          for (let k = 0; k < 5; k++) {
+            const a = hash(i, k), b2 = hash(k, i + 31), r = 5 + 20 * age * (0.6 + 0.4 * a);
+            g.fillStyle = `rgba(${S.dust},${(0.3 * (1 - age / 0.9) * (0.6 + 0.4 * b2)).toFixed(3)})`;
+            g.beginPath(); g.arc(hx + (a - 0.5) * el.pitch * 1.3 + (a - 0.5) * 30 * age, hy + 2 - 14 * age * b2, r, 0, TAU); g.fill();
+          }
+        }
+        // Warnstreifen und Lämpchen auf den Pfosten: Rot = Gefahr, Grün = Fallen zu
+        for (const [px, py] of [A, B]) {
+          g.save(); g.translate(px, py + 12); g.rotate(PI_2); hazard(g, 0, -5, 28, 10); g.restore();
+          lamp(g, px, py - 8, 6.5, sim.trapsClosed ? 'green' : 'red');
+        }
         return;
       }
       case 'trapdoors': {
@@ -348,6 +410,40 @@
     }
     g.restore();
   }
+  /** Spur hinter einer schnellen Murmel: Geisterbilder entgegen der Geschwindigkeit (nur aus dem Zustand). k = Tempo
+   *  des Videos (Zeitlupe kürzt die Spur). */
+  function trail(g, x, y, vx, vy, r, color, k) {
+    const v = Math.hypot(vx, vy), a0 = Math.min(1, (v - 260) / 420);
+    if (a0 <= 0) return;
+    for (let i = 4; i >= 1; i--) {
+      const f = i * 0.017 * k;
+      g.fillStyle = alpha(color, (0.2 * a0 * (1 - i / 5)).toFixed(3));
+      g.beginPath(); g.arc(x - vx * f, y - vy * f, r * (1 - i * 0.07), 0, TAU); g.fill();
+    }
+  }
+  /** Rütteln unter einer festgefahrenen Murmel: kurze Striche links und rechts der Auflage (0,45 s). */
+  function shake(g, x, y, age, r) {
+    if (age < 0 || age > 0.45) return;
+    const a = 1 - age / 0.45, j = Math.sin(age * TAU * 14) * 2.2;
+    g.save(); g.lineCap = 'round'; g.lineWidth = 2.4; g.strokeStyle = `rgba(255,236,196,${(0.85 * a).toFixed(3)})`;
+    for (const s of [-1, 1]) for (let i = 0; i < 3; i++) {
+      const bx = x + s * (r * 0.9 + i * 6) + j, by = y - 3 - i * 6;
+      g.beginPath(); g.moveTo(bx, by); g.lineTo(bx + s * 8, by - 5); g.stroke();
+    }
+    g.restore();
+  }
+  /** Glitzern an der Ziellinie, 0,7 s nach einem Zieldurchgang: kleine vierzackige Sterne, Lage aus der Hash-Funktion. */
+  function glitter(g, f, age, id) {
+    if (!(age >= 0 && age < 0.7)) return;
+    const a = 1 - age / 0.7, x0 = (f.ax + f.bx) / 2, y0 = Math.max(f.ay, f.by), h = Math.abs(f.by - f.ay);
+    g.save(); g.fillStyle = `rgba(255,240,190,${(0.9 * a).toFixed(3)})`;
+    for (let k = 0; k < 6; k++) {
+      const u = hash(id, k), v = hash(k + 17, id), x = x0 + (u - 0.5) * 70, y = y0 - v * h * 0.9 - age * 30 * v, s = (3 + 5 * u) * (0.4 + a * 0.6);
+      g.beginPath(); g.moveTo(x, y - s); g.lineTo(x + s * 0.28, y - s * 0.28); g.lineTo(x + s, y); g.lineTo(x + s * 0.28, y + s * 0.28);
+      g.lineTo(x, y + s); g.lineTo(x - s * 0.28, y + s * 0.28); g.lineTo(x - s, y); g.lineTo(x - s * 0.28, y - s * 0.28); g.closePath(); g.fill();
+    }
+    g.restore();
+  }
   function finishLine(g, f, T) {
     const dx = f.bx - f.ax, dy = f.by - f.ay, len = Math.hypot(dx, dy), n = Math.max(2, Math.round(len / (T * 0.8)));
     g.save(); g.translate(f.ax, f.ay); g.rotate(Math.atan2(dy, dx));
@@ -369,5 +465,5 @@
     text(g, 'OUT', x, yTop - 24, 30, { align: 'center', weight: 900, spacing: 2 });
   }
 
-  EBS.KnockoutArt = { S, WORLDS, hash, text, background, hazard, killPit, lamp, stroke, metalBar, paintStatic, drawTrack, drawElement, marble, crown, hatch, finishLine, outTube, woodShapes, metalShapes, hubDot, alpha, mixA };
+  EBS.KnockoutArt = { S, WORLDS, hash, text, background, hazard, killPit, lamp, stroke, metalBar, paintStatic, paintFront, drawTrack, drawElement, marble, crown, hatch, trail, shake, glitter, finishLine, outTube, woodShapes, metalShapes, hubDot, alpha, mixA };
 })(typeof window !== 'undefined' ? window : globalThis);

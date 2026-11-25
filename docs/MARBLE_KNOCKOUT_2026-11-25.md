@@ -305,3 +305,58 @@ Am 25.11. hat der Nutzer **Stil A** gewählt („Ja Stil A“). Die Referenzbild
 - `test/knockout-elements.test.mjs` bleibt grün (3 Tests).
 - Export über die echte Oberfläche: 4 s, 720p, ohne Fehler (lokal `output/knockout-lab/app-probe.mp4`).
 - Szenario-Listen in vier Browser-Tests um `knockout` ergänzt; diese Tests liefen hier nicht.
+
+---
+
+## M5 · Darstellung, Zeitlupe, Seek-Prüfung (25.11.2026)
+
+**Umfang:**
+
+- Abgrund: Gruben, in denen man ausscheidet, sind kein hartes schwarzes Rechteck mehr, sondern ein weicher Schacht,
+  der nach unten dunkel wird. Ein vorderer Rand liegt über den Murmeln, damit sie sichtbar hineinfallen.
+- Brücke: Pfosten an beiden Enden, Seil mit Hängern, Planken mit Maserung, Staub beim Lösen einer Planke, Lampen an
+  den Pfosten (rot, solange die Fallen offen sind, grün nach `TRAPS CLOSED`).
+- Murmeln: kurze Spur hinter schnellen Murmeln, je schneller, desto länger; in der Zeitlupe passend kürzer.
+- Rütteln: Bekommt eine Murmel einen Stoß, zittern 0,45 s lang kleine Striche links und rechts unter ihr.
+- Ziel: kurzes Glitzern an der Ziellinie für jede Murmel, die durch ist.
+- Zeitlupe: weicher dunkler Rand, im Langvideo klein `SLOW MOTION` oben in der Mitte. Sie wirkt nur während des
+  Rennens; im Zwischenstand läuft alles wieder normal.
+- Einzelne Bahn: Die Anzeige zeigt die Nummer im ganzen Rennen (zum Beispiel `STAGE 4/10`) statt `1/1`.
+- Feste Teile werden je Bahn einmal in zwei Ebenen gezeichnet (hinter und vor den Murmeln). Ihr Inhalt hängt nur an
+  der Bahn, nicht an der Zahl gezeichneter Bilder.
+- Alle neuen Effekte lesen nur den Zustand der Simulation (Geschwindigkeit, Zeit seit Stoß, Zielzeit). Kein Zustand
+  im Renderer, die Seek-Regel gilt.
+
+**Zeitlupe, abweichend vom Plan:**
+
+- Plan: letzte zwei Murmeln innerhalb von 3 Murmelbreiten vor dem Ziel und weniger als 0,15 s auseinander. Damit
+  löste sie in zehn Rennen kein einziges Mal aus.
+- Jetzt: Zielbereich 4 Murmelbreiten, Abstand unter 0,35 s, höchstens drei je Video.
+- Finale: eigene Zeitlupe mit Abstand unter 0,8 s (Platz 1 und 2 liegen im Median 0,8 s auseinander). Sie zählt
+  nicht zu den drei.
+
+**Unterwegs behoben:**
+
+- Stürzte im Finale eine Murmel, zählte das wie ein Zieleinlauf. Die Zeitlupe für den Kampf um Platz 1 war damit
+  abgeschaltet. Jetzt zählt nur ein echter Zieldurchgang.
+
+**Messung (30 freie Rennen, Seeds 1–30, Querformat):**
+
+- Zeitlupen: 44 in 30 Rennen, je Rennen 0 / 1 / 4 (min / Median / max), 5 Rennen ohne.
+- Verteilung: Finale 15, Bahn 9 10, Bahn 8 7, Bahn 6 6, Bahn 3 5, Bahn 2 1.
+- Vorher (Plan-Schwellen): 0 in 10 Rennen; mit 4 Breiten und 0,35 s, aber ohne Finale-Regel: 30 in 30 Rennen, davon
+  1 im Finale.
+
+**Grenzen:**
+
+- Die Zeitlupe verlangsamt die Physik. Ein Rennen mit Zeitlupe dauert deshalb ein paar Sekunden länger.
+- Auf Bahnen 1, 4, 5 und 7 löst sie selten aus, weil dort das Feld vor dem Ziel weit auseinanderliegt.
+- Die Bilder wurden als Bildbögen geprüft (lokal `output/knockout-lab/m5-*.jpg`), nicht als ganzes Video.
+
+**Nachweise:**
+
+- `test/knockout-browser.test.mjs` (neu), 3 Tests grün in 12,5 min:
+  - Chromium rechnet dasselbe Rennen wie Node (Zustands-Hash nach 20, 95 und 170 s, Seed 4).
+  - Seek-Regel: Sprung und durchgehende Wiedergabe ergeben an zwölf Zeitpunkten dasselbe Bild (Seed 2).
+  - Querformat, Hochformat und Quadrat zeichnen ohne Fehler; mit Anzeige aus bleibt nur die Bahn stehen.
+- `test/knockout.test.mjs`, `test/knockout-elements.test.mjs`, `test/knockout-physics.test.mjs`: 15 Tests grün.

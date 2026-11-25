@@ -71,7 +71,7 @@ class KnockoutRenderer extends EBS.CanvasScene {
     this.painter.paint(g);
     g.restore();
   }
-  destroy() { if (this.painter.cache) this.painter.cache.width = this.painter.cache.height = 1; super.destroy(); }
+  destroy() { for (const c of [this.painter.cache, this.painter.front]) if (c) c.width = c.height = 1; super.destroy(); }
 }
 
 /** Ganzes Rennen: Videolänge aus dem Ablauf (bis zum Ende des Podests). */

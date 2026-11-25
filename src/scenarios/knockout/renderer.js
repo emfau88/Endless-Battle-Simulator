@@ -12,27 +12,38 @@
   const fade = (age, inn, hold, out) => (age < 0 ? 0 : age < inn ? age / inn : age < inn + hold ? 1 : age < inn + hold + out ? 1 - (age - inn - hold) / out : 0);
 
   class Painter {
-    constructor(sim, scale = 1) { this.sim = sim; this.scale = scale; this.cache = null; this.key = ''; this.hud = true; }
+    constructor(sim, scale = 1) { this.sim = sim; this.scale = scale; this.cache = null; this.front = null; this.key = ''; this.hud = true; }
     setSim(sim) { this.sim = sim; this.key = ''; }
 
-    staticLayer() {
+    /** Feste Teile hinter (back) und vor (front) den Murmeln, je Bahn einmal gezeichnet. Inhalt hängt nur an der Bahn. */
+    layers() {
       const sim = this.sim, key = `${sim.stageNo}|${sim.galleryIndex}|${sim.stageSeedValue}|${sim.galleryStart}|${this.scale}`;
-      if (key === this.key && this.cache) return this.cache;
-      const c = this.cache || document.createElement('canvas');
-      c.width = Math.round(sim.W * this.scale); c.height = Math.round(sim.H * this.scale);
+      if (key === this.key && this.cache) return this;
+      const w = Math.round(sim.W * this.scale), h = Math.round(sim.H * this.scale);
+      const c = this.cache || document.createElement('canvas'), f = this.front || document.createElement('canvas');
+      c.width = w; c.height = h; f.width = w; f.height = h;
       const g = c.getContext('2d'); g.setTransform(this.scale, 0, 0, this.scale, 0, 0);
       A.paintStatic(g, sim, sim.stage, (sim.spec && sim.spec.world) || 'petrol');
-      this.cache = c; this.key = key; return c;
+      const q = f.getContext('2d'); q.setTransform(this.scale, 0, 0, this.scale, 0, 0);
+      A.paintFront(q, sim, sim.stage);
+      this.cache = c; this.front = f; this.key = key; return this;
     }
 
     paint(g) {
       const sim = this.sim, st = sim.stage, W = sim.W, H = sim.H, rt = sim.world.t, r = sim.r;
-      g.drawImage(this.staticLayer(), 0, 0, W, H);
+      // Zeitlupe wirkt nur im Rennen (danach läuft die Physik wieder in normalem Tempo)
+      const L = this.layers(), rate = sim.phase === 'race' && sim.slowAt ? sim.slowAt(sim.t) : 1;
+      g.drawImage(L.cache, 0, 0, W, H);
       if (st.finish) A.finishLine(g, st.finish, sim.T);
       for (const el of st.elements) A.drawElement(g, el, sim, rt, sim.t);
-      // Murmeln: Klappe unter Ausgeschiedenen, dann die Murmeln (Führende zuletzt, damit sie oben liegt)
+      // Murmeln: Klappe unter Ausgeschiedenen, Spuren, dann die Murmeln (Führende zuletzt, damit sie oben liegt)
       const runners = sim.runners || [];
       for (const u of runners) if (u.hatchT >= 0) A.hatch(g, u.hx, u.hy, sim.t - u.hatchT, r);
+      for (const u of runners) {
+        const m = u.pm, M = sim.roster[u.rid];
+        if (m.active && M && m.collide) A.trail(g, m.x, m.y, m.vx, m.vy, r, M.color, rate);
+        if (u.nudgeT >= 0) A.shake(g, u.nx, u.ny, sim.t - u.nudgeT, r);
+      }
       const racing = sim.phase === 'race' && !sim.final;
       const order = runners.slice().sort((a, b) => (b.rank || 0) - (a.rank || 0));
       for (const u of order) {
@@ -43,9 +54,20 @@
         const danger = racing && sim.lastPlace === u.rid && sim.needOut > sim.outHere ? 0.75 + 0.25 * Math.sin(sim.t * TAU * 1.6) : 0;
         A.marble(g, m.x, m.y, r, M.name, M.color, m.a, { crown: lead && sim.cfg.marks !== 'off', danger: sim.cfg.marks !== 'off' ? danger : 0, noShadow: !m.collide });
       }
-      for (const p of st.pits) if (p.kill) A.killPit(g, p);
-      for (const tr of st.tracks) if (tr.front) A.drawTrack(g, tr);
+      // Kleines Glitzern an der Ziellinie für jede Murmel, die gerade durch ist (Bahnzeit des Zieldurchgangs)
+      if (st.finish) for (const u of runners) if (u.finished && u.place < 500) A.glitter(g, st.finish, rt - u.finishT, u.rid);
+      g.drawImage(L.front, 0, 0, W, H);
+      if (rate < 1) this.slowmo(g, rate);
       this.overlay(g);
+    }
+
+    /** Zeitlupe: weicher dunkler Rand, im Langvideo dazu klein `SLOW MOTION` oben in der Mitte. */
+    slowmo(g, rate) {
+      const sim = this.sim, W = sim.W, H = sim.H, k = Math.min(1, (1 - rate) / 0.65);
+      const v = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.42, W / 2, H / 2, Math.hypot(W, H) * 0.6);
+      v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, `rgba(0,0,0,${(0.42 * k).toFixed(3)})`);
+      g.fillStyle = v; g.fillRect(0, 0, W, H);
+      if (this.hud && sim.format !== 'short') A.text(g, 'SLOW MOTION', W / 2, 84, 30, { align: 'center', weight: 900, spacing: 6, alpha: 0.9 * k, color: '#fff3c4' });
     }
 
     overlay(g) {
@@ -56,7 +78,9 @@
         return;
       }
       if (sim.cfg.display === 'off') return;
-      const n = sim.list.length, no = sim.stageNo + 1, title = sim.spec.title, alive = sim.roster.filter((m) => m.alive).length;
+      // Einzelne Bahn: ihre Nummer im ganzen Rennen (nicht 1/1)
+      const one = sim.mode === 'stage', n = one ? sim.stageSpecs().length : sim.list.length, no = (one ? sim.cfg.stage | 0 : sim.stageNo) + 1;
+      const title = sim.spec.title, alive = sim.roster.filter((m) => m.alive).length;
       if (!short) {
         // Anzeige oben links und rechts, Röhre OUT rechts
         if (sim.phase !== 'podium' && sim.phase !== 'end') {
