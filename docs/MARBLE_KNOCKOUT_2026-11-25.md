@@ -14,7 +14,7 @@ Dieser Bericht wird je Paket fortgeschrieben.
 | M6 Ton | **Erledigt** (25.11.) |
 | M7 Short-Bahnen, Casting, Vorlagen | **Erledigt** (25.11.) |
 | M8 Langvideo-Drehbuch, Vorlage, Finalprobe | **Erledigt** (25.11.) |
-| M9 Abschluss und Geschmacksfragen | **Offen** |
+| M9 Abschluss und Geschmacksfragen | **Erledigt** (25.11.). Offen sind nur die Antworten des Nutzers und die Abnahme. |
 
 ---
 
@@ -573,3 +573,63 @@ Am 25.11. hat der Nutzer **Stil A** gewählt („Ja Stil A“). Die Referenzbild
 - Gegenprobe im Casting-Skript für alle drei Drehbücher: „Geschichte hält“.
 - Nicht erneut gelaufen: Browser-Test (der Vorlagen-Vergleich steckt jetzt auch im Node-Test), Vorlagen-Exporttest,
   `npm run golden` und die Scrap-Hashes. M8 ändert kein anderes Szenario; beide liefen in M7 unverändert.
+
+---
+
+## M9 · Abschluss und gesammelte Geschmacksfragen (25.11.2026)
+
+**Was jetzt da ist:**
+
+- Szenario „Marble Knockout (in Arbeit)“ in der Oberfläche. Ablauf: ganzes Rennen, eine Bahn oder Galerie der
+  Bausteine. Querformat: Langvideo mit 12 Murmeln auf 10 Bahnen. Hochformat: Short mit 8 Murmeln auf 3 Bahnen,
+  Fassung A, B oder C.
+- Vorlagen-Knöpfe „Short · drei Bahnen“ (Fassung A, Seed 47) und „Langvideo · 10 Bahnen“ (Seed 3 mit Drehbuch).
+- Kommandozeile, der ganze Export nur auf Auftrag:
+
+  ```bash
+  node export.mjs --config presets/production/knockout-short.json --out output/knockout-short.mp4
+  ```
+
+  ```bash
+  node export.mjs --config presets/production/knockout-long.json --out output/knockout-long.mp4
+  ```
+
+- Casting für neue Seeds: `node scripts/knockout-casting.mjs --short A` und `--long`.
+- Tests: `test/knockout-physics`, `knockout-elements`, `knockout`, `knockout-browser`, `presets-export-knockout`.
+
+**Proben (lokal, je 20 s):**
+
+| Probe | Datei unter `output/knockout-lab/` |
+|---|---|
+| Short A, Seed 47, Lockruf und erste Bahnen | `m7-short-A-seed47.mp4` |
+| Langvideo, Finale mit Fotofinish und Sieg | `m8-finale-20s.mp4` |
+| Galerie: Schanze, Drehkreuze, Schaufelrad | `m8-galerie-20s.mp4` |
+
+**Gesammelte Geschmacksfragen** (mit Empfehlung; gebaut ist jeweils die Empfehlung):
+
+1. **Name im Video:** „Marble Knockout“ oder ein anderer Titel? Empfehlung: so lassen.
+2. **Murmelnamen:** Farbwörter (`RED`) oder Fantasienamen (`RUBY`, `JADE`)? Empfehlung: Farbwörter, die liest man sofort.
+3. **Geschichte im Langvideo:** Außenseiterin aufs Podest (gebaut) oder lieber offen? Welche der drei Fassungen:
+   Seed 3 (YELLOW, Empfehlung), Seed 2 (GREEN) oder Seed 1 (GOLD)?
+4. **Krone und roter Ring:** Krone für die Führende, roter Ring für die Letzte. Hilfreich oder zu viel? Empfehlung:
+   lassen.
+5. **Feldgröße:** 12 Murmeln (gebaut) oder 16? Empfehlung: 12, das bleibt lesbar.
+6. **Musik:** keine (gebaut) oder sehr leise? Empfehlung: keine.
+7. **Länge Langvideo:** 4,5 bis 4,7 min statt der geplanten 9 min. Empfehlung: so lassen; länger ginge mit
+   16 Murmeln oder einer zweiten Runde.
+8. **Länge Shorts:** A und B rund 37 s, C rund 45 s (Plan: 25 bis 35 s). Empfehlung: A und B so lassen, C kürzen.
+9. **Fotofinish:** unter 0,3 s statt unter 0,1 s. Knapper ginge es nur mit einem anderen Zieleinlauf im Finale.
+   Empfehlung: so lassen, die Zeitlupe zeigt den Abstand.
+10. **GOLD und YELLOW** sehen sich klein im Bild sehr ähnlich. Empfehlung: YELLOW heller und zitroniger machen, vorher
+    als Vorschau-Bild zeigen.
+11. **Lautstärke:** Short −26 LUFS, Langvideo als Ganzes −27 LUFS, feste leise Mischung. Empfehlung: erst anhören;
+    bei Bedarf +2 dB.
+12. **Ton-Ergänzungen:** Ratschen am Drehkreuz und leises Raumrauschen fehlen noch. Empfehlung: nur nachrüsten,
+    wenn beim Anhören etwas fehlt.
+13. **Nächste Schritte:** ganzer Export von Short und Langvideo (nur auf Auftrag); danach neue Bahnen oder weitere
+    Short-Fassungen.
+
+**Grenzen:**
+
+- Der Name in der Oberfläche trägt noch „(in Arbeit)“, bis der Nutzer Short und Langvideo abgenommen hat.
+- Weder Short noch Langvideo sind ganz exportiert; es gibt nur die 20-s-Proben.
