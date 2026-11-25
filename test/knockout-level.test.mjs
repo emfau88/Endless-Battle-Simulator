@@ -70,7 +70,7 @@ function run(seed, params, world) {
   const s = create(seed, params, world), cam = s.cam, o = cam.o, dt = s.dt;
   const first = s.sections[0], n = s.roster.length, keep = Math.min(first.keep, n);
   let closedAt = -1, releasedAt = -1, alive0 = -1, px = cam.x, py = cam.y, pz = cam.z, maxV = 0;
-  while (s.phase !== 'end' && s.t < 120) {
+  while (s.phase !== 'end' && s.t < 300) {
     s.stepOnce();
     // Kamera: Zoom im Rahmen und langsam, Tempo begrenzt, Bild nie außerhalb der Welt
     assert.ok(cam.z >= o.zmin - 1e-9 && cam.z <= o.zmax + 1e-9, `Zoom ${cam.z}`);
@@ -121,7 +121,7 @@ for (const [name, world, params, seeds] of [['Turm (9:16)', PORT, {}, [1, 2]], [
         assert.ok(s.winner >= 0 && s.roster[s.winner].alive, `Seed ${seed}: Sieger`);
         assert.ok(Math.abs(s.t - (s.winnerT + s.R.endHold)) < 2 * s.dt, 'Ende nach dem Halt');
         assert.ok(s.t < 45, `Länge ${s.t.toFixed(1)} s`);
-      } else assert.ok(s.t < 40, `Länge erster Abschnitt ${s.t.toFixed(1)} s`);
+      } else assert.ok(s.t < 24 * locks.length, `Länge bis zur letzten fertigen Schleuse ${s.t.toFixed(1)} s`);
     }
   });
 }

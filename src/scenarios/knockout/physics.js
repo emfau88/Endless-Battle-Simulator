@@ -242,6 +242,16 @@
       for (const b of this.bodies) if (b.enabled) for (const sh of b.shapes) test(sh);
       return best;
     }
+    /** Liegt die Murmel gerade in einer Gondel (Hebe-Rad)? Die Gondel hebt sie beim Einsteigen gewollt durch die feste
+     *  Plattform; dabei steckt sie für wenige Schritte in der Bahn (nur für die Invarianten-Prüfung). */
+    lifted(m) {
+      const p = this._p;
+      for (const b of this.bodies) {
+        if (!b.enabled || b.tag !== 'cup') continue;
+        for (const sh of b.shapes) { closest(sh.wax, sh.way, sh.wbx, sh.wby, m.x, m.y, p); if (Math.hypot(m.x - p[0], m.y - p[1]) - sh.rad - m.r < 2) return true; }
+      }
+      return false;
+    }
   }
 
   /** Prüfsumme über Zahlen (Bits der 64-Bit-Werte, FNV-1a über 32-Bit-Wörter). */

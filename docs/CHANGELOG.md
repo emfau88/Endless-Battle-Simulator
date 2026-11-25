@@ -2,6 +2,12 @@
 
 Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen in der [ROADMAP](ROADMAP.md).
 
+## 26.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| R43, Marble Knockout, Teil 2, G4: THE GAUNTLET Abschnitte 2 bis 5. `TURNSTILES` (zwei Spuren, drei Drehkreuze, Naben 0,15 d höher, dann BIG DROP durch einen Schacht mit Stiften und Bumpern), `THE WHEEL` (neuer Baustein Riesenrad `ferris` mit 16 Gondeln, Einstieg ganz rechts, hebt rund 800 E), `THE COLLAPSE` (feste Fangbahn, Brücke mit 15 Planken, Bruchkante 300 → 800 E/s über neuen Schalter `speed`), `TILT` (Schiebetor, zwei Kippbretter mit Grundneigung über neuen Schalter `bias`). Riesenrad im Bild mit Kranz, Speichen, Seilen und Holzgondeln. Invarianten erlauben die Murmel in der Gondel; Schleuse zu zählt als ein Aus. Abnahme: 100 Läufe bis zur fünften Schleuse ohne Hänger. Labor: fünfte Schleuse im Median nach 89 s, 0 Stöße in 12 Läufen. Tests: `knockout-level` 10 grün, Browser-Tests „Gesamtlevel“ (Seek auch an Rad und Brücke) und „Beide Formate“ grün, `knockout` 8 grün, Referenz-Hashes unverändert. | Branch `murmelrennen/plan` | [Bericht](MARBLE_KNOCKOUT_2026-11-25.md#g4--the-gauntlet-abschnitte-1-bis-5-26112026) |
+
 ## 25.11.2026
 
 | Was | Commit | Bericht |

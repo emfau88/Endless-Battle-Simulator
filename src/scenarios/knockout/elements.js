@@ -199,6 +199,23 @@
       if (casing) { const Rc = R + (casingGap || this.d + 6) + this.rad; casingPts = arcPts(x, y, Rc, casing[0], casing[1]); this.track(casingPts); }
       return this._add({ type: 'wheel', x, y, R, hubR, paddles, rps, bodies: [body], casing: casingPts });
     }
+    /** G3 Hebe-Rad (Riesenrad): n Gondeln, deren Bodenmitte auf einem Kreis (Radius R um x, y) läuft; die Gondeln
+     *  bleiben waagerecht (nur um tilt geneigt, + fällt nach rechts). Eine Gondel ist ein Boden der Breite cw mit einem
+     *  hohen Rand an der tiefen Seite (lipLo) und einem niedrigen an der hohen (lipHi). rps > 0 dreht im Bild im
+     *  Uhrzeigersinn. Ein- und Ausstieg ohne Klappen: Ein festes Bahnende reicht in die aufsteigenden Gondeln hinein
+     *  (der Boden hebt die wartenden Murmeln ab), und die absteigenden Gondeln laufen durch ein Bahnstück, auf dem die
+     *  Murmeln liegen bleiben. hang: Höhe des Aufhängepunkts über dem Boden (nur fürs Bild). */
+    ferris({ x, y, R, n = 16, rps = 0.07, cw, lipLo, lipHi, tilt = 0, hang }) {
+      const rad = this.rad * 0.8, w = cw || 5 * this.d, lo = lipLo === undefined ? 0.9 * this.d : lipLo, hi = lipHi === undefined ? 0.4 * this.d : lipHi;
+      const sR = tilt >= 0 ? lo : hi, sL = tilt >= 0 ? hi : lo;
+      const shapes = [{ ax: -w / 2, ay: 0, bx: w / 2, by: 0, rad }, { ax: -w / 2, ay: 0, bx: -w / 2, by: -sL, rad }, { ax: w / 2, ay: 0, bx: w / 2, by: -sR, rad }];
+      const ph = this.phase(1 / Math.abs(rps)) * TAU * Math.abs(rps), om = TAU * rps, bodies = [];
+      for (let i = 0; i < n; i++) {
+        const a0 = ph + i * TAU / n;
+        bodies.push(this._body(shapes, (t) => { const a = a0 + om * t; return { x: x + R * cos(a), y: y + R * sin(a), a: tilt }; }, { look: 'cup', tag: 'cup' }));
+      }
+      return this._add({ type: 'ferris', x, y, R, n, rps, cw: w, hang: hang === undefined ? 1.7 * this.d : hang, bodies });
+    }
     /** B3 Drehtrommel: Ring mit Lücken und Rippen innen; Eintritt von vorn über eine Zone.
      *  finAt: Winkel der Rippen (sonst gleichmäßig zwischen den Lücken). rock: { amp, period } lässt die Trommel
      *  zusätzlich schaukeln; das bricht feste Umläufe auf, in denen eine Murmel sonst immer gleich kreist. */
@@ -360,8 +377,9 @@
 
     // ---------------------------------------------------------------- D · Das Level verändert sich
     /** D1 Kippbrett um (x, y), Länge len, Ausschlag amp, volle Periode period; holes: [[von, bis]] in lokalem x;
-     *  posts: [x] kleine Stifte auf dem Brett; lips: Höhe der Endkanten (0 = offen). */
-    tilt({ x, y, len, amp = 0.21, period = 7, phase = 0, holes = [], posts = [], postH = 0.55, lips = 0 }) {
+     *  posts: [x] kleine Stifte auf dem Brett; lips: Höhe der Endkanten (0 = offen); bias: Grundneigung (positiv =
+     *  rechtes Ende tiefer), damit Murmeln im Mittel zu einem Ende wandern statt endlos hin und her zu rollen. */
+    tilt({ x, y, len, amp = 0.21, period = 7, phase = 0, holes = [], posts = [], postH = 0.55, lips = 0, bias = 0 }) {
       const rad = this.rad, shapes = [], cuts = [[-len / 2, len / 2]];
       for (const [h0, h1] of holes) {
         const k = cuts.findIndex(([a, b]) => h0 > a && h1 < b);
@@ -371,18 +389,23 @@
       for (const px of posts) shapes.push({ ax: px, ay: -rad - this.r * postH, bx: px, by: 0, rad: rad * 0.6 });
       if (lips) for (const s of [-1, 1]) shapes.push({ ax: s * (len / 2 - rad), ay: -lips, bx: s * (len / 2 - rad), by: 0, rad: rad * 0.8 });
       const ph = phase + this.phase(period);
-      const body = this._body(shapes, (t) => ({ x, y, a: amp * sin(TAU * (t + ph) / period) }), { look: 'tilt', hub: rad * 2.2, tag: 'tilt' });
+      const body = this._body(shapes, bias ? (t) => ({ x, y, a: bias + amp * sin(TAU * (t + ph) / period) }) : (t) => ({ x, y, a: amp * sin(TAU * (t + ph) / period) }), { look: 'tilt', hub: rad * 2.2, tag: 'tilt' });
       return this._add({ type: 'tilt', x, y, len, amp, period, holes, bodies: [body] });
     }
     /** D2 Einstürzende Brücke von (x0, y0) nach (x1, y1) mit n Planken. Der Einsturz beginnt bei `start` (Bahnzeit)
      *  oder, mit trigger = x, wenn `count` Murmeln x überquert haben (+ delay). Von hinten (x0) nach vorn.
-     *  sink: Planken verschwinden, wenn sie so tief gefallen sind (in einer dunklen Grube). */
-    bridge({ x0, y0, x1, y1, n = 10, start = 4, trigger, count = 1, delay = 0, interval = 0.5, wobble = 0.4, g = 1600, sink }) {
+     *  sink: Planken verschwinden, wenn sie so tief gefallen sind (in einer dunklen Grube).
+     *  speed: [v0, v1] (G4 Einsturz-Strecke): Die Bruchkante läuft mit v0 E/s los und wird über die Brücke gleichmäßig
+     *  schneller bis v1 (statt eines festen Abstands interval). */
+    bridge({ x0, y0, x1, y1, n = 10, start = 4, trigger, count = 1, delay = 0, interval = 0.5, wobble = 0.4, g = 1600, sink, speed }) {
       const rad = this.rad, dx = (x1 - x0) / n, dy = (y1 - y0) / n, pitch = Math.sqrt(dx * dx + dy * dy);
       const ux = dx / pitch, uy = dy / pitch, gone = sink ? Math.sqrt(2 * sink / (g * 1.12)) : 1.5;
       const el = { type: 'bridge', x0, y0, x1, y1, n, pitch, ux, uy, startT: trigger === undefined ? start : -1, trigger, count, passed: 0, npassed: 0, interval, wobble, closedAt: -1, bodies: [], homes: [] };
       const deckA = 0;                                                 // Planken liegen lokal schon längs der Brücke
-      const rel = (i) => (el.startT < 0 ? Infinity : el.startT + i * interval);
+      // Zeit der Bruchkante bis Planke i (nur Grundrechenarten: Mittelpunktregel über die Planken)
+      const off = [];
+      if (speed) { let acc = 0; for (let i = 0; i < n; i++) { off.push(acc); acc += pitch / (speed[0] + (speed[1] - speed[0]) * (i + 0.5) / n); } }
+      const rel = speed ? (i) => (el.startT < 0 ? Infinity : el.startT + off[i]) : (i) => (el.startT < 0 ? Infinity : el.startT + i * interval);
       const fall = (i, t, hx, hy) => {
         const ti = rel(i), seedA = ((i * 7919) % 13) / 13 - 0.5;
         if (t < ti - wobble) return { x: hx, y: hy, a: deckA };

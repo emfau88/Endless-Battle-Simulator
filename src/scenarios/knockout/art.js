@@ -429,6 +429,27 @@
         hubDot(g, el.x, el.y, 9);
         return;
       }
+      case 'ferris': {
+        // Hebe-Rad: Die Gondeln liegen in der Physik auf dem Kreis um (x, y). Gezeichnet wird das Rad um hang höher,
+        // jede Gondel hängt an zwei Seilen von ihrem Drehpunkt auf dem Kranz.
+        const cx = el.x, cy = el.y - el.hang, R = el.R, leg = R + el.hang + 40;
+        metalBar(g, cx, cy, cx - R * 0.42, cy + leg, 14); metalBar(g, cx, cy, cx + R * 0.42, cy + leg, 14);
+        for (const b of el.bodies) metalBar(g, cx, cy, b.x, b.y - el.hang, 4);
+        for (const [w, c] of [[13, S.metal.dark], [9, S.metal.base]]) { g.lineWidth = w; g.strokeStyle = c; g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.stroke(); }
+        g.lineWidth = 2.5; g.strokeStyle = S.metal.light; g.beginPath(); g.arc(cx - 2, cy - 2, R, 0, TAU); g.stroke();
+        g.lineWidth = 4; g.strokeStyle = S.metal.dark; g.beginPath(); g.arc(cx, cy, R * 0.55, 0, TAU); g.stroke();
+        for (const b of el.bodies) {
+          const [base, ...lips] = b.shapes, px = b.x, py = b.y - el.hang;
+          g.save(); g.lineWidth = 2.2; g.strokeStyle = S.rope; g.beginPath();
+          for (const s of lips) { g.moveTo(px, py); g.lineTo(s.wbx, s.wby); }
+          g.stroke(); g.restore();
+          woodShapes(g, { shapes: [base] }, 0);
+          metalShapes(g, { shapes: lips });
+          hubDot(g, px, py, 5);
+        }
+        hubDot(g, cx, cy, 22);
+        return;
+      }
       case 'floors':
         // Nur zwischen den Turmwänden zeichnen: Die Böden gleiten hinter den Wänden weiter
         g.save(); g.beginPath(); g.rect(el.xl, -1e4, el.xr - el.xl, 2e4); g.clip();

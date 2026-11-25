@@ -422,7 +422,7 @@
       for (const m of this.world.marbles) {
         if (!m.active) continue;
         if (![m.x, m.y, m.vx, m.vy].every(Number.isFinite)) errors.push(`Murmel ${m.rid}: ungültige Zahl`);
-        if (m.collide && this.world.clearance(m) < -this.r * 0.5) errors.push(`Murmel ${m.rid} steckt in der Bahn`);
+        if (m.collide && this.world.clearance(m) < -this.r * 0.5 && !this.world.lifted(m)) errors.push(`Murmel ${m.rid} steckt in der Bahn`);
       }
       return { ok: errors.length === 0, errors };
     }

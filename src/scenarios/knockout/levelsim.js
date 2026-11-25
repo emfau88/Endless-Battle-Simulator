@@ -186,7 +186,7 @@
       const lastIn = this.runners.filter((u) => u.finished && !u.out).sort((a, b) => b.place - a.place)[0];
       // Schnittkampf: wie weit lag die Erste draußen hinter der Letzten drinnen (in Murmeln Ideallinie)?
       if (lastIn && late.length) this.cuts.push({ sec: this.secNo, gap: (this.sec.p1 - late[0].prog) / (2 * this.r), t: this.t });
-      for (const u of late) { u.out = true; u.late = true; this.markOut(u, 'late'); }
+      late.forEach((u, i) => { u.out = true; u.late = true; this.markOut(u, 'late', i > 0); });
       if (late.length) this.emit('knockout', late[0].pm.x, late[0].pm.y, 0, late[0].rid);
       this.ranking();
     }
@@ -241,10 +241,11 @@
       if (!u.out) { u.out = true; this.markOut(u, how); this.emit('knockout', m.x, m.y, 0, u.rid); }
       u.hatchT = this.t; u.hx = m.x; u.hy = m.y + this.r; m.collide = false; m.vy = Math.max(m.vy, 60);
     }
-    markOut(u, how) {
+    markOut(u, how, group) {
       BASE.markOut.call(this, u, how);
-      // Kamera-Kennzahl: Ist das Aus im Bild?
-      if (this.cam) {
+      // Kamera-Kennzahl: Ist das Aus im Bild? Schließt die Schleuse, zählt das als ein Aus: die Erste draußen (der
+      // Kampf um den letzten Platz). Nachzügler weit dahinter (im Hebe-Rad, am anderen Brettende) passen nicht mit ins Bild.
+      if (this.cam && !group) {
         const v = CAM.view(this.cam), m = u.pm;
         this.camStats.outs++;
         if (m.x > v.x0 && m.x < v.x1 && m.y > v.y0 && m.y < v.y1) this.camStats.outsIn++;
@@ -302,7 +303,8 @@
     focus() {
       const sec = this.sec, sch = sec.sch, path = this.lv.path, cam = this.cam;
       const zfit = (w, h) => CAM.zoomFor(cam || { W: this.W, H: this.H }, w, h, 1.05);
-      if (cam && cam.mode === 'sections') {
+      // „Abschnitte“: feste Einstellung je Abschnitt; Abschnitte mit freiem Fall oder Hebe-Rad (ride) fahren mit
+      if (cam && cam.mode === 'sections' && !sec.ride) {
         const fr = sec.frame || sch.box;
         return { x: (fr.x0 + fr.x1) / 2, y: (fr.y0 + fr.y1) / 2, z: zfit(fr.x1 - fr.x0, fr.y1 - fr.y0), hold: true, lag: 0.75 };
       }

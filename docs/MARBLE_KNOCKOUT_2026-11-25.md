@@ -18,7 +18,8 @@ Dieser Bericht wird je Paket fortgeschrieben.
 | Teil 2: Gesamtlevel mit Kamerafahrt | **Plan erledigt** (25.11.): [MARBLE_KNOCKOUT_GESAMTLEVEL_PLAN_2026-11-25.md](MARBLE_KNOCKOUT_GESAMTLEVEL_PLAN_2026-11-25.md). Der Nutzer will vor dem ganzen Export je ein spannendes Gesamtlevel mit viel Action. |
 | G1 Gesamtlevel: Grundlage und erste Abschnitte | **Erledigt** (25.11.). Der Nutzer hat für das Querformat die Kamera **„Fahrt“** gewählt. |
 | G2 Bild fertig, Ton nach Bildlage, Sichern und Laden | **Erledigt** (25.11.) |
-| G3 THE TOWER komplett, Casting, Vorlage „Short · Turm“ | **Erledigt** (25.11.). G4 bis G7 offen. |
+| G3 THE TOWER komplett, Casting, Vorlage „Short · Turm“ | **Erledigt** (25.11.) |
+| G4 THE GAUNTLET Abschnitte 1 bis 5 | **Erledigt** (26.11.). G5 bis G7 offen. |
 
 ---
 
@@ -951,5 +952,102 @@ node export.mjs --config presets/production/knockout-short.json --clip-start 19.
   - Die Vorlagen-Dateien gleichen der Oberfläche.
 - `test/knockout.test.mjs`: 8 Tests grün, der alte Ablauf ist unverändert.
 - `npm run golden`: identisch mit der Referenz. Neue Schalter an Ringen und Startregal (`slots`, `pad`) ändern ohne
+  Angabe nichts.
+- Nicht gelaufen: Scrap-Hashes (Scrap unberührt), voller `npm test`.
+
+## G4 · THE GAUNTLET Abschnitte 1 bis 5 (26.11.2026)
+
+**Umfang:**
+
+- **Abschnitt 2 `TURNSTILES` (17 → TOP 14):**
+  - Ein Grat unter der Schleuse teilt das Feld auf zwei Spuren nach rechts (7°). Oben zwei Drehkreuze, unten eins.
+  - Beide Spuren enden über dem **BIG DROP**: ein Schacht, rund 1650 E tief und 9,6 d breit, mit Stiften alle 3 d,
+    vier Bumpern und Abweisern an beiden Wänden. Der Boden fällt mit 12° nach links in die Schleuse.
+  - Die Naben der Drehkreuze sitzen 0,15 d höher als im Turm. Mit 20 Murmeln stand vor den Kreuzen eine Schlange, und
+    die herabkommenden Armspitzen stießen die Erste immer wieder zurück (16 Läufe: 3 bis 8 Anstöße, jetzt keiner).
+- **Abschnitt 3 `THE WHEEL` (14 → TOP 12):**
+  - Neuer Baustein **Riesenrad** (`ferris`, im Plan das Hebe-Rad G3): 16 Gondeln auf einem Kreis mit 18 d Radius,
+    0,07 Umdrehungen je Sekunde.
+  - Der Zulauf (5°) endet über der Gondelbahn ganz rechts, wo die Gondeln senkrecht steigen. Wer am Anschlag wartet,
+    wird mitgenommen, vier bis fünf je Gondel. Hinter dem Scheitel laufen die Gondeln durch eine Rinne; die Murmeln
+    rollen nach links in die Schleuse.
+  - Das Rad hebt das Feld rund 800 E. Die Kamera fährt mit, auch in der Fassung „Abschnitte“.
+- **Abschnitt 4 `THE COLLAPSE` (12 → TOP 10, Sturz zählt):**
+  - Unter der Schleuse eine feste Fangbahn (9°), dann eine Brücke mit 15 Planken über 1400 E nach links.
+  - 3 s nachdem die Erste die Brücke betritt, bricht sie von hinten weg. Die Bruchkante wird von 300 auf 800 E/s
+    schneller (neuer Schalter `speed` an der Brücke) und holt die Langsamen irgendwo auf der Brücke ein.
+  - Darunter der Abgrund in vier überlappenden Stücken (eine Grube ist ein Rechteck, die Brücke ist geneigt).
+  - Am Ende eine Kehre hinab auf die untere Bahn nach rechts in die Schleuse.
+- **Abschnitt 5 `TILT` (10 → TOP 8):**
+  - Fangbahn mit Schiebetor (1,6 s von 2,6 s offen), dann zwei Kippbretter übereinander, je 20 d lang.
+  - Oben ist rechts ein mitkippender Rand, unten reicht das Brettende links in die Außenwand.
+  - Beide Bretter haben eine Grundneigung von 0,1 zum offenen Ende (neuer Schalter `bias` am Kippbrett).
+- Danach wie bisher die Auffangschale `TO BE CONTINUED`.
+- **Bild:** Das Riesenrad hat Kranz, Speichen, zwei Stützen, Seile und Holzgondeln. Die Gondeln liegen in der Physik
+  auf dem Kreis; gezeichnet wird das Rad 1,7 d höher, so hängt jede Gondel sichtbar an ihrem Drehpunkt.
+- **Prüfregeln:**
+  - Die Gondel hebt eine Murmel beim Einsteigen gewollt durch die feste Plattform. Für wenige Schritte steckt sie dabei
+    in der Bahn. Die Invarianten-Prüfung erlaubt das jetzt, solange die Murmel in einer Gondel liegt.
+  - Kamera-Kennzahl „Aus im Bild“: Schließt eine Schleuse, zählt das als ein Aus, nämlich die Erste draußen (der Kampf
+    um den letzten Platz). Nachzügler weit dahinter, etwa noch im Rad, passen nicht mit ins Bild.
+
+**Abweichungen vom Plan (nach Messung):**
+
+| Plan | Messung | Jetzt |
+|---|---|---|
+| Hebe-Rad als großes Schaufelrad mit Gehäuse, Ø 1,5 B, hebt 1,5 B | Ein Schaufelrad dreht das Feld um; zwischen Rad und Schacht war dann kein Platz mehr. Erste Gondel-Fassung mit Einstieg bei 37°: Die Gondeln fuhren schräg in die Schlange und schoben sie zurück, 36 bis 50 s und Anstöße | Riesenrad mit Gondeln, Ø 1728 E, hebt rund 800 E; Einstieg ganz rechts, Schleuse im Median nach 11,7 s zu |
+| Einsturz-Strecke mit 40 Planken, Start 2 s nach der Ersten, Bruchkante 300 → 650 E/s | Die zwei Langsamsten lagen beim Losbrechen noch unter der Schleuse und stürzten in jedem Lauf gleich am Anfang | feste Fangbahn, 15 Planken, 3 s, 300 → 800 E/s; Stürze überall auf der Brücke, 0 bis 3 je Lauf |
+| Zwei Kippbretter ohne Zusatz | Murmeln rollten auf dem unteren Brett 30 s und länger hin und her; zwischen Wand und Brettende klemmte eine Murmel ein | Grundneigung 0,1, Brettende in der Wand, mitkippender Rand statt fester Wand |
+| Welt 3 × 6 Bildschirme (5760 × 6480 E) | — | 5300 × 7600 E |
+| Totale 0,8 beim Einsturz, Zoom 0,85 im Schacht | — | noch nicht; die Kamera folgt der Spitze und zeigt in der zweiten Hälfte Becken und Schnittlinie |
+
+**Messwerte (Labor, 12 Läufe, Seeds 1 bis 12):**
+
+| Abschnitt | Schleuse zu nach (Median, längster) | Abstand an der Schnittlinie (Median) | Stürze |
+|---|---|---|---|
+| 1 `THE DROP` | 15,9 s, 17,1 s | 3,7 Murmelbreiten | 0 |
+| 2 `TURNSTILES` | 17,0 s, 18,2 s | 4,0 | 0 |
+| 3 `THE WHEEL` | 11,7 s, 13,4 s | 7,9 | 0 |
+| 4 `THE COLLAPSE` | 11,5 s, 13,5 s | 8,6 (2 von 10 unter 1,5) | 13 |
+| 5 `TILT` | 26,4 s, 30,2 s | 24,2 | 0 |
+
+| | Gauntlet (16:9) |
+|---|---|
+| Fünfte Schleuse offen (Median, längster) | 89,3 s, 95,4 s |
+| Führungswechsel je Minute (Median) | 18,4 |
+| Führende im Bild / Aus im Bild | 95 % / 68 von 71 |
+| Stöße / festgefahren / Zeit um | 0 / 0 / 0 |
+
+**Abnahme (Seeds 1 bis 100, bis zur fünften Schleuse):** 100 von 100 Läufen kommen durch, niemand bleibt hängen,
+kein Zeitlimit. In 7 Läufen braucht eine Murmel einen Anstoß, sonst keinen. Die fünfte Schleuse öffnet nach 87 bis
+95 s.
+
+**Bildblatt (lokal):** `output/knockout-lab/g4-blatt.jpg`, Seed 2: Schacht, Rad, Einsturz, Kippbretter, Auffangschale.
+
+```bash
+node scripts/knockout-frames.mjs --mode level --seed 2 --times 26,39,43,52,55,67,76,86 --aspect 16:9 --out output/knockout-lab/g4-blatt.jpg
+```
+
+**Grenzen:**
+
+- `TILT` dauert am längsten (Median 26 s), und die Schnittlinie ist dort nie knapp. Entschieden wird auf den Brettern.
+- Auch am Rad ist die Schnittlinie nie knapp: Wer eine Gondel später einsteigt, liegt gleich weit zurück.
+- 3 von 71 Aus waren nicht im Bild: zweimal lag die Erste draußen noch im Rad, einmal stürzte eine Murmel ganz links
+  von der Brücke, während die Kamera schon an der Schleuse war.
+- Eigene Kamerapunkte (Totale beim Einsturz) fehlen noch.
+- Das Riesenrad steht noch nicht in der Element-Galerie.
+- Keine Videoprobe exportiert; die Abnahme für G4 sind die 100 Läufe.
+
+**Nachweise:**
+
+- `test/knockout-level.test.mjs`: 10 Tests grün. Angepasst:
+  - Ein Lauf darf jetzt bis 300 s dauern; ein noch unfertiges Level höchstens 24 s je Schleuse.
+  - Die Invarianten erlauben die Murmel in der Gondel (siehe oben).
+- `test/knockout-browser.test.mjs`, Tests „Gesamtlevel (G2)“ und „Beide Formate“: grün. Die Seek-Prüfung im
+  Querformat prüft jetzt auch das Rad (42 s) und die einbrechende Brücke (54 s). Die übrigen Browser-Tests betreffen
+  den alten Ablauf; „Node = Chromium“ und „Short (M7)“ liefen grün, die alte Seek-Prüfung habe ich nach 10 min
+  abgebrochen (unberührt).
+- `test/knockout.test.mjs`: 8 Tests grün, der alte Ablauf ist unverändert.
+- `npm run golden`: identisch mit der Referenz. Die neuen Schalter `bias` (Kippbrett) und `speed` (Brücke) ändern ohne
   Angabe nichts.
 - Nicht gelaufen: Scrap-Hashes (Scrap unberührt), voller `npm test`.
