@@ -75,6 +75,29 @@ test('Zeichnen verändert den Zustand nicht (Painter mit leerem Zeichenkontext)'
   }
 });
 
+test('Ton (M6): weiche Klänge, feste Mischung, Dichte begrenzt, Zielton je Platz tiefer', () => {
+  const a = sc.audio, root = new URL('../', import.meta.url);
+  assert.deepEqual([a.mixProfile, a.fixedGainDb, a.ceilingDb], ['marbleworks-soft-v1', 1, -6]);
+  for (const [type, def] of Object.entries(a.events)) for (const s of def.samples) {
+    assert.ok(s.startsWith('synth:') || readFileSync(new URL(`assets/audio/${s}.ogg`, root)).length > 0, `${type}: ${s}`);
+  }
+  // 40 s Rennen sammeln (Ringpuffer alle 10 Schritte leeren wie der Exporter)
+  const sim = create(1), events = [];
+  let seq = 0;
+  while (sim.t < 40) {
+    sim.stepOnce();
+    if (sim.step % 10 === 0) for (; seq < sim.eventSeq; seq++) events.push(sim.events[seq % sim.events.length]);
+  }
+  const fin = events.filter((e) => e.type === 'finish');
+  assert.ok(fin.length >= 11, `${fin.length} Zieleinläufe`);
+  for (const e of fin) assert.equal(e.c, e.p - 1, 'c = Platz − 1 für die Tonleiter');
+  const plan = sc.createAudioMixPlan(events, { cfg: { video: { aspect: '16:9', volume: {} } } });
+  assert.equal(plan.events.length, events.length);
+  const on = events.filter((_e, i) => plan.events[i].gain > 0);
+  for (let i = 3; i < on.length; i++) assert.ok(on[i].step - on[i - 3].step >= 18, 'höchstens drei Klänge je 0,3 s');
+  for (const type of ['gate', 'knockout']) assert.ok(on.some((e) => e.type === type), `${type} hörbar`);
+});
+
 test('Export: Länge aus dem Ablauf bis zum Ende des Podests', () => {
   assert.equal(sc.hasNaturalDuration({ params: sc.normalizeParams({}) }), true);
   assert.equal(sc.hasNaturalDuration({ params: sc.normalizeParams({ videoEnd: 'free' }) }), false);

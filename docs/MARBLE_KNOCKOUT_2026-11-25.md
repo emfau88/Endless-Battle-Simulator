@@ -359,4 +359,45 @@ Am 25.11. hat der Nutzer **Stil A** gewählt („Ja Stil A“). Die Referenzbild
   - Chromium rechnet dasselbe Rennen wie Node (Zustands-Hash nach 20, 95 und 170 s, Seed 4).
   - Seek-Regel: Sprung und durchgehende Wiedergabe ergeben an zwölf Zeitpunkten dasselbe Bild (Seed 2).
   - Querformat, Hochformat und Quadrat zeichnen ohne Fehler; mit Anzeige aus bleibt nur die Bahn stehen.
+
+---
+
+## M6 · Ton (25.11.2026)
+
+**Umfang:**
+
+- Weiche Marble-Works-Klänge und erzeugte Glockentöne, feste Mischung ohne Einmessung (Profil
+  `marbleworks-soft-v1`, fester Pegel +1 dB, Spitze höchstens −6 dBFS). Keine neuen Sounddateien.
+
+  | Ereignis | Klang |
+  |---|---|
+  | `winner` | aufsteigende Glocken (Fanfare), tiefer gestimmt |
+  | `knockout`, `fall` | weiches „Plopp“ |
+  | `finish` | kleiner Glockenton, je Platz etwas tiefer |
+  | `gate` | weiches Holz-„Klonk“ |
+  | `plank` | Holz, tief gestimmt |
+  | `traps` | heller Glockenton |
+  | `podium` | weicher Dur-Akkord |
+  | `hit_track`, `hit_marble`, `peg`, `bumper` | Holz, Glas und Körper nach Aufprallstärke |
+  | `flip`, `nudge` | leises Klicken |
+
+- Mischplan: höchstens drei Klänge je 0,3 s. Die ersten acht Ereignisse haben Vorrang, Aufprälle füllen auf.
+  Stereo nach Ort im Bild.
+- Das Ziel-Ereignis trägt jetzt den Platz (c = Platz − 1), damit der Glockenton je Platz tiefer wird.
+
+**Messung (20-s-Probe, Sekunde 10 bis 30 des Langvideos, Seed 1):**
+
+- 475 Ereignisse, 134 Stimmen in 30 s.
+- Mit +3 dB: −22,2 LUFS, Begrenzer bis −2,5 dB. Mit +1 dB: −24,0 LUFS, Begrenzer bis −0,5 dB. Gewählt: +1 dB.
+- Lokal: `output/knockout-lab/m6-ton-long.mp4`.
+
+**Grenzen:**
+
+- Das Hörurteil liegt beim Nutzer. Ich kann nur messen.
+- Ratschen am Drehkreuz und leises Raumrauschen aus dem Plan fehlen noch; dafür gibt es kein Ereignis.
+
+**Nachweise:**
+
+- `test/knockout.test.mjs`, neuer Test „Ton“: alle Klangdateien vorhanden, Zielton-Platz, höchstens drei Klänge je
+  0,3 s, Starttor und Aus hörbar. 6 Tests grün.
 - `test/knockout.test.mjs`, `test/knockout-elements.test.mjs`, `test/knockout-physics.test.mjs`: 15 Tests grün.

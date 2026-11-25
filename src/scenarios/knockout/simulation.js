@@ -231,7 +231,8 @@
           const f = crossing(m.px, m.py, m.x, m.y, fin.ax, fin.ay, fin.bx, fin.by);
           if (f >= 0) {
             u.finished = true; u.finishT = rt - h + f * h; this.finishedCount++;
-            u.place = ++this.placeCount; this.emit('finish', m.x, m.y, u.place, u.rid);
+            // c = Platz − 1: Der Zielton wird je Platz etwas tiefer (Tonleiter im Ton-Eintrag `finish`)
+            u.place = ++this.placeCount; this.emit('finish', m.x, m.y, u.place, u.place - 1);
             if (this.final && u.place === 1) this.emit('winner', m.x, m.y, 1, u.rid);
           }
         }
