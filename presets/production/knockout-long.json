@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "name": "Marble Knockout – Langvideo (The Gauntlet, zwei Rennen)",
+  "scenario": "knockout",
+  "seed": 2,
+  "params": {
+    "mode": "level",
+    "cam": "ride",
+    "intro": "on",
+    "series": "two",
+    "slowmo": "on",
+    "marks": "on",
+    "display": "on",
+    "videoEnd": "finish",
+    "script": [
+      0,
+      1004446663,
+      1738348783,
+      0,
+      73999703,
+      1601878192,
+      3456007667,
+      0,
+      3783823125,
+      1495263803
+    ],
+    "seed2": 4,
+    "script2": [
+      0,
+      3879832192,
+      791229985,
+      0,
+      1761338124,
+      0,
+      2558919375,
+      3751665676,
+      461732041,
+      176347750
+    ]
+  },
+  "video": {
+    "aspect": "16:9",
+    "resolution": 1080,
+    "fps": 30,
+    "durationSec": 420,
+    "tempo": 1,
+    "audio": true,
+    "volume": {
+      "master": 100
+    },
+    "quality": {
+      "crf": 20,
+      "preset": "medium",
+      "bitrate": null
+    }
+  },
+  "view": {
+    "hud": true,
+    "camera": false
+  }
+}
