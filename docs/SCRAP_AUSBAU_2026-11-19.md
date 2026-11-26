@@ -354,4 +354,773 @@ stehen in [SCRAP_OFFENE_PUNKTE_2026-11-20.md](SCRAP_OFFENE_PUNKTE_2026-11-20.md)
 **Grenzen:** Der erste K.o. liegt über dem Ziel aus S2 (5–10 s); das soll die Short-Balance in S2 lösen. Die Werte
 sind in Node gemessen; im Browser laufen `v4`-Runden wegen leicht anderer `sin`/`cos`-Werte etwas anders.
 
-**Stopp** am 20.11. auf Wunsch des Nutzers nach diesem Teil.
+**Stopp** am 20.11. auf Wunsch des Nutzers nach diesem Teil. Fortsetzung am 21.11. im nächsten Abschnitt.
+
+---
+
+## S1, Rest · Darstellung des Shorts (21.11.2026)
+
+**Umfang:** nur Darstellung und Bedienung; die Simulation ist unverändert. Der Short ist jetzt in der Oberfläche
+wählbar.
+
+- **Keine Kopfleiste:** Bei `layout: 'short'` hochkant zeichnet der Short weder Kopfleiste noch Rundenbanner. Oben
+  bleiben 8 %, unten 19 % des Bildes einfarbig frei (dort liegt die Bedienung der Plattform).
+- **Namensschilder 1,4-fach** mit Lebensbalken; die Munitionspunkte wachsen mit. Die Schilder haben dafür einen
+  Maßstab bekommen; im normalen Bild ist er 1 und alle Zahlen sind wie bisher.
+- **Einstiegstext** 0–2,5 s: „4 BOTS · 1 SURVIVOR“ bei 22 % der Bildhöhe, darunter „PICK YOUR COLOR“. Weiße Schrift
+  mit dunklem Rand, ab dem ersten Bild voll sichtbar, blendet 0,3 s aus. Die Zeit folgt aus dem Episodenschritt.
+- **Abspann:** groß „<NAME> WINS“ in der Teamfarbe mit weichem dunklem Band dahinter, in der Mitte der Arena. Steht
+  der Sieger selbst in der Mitte, rückt die Schrift knapp über oder unter ihn. Kein „NEXT ROUND“, kein „ROUND
+  COMPLETE“. Die letzte Explosion klingt im Abspann aus, statt einzufrieren.
+- **Sunny-Boden bei 540 × 700:** geprüft, passt ohne Änderung (Platten, Mittelstreifen, Abläufe und Pflanztröge
+  sitzen richtig).
+- **Schalter „Bildaufbau“** in der Oberfläche: „Normal · Kopfleiste, ganze Arena“ oder „Short · kleine Karte, ohne
+  Kopfleiste, eine Runde (nur Hochformat)“. Wählbar nur mit Taktik-Arena auf Sunny Yard. Im Hochformat endet das
+  Video dann von selbst; die Längenanzeige sagt „eine Runde bis zum Sieg und 2,5 Sekunden Abspann“.
+- **Vorschau-Skript** `scripts/scrap-short-preview.mjs`: Einstieg, Kampf und Sieger als Einzelbilder und als ein
+  Blatt (lokal unter `output/scrap-short/`).
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-short.test.mjs` (neu) | 3 von 3: kein Text am Rand (oben 8 %, unten 19 % einfarbig, acht Zeitpunkte), Einstiegstext bei 22 %, Sieger groß ohne „NEXT ROUND“; Seek-Bild an fünf Stellen pixelgleich; Schalter „Bildaufbau“ |
+| `node --test test/scrap-labels.test.mjs test/scrap-optics.test.mjs test/scrap-hud.test.mjs test/audio-scrap-soft.test.mjs` | 15 von 15 |
+| Bildvergleich gegen `main` ohne Short (`classic`, `v2`, `v3`, `v4`; quer und hochkant; je 5 Bilder bis 30 s) | 10 Fälle × 5 Bilder pixelgleich, Zustands-Hash gleich |
+| Vorschaubilder Seed 42 (Einstieg 1,0 s, Kampf 10,6 s, Sieger 22,4 s) | dem Nutzer gezeigt |
+
+**Nicht gelaufen:** kein vollständiger `npm test`, kein Export.
+
+**Grenzen:** Die farbigen Startecken im Boden sind auch im Short zu sehen (offene Frage an den Nutzer). Die Regie
+(Schaden, Zeitlupe, Casting) folgt in S2; bis dahin dauert eine Runde so lange wie in `v4`.
+
+---
+
+## S2 · Verdeckte Regie (21.11.2026)
+
+**Umfang:** Short-Balance, Zeitlupe beim letzten K.o. und Casting. Alles gilt nur bei `layout: 'short'` hochkant;
+`classic` bis `v4` ohne Short rechnen wie bisher.
+
+### Short-Balance
+
+> Stand vor der ersten Probe. Seit dem [Nachtrag](#nachtrag-zum-short-nach-der-ersten-probe-21112026) gilt nach dem
+> ersten K.o. Schaden ×0,55 und eine kürzere Deckung.
+
+Der Startwert aus dem Plan war „Schaden überall ×1,5“. Gemessen brachte das den ersten K.o. nur von 14,4 s auf 11,6 s
+und verkürzte zugleich die ganze Runde auf rund 25 s. Deshalb wirkt der Zuschlag jetzt nur in der Eröffnung:
+
+- **Solange alle vier leben: Schaden an Robotern ×2,5.** Danach normaler Schaden (×1).
+- **Im Schlussduell nimmt der Schwächere 20 % weniger Schaden** (wie im Plan).
+- **Die Startkisten brechen innerhalb von 1,2 s auf** statt 2,4 s (der Mindestabstand von 0,4 s bleibt).
+
+| Einstellung (200 Seeds, Node) | erster K.o. | zweiter K.o. | Schlussduell | Videolänge |
+|---|---|---|---|---|
+| ohne Balance (Stand S1, 100 Seeds) | 14,4 s | – | – | 29,5 s |
+| überall ×1,5 (Startwert) | 11,6 s | 14,7 s | 7,0 s | 25,3 s |
+| Eröffnung ×2,0, danach ×1,5 | 9,5 s | 13,9 s | 5,6 s | 23,4 s |
+| Eröffnung ×2,5, danach ×1,5, Kisten 1,2 s | 8,0 s | 12,3 s | 6,6 s | 22,6 s |
+| **Eröffnung ×2,5, danach ×1, Kisten 1,2 s (gewählt)** | **8,0 s** | **13,4 s** | **8,6 s** | **26,4 s** |
+| Eröffnung ×2,5, danach ×0,8, Kisten 1,2 s | 8,0 s | 14,7 s | 8,7 s | 28,3 s |
+
+Alle Werte sind Mediane. Zielwerte: erster K.o. 5–10 s, zweiter 12–20 s, Schlussduell ab 6 s, Länge 26–38 s. Mit
+der gewählten Einstellung liegt der erste K.o. bei 90 % der Seeds im Ziel (mit „überall ×1,5“ waren es 35 %). Die Siege bleiben verteilt (EMBER 22 %, AZURE 28 %,
+AMBER 27 %, MOSS 23 % über 1200 Seeds, kein Unentschieden).
+
+### Zeitlupe beim letzten K.o.
+
+- 0,5 s Videozeit mit Tempo 0,35: **0,3 s vor dem letzten Treffer** läuft die Simulation langsamer, **0,2 s danach**
+  laufen Explosion, Trümmer und Rauch langsamer. Der Sieger-Schriftzug erscheint erst 0,3 s nach dem K.o.
+- **Vorab berechneter Tempoplan:** Beim Start rechnet die Episode eine zweite, unbeobachtete Runde mit demselben
+  Seed bis zum Ende und kennt damit den Schritt des letzten K.o. Der Plan steht fest, bevor das erste Bild entsteht.
+- **Seek-Regel:** Der Renderer hält keinen eigenen Zustand. Das Alter der Effekte rechnet er über die neue
+  Szenenzeit der Episode (`sceneTime`), die in der Zeitlupe langsamer läuft.
+- Das Video wird durch die Zeitlupe rund 0,2 s länger; die Export-Vorplanung rechnet das mit.
+- **Ton:** Die Klänge liegen zeitlich richtig, werden aber nicht gedehnt und bekommen keinen eigenen Akzent.
+- Im Langvideo und ohne Short gibt es keinen Plan (`slow` ist dort leer), die Zustands-Hashes bleiben gleich.
+
+### Casting
+
+> Die Zahlen und die Seed-Liste dieses Abschnitts sind überholt: Nach der ersten Probe wurde neu gerechnet
+> ([Nachtrag](#nachtrag-zum-short-nach-der-ersten-probe-21112026), jetzt 29 Seeds, Vorlage auf Seed 84).
+
+`node scripts/scrap-short-casting.mjs --from 1 --to 1200 --list` rechnet **in Chromium**, also dort, wo auch der
+Export rechnet. Bedingungen in Videosekunden: erster K.o. 5–10 s, zweiter 12–20 s, Schlussduell mindestens 6 s,
+beide Duellanten beim Start des Duells unter 40 % Leben, Länge 26–38 s. Bevorzugt gewinnt nicht der Roboter, der
+zuerst bewaffnet war. In `v4` starten alle vier mit einem Blaster (9 Schuss); „zuerst bewaffnet“ heißt hier deshalb:
+Er nimmt als Erster eine neue Waffe vom Boden auf.
+
+| Messung (Seeds 1–1200, Chromium 148) | Wert |
+|---|---|
+| erster K.o. 5–10 s | 89,3 % der Seeds, Median 8,0 s |
+| zweiter K.o. 12–20 s | 59,5 %, Median 13,1 s |
+| Schlussduell mindestens 6 s | 62,1 %, Median 8,6 s |
+| beide beim Duellstart unter 40 % Leben | 36,3 % |
+| Länge 26–38 s | 35,8 %, Median 25,8 s |
+| Bogen vollständig | 32 Seeds (2,7 %) |
+| davon gewinnt nicht der zuerst Bewaffnete | **23 Seeds**, als Liste `SHORT_SEEDS` in `src/scenarios/scrap/episode.js` |
+| Vergleich Node | 33 vollständige Seeds statt 32: Einzelne Runden laufen in Node anders, wie angekündigt |
+
+Die Vorlage nimmt den nächsten geprüften Seed ab dem gewünschten (`EBS.Scrap.castSeed`). Für Seed 42 ist das
+**Seed 61**: erster K.o. 7,8 s (EMBER), zweiter 18,1 s (AZURE), Sieg nach 32,1 s, Schlussduell 14,1 s mit 33 % und
+11 % Leben, AMBER gewinnt mit 10 % Rest, zuerst bewaffnet war MOSS. Videolänge 34,6 s.
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-v4.test.mjs test/scrap.test.mjs` | 27 von 27, neu: Balance (Schadensstufen, Kistenzeiten) und Zeitlupe (Plan, letzter K.o. am geplanten Schritt, Szenenzeit stetig, Exportlänge) |
+| `node --test test/scrap-short.test.mjs` | 4 von 4, neu: alle 23 Casting-Seeds halten in Chromium den Bogen ein; Seek-Bild an sieben Stellen pixelgleich, zwei davon in der Zeitlupe |
+| `node scripts/scrap-map-hashes.mjs` | 6 Fälle × 4 Prüfpunkte gleich |
+| `classic` bis `v4` ohne Short gegen `main` (Node, 24 Fälle über 45 s, zwei Turniere, Short-Parameter im Querformat) | 27 Fälle gleich |
+| `node scripts/scrap-v4-stats.mjs --layout short` (100 Seeds) | festgefahren 0,7 %, häufigstes Paar 19,3 %, kein Unentschieden, 5,5 ms je Simulationssekunde |
+
+**Nicht gelaufen:** kein vollständiger `npm test`, kein Export. `npm run golden` läuft einmal am Ende der Pakete.
+
+**Grenzen:**
+
+- Die Liste gilt für den heutigen Stand von `v4`, die Short-Balance und Chromium 148. Nach Änderungen daran neu
+  rechnen; der Test im Browser meldet es.
+- Im Mittel sind Shorts rund 26 s lang, am unteren Rand des Ziels. Die geprüften Seeds liegen bei 26–35 s. Mit
+  Schaden ×0,8 nach dem ersten K.o. wären es im Mittel knapp 2 s mehr (Frage an den Nutzer).
+- Der Startvorgang eines Shorts rechnet die Runde einmal vorab (rund 0,2 s).
+
+---
+
+## S3 · Short-Vorlage und 20-Sekunden-Probe (21.11.2026)
+
+**Umfang:** Die Short-Vorlage von Scrap Wars nutzt jetzt das Short-Bild mit Regie.
+
+> Seed, Länge und Probe dieses Abschnitts sind der Stand vor der Rückmeldung des Nutzers. Aktuell: Seed 84, 26,5 s,
+> neue Probe ([Nachtrag](#nachtrag-zum-short-nach-der-ersten-probe-21112026)).
+
+- **Vorlage** `presets/production/scrap-short.json` und `src/production-presets.js`: „Scrap Wars – Short (4 Bots,
+  1 Survivor)“, Taktik-Arena `v4` auf Sunny Yard, `layout: 'short'`, Ton `soft-v1`, 9:16 in 1080p30. Bisher war es
+  eine Minute Dauerlauf im normalen Bild.
+- **Seed aus dem Casting:** Die Vorlage nimmt den nächsten geprüften Seed ab dem eingestellten. Für Seed 42 ist das
+  **Seed 61**. Das ist die eine Stelle, an der ein Vorlagenknopf den Seed ändert (wie bei Cloud Wars).
+- **Länge:** ergibt sich aus dem Ablauf, für Seed 61 **34,7 s** (Sieg nach 32,1 s, 2,5 s Abspann). In der Datei
+  stehen 35 s nur als Startwert.
+- Der Knopf heißt bei Scrap Wars „Short · eine Runde (rund 30 Sekunden)“.
+
+**20-Sekunden-Probe** (lokal, nicht im Repository): `output/scrap-short/scrap-short-probe-20s.mp4` in der
+Arbeitskopie `scrap-s1`, die ersten 20 s als Ausschnitt der ganzen Episode:
+
+```bash
+node export.mjs --config presets/production/scrap-short.json --clip-start 0 --clip-duration 20 --out output/scrap-short/scrap-short-probe-20s.mp4
+```
+
+| Messung | Wert |
+|---|---|
+| Bild | 1080 × 1920, 30 Bilder je Sekunde, 600 Bilder, 5,0 MB |
+| Ton der ganzen Episode | 155 Ereignisse, davon 59 hörbar; −20,8 LUFS, Spitze −6 dBFS, Begrenzer bis −3,3 dB |
+| Ton des Ausschnitts (AAC) | −24,5 LUFS, True Peak −5,9 dBTP |
+| Exportzeit | 24 s |
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-short.test.mjs` | 5 von 5, neu: Vorlage (Casting-Seed, geplante Länge im Ziel, Export der letzten zwei Sekunden mit Sieger über den echten Exportweg) |
+| `node --test test/presets.test.mjs test/audio-scrap-soft.test.mjs` | 8 von 8; die Vorlagen-Tests kennen den Casting-Seed und die geplante Länge |
+| `node --test test/presets-export-scrap.test.mjs` | 2 von 2 (3-Sekunden-Exporte über die Oberfläche) |
+
+**Nicht gelaufen:** kein vollständiger `npm test`; **kein ganzes Short** (nur auf Auftrag des Nutzers).
+
+**Grenzen:**
+
+- Die ganze Episode ist mit −20,8 LUFS etwas lauter als der Richtwert −23 von `soft-v1`, weil ein Short dichter ist
+  als ein Dauerlauf; die Spitzen bleiben bei −6 dBFS. Das Hörurteil liegt beim Nutzer.
+- Der 3-Sekunden-Test über die Oberfläche schaltet für die freie Länge auf das normale Bild zurück; das Short-Bild
+  selbst prüft der Export der letzten zwei Sekunden.
+
+---
+
+## L1 · Langvideo-Vorlage im Turniermodus (21.11.2026)
+
+> **Ergänzt am 22.11.2026:** Die Vorlage nutzt jetzt die Raketen-Regeln und einen geprüften Turnier-Seed (431,
+> 5:08 Minuten), siehe [L2](#l2--langvideo-mit-den-raketen-regeln-22112026). Die Zahlen zu Seed 42 unten gelten für
+> den Stand davor.
+
+**Umfang:** Die Langvideo-Vorlage von Scrap Wars ist jetzt ein Turnier statt eines Dauerlaufs; der Export schreibt
+Kapitelzeiten in die Begleitdatei.
+
+- **Vorlage** `presets/production/scrap-long.json` und `src/production-presets.js`: „Scrap Wars – Langvideo (Turnier,
+  8 Runden)“, Taktik-Arena `v4` auf Sunny Yard, Ton `soft-v1`, 16:9 in 1080p30, feste Übersicht. Acht Runden mit
+  Punktestand, danach 5 s Rangliste; das Video endet von selbst.
+- **Länge:** aus dem Ablauf. Gemessen an sechs Seeds 4:02 bis 5:23 Minuten, für Seed 42 **5:23** (322,7 s, MOSS
+  gewinnt mit 5 von 8 Runden). In der Datei stehen 300 s nur als Startwert. Der Knopf heißt „Langvideo · Turnier
+  (8 Runden)“.
+- **Kapitelzeiten:** Die Episode merkt sich den Videoschritt jedes Rundenstarts (dieselbe Zeit wie das Ereignis
+  `round_start`). Der Export schreibt daraus in die JSON-Begleitdatei `chapters` (Zeit in Sekunden, Zeitmarke,
+  Titel) und `chaptersText` als fertigen Block für die Videobeschreibung:
+
+  ```text
+  0:00 Round 1
+  0:41 Round 2
+  1:25 Round 3
+  2:06 Round 4
+  2:46 Round 5
+  3:26 Round 6
+  4:12 Round 7
+  4:50 Round 8 – Final
+  ```
+
+  Das sind die Zeiten der Vorlage mit Seed 42, in Chromium gerechnet. Titel englisch. Bei einem Ausschnitt gelten die Zeiten für die ganze Episode (`chaptersScope`). Auch ein
+  Dauerlauf mit Folgerunden bekommt Kapitel; ein Short mit einer Runde nicht.
+- Die neue Schnittstelle `chapters(sim, cfg)` steht allen Szenarien offen ([ARCHITEKTUR](ARCHITEKTUR.md)).
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-long.test.mjs` (neu) | 3 von 3: Zeitmarken der Kapitelliste; Vorlage als Turnier mit acht Kapiteln auf den Rundenstarts, Short ohne Kapitel; Export der letzten zwei Sekunden schreibt `chapters` und `chaptersText` in die Begleitdatei |
+| `node --test test/presets.test.mjs` | 4 von 4; die Vorlagen-Tests kennen das Turnier und die geplante Länge |
+| `node --test` mit `scrap-v4`, `scrap`, `scrap-short`, `audio-scrap-soft`, `presets-export-scrap`, `scrap-labels`, `scrap-hud` | 45 von 45 |
+| `node --test test/export.test.mjs` (Exporter geändert) | 7 von 7 |
+| `node scripts/scrap-map-hashes.mjs` | 6 Fälle × 4 Prüfpunkte gleich |
+| `npm run golden` (einmal, am Ende aller Pakete) | 36 Fälle × 2 Prüfpunkte identisch mit der Referenz |
+| `classic` bis `v4` ohne Short gegen `main`: Zustand (Node, 27 Fälle) und Bilder (Chromium, 10 Fälle × 5 Bilder) | alle gleich |
+
+**Nicht gelaufen:** kein vollständiger `npm test`; **kein ganzes Langvideo** (über 20 s nur auf Auftrag).
+
+**Grenzen:**
+
+- Die Vorlage nimmt den eingestellten Seed, ein Casting gibt es für das Turnier nicht. Bei Seed 314 endet es
+  zum Beispiel 2 : 2 : 2 : 2 („TIED FOR FIRST“).
+- Das Langvideo ist rund 5 statt 10 Minuten lang (acht Runden sind fest).
+- Die Rangliste am Ende ist 5 s lang und bekommt kein eigenes Kapitel, weil YouTube Kapitel unter 10 s ablehnt.
+- Die Rundenliste ist kein Teil des Zustands-Hashes; `classic` bis `v4` bleiben bit-gleich.
+
+---
+
+## Nachtrag zum Short nach der ersten Probe (21.11.2026)
+
+**Rückmeldung des Nutzers zur 20-Sekunden-Probe:** Die Roboter hängen ab etwa der Hälfte des Videos. Die Waffen
+sollen erst nach den Robotern kommen, gern vom Himmel fallen. Die Bretter der Startkisten sollen nach 1 bis 2
+Sekunden ausblenden, sonst ist das Bild zu unruhig. Alle drei Punkte gelten nur im Short (`layout: 'short'`
+hochkant); `classic` bis `v4` ohne Short rechnen und zeichnen wie bisher.
+
+### Hänger
+
+**Ursache:** die Deckung. Wer unter 35 % Leben hat oder nur noch zwei Schuss, fährt hinter einen Block und wartet
+dort 3 s. Durch den hohen Schaden der Eröffnung sind nach dem ersten K.o. meist alle angeschlagen und warten
+gleichzeitig. Bei Seed 61 standen von 10,2 bis 13,5 s alle drei still, im Schlussduell noch zweimal je 3 s.
+
+**Lösung:** Im Short warten die Roboter in der Deckung nur 0,5 s (höchstens 2,5 s unterwegs, danach 6 s Pause).
+Ohne das Warten wäre die Runde nach 22 s vorbei; deshalb zählt Schaden nach dem ersten K.o. jetzt ×0,55 statt ×1.
+Die Eröffnung (×2,5) und der Schutz des Schwächeren im Duell (−20 %) bleiben.
+
+Hänger heißt hier: Alle lebenden Roboter stehen (unter 8 AE/s) und niemand schießt, mindestens 1 s lang.
+
+| Einstellung (150 Seeds, Node, Mediane) | zweiter K.o. | Schlussduell | Videolänge | Seeds mit Hänger | Hänger über 2 s |
+|---|---|---|---|---|---|
+| bisher: 3 s Deckung, Schaden ×1 | 13,5 s | 7,9 s | 25,7 s | 51 % | 31 % |
+| keine Deckung, ×1 | 11,8 s | 5,0 s | 20,3 s | 7 % | 1 % |
+| keine Deckung, ×0,55 | 13,8 s | 7,3 s | 26,8 s | 5 % | 0 % |
+| 0,5 s Deckung, ×1 | 12,9 s | 5,7 s | 22,5 s | 4 % | 0 % |
+| 0,5 s Deckung, ×0,6 | 15,0 s | 8,0 s | 27,8 s | 3 % | 0 % |
+| 0,5 s Deckung, ×0,5 | 15,5 s | 9,0 s | 31,7 s | 3 % | 0 % |
+| **0,5 s Deckung, ×0,55 (gewählt)** | siehe Casting | | | | |
+
+Der erste K.o. bleibt in allen Zeilen bei 8,0 s. Die kurze Deckung bleibt als Bewegung erhalten (ein Roboter duckt
+sich kurz weg), ganz ohne Deckung wären die Duelle kürzer und einförmiger.
+
+### Waffen fallen vom Himmel
+
+> **Überholt am 22.11.2026:** Der Abwurf ist wieder ausgebaut, die Waffen stehen als drehende Münzen von Anfang
+> an da. Siehe den [zweiten Nachtrag](#zweiter-nachtrag-zum-short-waffen-als-drehende-münzen-22112026).
+
+- Am Start liegt **keine Waffe** mehr auf der Karte. Die vier Waffen fallen, wenn alle Roboter aus den Kisten sind:
+  die erste 0,8 s nach dem letzten Ausbruch, dann alle 0,4 s eine. Die Reihenfolge kommt aus einem eigenen
+  Seed-Zufallsstrom. Bei Seed 84 landen sie bei 3,7 / 4,1 / 4,5 / 4,9 s.
+- **Der Fall dauert 0,45 s:** Ein Schatten wächst am Zielpunkt, die Marke kommt von oben und wird kleiner, bei der
+  Landung gibt es einen kleinen Staubring. Solange die Waffe fällt, kann sie niemand aufnehmen.
+- Auch der Nachschub der zwei Stationen fällt so, zum ersten Mal erst nach den vier Waffen.
+- Alle Roboter starten weiter mit einem Blaster (9 Schuss). Die ersten Magazine sind nach rund 7,5 s leer; die
+  Waffen liegen also rechtzeitig da.
+- **Ton:** Bei der Landung spielt der vorhandene leise Klang „Waffenabwurf“ (kein neuer Regler).
+- **Technik:** Der Nachschubplan (`supply`) ist Teil des Rundenzustands. Eine fallende Waffe hat ein negatives
+  Alter; der Renderer liest nur dieses Alter und hält keinen eigenen Zustand (Seek-Regel).
+
+### Bretter der Startkisten
+
+Die Bretter fliegen wie bisher 0,45 s, bleiben bis 1,0 s liegen und blenden bis 1,8 s aus. Danach ist der Boden
+frei. Splitter und Trümmer aus dem Kampf bleiben wie bisher liegen.
+
+### Casting neu gerechnet
+
+Weil sich der Ablauf des Shorts geändert hat, gilt die alte Seed-Liste nicht mehr. Das Casting hat eine sechste
+Bedingung: **kein Hänger ab 1,5 s**.
+
+| Messung (Seeds 1–1200, Chromium 148) | Wert | vorher |
+|---|---|---|
+| erster K.o. 5–10 s | 89,4 %, Median 8,0 s | 89,3 %, 8,0 s |
+| zweiter K.o. 12–20 s | 69,3 %, Median 15,2 s | 59,5 %, 13,1 s |
+| Schlussduell mindestens 6 s | 62,5 %, Median 10,3 s | 62,1 %, 8,6 s |
+| beide beim Duellstart unter 40 % Leben | 38,4 % | 36,3 % |
+| Länge 26–38 s | 23,2 %, Median 32,1 s | 35,8 %, 25,8 s |
+| kein Hänger ab 1,5 s | 98,8 % | nicht gemessen |
+| Bogen vollständig | 36 Seeds (3,0 %) | 32 Seeds |
+| davon gewinnt nicht der zuerst Bewaffnete | **29 Seeds** (neue Liste `SHORT_SEEDS`) | 23 Seeds |
+
+Siege über 1200 Seeds: EMBER 283, AZURE 335, AMBER 316, MOSS 264, zwei Runden ohne Sieger.
+
+Die Vorlage nimmt für Seed 42 jetzt **Seed 84** (vorher 61): erster K.o. 8,5 s (AZURE), zweiter 14,9 s (AMBER),
+Sieg nach 24,0 s, Schlussduell 9,1 s mit 23 % und 16 % Leben, EMBER gewinnt mit 5 % Rest, längster Hänger 1,0 s.
+Videolänge **26,5 s**.
+
+### Neue 20-Sekunden-Probe
+
+Lokal, nicht im Repository: `output/scrap-short/scrap-short-probe-20s-v2.mp4` in der Arbeitskopie `scrap-s1`
+(derselbe Befehl wie bei S3). Dazu die Vorschaubilder `seed84-blatt.jpg` und `seed84-nachschub.jpg`.
+
+| Messung | Wert |
+|---|---|
+| Bild | 1080 × 1920, 30 Bilder je Sekunde, 600 Bilder, 5,2 MB |
+| Ton der ganzen Episode | 186 Ereignisse, 67 hörbar; −22,2 LUFS (vorher −20,8), Spitze −6 dBFS, Begrenzer bis −3,5 dB |
+| Exportzeit | 30 s |
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-v4.test.mjs` | 9 von 9, neu: Deckung im Short (höchstens 3 von 30 Seeds mit Hänger, kein Roboter länger als erlaubt in Deckung) und Nachschub (keine Waffe am Start, Landezeiten, im Fall nicht aufnehmbar, ohne Short unverändert) |
+| `node --test test/scrap-short.test.mjs` | 6 von 6, neu: Bretter blenden aus, Waffen fallen sichtbar; Seek-Bild an zehn Stellen pixelgleich (neu: Bretter beim Ausblenden, Waffe im Fall und kurz nach der Landung); alle 29 Casting-Seeds halten den Bogen |
+| `node --test` mit `scrap`, `scrap-optics`, `audio-scrap-soft`, `presets`, `presets-export-scrap`, `scrap-long` | alle bestanden (zusammen mit den beiden Dateien oben 52 Tests) |
+| `node scripts/scrap-map-hashes.mjs` | 6 Fälle × 4 Prüfpunkte gleich |
+| `npm run golden` (einmal) | 36 Fälle × 2 Prüfpunkte identisch mit der Referenz |
+
+**Nicht gelaufen:** kein vollständiger `npm test`, kein Export über 20 s.
+
+**Grenzen:**
+
+- Einzelne Roboter stehen weiterhin kurz, wenn sie von ihrem Platz aus schießen; das ist kein Hänger. Dass alle
+  stehen und niemand schießt, kommt bei den geprüften Seeds höchstens 1,0 s lang vor.
+- Die Shorts sind im Mittel länger geworden (32 s statt 26 s) und streuen stärker; nur 23 % aller Seeds liegen bei
+  26–38 s. Das Casting wählt deshalb strenger aus.
+- Seed 84 ist mit 26,5 s am unteren Rand. Längere geprüfte Seeds stehen in der Liste, zum Beispiel 349 (29,2 s)
+  oder 983 (32,1 s).
+- Die ältere Probe (`scrap-short-probe-20s.mp4`, Seed 61) zeigt den Stand vor diesem Nachtrag.
+- Im Langvideo (Turnier, normales Bild) liegen die Waffen weiter von Anfang an da, die Bretter bleiben liegen und
+  die Deckung dauert 3 s. Ob das dort auch geändert werden soll, ist eine Frage an den Nutzer.
+
+---
+
+## Zweiter Nachtrag zum Short: Waffen als drehende Münzen (22.11.2026)
+
+> **Teilweise überholt am selben Tag:** Die vier freien Startwaffen und die Blitz-Münzen gibt es im Short nicht
+> mehr, siehe den [dritten Nachtrag](#dritter-nachtrag-zum-short-raketen-als-einziges-item-22112026). Die Münze
+> selbst (Drehung, Aufwachsen) ist geblieben.
+
+**Rückmeldung des Nutzers zur zweiten Probe:** Erst fallen die Kisten, dann ein Haufen Waffen; das ist für den
+Zuschauer schlecht lesbar. Die Waffen sollen nicht auch noch fallen, sondern von Anfang an da sein, wie drehende
+Münzen.
+
+### Umsetzung
+
+- **Der Abwurf vom Himmel ist ausgebaut.** Die vier Waffen liegen im Short wieder ab dem ersten Bild auf der Karte,
+  die zwei Stationen liefern wie ohne Short (zum ersten Mal nach 3 s und 5 s). Der Nachschubplan (`supply`), die
+  fallenden Waffen und das Ereignis bei der Landung gibt es nicht mehr.
+- **Geladene Waffen sind im Short drehende Münzen:** eine aufrechte Scheibe mit dem Waffensymbol, farbigem Ring
+  (Rakete orange, Blitz blau) und dunklem Rand. Sie dreht sich um die Hochachse, eine Umdrehung in 1,8 s, alle im
+  Gleichtakt; von der Seite sieht man kurz nur den Rand. Beide Seiten zeigen dasselbe Symbol. Radius 19 statt
+  16,5 AE.
+- **Neue Waffen an den Stationen** wachsen in 0,3 s auf (mit leichtem Überschwingen), statt zu fallen.
+- **Leere, abgelegte Waffen** bleiben die flache, blasse Marke; sie drehen sich nicht.
+- Außerhalb des Shorts bleiben die flachen Marken, wie sie waren.
+- **Technik:** Drehung und Schweben hängen nur an der Rundenzeit, das Aufwachsen am Alter der Waffe in der
+  Simulation. Der Renderer hält keinen eigenen Zustand (Seek-Regel).
+- Kurze Deckung (0,5 s), Schaden ×0,55 nach dem ersten K.o. und ausblendende Bretter aus dem ersten Nachtrag
+  bleiben.
+
+### Casting
+
+Neu gerechnet, weil die Waffen wieder früher da sind. **Die Liste der 29 geprüften Seeds ist dieselbe geblieben**,
+die Vorlage bleibt auf **Seed 84** (26,5 s, K.o. bei 8,5 / 14,9 / 24,0 s, EMBER gewinnt). Alle Roboter starten mit
+einem Blaster und holen neue Waffen erst später; deshalb ändern sich nur wenige Runden.
+
+| Messung (Seeds 1–1200, Chromium 148) | Wert | mit Abwurf |
+|---|---|---|
+| erster K.o. 5–10 s | 89,4 %, Median 8,0 s | 89,4 %, 8,0 s |
+| zweiter K.o. 12–20 s | 69,3 %, Median 15,1 s | 69,3 %, 15,2 s |
+| Schlussduell mindestens 6 s | 62,1 %, Median 10,3 s | 62,5 %, 10,3 s |
+| beide beim Duellstart unter 40 % Leben | 38,3 % | 38,4 % |
+| Länge 26–38 s | 22,9 %, Median 31,9 s | 23,2 %, 32,1 s |
+| kein Hänger ab 1,5 s | 98,7 % | 98,8 % |
+| Bogen vollständig | 36 Seeds (3,0 %) | 36 Seeds |
+| davon gewinnt nicht der zuerst Bewaffnete | 29 Seeds (Liste unverändert) | 29 Seeds |
+
+Siege über 1200 Seeds: EMBER 283, AZURE 329, AMBER 314, MOSS 272, zwei Runden ohne Sieger.
+
+### Neue 20-Sekunden-Probe
+
+Lokal, nicht im Repository: `output/scrap-short/scrap-short-probe-20s-v3.mp4` in der Arbeitskopie `scrap-s1`
+(Befehl wie bei S3, mit `--clip-start 0 --clip-duration 20`). Dazu `probe-20s-v3-bilder.jpg` (fünf Bilder).
+
+| Messung | Wert |
+|---|---|
+| Bild | 1080 × 1920, 30 Bilder je Sekunde, 600 Bilder, 5,7 MB |
+| Ton der ganzen Episode | 175 Ereignisse, 67 hörbar; −21,9 LUFS, Spitze −6 dBFS, Begrenzer bis −4,1 dB |
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-v4.test.mjs` | 9 von 9; der Test zum Nachschub ist ersetzt: vier Waffen ab dem Start, Stationen bei 3 s und 5 s, nichts fällt |
+| `node --test test/scrap-short.test.mjs` | 6 von 6; Seek-Bild an zehn Stellen pixelgleich (neu: Münze fast von der Seite, neue Münze beim Aufwachsen); jede Waffe wird im Short als Münze gezeichnet, ohne Short keine; alle 29 Casting-Seeds halten den Bogen |
+| `node --test` mit `scrap`, `scrap-optics`, `audio-scrap-soft`, `presets`, `presets-export-scrap`, `scrap-long` | alle bestanden (zusammen mit den beiden Dateien oben 52 Tests) |
+| `node scripts/scrap-map-hashes.mjs` | 6 Fälle × 4 Prüfpunkte gleich |
+| `npm run golden` (einmal) | 36 Fälle × 2 Prüfpunkte identisch mit der Referenz |
+
+**Nicht gelaufen:** kein vollständiger `npm test`.
+
+**Fehler beim Export, offen gesagt:** Der erste Aufruf für die Probe nutzte `--duration 20` statt
+`--clip-duration 20`. Die Vorlage bestimmt ihre Länge selbst, deshalb entstand das ganze Short (26,5 s), ohne
+Auftrag. Die Datei wurde sofort gelöscht; die Probe ist danach mit dem richtigen Befehl entstanden. Der Lauf davor
+hat einen Zeichenfehler gezeigt (Radius knapp unter null im ersten Bild einer neuen Münze); er ist behoben.
+
+**Grenzen:**
+
+- Für etwa ein Siebtel jeder Umdrehung steht die Münze fast von der Seite, das Symbol ist dann kurz nicht zu lesen.
+- Eine Rakete liegt am Anfang hinter der zweiten Zeile des Einstiegstexts (wie vor dem ersten Nachtrag).
+- Farben, Größe und Drehtempo der Münzen sind Startwerte; das Urteil liegt beim Nutzer.
+- Die Proben `scrap-short-probe-20s.mp4` (Seed 61) und `…-v2.mp4` (Abwurf vom Himmel) zeigen ältere Stände.
+- Im Langvideo (Turnier, normales Bild) bleiben die flachen Marken, liegende Bretter und 3 s Deckung.
+
+---
+
+## Dritter Nachtrag zum Short: Raketen als einziges Item (22.11.2026)
+
+> **Ergänzt am selben Tag:** Seed-Liste, Vorlagen-Seed und die Deckungszeit haben sich mit
+> [S4](#s4--entschlossen-fahren-22112026) noch einmal geändert. Die Regeln selbst gelten weiter.
+
+**Rückmeldung des Nutzers zur dritten Probe:** nicht schlecht, aber für ein Short fast zu viele Items. Und warum
+haben zwei Items eine Plattform und die anderen nicht? Nach einer Vorschau (Bilder, Messwerte, 20-Sekunden-Probe)
+hat der Nutzer den Umbau freigegeben („so ist es viel besser“).
+
+### Was vorher nicht stimmte (200 Runden, Node)
+
+| Messung | Wert |
+|---|---|
+| geladene Waffen gleichzeitig am Boden | im Mittel 4,6, in der Spitze 7 |
+| erste Aufnahme einer Waffe | nach 9,8 s (Median); bis dahin drehen sich die Münzen unbenutzt |
+| Startwaffen, die bis zum Ende unberührt liegen | 0,8 von 4 |
+| Zeit ohne Waffe je lebendem Roboter | 12 % |
+
+Dazu kamen zwei Regeln für dieselbe Sache: vier freie Startwaffen und zwei Plattformen mit Nachschub, ein Erbe der
+großen Arena. Und wer eine Blitz-Münze holte, bekam die Waffe, die er schon hatte.
+
+### Neue Regeln (nur im Short)
+
+- **Der Blaster ist die Grundwaffe und lädt von selbst nach:** Nach dem neunten Schuss ist er 1,4 s gesperrt, dann
+  wieder voll. Niemand ist je unbewaffnet, leere Waffen fallen nicht mehr zu Boden (auch nicht beim K.o.).
+- **Die Rakete ist das einzige Item und kommt nur von den zwei Plattformen.** Die erste erscheint nach 6 s, die
+  zweite nach 7,5 s; vorher füllt sich der Ring der Plattform. Eine Plattform lädt erst wieder, wenn ihre Rakete
+  geholt ist, dann 9 s lang. Es liegen also höchstens zwei Münzen auf der Karte.
+- **Holen:** Wer nur den Blaster hat, fährt zu einer geladenen (oder in 1,2 s fertigen) Plattform, wenn der Weg
+  höchstens 320 AE lang ist und kein anderer Holer näher dran ist. Der Blaster wird gegen drei Raketen getauscht;
+  danach ist nach 0,5 s wieder der volle Blaster da.
+- **Schaden:** ×2,5, solange alle vier leben, zu dritt ×0,5 (vorher ×0,55), im Schlussduell ×0,9 (vorher ×0,55);
+  der Schwächere im Duell nimmt weiter 20 % weniger.
+- **Fairness:** Ambers Vorliebe für Raketen gilt im Short nicht. Mit ihr gewann Amber 360 von 1200 Shorts, Moss
+  nur 248.
+- **Technik:** Die Regeln hängen an der Short-Karte (`SHORT_ITEMS` in `tactics.js`). Das Ereignis `pickup` meldet
+  jetzt den Wechsel der Waffe; ohne Short ist das dasselbe wie bisher. `classic` bis `v4` ohne Short rechnen
+  unverändert.
+
+### Darstellung (nur im Short)
+
+- **Aufnahme:** Ring in Teamfarbe um den Roboter und eine aufsteigende Münze, 0,7 s.
+- **Abzeichen:** Wer Raketen trägt, hat die Raketen-Münze links an seinem Namensschild.
+- **Nachladen:** Die Magazinpunkte unter dem Roboter füllen sich während der 1,4 s wieder.
+- **Startkisten:** Deckel ganz in Teamfarbe mit hellem Rahmen, Seitenwände und Bretter ebenfalls in Teamfarbe. So
+  sehen sie nicht mehr wie die Holz-Deckung aus.
+- Alles folgt aus Rundenzeit, Ereignisalter und Roboterzustand; der Renderer hält keinen eigenen Zustand.
+
+### Balance gemessen (je 150 Runden, Node, Rundenzeit)
+
+| Einstellung | erster K.o. | zweiter K.o. | Ende | Schlussduell | beide unter 40 % | Raketen je Short |
+|---|---|---|---|---|---|---|
+| erste Rakete 3 / 4,5 s, Schaden ×0,55 | 7,2 s | 15,7 s | 30,2 s | 12,8 s | 6 % | 6,0 |
+| erste Rakete 6 / 7,5 s, ×0,55 | 8,3 s | 13,1 s | 29,9 s | 13,7 s | 19 % | 5,3 |
+| erste Rakete 6 / 7,5 s, ×0,7 | 8,3 s | 12,5 s | 26,6 s | 12,1 s | 19 % | 4,6 |
+| **erste Rakete 6 / 7,5 s, zu dritt ×0,5, Duell ×0,9 (gewählt)** | 8,3 s | 13,2 s | 25,8 s | 10,1 s | 19 % | 4,4 |
+| ohne Holen (Raketen nur im Vorbeifahren) | 8,0 s | 14,6 s | 31,0 s | 11,6 s | 41 % | 1,8 |
+
+Kommen die Raketen schon nach 3 s, trifft es in der Eröffnung (Schaden ×2,5) früh einen einzelnen Roboter hart;
+die anderen bleiben fast unverletzt, und das Schlussduell beginnt ungleich. Mit 6 s gehört die Eröffnung dem
+Blaster, die Raketen kommen zum ersten K.o.
+
+### Casting
+
+| Messung (Seeds 1–2400, Chromium 148) | Wert | vorher (Seeds 1–1200) |
+|---|---|---|
+| erster K.o. 5–10 s | 88,4 %, Median 8,1 s | 89,4 %, 8,0 s |
+| zweiter K.o. 12–20 s | 57,9 %, Median 14,0–14,3 s | 69,3 %, 15,1 s |
+| Schlussduell mindestens 6 s | 67,0 %, Median 9,3–10,0 s | 62,1 %, 10,3 s |
+| beide beim Duellstart unter 40 % Leben | 19,4 % | 38,3 % |
+| Länge 26–38 s | 59,0 %, Median 28,2–28,7 s | 22,9 %, 31,9 s |
+| kein Hänger ab 1,5 s | 98,4 % | 98,7 % |
+| Bogen vollständig | 17 Seeds (0,7 %) | 36 Seeds (3,0 %) |
+| davon gewinnt nicht, wer die erste Rakete holt | **11 Seeds** (neue Liste `SHORT_SEEDS`) | 29 Seeds |
+
+Siege über 2400 Seeds: EMBER 616, AZURE 650, AMBER 623, MOSS 510, eine Runde ohne Sieger.
+
+| Seed | 1. K.o. | 2. K.o. | Sieg | Duell | Leben im Duell | Länge | Sieger (Rest) |
+|---|---|---|---|---|---|---|---|
+| 318 (Vorlage) | 7,8 s | 19,6 s | 30,4 s | 10,8 s | 38 % / 37 % | 32,9 s | MOSS (24 %) |
+| **1601 (Empfehlung)** | 8,5 s | 16,0 s | 29,6 s | 13,6 s | 16 % / 35 % | 32,1 s | AZURE (1 %) |
+| 2261 | 8,8 s | 15,9 s | 24,0 s | 8,0 s | 16 % / 16 % | 26,5 s | AZURE (1 %) |
+| 2216 | 10,0 s | 18,1 s | 30,8 s | 12,6 s | 21 % / 23 % | 33,3 s | EMBER (14 %) |
+
+Die Vorlage nimmt wie bisher den nächsten geprüften Seed ab 42, das ist jetzt **318**. Am knappsten endet
+**Seed 1601** (AZURE gewinnt mit 1 % Rest); für den Export genügt `--seed 1601`.
+
+### Vorschau und Probe
+
+Lokal, nicht im Repository, in `output/scrap-short/` der Arbeitskopie `scrap-s1`:
+
+- `scrap-short-probe-20s-v5-seed1601.mp4`: 20-Sekunden-Probe des endgültigen Stands (Seed 1601), 1080 × 1920,
+  600 Bilder, 5,3 MB; Ton der ganzen Episode 152 Ereignisse, −21,8 LUFS, Spitze −6 dBFS, Begrenzer bis −5,3 dB.
+- `scrap-short-probe-20s-v4-raketen.mp4`, `seed946-raketen-blatt.jpg`, `seed946-raketen-8s.png`: die Vorschau, die
+  der Nutzer gesehen hat (Seed 946, noch mit Ambers Raketen-Vorliebe). Seed 946 steht nicht mehr in der Liste.
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-v4.test.mjs` | 9 von 9; der Waffen-Test ist neu: nie unbewaffnet, nur Raketen an den Plattformen, Plattform lädt erst nach der Aufnahme, Nachladen und Wechsel zurück zum Blaster, kein Abwurf; Balance-Test mit ×0,5 und ×0,9 |
+| `node --test test/scrap-short.test.mjs` | 6 von 6; Seek-Bild an elf Stellen pixelgleich (neu: Kisten in Teamfarbe, Ring und Abzeichen kurz nach der Aufnahme); alle 11 Casting-Seeds halten den Bogen |
+| `node --test` mit `scrap`, `scrap-optics`, `audio-scrap-soft`, `presets`, `presets-export-scrap`, `scrap-long` | alle bestanden (zusammen mit den beiden Dateien oben 52 Tests) |
+| `node scripts/scrap-map-hashes.mjs` | 6 Fälle × 4 Prüfpunkte gleich |
+| `npm run golden` (einmal) | 36 Fälle × 2 Prüfpunkte identisch mit der Referenz |
+
+**Nicht gelaufen:** kein vollständiger `npm test`, kein Export über 20 s.
+
+**Grenzen:**
+
+- **Wenige Seeds:** 11 von 2400. Hauptgrund ist die Bedingung „beide beim Duellstart unter 40 % Leben“ (19 % statt
+  38 %), weil Raketen einzelne Roboter schnell herausnehmen.
+- **Moss gewinnt seltener** als die anderen (510 von 2400, die anderen 616 bis 650). Nicht ausgeglichen.
+- Das Nachladen sieht man nur an den Magazinpunkten; einen eigenen Klang gibt es nicht.
+- **Langvideo:** Das Turnier (normales Bild) hat weiter vier Startwaffen, Blitz-Münzen als flache Marken, braune
+  Startkisten, liegende Bretter und 3 s Deckung. Die neuen Regeln hängen an der Short-Karte.
+
+---
+
+## L2 · Langvideo mit den Raketen-Regeln (22.11.2026)
+
+> **Ergänzt am selben Tag:** Tempo-Werte, Casting und Vorlagen-Seed (jetzt 458) stehen aktuell in
+> [S4](#s4--entschlossen-fahren-22112026). Seed 431 und das exportierte Short mit Seed 1601 zeigen den Stand davor.
+
+**Auftrag des Nutzers:** heute ein hochwertiges Short und ein Langvideo von rund fünf Minuten, so spannend wie
+möglich. Die Raketen-Regeln des Shorts sollen auch im Langvideo gelten.
+
+### Das ganze Short
+
+Auf Auftrag exportiert, lokal: `output/scrap-short/scrap-short-seed1601-60fps.mp4` (Seed 1601, 32,1 s, 1080 × 1920,
+60 Bilder je Sekunde, 1927 Bilder, 8,5 MB, −21,8 LUFS). Befehl:
+`node export.mjs --config presets/production/scrap-short.json --seed 1601 --fps 60 --out …`.
+Der Nutzer fragte, warum die Arena nicht das ganze Hochkantbild füllt. Antwort: Sie liegt absichtlich zwischen 8 %
+und 81 % der Bildhöhe, weil YouTube oben und unten Titel und Knöpfe einblendet. Das bleibt so („lass es einfach so“).
+
+### Schalter „Waffen“
+
+- Neuer Parameter `items: 'rockets'`, nur in der Taktik-Arena `v4`, auf allen Karten und in beiden Formaten. In der
+  Oberfläche: „Waffen“ mit „Klassisch“ und „Nur Raketen“. Im Short gelten die Regeln ohnehin immer.
+- Ohne den Schalter fehlt der Schlüssel in der Episode; `classic` bis `v4` rechnen und zeichnen unverändert.
+- **Regeln wie im Short:** Blaster lädt nach 1,4 s von selbst nach, Raketen nur von den zwei Stationen (erste nach
+  6 s und 7,5 s, danach 9 s nach der Aufnahme), gezieltes Holen bis 320 AE Weg, Deckung nur 0,5 s.
+- **Darstellung wie im Short:** drehende Münzen, Ring und Abzeichen bei der Aufnahme, Magazinpunkte beim Nachladen,
+  Startkisten in Teamfarbe, Bretter blenden aus. Kopfleiste, Rangliste und Rundenbanner bleiben.
+
+### Tempo auf der großen Karte (je 120 Runden, Sunny Yard quer, Node)
+
+| Einstellung | erster K.o. | zweiter K.o. | Rundenende | Schlussduell | Duell über 20 s | Hänger ab 1,5 s |
+|---|---|---|---|---|---|---|
+| klassisch (bisher) | 15,6 s | 21,2 s | 31,2 s | 9,5 s | nicht gemessen | 28 % |
+| Raketen, Schaden ×1 | 15,2 s | 19,6 s | 28,7 s | 7,7 s | nicht gemessen | 1 % |
+| Raketen, ×2 zu viert, dann ×0,55, Duell ×0,8 | 10,2 s | 18,4 s | 32,4 s | 11,8 s | 19 % | 1 % |
+| dazu Steigerung im Duell 6 % je Sekunde | 10,2 s | 18,4 s | 29,3 s | 9,8 s | 5 % | 1 % |
+| **×2 zu viert, zu dritt ×0,45, Duell ×0,8 mit Steigerung (gewählt)** | 10,2 s | 19,8 s | 31,5 s | 9,4 s | 4 % | unter 1 % |
+
+- **Eröffnung ×2:** Der erste K.o. fällt nach 10 statt 15 Sekunden.
+- **Steigerung im Duell:** Ab dem ersten Treffer im Schlussduell steigt der Schaden je Sekunde um 6 %, höchstens
+  auf das Dreifache. Lange, zähe Duelle über 20 Sekunden gibt es damit in 4 % statt 19 % der Runden. Der Schwächere
+  nimmt 15 % weniger Schaden. Im Short gibt es diese Steigerung nicht.
+- **Ergebnis zwischen den Runden:** 4 statt 3 Sekunden, damit die Rangliste lesbar ist.
+
+### Turnier-Casting
+
+Neu: `scripts/scrap-tournament-casting.mjs` rechnet ganze Turniere in Chromium (rund 0,5 s je Turnier). Bedingungen:
+ein Turniersieger und keine Runde ohne Sieger; offen bis Runde 8; jeder gewinnt mindestens eine Runde; die Führung
+wechselt mindestens zweimal; Runden 18–50 s und Video 4:15–5:30 Minuten; kein Hänger ab 2 s.
+
+| Messung (Seeds 1–900, Chromium 148) | Wert |
+|---|---|
+| ein Sieger, keine Runde ohne Sieger | 73,3 % |
+| offen bis Runde 8 | 75,0 % |
+| jeder gewinnt eine Runde | 62,2 % |
+| Führung wechselt zweimal | 15,6 % |
+| Rundenlängen und Videolänge | 62,7 % |
+| kein Hänger ab 2 s | 98,1 % |
+| alle Bedingungen | 49 Seeds (5,4 %) |
+| Median | Video 4:33, Runde 30,2 s, erster K.o. 10,1 s |
+
+Rundensiege über 7200 Runden: EMBER 1783, AZURE 1948, AMBER 1787, MOSS 1681, eine Runde ohne Sieger.
+
+Die Vorlage nimmt den nächsten geprüften Turnier-Seed (`EBS.Scrap.castTournamentSeed`), die Liste hat die drei besten
+um fünf Minuten: **431**, 469, 488. Bei allen dreien liegen vor der letzten Runde drei Roboter mit je zwei Siegen
+gleichauf.
+
+**Seed 431, 5:08 Minuten:**
+
+| Runde | Kapitel | K.o. bei | Sieger (Rest-Leben) | Duell |
+|---|---|---|---|---|
+| 1 | 0:00 | 8,4 / 27,6 / 43,4 s | AZURE (14 %) | 15,8 s |
+| 2 | 0:47 | 11,3 / 13,1 / 26,5 s | EMBER (34 %) | 13,4 s |
+| 3 | 1:17 | 12,7 / 13,4 / 23,4 s | EMBER (6 %) | 10,0 s |
+| 4 | 1:45 | 10,5 / 17,9 / 25,8 s | AZURE (19 %) | 7,9 s |
+| 5 | 2:15 | 7,5 / 20,7 / 31,9 s | AMBER (14 %) | 11,2 s |
+| 6 | 2:51 | 6,7 / 47,3 / 49,4 s | MOSS (28 %) | 2,1 s |
+| 7 | 3:44 | 8,2 / 28,0 / 34,8 s | AMBER (60 %) | 6,8 s |
+| 8 – Finale | 4:23 | 9,3 / 27,2 / 39,6 s | AZURE (6 %) | 12,4 s |
+
+Stand vor dem Finale: EMBER 2, AZURE 2, AMBER 2, MOSS 1. Endstand: AZURE 3, EMBER 2, AMBER 2, MOSS 1.
+
+### Probe und Prüfungen
+
+Lokal, nicht im Repository: `output/scrap-long/scrap-long-probe-20s.mp4` (erste 20 Sekunden, 1920 × 1080, 600 Bilder,
+4,6 MB; Ton der ganzen Episode 1679 Ereignisse, −22,0 LUFS, Spitze −6 dBFS), `probe-20s-bilder.jpg` und die
+Casting-Protokolle.
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-v4.test.mjs` | 10 von 10, neu: Schalter `items` auf der großen Karte in beiden Formaten, Schadenswerte und Steigerung im Duell, ohne Schalter keine neuen Felder |
+| `node --test test/scrap-long.test.mjs` | 4 von 4, neu: Schalter „Waffen“ in der Oberfläche, alle drei Turnier-Seeds bestehen das Casting in Chromium |
+| `node --test test/scrap-short.test.mjs` | 6 von 6 (Short unverändert) |
+| `node --test` mit `scrap`, `scrap-optics`, `audio-scrap-soft`, `presets`, `presets-export-scrap` | 34 von 34 |
+| `node scripts/scrap-map-hashes.mjs` | 6 Fälle × 4 Prüfpunkte gleich |
+| `npm run golden` (einmal) | 36 Fälle × 2 Prüfpunkte identisch mit der Referenz |
+
+**Nicht gelaufen:** kein vollständiger `npm test`.
+
+**Grenzen:**
+
+- Gemessen ist nur Sunny Yard. Auf den dunklen Karten gelten die Regeln, aber die Waffen bleiben flache Marken.
+- Runde 6 von Seed 431 hat eine lange Phase zu dritt (K.o. bei 6,7 s und erst wieder bei 47,3 s).
+- AZURE gewinnt über alle Seeds etwas öfter (208 von 661 klaren Turniersiegen), MOSS seltener (129).
+- Die Hof-Kulisse fürs Short (Bild ganz gefüllt) war begonnen und ist auf Wunsch des Nutzers wieder ausgebaut.
+
+---
+
+## S4 · Entschlossen fahren (22.11.2026)
+
+**Rückmeldung des Nutzers zur 20-Sekunden-Probe des Langvideos:** Die Roboter hängen gern mal ein wenig fest und
+können sich nicht entscheiden. Das soll vor dem Langvideo behoben werden. Der Nutzer hat den Export abgebrochen,
+sich die Ursachen erklären lassen und den Umbau für Short und Langvideo freigegeben.
+
+### Messung vorher (je 60 Runden, Node)
+
+„Untätig“ heißt: Der Roboter lebt, ist frei, fährt unter 8 AE/s und hat seit 0,8 s nicht geschossen. Die bisherige
+Hänger-Messung zählte nur, wenn **alle** gleichzeitig standen.
+
+| Ursache (große Karte) | Anteil der Roboterzeit | Pausen ab 1 s je Runde |
+|---|---|---|
+| steht am Zielpunkt, aber ohne freie Schusslinie | 5,8 % | 0,8 |
+| wartet in der Deckung | 2,4 % | 0,5 |
+| dreht den Turm oder zielt | 2,3 % | 0,2 |
+| lädt nach und bleibt dabei stehen | 2,2 % | 0,1 |
+| wartet an der Station, kein Ziel | 0,3 % | 0,2 |
+| **zusammen** | **12,8 %** | **1,8** |
+
+Dazu dachte jeder Roboter alle 0,4 bis 0,6 s neu und wählte dabei oft einen anderen Zielpunkt (111 Zielwechsel je
+Runde).
+
+### Umbau (nur mit den Raketen-Regeln: Short und Schalter „Waffen“)
+
+Werte in `DECIDE` in `tactics.js`.
+
+1. **Beim Gegner bleiben:** Wechsel frühestens nach 3 s statt 1,5 s.
+2. **Stellung halten:** Ein Roboter fährt eine Stellung an, schießt von dort 1,6 s und zieht dann gezielt weiter
+   (mindestens 70 AE, bevorzugt in Fahrtrichtung). Vorher wurde der Punkt bei jedem Denken neu gewählt.
+3. **Ohne Schusslinie sofort umsetzen:** Umfahren nach 0,5 s statt 2 s; wer am Zielpunkt ankommt und nichts sieht,
+   wählt sofort neu.
+4. **Beim Nachladen die Stellung wechseln** statt stehen zu bleiben.
+5. **Deckung ohne Warten:** 0,15 s statt 0,5 s.
+6. **Sicherheitsnetz:** Wer steht und seit 1 s nicht geschossen hat, entscheidet sofort neu.
+7. **Raketen-Holen durchziehen:** Wer losgefahren ist, bleibt dabei, solange die Rakete daliegt oder gleich kommt.
+
+Ohne die Raketen-Regeln ändert sich nichts; die Roboter bekommen dort auch keine neuen Felder.
+
+### Messung nachher
+
+| Messung (je 60 Runden, Node) | große Karte vorher | nachher | Short vorher | nachher |
+|---|---|---|---|---|
+| untätige Roboterzeit | 12,8 % | **5,1 %** | 11,9 % | **4,7 %** |
+| Zielwechsel je Runde | 111 | 65 | nicht gemessen | nicht gemessen |
+| Kehrtwenden über 110° je Runde | 3,7 | 3,7 | 3,0 | 3,3 |
+| mittleres Tempo | 52 AE/s | 71 AE/s | 46 AE/s | 68 AE/s |
+
+Pausen ab 1 s kamen in der Messung direkt nach dem Umbau nicht mehr vor (0,0 je Runde in jeder Ursache).
+
+| Casting (Chromium 148) | vorher | nachher |
+|---|---|---|
+| Short: kein Hänger ab 1,5 s | 98,4 % von 2400 | **100 % von 3600** |
+| Turnier: kein Hänger ab 2 s | 98,1 % von 900 | **100 % von 900** |
+
+### Tempo und Seeds neu
+
+Die Roboter treffen durch die Bewegung etwas anders; deshalb ist das Tempo der großen Karte nachgestellt:
+Schaden ×1,8 bis zum ersten K.o. (vorher ×2), zu dritt ×0,4 (vorher ×0,45), Duell unverändert. Gemessen (120 Runden,
+Node): K.o. nach 9,9 s und 19,0 s, Rundenende 31,0 s, Duelle über 20 s in 2 % der Runden. Das Short behält seine
+Werte (150 Runden: K.o. nach 7,8 s und 14,5 s, Ende 26,7 s).
+
+| Short-Casting (Seeds 1–3600) | Wert |
+|---|---|
+| erster K.o. 5–10 s | 94,4 %, Median 7,4 s |
+| zweiter K.o. 12–20 s | 51,7 %, Median 14,8 s |
+| Schlussduell mindestens 6 s | 70,2 %, Median 10,6 s |
+| beide beim Duellstart unter 40 % Leben | 12,1 % |
+| Länge 26–38 s | 64,9 %, Median 29,6 s |
+| Bogen vollständig | 16 Seeds, davon 10 mit Außenseiter-Sieg (Liste `SHORT_SEEDS`) |
+
+Siege über 3600 Shorts: EMBER 879, AZURE 982, AMBER 908, MOSS 831.
+
+Die Short-Vorlage steht jetzt auf **Seed 78**: K.o. nach 9,1 s (AMBER) und 15,5 s (EMBER), Schlussduell 15,0 s mit
+26 % und 37 % Leben, AZURE gewinnt nach 30,5 s mit unter 1 % Rest, Videolänge **33,0 s**.
+
+| Turnier-Casting (Seeds 1–900) | Wert | vor S4 |
+|---|---|---|
+| alle Bedingungen | 75 Seeds (8,3 %) | 49 Seeds |
+| Rundenlängen und Videolänge | 88,6 % | 62,7 % |
+| Median | Video 4:46, Runde 31,2 s, erster K.o. 9,8 s | 4:33, 30,2 s, 10,1 s |
+| Rundensiege | EMBER 1756, AZURE 1860, AMBER 1761, MOSS 1821 | 1783 / 1948 / 1787 / 1681 |
+
+Die Langvideo-Vorlage steht jetzt auf **Seed 458** (Liste `LONG_SEEDS`: 458, 469, 489), **4:59 Minuten**:
+
+| Runde | Kapitel | K.o. bei | Sieger (Rest-Leben) | Duell |
+|---|---|---|---|---|
+| 1 | 0:00 | 12,3 / 20,6 / 24,3 s | AZURE (64 %) | 3,7 s |
+| 2 | 0:28 | 9,6 / 29,4 / 43,4 s | EMBER (8 %) | 14,0 s |
+| 3 | 1:15 | 11,2 / 17,9 / 40,8 s | AMBER (8 %) | 22,9 s |
+| 4 | 2:00 | 8,1 / 27,6 / 37,6 s | MOSS (34 %) | 10,0 s |
+| 5 | 2:42 | 10,7 / 15,2 / 29,4 s | MOSS (9 %) | 14,2 s |
+| 6 | 3:15 | 10,1 / 12,4 / 27,5 s | AZURE (35 %) | 15,1 s |
+| 7 | 3:47 | 9,5 / 21,0 / 34,1 s | EMBER (44 %) | 13,1 s |
+| 8 – Finale | 4:25 | 10,7 / 13,0 / 28,9 s | EMBER (2 %) | 15,9 s |
+
+Stand vor dem Finale: EMBER 2, AZURE 2, AMBER 1, MOSS 2. Endstand: EMBER 3, AZURE 2, MOSS 2, AMBER 1.
+
+### Proben und Prüfungen
+
+Lokal, nicht im Repository: `output/scrap-long/scrap-long-probe-20s-v2-seed458.mp4` (1920 × 1080, 600 Bilder,
+5,2 MB; ganze Episode 299,1 s, 1640 Tonereignisse, −22,0 LUFS) und
+`output/scrap-short/scrap-short-probe-20s-v6-seed78.mp4` (1080 × 1920, 600 Bilder, 5,4 MB; ganze Episode 33,0 s,
+179 Tonereignisse, −21,5 LUFS). Beide mit `--clip-start 0 --clip-duration 20`.
+
+| Prüfung | Ergebnis |
+|---|---|
+| `node --test test/scrap-v4.test.mjs` | 11 von 11, neu: untätige Zeit unter 7,5 %, längste Pause unter 2,6 s, Gegnerwechsel frühestens nach 3 s, ohne Raketen-Regeln keine neuen Felder |
+| `node --test test/scrap-long.test.mjs` | 4 von 4, die drei Turnier-Seeds bestehen das Casting in Chromium |
+| `node --test test/scrap-short.test.mjs` | 6 von 6, alle 10 Casting-Seeds halten den Bogen |
+| `node --test` mit `scrap`, `scrap-optics`, `audio-scrap-soft`, `presets`, `presets-export-scrap` | 34 von 34 |
+| `node scripts/scrap-map-hashes.mjs` | 6 Fälle × 4 Prüfpunkte gleich |
+| `npm run golden` (einmal) | 36 Fälle × 2 Prüfpunkte identisch mit der Referenz |
+
+**Nicht gelaufen:** kein vollständiger `npm test`, kein Export über 20 s nach diesem Umbau.
+
+**Grenzen:**
+
+- Rund 5 % der Zeit steht ein Roboter weiterhin kurz, meist beim Zielen oder im Wenden.
+- Die Zahl der Kehrtwenden ist nicht gesunken; sie war mit rund einer je Roboter und Runde schon vorher klein.
+  Der Eindruck des Zögerns kam vom ständigen Neuwählen des Zielpunkts und vom Stehen.
+- Das exportierte Short (`scrap-short-seed1601-60fps.mp4`) zeigt den Stand vor S4 und muss neu exportiert werden.
+- Nur 16 von 3600 Shorts erfüllen alle sechs Bedingungen; es bremst vor allem „beide unter 40 % Leben“ (12 %).
+- Ob das Fahren jetzt gut aussieht, entscheidet der Nutzer an den Proben.
