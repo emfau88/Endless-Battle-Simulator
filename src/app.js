@@ -124,9 +124,10 @@ async function bootLive() {
     session.start({ scenario: scSel.value, seed: c.seed, video, view: c.view }); // neue Standardwerte des Szenarios
     acc = 0; fit(); save(); buildScenarioUi(); syncUi();
   });
+  const regularPresetHint = $('presetHint').textContent;
   for (const [id, kind] of [['btnShortPreset', 'short'], ['btnLongPreset', 'long']]) {
     $(id).addEventListener('click', () => {
-      const preset = EBS.productionPreset(session.cfg.scenario, kind, session.cfg.seed);
+      const preset = EBS.productionPreset(session.cfg.scenario, kind, session.cfg.seed, session.cfg.params.layout);
       session.start(normalizeConfig(preset));
       speed = 1; acc = 0; fit(); save(); buildScenarioUi(); syncUi();
     });
@@ -254,7 +255,7 @@ async function bootLive() {
     }
     markCustomProfile(c.key);
     if (c.restart) {
-      restart({ params: { ...(c.sets && c.sets[v]), [c.key]: v } }); // Apply the selected scene's related defaults.
+      restart({ ...(c.videoSets?.[v] && { video: c.videoSets[v] }), params: { ...c.sets?.[v], [c.key]: v } });
       // Bringt die Auswahl eine eigene Standardmischung mit (resetMix), gilt sie ab sofort – wie beim Szenariowechsel.
       if (c.resetMix) {
         session.cfg.video.volume = normalizeConfig({ scenario: session.cfg.scenario, params: session.cfg.params }).video.volume;
@@ -398,9 +399,11 @@ async function bootLive() {
     const c = session.cfg;
     scSel.value = c.scenario; $('seed').value = c.seed;
     const production = c.scenario === 'marbleworks';
+    const wilds = c.scenario === 'territory' && c.params.layout === 'wilds';
+    $('presetHint').textContent = wilds ? 'Die Langvideo-Vorlage lädt Seed 46 in 16:9 mit Ton. Sie endet nach dem Sieg bei rund 10:04 Minuten.' : regularPresetHint;
     $('btnShortPreset').textContent = production ? 'Short · Mini-Auftrag' : c.scenario === 'waterpark' ? 'Short · 30 Sekunden'
       : c.scenario === 'scrap' ? 'Short · eine Runde (rund 30 Sekunden)' : c.scenario === 'knockout' ? 'Short · Turm (rund 38 Sekunden)' : 'Short · 1 Minute';
-    $('btnLongPreset').textContent = production ? 'Langvideo · Vollständiger Auftrag'
+    $('btnLongPreset').textContent = wilds ? 'Langvideo · Meteor und Riese' : production ? 'Langvideo · Vollständiger Auftrag'
       : c.scenario === 'scrap' ? 'Langvideo · Turnier (8 Runden)' : c.scenario === 'knockout' ? 'Langvideo · The Gauntlet (rund 3½ Minuten)' : 'Langvideo · 10 Minuten';
     for (const ctl of session.scenario.controls) {
       const el = $('p-' + ctl.key), v = c.params[ctl.key];

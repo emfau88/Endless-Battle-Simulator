@@ -95,3 +95,10 @@ erhält diese Caches und setzt Labeloffsets wie das Original beim Resize zurück
 Konfigurationen beschreiben einen neuen Export ab dem gespeicherten Seed. Zwischenzeitliche manuelle
 Regel-/Tempoänderungen werden nicht als Eingabehistorie aufgezeichnet. Die Vorschau bleibt wie im
 gemeinsamen Generator stumm; Ereigniston entsteht im Export. Offene persönliche Abnahme: [R17](ROADMAP.md).
+
+## Zusatz vom 24.11.2026 · Großkarte für Langvideos
+
+Die optionale Regelversion `territory-wilds-v1` erweitert die Auswahl um eine Querformatkarte mit
+221 Feldern. Ein neutraler Riese löst Rückzüge aus, ein angekündigter Meteor unterbricht einen Weg
+zur Zitadelle. Der Riese nutzt zwei gegenüberliegende Bergpässe. Nur unmittelbar betroffene HQs zeigen
+gelegentlich eine Gesichtsblase. Normale Truppenmärsche laufen lautlos. [Zeitpunkte, Filmvorlage und Prüfungen](TERRITORY_GROSSKARTE_2026-11-24.md)

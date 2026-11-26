@@ -35,6 +35,15 @@
       this.labelCanvas = document.createElement('canvas');
       // Derived view: the source renderer plus optional spearmen instead of tanks (units.js).
       this.hexView = new (EBS.Territory.UnitView || HexView)(this.worldCanvas);
+      if (this.sim.cfg.layout === 'wilds') {
+        // The large map changes territory colour on capture. The archived view
+        // normally blends from whichever colour the last rendered frame held.
+        const view = this.hexView, tileColor = view._tileColor.bind(view);
+        view._tileColor = (tile, time) => {
+          if (view.tileCache.get(tile.id)?.owner !== tile.owner) view.tileCache.delete(tile.id);
+          return tileColor(tile, time);
+        };
+      }
       this.overlay = EBS.Territory.createOverlay(this.labelCanvas, this.hexView);
       this.unsubscribe = this.sim.addTickObserver(round => this.overlay.observe(round));
       this.resize(ctx);
@@ -69,23 +78,41 @@
       // The round clock stops with the result, the picture does not: colour changes of the
       // last conquest, flags and effects finish in video time (generator steps since the result).
       const after = r.phase === 'finished' ? Math.max(0, s.step - s.resultStep) / 60 * s.timeScale : 0;
+      const reaction = !l.portrait && this.view.hud && l.mode !== 'off' ? s.hqReactions?.visible(s.step / 60) : null;
+      if (p.layout === 'wilds') {
+        const crater = r.meteor?.closed ? r.meteor.tile : -1;
+        if (this.lastCrater !== crater) { this.hexView.lastSignature = ''; this.lastCrater = crater; }
+      }
       this.overlay.observe(r);
       this.hexView.render(r, r.time + remainder + after, { selected: null, hover: null, showUnits: true, quality: p.highQuality ? 'high' : 'low' });
       g.fillStyle = '#09171f'; g.fillRect(0, 0, this.world.w, this.world.h);
       g.drawImage(this.worldCanvas, l.x, l.y, l.w, l.h);
+      if (p.layout === 'wilds') {
+        g.save(); g.translate(l.x, l.y);
+        g.beginPath(); g.rect(0, 0, l.w, l.h); g.clip();
+        EBS.Territory.drawWilds(g, r, this.hexView, r.time + remainder, after);
+        g.restore();
+      }
       // The slim frame draws its own, larger name plates; numbers and routes stay with the full view.
-      if (l.mode !== 'slim') { this.overlay.draw(remainder, p); g.drawImage(this.labelCanvas, l.x, l.y, l.w, l.h); }
+      if (l.mode !== 'slim') {
+        this.overlay.draw(remainder, p, reaction);
+        g.drawImage(this.labelCanvas, l.x, l.y, l.w, l.h);
+      }
       if (l.mode === 'full') {
         if (this.view.hud) this.hud(g);
         if (p.showWinner && r.phase === 'finished') this.winner(g);
       } else if (l.mode === 'slim' && this.view.hud) {
-        EBS.Territory.drawSlim(g, { sim: s, world: this.world, layout: l, view: this.hexView, remainder });
+        EBS.Territory.drawSlim(g, { sim: s, world: this.world, layout: l, view: this.hexView, remainder, reaction });
       }
     }
     hud(g) {
       const r = this.sim.roundSim, p = this.sim.cfg, l = this.layout;
       text(g, 'TERRITORY WARS', 28, 27, 12, '#8aa5ad', 'left', true);
       text(g, 'HEX DOMINION', 28, 57, 29, '#e4efe7');
+      if (p.layout === 'wilds') {
+        const notice = EBS.Territory.wildsNotice(r, r.time + this.sim.accumulator);
+        if (notice) text(g, notice, l.w / 2, 55, 22, '#ffdb99', 'center', true, 650);
+      }
       text(g, `WORLD ${String(r.seed).padStart(4, '0')} / FOUR CROWNS`, 29, 84, 12, '#77969f', 'left', true);
       if (p.showClock) {
         text(g, EBS.util.fmtTime(r.time), l.w - 28, 43, 29, '#d9e7e3', 'right', true);
@@ -154,13 +181,16 @@
   // Fast rules for the short map. Not part of the archived source profiles.
   const BLITZ = { label: 'Blitz (Short)', filmTempo: 2, incomeMultiplier: 2, aggression: 1, offensiveInterval: 2, marchDuration: 1.5 };
   const PROFILES = { ...HexSim.PROFILES, blitz: BLITZ };
-  const CLASSIC_AUDIO = { ceilingDb: -3, events: {
-    dispatch: { label: 'Marsch', samples: ['synth:chime'], gain: .09, semis: -12, detune: .3 },
+  const FIELD_SOUNDS = {
     battle: { label: 'Gefecht', samples: ['impactMetal_light_000','impactMetal_light_001'], gain: .15, semis: -3, detune: .5 },
     capture: { label: 'Eroberung', samples: ['synth:scrap-pickup'], gain: .15, semis: -7 },
     build: { label: 'Bunkerbau', samples: ['impactWood_medium_000'], gain: .16, semis: -3 },
     hq: { label: 'Hauptquartier gefallen', samples: ['synth:scrap-stone-break'], gain: .26, semis: -4 },
     victory: { label: 'Sieg', samples: ['synth:myco-pling'], gain: .24, semis: -5 },
+  };
+  const CLASSIC_AUDIO = { ceilingDb: -3, events: {
+    dispatch: { label: 'Marsch', samples: ['synth:chime'], gain: .09, semis: -12, detune: .3 },
+    ...FIELD_SOUNDS,
   } };
   /* Short map: soft sounds at a fixed, quiet level (no loudness boost) and a
    * plan that lets only the important events sound. `gap` is the shortest
@@ -174,7 +204,14 @@
     hq: { label: 'Krone gefallen', samples: ['synth:myco-pop'], gain: .50, semis: -9 },
     victory: { label: 'Sieg', samples: ['synth:myco-pling'], gain: .32, semis: -5 },
   } };
-  const audioFor = params => params && params.layout === 'short' ? SOFT_AUDIO : CLASSIC_AUDIO;
+  const WILDS_AUDIO = { ceilingDb: -3, events: { ...FIELD_SOUNDS,
+    capture: { label: 'Eroberung', samples: ['mw-soft-switch-0', 'mw-soft-switch-1'], gain: .12, semis: -4 },
+    meteor_warning: { label: 'Meteor nähert sich', samples: ['synth:wind'], gain: .18, semis: -4 },
+    meteor_impact: { label: 'Meteoreinschlag', samples: ['synth:thunder'], gain: .44, semis: -4 },
+    giant_arrival: { label: 'Riese erscheint', samples: ['synth:thunder'], gain: .20, semis: -8 },
+    giant_retreat: { label: 'Schritt des Riesen', samples: ['impactWood_heavy_000'], gain: .30, semis: -7, minGap: 1.5 },
+  } };
+  const audioFor = params => params?.layout === 'wilds' ? WILDS_AUDIO : params?.layout === 'short' ? SOFT_AUDIO : CLASSIC_AUDIO;
   const RANK = { victory: 0, hq: 1, story: 2, battle: 3, capture: 4, build: 5, dispatch: 6 };
   // Complete, chronological decisions: nothing later can change an earlier one.
   function shortMixPlan(events, { cfg, world }) {
@@ -233,7 +270,9 @@
           params: { profile:key, incomeMultiplier:p.incomeMultiplier, aggression:p.aggression, offensiveInterval:p.offensiveInterval, marchDuration:p.marchDuration },
           video: { tempo:p.filmTempo },
         }])) },
-      { key: 'layout', label: 'Kartenform', type: 'select', options: [['landscape','Querformatkarte'],['portrait','Hochformatkarte'],['short','Short-Karte (klein, mit Drehbuch)']], restart: true, rebuildUi: true, applyLabel: 'Karte anwenden' },
+      { key: 'layout', label: 'Kartenform', type: 'select', options: [['landscape','Querformatkarte'],['portrait','Hochformatkarte'],['short','Short-Karte (klein, mit Drehbuch)'],
+        ['wilds','Großkarte · Meteor und Riese (Langvideo 16:9)']], videoSets: { wilds: { aspect: '16:9' } },
+        restart: true, rebuildUi: true, applyLabel: 'Karte anwenden' },
       { key: 'story', label: 'Drehbuch (Short-Karte)', type: 'select', options: [['crown','Die letzte Krone'],['none','Ohne Drehbuch']], restart: true, enabled: p => p.layout === 'short' },
       { key: 'storySec', label: 'Kriegsdauer (Short-Karte)', type: 'range', min: 40, max: 180, step: 5, restart: true, enabled: p => p.layout === 'short', format: v => `${v} s Spielzeit` },
       { key: 'videoEnd', label: 'Videoende', type: 'select', options: [['free','Freie Dauer'],['victory','Nach dem Sieg']], affectsDuration: true },
