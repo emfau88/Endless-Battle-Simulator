@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "name": "Marble Knockout – Langvideo (The Gauntlet, Drehbuch)",
+  "scenario": "knockout",
+  "seed": 1,
+  "params": {
+    "mode": "level",
+    "cam": "ride",
+    "intro": "on",
+    "slowmo": "on",
+    "marks": "on",
+    "display": "on",
+    "videoEnd": "finish",
+    "script": [
+      0,
+      0,
+      4012558754,
+      0,
+      0,
+      0,
+      1012860517,
+      2432261259,
+      3248022227,
+      1003354678
+    ]
+  },
+  "video": {
+    "aspect": "16:9",
+    "resolution": 1080,
+    "fps": 30,
+    "durationSec": 200,
+    "tempo": 1,
+    "audio": true,
+    "volume": {
+      "master": 100
+    },
+    "quality": {
+      "crf": 20,
+      "preset": "medium",
+      "bitrate": null
+    }
+  },
+  "view": {
+    "hud": true,
+    "camera": false
+  }
+}

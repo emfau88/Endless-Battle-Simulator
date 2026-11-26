@@ -2,7 +2,7 @@
 // presets/production carry the same values for CLI use; tests check both paths.
 (function () {
   'use strict';
-  const labels = { naval: 'Seeschlacht', marble: 'Kugelfabrik', scrap: 'Scrap Wars', mycelium: 'Myzel', pyramid: 'Pyramide', territory: 'Territory Wars / Hex Dominion', marbleworks: 'Marble Works', waterpark: 'Wasserpark', cloudwars: 'Cloud Wars' };
+  const labels = { naval: 'Seeschlacht', marble: 'Kugelfabrik', scrap: 'Scrap Wars', mycelium: 'Myzel', pyramid: 'Pyramide', territory: 'Territory Wars / Hex Dominion', marbleworks: 'Marble Works', waterpark: 'Wasserpark', cloudwars: 'Cloud Wars', knockout: 'Marble Knockout' };
   EBS.productionPreset = (scenario, kind, seed = 42) => {
     if (!Object.hasOwn(labels, scenario) || !['short', 'long'].includes(kind)) throw new Error('Unbekannte Produktionsvorlage.');
     if (scenario === 'marbleworks') return EBS.MarbleProduction.preset(kind, seed);
@@ -27,6 +27,22 @@
         volume: { master: 100 }, quality: { crf: 20, preset: 'medium', bitrate: null } },
       view: { hud: true, camera: false },
     };
+    // Marble Knockout: Short als Gesamtlevel THE TOWER (16 Murmeln, eine Fahrt durch den Turm, Ziel mit Fotofinish)
+    // auf einem geprüften Casting-Seed (seit G3); Langvideo als Gesamtlevel THE GAUNTLET (20 Murmeln, zehn Abschnitte,
+    // Kamerafahrt, Einstiegsflug, Podest) nach einem gecasteten Drehbuch (seit G6). Das Rennen Bahn für Bahn bleibt
+    // über „Ablauf“ wählbar. Beide enden mit dem Rennende (40 s und 200 s sind nur Startwerte).
+    if (scenario === 'knockout') {
+      const cast = short ? null : EBS.Knockout.castGauntlet(seed);
+      return {
+        version: 1, name: `${labels[scenario]} – ${short ? 'Short (The Tower)' : 'Langvideo (The Gauntlet, Drehbuch)'}`,
+        scenario, seed: short ? EBS.Knockout.castTowerSeed(seed) : cast.seed,
+        params: short ? { mode: 'level', slowmo: 'on', marks: 'on', display: 'on', videoEnd: 'finish' }
+          : { mode: 'level', cam: 'ride', intro: 'on', slowmo: 'on', marks: 'on', display: 'on', videoEnd: 'finish', script: cast.script.slice() },
+        video: { aspect: short ? '9:16' : '16:9', resolution: 1080, fps: 30, durationSec: short ? 40 : 200, tempo: 1, audio: true,
+          volume: { master: 100 }, quality: { crf: 20, preset: 'medium', bitrate: null } },
+        view: { hud: true, camera: false },
+      };
+    }
     // Territory Short: small map with the hidden story "The last crown"; the video ends three
     // seconds after the result (length is planned from the seed, about half a minute).
     if (scenario === 'territory' && short) return {
