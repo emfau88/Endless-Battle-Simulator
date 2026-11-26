@@ -102,6 +102,15 @@ const MODES = {
 // Rakete vom Heck (ruhiges Duell): seltene zweite Attacke. Sie wird sichtbar aufgelegt, die Lunte brennt, dann fliegt
 // sie im Bogen über das gegnerische Schiff und zerplatzt dort in Splitter. Splitter sind kurzlebig und gehören nicht
 // zum Kugelkreislauf: Wer trifft, nimmt einen halben Kanonentreffer; wer daneben fällt, verlischt im Wasser.
+// Finale (ruhiges Duell): Kurz vor dem Videoende schweigen die Kanonen. Sieger ist, wer mehr Gegner versenkt hat; bei
+// Gleichstand das weniger beschädigte Schiff. Der Sieger bekommt Schriftzug, Wimpelkette und Feuerwerk, der Verlierer
+// hisst die weiße Flagge. Nur bei Videos ab 90 Sekunden; die Länge des Finales hängt an der Videolänge.
+const FINALE = {
+  minVideo: 90,      // kürzere Videos haben kein Finale
+  share: 0.05,       // Anteil der Videolänge …
+  minT: 10, maxT: 20, // … mindestens 10, höchstens 20 Sekunden
+  bannerAt: 1.5,     // so lange nach dem Schlusspfiff erscheint der Sieger
+};
 const ROCKET = {
   period: 20,        // Sekunden zwischen zwei Raketen eines Schiffs (die Schiffe wechseln sich ab)
   prepT: 6,          // so lange vorher wird die Rakete aufgelegt
@@ -216,7 +225,8 @@ function polyYMax(poly, x) {
 const flat = (pts) => pts.flatMap((p) => p);
 
 class NavalBattle {
-  constructor({ seed, params, world, timeScale = 1 }) {
+  constructor({ seed, params, world, timeScale = 1, video = null }) {
+    this.video = video;   // nur das ruhige Duell liest die Videolänge (Finale); der Standardmodus nicht
     // Zeitlupe: jeder Physikschritt deckt timeScale × 1/60 s Simulationszeit ab (1 = unverändert, bitgleich)
     this.dt = DT * timeScale; this.dtMs = DT_MS * timeScale;
     const cfg = (this.cfg = { seed, ...params });
@@ -228,7 +238,7 @@ class NavalBattle {
     const M = (this.modeDef = MODES[cfg.mode] || null);
     this.fireTempo = M ? M.fireTempo : 1;
     this.trailEvery = M ? M.trailEvery : 2;
-    this.calm = M ? { bounces: 0, sailHits: 0, score: new Array(L.n).fill(0), sunk: 0, round: 1, last: null, rockets: 0, shardHits: 0, goldHits: 0, gold: null } : null;
+    this.calm = M ? { bounces: 0, sailHits: 0, score: new Array(L.n).fill(0), sunk: 0, round: 1, last: null, rockets: 0, shardHits: 0, goldHits: 0, gold: null, final: null, fireworks: 0 } : null;
     if (M) { cfg.cannons = M.cannons; this.sailRng = new RNG(hashSeed(cfg.seed, 'sail')); }
     this.engine = Engine.create({ gravity: { x: 0, y: L.g / 1000, scale: 0.001 }, positionIterations: 8, velocityIterations: 6 });
     this.world = this.engine.world;
@@ -239,6 +249,7 @@ class NavalBattle {
     this.events = new Array(256); this.eventSeq = 0;
     this.hitQueue = []; this.clinkQueue = [];
     this.shards = [];   // Raketensplitter (nur ruhiges Duell): fester Vorrat, wird wiederverwendet
+    this.fw = [];       // Feuerwerksraketen im Finale (höchstens acht gleichzeitig)
     this.ships = []; this.balls = [];
     this.allShipsMask = ((1 << L.n) - 1) * SHIP_CAT;
     this.allMastsMask = ((1 << L.n) - 1) * MAST_CAT;
@@ -324,7 +335,7 @@ class NavalBattle {
       maxSink: geo.fb * 0.42, damage: 0, holes: [], dmgVer: 0, lastPatch: 0,
       sails: this.modeDef ? NavalSails.create(geo, len, facing, (k) => hashSeed(this.cfg.seed, `sail${i}_${k}`)) : null, sailVer: 0,
       // Runden (nur ruhiges Duell): Zustand afloat | sinking | arriving, Versatz beim Sinken und Einlaufen, Schiffsnummer
-      phase: 'afloat', phaseT: 0, down: 0, list: 0, slide: 0, alpha: 1, gen: 0, hitT: -9, hitFrom: 0, hitGold: false, goldTaken: 0, repairFrom: 0,
+      phase: 'afloat', phaseT: 0, down: 0, list: 0, slide: 0, alpha: 1, gen: 0, hitT: -9, hitFrom: 0, hitGold: false, goldTaken: 0, repairFrom: 0, cheerT: -1, whiteFlag: false,
       edge: i === 0 ? -1 : i === n - 1 ? 1 : 0, enter: (i === 0 ? L.xs[i] : L.W - L.xs[i]) + 0.8 * len,
       // Rakete: Zeit bis zum nächsten Start, fliegende Rakete, Fuß der Startschiene am Heck (Schiffskoordinaten)
       rocketT: ROCKET.period * (0.6 + i / n), rk: { on: false, t: 0, x0: 0, y0: 0, cx: 0, cy: 0, x1: 0, y1: 0, x: 0, y: 0, ang: 0 },
@@ -425,7 +436,10 @@ class NavalBattle {
     this.step++; this.t = this.step * this.dt;
     this._processHits();
     this._updateBalls();
-    if (this.calm) this._updateRockets();
+    if (this.calm) {
+      this._updateRockets();
+      if (this.cfg.finaleV1) this._updateFinale();
+    }
     this._updateShipDamage();
     this.particles.update(this.dt, this._surfaceNow);
     this.shake *= 0.9;
@@ -498,7 +512,7 @@ class NavalBattle {
     if (this._activeHoles(o) > target) { for (const h of o.holes) if (!h.patched) { h.patched = true; o.dmgVer++; break; } }
   }
   _updateRound(ship) {
-    if (ship.phase === 'afloat') return;
+    if (ship.phase === 'afloat' || ship.phase === 'gone') return;
     const u = this.L.u;
     ship.phaseT += this.dt;
     if (ship.phase === 'sinking') {
@@ -506,7 +520,7 @@ class NavalBattle {
       const k = clamp(ship.phaseT / ROUND.sinkT, 0, 1), e = k * k * (3 - 2 * k);
       ship.down = ship.len * 0.85 * k * k; ship.list = -ship.facing * 0.42 * e; ship.alpha = 1 - clamp((k - 0.6) / 0.4, 0, 1);
       if (k < 1 && this.step % 3 === 0) this._fxBubble(ship.x0 + this.fx.range(-0.45, 0.45) * ship.len, this.L.waterY + this.fx.range(4, 40) * u);
-      if (ship.phaseT >= ROUND.sinkT + ROUND.gapT) this._arrive(ship);
+      if (ship.phaseT >= ROUND.sinkT + ROUND.gapT) { if (this.calm.final) ship.phase = 'gone'; else this._arrive(ship); }
       return;
     }
     // Einlaufen: Randschiffe segeln vom Bildrand herein, mittlere tauchen aus dem Dunst auf
@@ -527,7 +541,7 @@ class NavalBattle {
 
   _updateCannons() {
     const maxTurn = 2.2 * this.dt;
-    const peace = this.calm ? this.ships.every((s) => s.phase === 'afloat') : true;
+    const peace = this.calm ? !this.calm.final && this.ships.every((s) => s.phase === 'afloat') : true;
     for (const ship of this.ships) {
       for (const c of ship.cannons) {
         c.recoil = Math.max(0, c.recoil - this.dt * 3);
@@ -727,6 +741,68 @@ class NavalBattle {
     }
   }
 
+  // ---------- Ruhiges Duell: Finale am Videoende ----------
+  _finaleLength() {
+    const d = this.video ? this.video.durationSec : 0;
+    return d >= FINALE.minVideo ? clamp(d * FINALE.share, FINALE.minT, FINALE.maxT) : 0;
+  }
+  _updateFinale() {
+    const c = this.calm, L = this.L, u = L.u, vt = this.step * DT;   // Videozeit (auch in Zeitlupe 60 Schritte je Sekunde)
+    if (!c.final) {
+      const F = this._finaleLength();
+      if (!F || vt < this.video.durationSec - F) return;
+      // Schlusspfiff: Rang nach Punkten, dann nach geringerem Schaden (ein sinkendes Schiff zählt als zerstört)
+      const rank = (sh) => [c.score[sh.i], sh.phase === 'afloat' ? -sh.damage : -2];
+      const order = [...this.ships].sort((a, b) => { const x = rank(a), y = rank(b); return y[0] - x[0] || y[1] - x[1] || a.i - b.i; });
+      const x = rank(order[0]), y = rank(order[1]), draw = x[0] === y[0] && x[1] === y[1];
+      c.final = { t: this.t, winner: draw ? -1 : order[0].i, draw, rang: false, nextFw: FINALE.bannerAt + 0.5 };
+      for (const b of this.balls) if (b.state === 'fly') b.hit = true;   // Nachzügler zählen nicht mehr
+      return;
+    }
+    const fin = c.final, tau = this.t - fin.t, f = this.fx, P = this.particles;
+    if (!fin.rang && tau >= FINALE.bannerAt) {
+      fin.rang = true;
+      for (const sh of this.ships) {
+        if (sh.phase !== 'afloat') continue;
+        if (fin.draw || sh.i === fin.winner) sh.cheerT = this.t; else sh.whiteFlag = true;
+      }
+      this._event('win', L.W / 2, L.H * 0.2, 1);
+    }
+    // Feuerwerk: steigt von den Siegerschiffen auf und zerplatzt in deren Farbe, Gold und Weiß
+    if (fin.rang && tau >= fin.nextFw) {
+      fin.nextFw = tau + f.range(0.5, 1.0);
+      const hosts = this.ships.filter((sh) => sh.cheerT >= 0);
+      let fw = this.fw.find((o) => !o.on);
+      if (!fw && this.fw.length < 8) { fw = { on: false }; this.fw.push(fw); }
+      if (hosts.length && fw) {
+        const sh = hosts[c.fireworks % hosts.length], x0 = sh.x0 + f.range(-0.4, 0.4) * sh.len;
+        Object.assign(fw, { on: true, t: 0, T: f.range(0.8, 1.15), x0, y0: L.waterY + sh.geo.deckY - 0.05 * sh.len,
+          x1: lerp(x0, L.W / 2, f.range(0, 0.6)), y1: L.H * (L.portrait ? f.range(0.3, 0.44) : f.range(0.17, 0.36)),
+          color: [sh.team.color, 0xffcf5a, 0xfff3c4][c.fireworks % 3], color2: sh.team.color });
+        c.fireworks++;
+      }
+    }
+    for (const fw of this.fw) {
+      if (!fw.on) continue;
+      fw.t += this.dt;
+      const k = Math.min(1, fw.t / fw.T), e = 1 - (1 - k) * (1 - k), x = lerp(fw.x0, fw.x1, k), y = lerp(fw.y0, fw.y1, e);
+      P.spawn(x, y, f.range(-20, 20) * u, f.range(20, 90) * u, f.range(0.25, 0.5), f.range(4, 6) * u, 1 * u, 1, 0xffe2a8, T_SPARK, 1, 120 * u, 1.2, 0, 0);
+      if (k < 1) continue;
+      fw.on = false;
+      P.spawn(x, y, 0, 0, 0.3, 60 * u, 300 * u, 0.95, 0xfff3d0, T_SOFT, 1, 0, 0, 0, 0);
+      const n = 56, rot = f.range(0, 6.283);
+      for (let i = 0; i < n; i++) {       // äußerer und innerer Ring im Wechsel
+        const a = rot + (i / n) * 6.283 + f.range(-0.05, 0.05), sp = (i % 2 ? f.range(330, 400) : f.range(170, 240)) * u;
+        P.spawn(x, y, Math.cos(a) * sp, Math.sin(a) * sp, f.range(1.1, 1.8), f.range(7, 11) * u, 2 * u, 1, i % 2 ? fw.color : fw.color2, T_SPARK, 1, 140 * u, 1.4, 0, 0);
+      }
+      for (let i = 0; i < 16; i++) {      // Glitzer rieselt langsam herab
+        const a = f.range(0, 6.283), sp = f.range(40, 260) * u;
+        P.spawn(x, y, Math.cos(a) * sp, Math.sin(a) * sp, f.range(1.6, 2.6), f.range(4, 6) * u, 1 * u, 0.95, 0xfff6d0, T_SPARK, 1, 230 * u, 1.1, 0, 0);
+      }
+      this._event('firework', x, y, 1);
+    }
+  }
+
   // ---------- Ruhiges Duell: Rakete vom Heck ----------
   _railTip(ship) {
     const a = ROCKET.railAngle, d = ROCKET.rail * ship.len;
@@ -788,7 +864,7 @@ class NavalBattle {
     }
     this._event('hit', sh.x, sh.y, 0.5);
     // In der Feuerpause ist die Runde entschieden: Nachzügler richten keinen Schaden mehr an
-    if (!this.ships.every((o) => o.phase === 'afloat')) return;
+    if (this.calm.final || !this.ships.every((o) => o.phase === 'afloat')) return;
     ship.hitFrom = ship.damage; ship.hitT = this.t; ship.hitGold = false;
     ship.damage = Math.min(1, ship.damage + ROCKET.shardHit * (this.cfg.intensity / 0.35));
     ship.shardsTaken++; this.calm.shardHits++;
@@ -799,7 +875,7 @@ class NavalBattle {
   }
   _updateRockets() {
     const L = this.L, u = L.u, dt = this.dt, f = this.fx, P = this.particles;
-    const peace = this.ships.every((o) => o.phase === 'afloat');
+    const peace = !this.calm.final && this.ships.every((o) => o.phase === 'afloat');
     for (const ship of this.ships) {
       const rk = ship.rk;
       // Vorbereitung und Start: nur während des Gefechts
@@ -1179,7 +1255,8 @@ class NavalBattle {
       })),
       ...(this.calm ? { mode: this.cfg.mode, bounces: this.calm.bounces, sailHits: this.calm.sailHits,
         score: [...this.calm.score], sunk: this.calm.sunk, round: this.calm.round,
-        rockets: this.calm.rockets, shardHits: this.calm.shardHits, goldHits: this.calm.goldHits, shardsFlying: this.shards.filter((o) => o.on).length } : {}),
+        rockets: this.calm.rockets, shardHits: this.calm.shardHits, goldHits: this.calm.goldHits, shardsFlying: this.shards.filter((o) => o.on).length,
+        final: this.calm.final ? { winner: this.calm.final.winner, draw: this.calm.final.draw, fireworks: this.calm.fireworks } : null } : {}),
     };
   }
   stateHash() {
@@ -1201,6 +1278,8 @@ class NavalBattle {
         for (const sl of sh.sails) s += `${sl.hits},${sl.holes.length},${f(sl.wear)};`;
       }
       s += `|${this.calm.rockets},${this.calm.shardHits},${this.calm.goldHits}|`;
+      // das Finale geht nur dann in den Hash ein, wenn es begonnen hat (ohne Finale bleibt die Zustandsreferenz gleich)
+      if (this.calm.final) s += `F${this.calm.final.winner},${this.calm.fireworks}|`;
       for (const o of this.shards) if (o.on) s += `${f(o.x)},${f(o.y)};`;
     }
     return fnv1a(s).toString(16).padStart(8, '0');
@@ -1362,6 +1441,7 @@ class ShipView {
       this.rocket = new PIXI.Graphics(); drawRocket(this.rocket, len * 0.13, ship.team.color);
       this.rocket.rotation = Math.atan2(ey - ship.railY, ex - ship.railX); this.rocket.visible = false;
       root.addChild(this.rocket);
+      this.bunting = new PIXI.Graphics(); root.addChild(this.bunting);   // Finale: Wimpelkette des Siegers
     }
     // Mündungsfeuer als Licht: warmer Schein auf Segeln und Rumpf, solange der Rückstoß abklingt
     this.flash = new PIXI.Sprite(getParticleTextures()[T_SOFT]); this.flash.anchor.set(0.5); this.flash.blendMode = 'add';
@@ -1393,7 +1473,30 @@ class ShipView {
     const pts = [];
     for (let k = 0; k <= 6; k++) pts.push(fx + dir * fw * k / 6, fy + Math.sin(t * 6 - k * 0.9) * 3 * u * k / 6);
     for (let k = 6; k >= 0; k--) pts.push(fx + dir * fw * k / 6, fy + fh + Math.sin(t * 6 - k * 0.9) * 3 * u * k / 6);
-    fl.poly(pts).fill(s.team.color).stroke({ width: 1.5, color: 0x1a0f09 });
+    fl.poly(pts).fill(s.whiteFlag ? 0xf4f1e8 : s.team.color).stroke({ width: 1.5, color: 0x1a0f09 });
+    if (this.bunting) {
+      // Finale: Wimpelkette vom Bugspriet über beide Mastspitzen zum Heck; sie entrollt sich über zwei Sekunden
+      const bg = this.bunting, bt = s.cheerT >= 0 ? t - s.cheerT : -1;
+      bg.clear();
+      if (bt >= 0) {
+        const g = s.geo, len = s.len, show = clamp(bt / 2, 0, 1), cols = [s.team.color, 0xffcf5a, 0xf5ecd6];
+        const P4 = [[g.bowsprit[1][0], g.bowsprit[1][1]], [g.masts[1].x, g.deckY - g.masts[1].h], [g.masts[0].x, g.deckY - g.masts[0].h],
+          [s.facing * -0.5 * len, g.castle.y0]];
+        let idx = 0;
+        for (let q = 0; q < 3; q++) {
+          const [ax, ay] = P4[q], [bx, by] = P4[q + 1], d = Math.hypot(bx - ax, by - ay), n = Math.max(2, Math.round(d / (0.075 * len)));
+          const at = (k) => [lerp(ax, bx, k), lerp(ay, by, k) + d * 0.28 * k * (1 - k) + Math.sin(t * 2.2 + q + k * 5) * 1.2 * u];
+          bg.moveTo(ax, ay);
+          for (let j = 1; j <= 12; j++) { const p = at(j / 12); bg.lineTo(p[0], p[1]); }
+          bg.stroke({ width: 1.5, color: 0x2a1c14, alpha: 0.9 * show });
+          for (let j = 0; j < n; j++, idx++) {
+            if ((q + (j + 0.5) / n) / 3 > show) continue;
+            const p0 = at((j + 0.2) / n), p1 = at((j + 0.8) / n);
+            bg.poly([p0[0], p0[1], p1[0], p1[1], (p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2 + 0.045 * len]).fill(cols[idx % 3]).stroke({ width: 1, color: 0x2a1c14, alpha: 0.8 });
+          }
+        }
+      }
+    }
     // Kanonen
     s.cannons.forEach((c, i) => {
       const v = this.cannons[i], rot = c.angle - s.angle, rec = c.recoil * c.recoil * 0.05 * s.len;
@@ -1685,6 +1788,13 @@ class NavalRenderer {
       this.hGoldHit = new PIXI.Text({ text: 'GOLDEN HIT!', style: style(38 * u, '900', GOLD, 3 * u) });
       this.hGoldHit.anchor.set(0.5); this.hGoldHit.visible = false;
       this.hud.addChild(this.hGoldHit);
+      // Finale: Sieger und Endstand
+      this.hWin = new PIXI.Text({ text: '', style: style(84 * u, '900', 0xffffff, 5 * u) });
+      this.hWin.anchor.set(0.5); this.hWin.position.set(W / 2, cy - 8 * u);
+      this.hWinSub = new PIXI.Text({ text: '', style: style(30 * u, '800', 0xffffff, 3 * u) });
+      this.hWinSub.anchor.set(0.5); this.hWinSub.position.set(W / 2, cy + 50 * u);
+      this.hWin.visible = this.hWinSub.visible = false;
+      this.hud.addChild(this.hWin, this.hWinSub);
       this.sinkKey = -1;
     }
     // Goldene Kugel: „GOLDEN BALL · fired 12×“ mit kleiner Goldkugel davor. Querformat-Duell: oben mittig, sobald der
@@ -1963,7 +2073,7 @@ class NavalRenderer {
       const g = b.bar;
       // Ruhiges Duell: beim Sinken leer, beim Einlaufen füllt sich der Balken; ein Treffer lässt den Rahmen aufblitzen
       const flash = sim.calm ? clamp(1 - (sim.t - b.s.hitT) / 0.6, 0, 1) : 0;
-      if (sim.calm && b.s.phase === 'sinking') hp = 0;
+      if (sim.calm && (b.s.phase === 'sinking' || b.s.phase === 'gone')) hp = 0;
       if (sim.calm && b.s.phase === 'arriving') hp = clamp(b.s.phaseT / ROUND.arriveT, 0, 1);
       b.hp = hp;
       g.clear();
@@ -1985,7 +2095,20 @@ class NavalRenderer {
         this.hGoldHit.scale.set(1 + 0.6 * Math.pow(clamp(1 - gdt / 0.35, 0, 1), 2));
       }
       const last = sim.calm.last, dt = last ? sim.t - last.t : 99, on = dt >= 0 && dt < 4.2;
-      this.hSink.visible = this.hPoint.visible = on;
+      // Finale: Sieger und Endstand bleiben bis zum Schluss stehen
+      const fin = sim.calm.final, wt = fin ? sim.t - fin.t - FINALE.bannerAt : -1, won = wt >= 0;
+      this.hWin.visible = this.hWinSub.visible = won;
+      if (won) {
+        if (this.winKey !== fin.t) {
+          this.winKey = fin.t;
+          const team = fin.draw ? null : sim.ships[fin.winner].team;
+          this.hWin.text = team ? `${team.name} WINS!` : 'DRAW!'; this.hWin.style.fill = team ? team.color : GOLD;
+          this.hWinSub.text = `FINAL SCORE  ${sim.calm.score.join(' : ')}`;
+        }
+        this.hWin.alpha = this.hWinSub.alpha = clamp(wt / 0.4, 0, 1);
+        this.hWin.scale.set(1 + 0.35 * Math.pow(clamp(1 - wt / 0.6, 0, 1), 2) + 0.015 * Math.sin(sim.t * 3));
+      }
+      this.hSink.visible = this.hPoint.visible = on && !won;
       if (on) {
         if (this.sinkKey !== last.t) {
           this.sinkKey = last.t;
@@ -2001,10 +2124,11 @@ class NavalRenderer {
     if (this.frame % 6 === 1) {
       // Texte im Video englisch; Uhr = Videozeit (bei Zeitlupe läuft die Simulationszeit langsamer)
       this.hSub.text = sim.calm
-        ? `${fmtTime(sim.step * DT)}  ·  Round ${sim.calm.round}  ·  Shots ${fmtIntEn(st.shots)}  ·  Hits ${fmtIntEn(st.hits)}`
+        ? `${fmtTime(sim.step * DT)}  ·  ${sim.calm.final ? 'FINAL' : 'Round ' + sim.calm.round}  ·  Shots ${fmtIntEn(st.shots)}  ·  Hits ${fmtIntEn(st.hits)}`
         : `${fmtTime(sim.step * DT)}  ·  Shots ${fmtIntEn(st.shots)}  ·  Hits ${fmtIntEn(st.hits)}`;
       for (const b of this.hBars) {
-        b.pct.text = `${Math.round(b.hp * 100)}%`;
+        // ein schwimmendes Schiff zeigt nie 0 %: knapp überlebt heißt mindestens 1 %
+        b.pct.text = `${b.hp > 0 ? Math.max(1, Math.round(b.hp * 100)) : 0}%`;
         b.ammo.text = sim.beute ? `Ammo ${b.s.ammo}` : `Ammo ${b.s.ammo}/${b.s.totalBalls}`;
       }
       if (this.hGold.visible) {
@@ -2046,6 +2170,8 @@ function calmAudioTable(base) {
     gold: { label: 'Goldtreffer', samples: ['mw-soft-metal-0', 'mw-soft-metal-1'], gain: 0.3, semis: 0, detune: 1, minGap: 0.3 },
     sail: { label: 'Segeldurchschuss', samples: ['impactSoft_medium_000'], gain: 0.1, semis: -3, detune: 2, minGap: 0.15 },
     sink: { label: 'Versenkung', samples: ['impactWood_heavy_000'], gain: 0.5, semis: -6, detune: 0.5, minGap: 1 },
+    firework: { label: 'Feuerwerk', samples: ['synth:firework'], gain: 0.2, detune: 1.5, minGap: 0.15 },
+    win: { label: 'Siegerklang', samples: ['synth:chime'], gain: 0.22, semis: 0, minGap: 1 },
     ...rest } });
 }
 
@@ -2056,7 +2182,7 @@ EBS.registerScenario({
   // Video) – Himmel erreicht das Morgengrauen am Videoende (mindestens 10 min), Sternschnuppe etwa alle 75 s (jedes
   // Video ab 8 s hat mindestens eine), Wal etwa alle 3½ Minuten, goldene Kugel mit Zähler.
   defaults: {
-    mode: 'endless',
+    mode: 'endless', finaleV1: false,
     ships: 2, cannons: 4, fireRate: 1, projectileSpeed: 1, intensity: 0.35, ballsPerCannon: 5, recycleVisible: true,
     goldenBall: true, sky: true, skyMinutes: 0, meteors: true, meteorEvery: 75, whales: true, whaleEvery: 210,
   },
@@ -2065,6 +2191,7 @@ EBS.registerScenario({
     // resetMix: der Modus bringt eine eigene Standardmischung mit; rebuildUi: Regler und Klangliste neu aufbauen
     { key: 'mode', label: 'Modus', type: 'select', restart: true, rebuildUi: true, resetMix: true,
       options: [['endless', 'Endlos (Standard)'], ['calm', 'Ruhiges Duell (in Arbeit)']] },
+    { key: 'finaleV1', label: 'Finale am Videoende (Vorschau)', type: 'check', restart: true, visible: (p) => p.mode === 'calm' },
     { key: 'ships', label: 'Anzahl der Schiffe', type: 'select', restart: true, options: [[2, '2 Schiffe'], [3, '3 Schiffe'], [4, '4 Schiffe']] },
     // im ruhigen Duell legt der Modus die Kanonenzahl fest (2 je Schiff)
     { key: 'cannons', label: 'Kanonen pro Schiff', type: 'range', restart: true, min: 1, max: 6, step: 1, format: (v) => String(v), visible: (p) => p.mode !== 'calm' },
@@ -2083,6 +2210,7 @@ EBS.registerScenario({
   normalizeParams(p) {
     return {
       mode: Object.hasOwn(MODES, p.mode) ? p.mode : 'endless',
+      ...(p.mode === 'calm' && bool(p.finaleV1, false) ? { finaleV1: true } : {}),
       ships: clamp(Math.round(num(p.ships, 2)), 2, 4),
       cannons: clamp(Math.round(num(p.cannons, 4)), 1, 6),
       fireRate: clamp(num(p.fireRate, 1), 0.2, 3),

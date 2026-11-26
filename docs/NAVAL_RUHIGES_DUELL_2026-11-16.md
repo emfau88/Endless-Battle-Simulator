@@ -1,6 +1,6 @@
 # Naval: Modus „Ruhiges Duell“ (in Arbeit)
 
-Stand: 17.11.2026. Erste sechs Pakete des Naval-Ausbaus (R34, im [Gesamtplan](GESAMTPLAN_2026-11-16.md) Abschnitt 8.4
+Stand: 18.11.2026. Erste sechs Pakete des Naval-Ausbaus (R34, im [Gesamtplan](GESAMTPLAN_2026-11-16.md) Abschnitt 8.4
 als N1a und N2a bis N2e geführt). Der Nutzer hat die Richtung anhand von Standbildern und Testclips freigegeben, den Einbau als
 neuen Modus beauftragt und danach die Vorschläge zu Lebensanzeige, Runden und Segeln zur Umsetzung freigegeben.
 
@@ -22,7 +22,8 @@ node export.mjs --scenario naval --param mode=calm --duration 20 --aspect 16:9 -
 Seit dem zweiten Paket enthalten: Runden mit Versenkung, Punktestand und neuem Schiff (Abschnitt 3a).
 Seit dem dritten Paket enthalten: die Rakete vom Heck (Abschnitt 3b). Seit dem vierten: der Auftritt der goldenen Kugel
 (Abschnitt 3c).
-Noch **nicht** enthalten: Finale am Videoende, Wetter.
+Im Modus „Ruhiges Duell“ aktiviert der Schalter „Finale am Videoende (Vorschau)“ das optionale Finale (Abschnitt 3f).
+Noch **nicht** enthalten: Wetter.
 
 ## 2 · Werte des Modus
 
@@ -167,6 +168,28 @@ Notlösung stand die Gesamtlautstärke auf 65 %.
 | 20-Sekunden-Probe | −17,8 LUFS (Mischung vor dem Kodieren) | −20,7 LUFS im fertigen AAC, höchstens −2,9 dBTP |
 
 Die Mischung ist damit etwas leiser, aber die Schüsse behalten ihren Anschlag.
+
+## 3f · Finale am Videoende (Vorschau)
+
+Bestehende Einstellungen spielen das ruhige Duell weiter bis zum Ende. Die Vorschau lässt sich mit `--param finaleV1=true` oder über den Schalter im Menü einschalten. Vom Nutzer am 17.11. als nächster Schritt beauftragt.
+
+- **Schlusspfiff:** Kurz vor dem Videoende schweigen Kanonen und Raketen; Kugeln, die noch fliegen, zählen nicht
+  mehr. Das Finale dauert 5 % der Videolänge, mindestens 10 und höchstens 20 Sekunden (10 Minuten: ab 9:40).
+- **Sieger:** wer mehr Gegner versenkt hat; bei Gleichstand das weniger beschädigte Schiff. Sind auch die
+  gleich, steht „DRAW!“ da und beide feiern.
+- **Im Bild:** nach anderthalb Sekunden „BLUE WINS!“ mit „FINAL SCORE 1 : 2“, die untere Zeile zeigt „FINAL“.
+- **Sieger:** Eine Wimpelkette entrollt sich vom Bugspriet über die Mastspitzen zum Heck, dazu Feuerwerk in
+  Teamfarbe, Gold und Weiß bis zum letzten Bild.
+- **Verlierer:** hisst die weiße Flagge. Sinkt ein Schiff gerade, wenn der Schlusspfiff kommt, läuft kein neues ein.
+- **Kurze Videos:** unter 90 Sekunden gibt es kein Finale.
+- **Zeitbezug:** Das Finale hängt an der Videozeit, nicht an der Simulationszeit, und passt damit auch in Zeitlupe.
+
+Der Himmel erreicht das Morgengrauen ohnehin am Videoende; das Finale spielt also im Sonnenaufgang.
+
+Die Klänge sind vorhandene: ein Glockenton zum Sieg und der Feuerwerksknall, den schon die Pyramide nutzt.
+
+Solange kein Finale begonnen hat, bleibt der Zustands-Hash des Modus unverändert; die Zustandsreferenz im Test
+gilt weiter.
 
 ## 4 · Aufbau im Code
 
