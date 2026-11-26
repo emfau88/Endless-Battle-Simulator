@@ -24,6 +24,7 @@ Dieser Bericht wird je Paket fortgeschrieben.
 | G6 Drehbuch-Casting, Vorlage „Langvideo“ | **Erledigt** (26.11.) |
 | G7 Abschluss Teil 2, Geschmacksfragen | **Erledigt** (26.11.). Offen: Antworten des Nutzers, ganzer Export nur auf Auftrag. |
 | G8 Gruben: OUT-Kiste, Schacht mit Rahmen, Abgrund | **Erledigt** (26.11.) |
+| CI: Knockout-Prüfungen im Zeitbudget | **Erledigt** (26.11.), CI-Lauf nach dem Push entscheidet |
 
 ---
 
@@ -1363,3 +1364,29 @@ vom 26.11., die der Nutzer freigegeben hat.
 - Das Rennen Bahn für Bahn (Teil 1) zeichnet weiter den weichen Abgrund von M5.
 - Der Schacht ist innen zu gut zwei Dritteln dunkel: Eine Murmel muss im Dunkel verschwunden sein, bevor sie in
   1,1 Murmelbreiten Tiefe herausgenommen wird.
+
+## CI · Knockout-Prüfungen wieder im Zeitbudget (26.11.2026)
+
+**Befund:** Seit M7 waren in der CI auf dem Branch die Jobs `knockout` und `export-knockout` rot, beide wegen
+Zeitgrenzen, nicht wegen falscher Ergebnisse (lokal war alles grün):
+
+- `knockout`: Die Datei `test/knockout-browser.test.mjs` brauchte länger als die 600 s je Datei. Allein die
+  Seek-Prüfung des Rennens Bahn für Bahn zeichnete vor jedem der zwölf Zeitpunkte 30 Bilder und lief über 9 Minuten.
+  Die Gesamtlevel-Prüfung kam in der CI nie an die Reihe.
+- `export-knockout`: Der 3-s-Export des Shorts (Turm, 1080 × 1920) brauchte mehr als die erlaubten 420 s. Ein Rennbild
+  im Gesamtlevel kostet ohne Grafikkarte lokal rund 2,5 s, die meiste Zeit für die Murmeln mit weichem Schatten.
+
+**Geändert:**
+
+- Seek-Prüfung des Rennens: 0,2 s Vorlauf (sechs Bilder) statt einer Sekunde je Zeitpunkt.
+- Die Gesamtlevel-Prüfung im Browser steht in einer eigenen Datei `test/knockout-level-browser.test.mjs`.
+- Zwei eigene CI-Jobs `knockout-browser` und `knockout-level-browser` mit 1200 s je Datei, wie bei `scrap-browser`.
+- Export-Prüfung: Wartezeit für Knockout 900 s statt 420 s.
+
+**Nachweise:**
+
+- Lokal grün: Seek-Prüfung des Rennens (174 s), Gesamtlevel-Prüfung aus der neuen Datei (125 s); Zuordnung der Testdateien zu den Jobs mit `node scripts/test-ci.mjs --list` geprüft (67 von 67 Dateien).
+- Ob die Zeitgrenzen in der CI reichen, zeigt erst der Lauf nach dem Push.
+
+**Grenze:** Ein Rennbild bleibt ohne Grafikkarte teuer. Schneller ginge es mit vorgezeichneten Murmeln; das ändert die
+Optik leicht und gehört nicht zu diesem Schritt.

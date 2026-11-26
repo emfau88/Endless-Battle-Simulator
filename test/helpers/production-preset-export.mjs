@@ -84,9 +84,11 @@ for (const kind of ['short', 'long']) {
     assert.deepEqual(request.postDataJSON(), config, 'Oberfläche sendet die vollständigen Einstellungen');
     await page.waitForFunction(() => document.querySelector('#btnExport').disabled);
     // The physical 3D materials take longer in CI's software renderer; preserve the original scenarios' budget.
-    // Marble Knockout: weiche Schatten und Abgründe rendern in Software rund 0,4 Bilder/s im Querformat.
+    // Marble Knockout: weiche Schatten und Abgründe rendern in Software rund 0,4 Bilder/s im Querformat. Seit dem
+    // Gesamtlevel (Turm im Short) kostet ein 1080p-Bild ohne Grafikkarte lokal rund 2,5 s; die CI brauchte für den
+    // Short mehr als 420 s. Darum 900 s (die Datei hat 1200 s, das Langvideo zeigt in 3 s nur den Einstiegsflug).
     await page.waitForFunction(() => document.querySelector('#exportMsg a') || document.querySelector('#exportMsg').classList.contains('err'), null,
-      { timeout: scenario === 'marbleworks' || scenario === 'knockout' ? 420000 : 180000 });
+      { timeout: scenario === 'knockout' ? 900000 : scenario === 'marbleworks' ? 420000 : 180000 });
     status = await (await fetch(base + '/api/export')).json();
     assert.equal(status.state, 'done', status.error || JSON.stringify(status));
     assert.deepEqual(status.cfg, config);

@@ -51,12 +51,14 @@ test('Short (M7): Chromium rechnet dieselben Hochformat-Rennen wie Node; Vorlage
 
 test('Seek-Regel: Sprung und durchgehende Wiedergabe ergeben dasselbe Bild (zwölf Zeitpunkte)', async () => {
   const marks = [2, 5.5, 21, 44, 73, 98, 121, 147, 168, 196, 221, 247];
-  // Durchgehend: vor jedem Zeitpunkt eine Sekunde lang jedes Bild zeichnen
+  // Durchgehend: vor jedem Zeitpunkt 0,2 s lang jedes Bild zeichnen (sechs Bilder). Mit einer ganzen Sekunde (30 Bilder
+  // je Zeitpunkt) brauchte allein dieser Test in der CI ohne Grafikkarte mehr als 9 Minuten.
+  const LEAD = 0.2;
   const a = await open(2, '16:9'), cont = [];
   let at = 0;
   for (const t of marks) {
-    await a.evaluate((s) => window.exportAPI.simulate(s), t - 1 - at);
-    const frames = await a.evaluate((n) => window.exportAPI.renderFrames(n, 1, 'image/png'), FPS);
+    await a.evaluate((s) => window.exportAPI.simulate(s), t - LEAD - at);
+    const frames = await a.evaluate((n) => window.exportAPI.renderFrames(n, 1, 'image/png'), Math.round(LEAD * FPS));
     cont.push(sha(frames[frames.length - 1])); at = t;
   }
   await a.close();
@@ -71,43 +73,7 @@ test('Seek-Regel: Sprung und durchgehende Wiedergabe ergeben dasselbe Bild (zwö
   marks.forEach((t, i) => assert.equal(jump[i], cont[i], `Bild bei ${t} s weicht ab`));
 });
 
-// Ein Gesamtlevel-Bild kostet ohne Grafikkarte knapp 3 s; darum sechs Zeitpunkte je Format und drei Bilder Vorlauf.
-// Turm (ab G3): zwei Zeitpunkte im Finale, der letzte kurz nach dem Sieg (Seed 3 gewinnt bei 31,1 s: Ziel, Glitzern,
-// Siegerzeile). Gauntlet: Einstiegsflug (0,4 s und 4,1 s, ab G5), Titelkarte, Start, Hebe-Rad (49 s) und
-// einbrechende Brücke (61 s); seit G5 liegt alles um die 7 s des Flugs später.
-test('Gesamtlevel (G2): Chromium rechnet wie Node; Seek-Regel mit Kamera an sechs Zeitpunkten je Format', async () => {
-  const EBS = loadKnockout();
-  for (const [aspect, seed, marks] of [
-    ['9:16', 3, [0.4, 5.2, 10.2, 12.6, 26.0, 31.4]],
-    ['16:9', 3, [0.4, 4.1, 10.3, 16.6, 49.0, 61.0]],
-  ]) {
-    const sim = makeSim(EBS, { seed, aspect, params: { mode: 'level' } }), node = [];
-    for (const t of [5, 12]) { while (sim.step < t * 60) sim.stepOnce(); node.push(sim.stateHash()); }
-    const a = await open(seed, aspect, { mode: 'level' }), web = [];
-    await a.evaluate(() => window.exportAPI.simulate(5)); web.push(await a.evaluate(() => window.exportAPI.hash()));
-    await a.evaluate(() => window.exportAPI.simulate(7)); web.push(await a.evaluate(() => window.exportAPI.hash()));
-    await a.close();
-    assert.deepEqual(web, node, `${aspect}: Node und Chromium`);
-    // Durchgehend: vor jedem Zeitpunkt jedes Bild zeichnen (Kachel-Speicher füllt sich); Sprung: nur rechnen
-    const c = await open(seed, aspect, { mode: 'level' }), cont = [];
-    let at = 0;
-    for (const t of marks) {
-      const lead = Math.min(0.1, t - at);
-      await c.evaluate((s) => window.exportAPI.simulate(s), t - lead - at);
-      const frames = await c.evaluate((n) => window.exportAPI.renderFrames(n, 1, 'image/png'), Math.round(lead * FPS));
-      cont.push(sha(frames[frames.length - 1])); at = t;
-    }
-    await c.close();
-    const j = await open(seed, aspect, { mode: 'level' }), jump = [];
-    at = 0;
-    for (const t of marks) {
-      await j.evaluate((s) => window.exportAPI.simulate(s), t - 1 / FPS - at);
-      jump.push(sha((await j.evaluate(() => window.exportAPI.renderFrames(1, 1, 'image/png')))[0])); at = t;
-    }
-    await j.close();
-    marks.forEach((t, i) => assert.equal(jump[i], cont[i], `${aspect}: Bild bei ${t} s weicht ab`));
-  }
-});
+// Gesamtlevel (Teil 2): eigene Datei knockout-level-browser.test.mjs mit eigenem CI-Job.
 
 test('Beide Formate und das Quadrat zeichnen ohne Fehler; Anzeige aus lässt nur die Bahn stehen', async () => {
   for (const [aspect, params] of [['16:9', {}], ['1:1', {}], ['9:16', {}], ['16:9', { mode: 'gallery', element: 'drum' }], ['16:9', { mode: 'stage', stage: 3 }]]) {
