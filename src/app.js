@@ -398,7 +398,8 @@ async function bootLive() {
     const c = session.cfg;
     scSel.value = c.scenario; $('seed').value = c.seed;
     const production = c.scenario === 'marbleworks';
-    $('btnShortPreset').textContent = production ? 'Short · Mini-Auftrag' : c.scenario === 'waterpark' ? 'Short · 30 Sekunden'
+    $('btnShortPreset').textContent = production ? 'Short · Mini-Auftrag' : c.scenario === 'foerderduell' ? 'Short · Ein Rennen'
+      : c.scenario === 'waterpark' ? 'Short · 30 Sekunden'
       : c.scenario === 'scrap' ? 'Short · eine Runde (rund 30 Sekunden)' : c.scenario === 'knockout' ? 'Short · Turm (rund 38 Sekunden)' : 'Short · 1 Minute';
     $('btnLongPreset').textContent = production ? 'Langvideo · Vollständiger Auftrag'
       : c.scenario === 'scrap' ? 'Langvideo · Turnier (8 Runden)' : c.scenario === 'knockout' ? 'Langvideo · The Gauntlet (rund 3½ Minuten)' : 'Langvideo · 10 Minuten';
@@ -524,7 +525,10 @@ async function bootLive() {
     if (running) {
       acc += dt * speed;
       let n = 0;
-      while (acc >= DT && n < 40 * speed) { session.step(); acc -= DT; n++; }
+      while (acc >= DT && n < 40 * speed) {
+        if (session.scenario.shouldReplayPreview?.(session.sim)) session.start(session.cfg);
+        session.step(); acc -= DT; n++;
+      }
       if (n >= 40 * speed) acc = 0;
     }
     if (running || renderDirty) {

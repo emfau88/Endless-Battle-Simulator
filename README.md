@@ -1,6 +1,6 @@
 # Endless Battle Simulator
 
-Acht deterministische Simulationen für Battle- und „Satisfying“-Videos mit Browser-Vorschau und MP4-Export inklusive Ton. Mit 2D-Szenen und einer 3D-Produktionsanlage in Marble Works.
+Deterministische Simulationen für Battle- und „Satisfying“-Videos mit Browser-Vorschau und MP4-Export inklusive Ton. Mit 2D-Szenen und einer 3D-Produktionsanlage in Marble Works.
 
 **[▶ Online-Vorschau öffnen](https://emfau88.github.io/Endless-Battle-Simulator/)** · [Produktionsvorlagen](presets/production/) · [Roadmap](docs/ROADMAP.md) · [Changelog](docs/CHANGELOG.md)
 
@@ -10,7 +10,7 @@ Acht deterministische Simulationen für Battle- und „Satisfying“-Videos mit 
 
 [![Endless Waterpark im Querformat (Parktag) und im Hochformat (Vier-Tiere-Short)](docs/images/waterpark.jpg)](docs/images/waterpark.jpg)
 
-*Neu: **Endless Waterpark**, das achte Szenario. Links der Parktag im Querformat, rechts der Short im Hochformat.*
+*Endless Waterpark zeigt links den Parktag im Querformat und rechts den Short im Hochformat.*
 
 ## Szenarien und Varianten
 
@@ -18,6 +18,7 @@ Die folgenden Szenarien und Varianten sind im aktuellen Code vorhanden. Weitere 
 
 | Szenario | Inhalt und wählbare Varianten | Videoende / Ausschnitte |
 |---|---|---|
+| **Schnecke gegen Stempel (Vorschau)**<br>`foerderduell` | Zwei Maschinen erhalten je 24 Kugeln in derselben Folge. Die rotierende Windung schiebt jede Kugel einzeln bergauf, der Stempel fördert in Schüben. Die zwölfte Kugel im Glas entscheidet. Der Zulauf kann gleichmäßig, in zwei Schüben oder in wechselnden Portionen erfolgen. [Rennverläufe](docs/FOERDERDUELL_2026-11-22.md) · [Drehung und Kugelführung](docs/FOERDERDUELL_SCHNECKE_2026-11-24.md#sichtbare-drehung-im-simulator) | Einzelrennen mit Wiederholung in der Vorschau, Short bis zum Ergebnis oder Rennserie mit freier Dauer, **Clip-Export** |
 | **Endless Naval Battle**<br>`naval` | Seeschlacht mit **2, 3 oder 4 Schiffen** und Kanonenkugel-Kreislauf. Optional: goldene Kugel, Himmelsverlauf, Sternschnuppen und Wal.<br>**Modi:** Endlos (Standard); Ruhiges Duell (in Arbeit, `--param mode=calm`) mit zwei Kanonen je Schiff, halbem Tempo, kleineren Schiffen und Segelschäden; gespielt in Runden mit Versenkung und Punktestand. | Freie Dauer |
 | **Endless Marble Factory**<br>`marble` | Klassische Kugelfabrik mit geschlossenem Sortierkreislauf; eigenes Hoch- und Querformatlayout. **20–35 Kugeln**, 1–3 Kugeln je Farbröhre. | Freie Dauer |
 | **Marble Works · Progressive Factory**<br>`marbleworks` | 3D-Fabrik mit Produktionsauftrag und zwei Ausbauten.<br>**Material:** Glas, Stahl, Gummi, Materialvergleich.<br>**Veredelung:** Farbspirale, Klarglas / Vollton, Perlmutt.<br>**Kollektion:** Spektrum, Ozean, Glut.<br>Aufträge mit 24–360 Kugeln; automatische Kamera, Übersicht oder manuelle Ansicht. | Auftrag + Finale oder freie Dauer; **Clip-Export** |
@@ -37,7 +38,7 @@ Die folgenden Szenarien und Varianten sind im aktuellen Code vorhanden. Weitere 
 
 ## Was lässt sich exportieren?
 
-**Alle acht Szenarien samt Varianten** unterstützen den Videoexport.
+Die Szenarien der Tabelle unterstützen den Videoexport.
 
 | Ausgabe | Möglichkeiten |
 |---|---|
@@ -45,7 +46,7 @@ Die folgenden Szenarien und Varianten sind im aktuellen Code vorhanden. Weitere 
 | **Bildformat** | 9:16 und 16:9; zusätzlich 1:1 (nur per Konfiguration / Kommandozeile). Quadrat nutzt teils ein eingepasstes Querformatlayout. |
 | **Qualität** | 720p, 1080p, 1440p oder 4K (kurze Bildseite); 30 oder 60 fps. |
 | **Länge** | Frei von 1 Sekunde bis 4 Stunden. Marble Works kann bis zum Auftragsende + 12 Sekunden Fabrikfinale laufen (bei Zeitlupe länger); Scrap-Turniere enden nach 8 Runden + 5 Sekunden Ergebnisanzeige, Scrap-Shorts 2,5 Sekunden nach dem Sieg. |
-| **Ausschnitte** | Nur **Scrap Wars, Marble Works, Waterpark, Cloud Wars, Marble Knockout und Endless Burrow** (Kommandozeilenfunktion). Der Ton stammt aus der vollständigen Episodenmischung. |
+| **Ausschnitte** | Nur **Scrap Wars, Marble Works, Waterpark, Cloud Wars, Marble Knockout, Endless Burrow und Schnecke gegen Stempel** (Kommandozeilenfunktion). Der Ton stammt aus der vollständigen Episodenmischung. |
 | **Einzelbild** | PNG (Skriptfunktion, kein eigener Button in der Oberfläche) |
 | **Einstellungen / Wiederholung** | Einstellungen als JSON speicherbar. Jedes MP4 erhält außerdem eine JSON mit Konfiguration, Seed, Aufnahmeparametern, Prüfsummen und Programmstand. |
 
@@ -56,10 +57,11 @@ Die Online-Vorschau ist stumm und exportiert keine Videos. Gleiche Einstellungen
 Für jedes Szenario gibt es **Short- und Langvideo-Vorlagen**: normalerweise **1 Minute hochkant** bzw. **10 Minuten quer**, jeweils **1080p30 mit Ton**. **Marble Works** verwendet stattdessen einen Mini-Auftrag mit **24** bzw. einen vollständigen Auftrag mit **144 Kugeln**; die Laufzeit ergibt sich aus der Produktion. Der **Scrap-Short** zeigt eine Runde im Short-Bild auf einem geprüften Seed und endet 2,5 Sekunden nach dem Sieg (rund 30 Sekunden); das **Scrap-Langvideo** ist ein Turnier mit acht Runden (rund 5 Minuten), und der Export schreibt die Kapitelzeiten der Runden in die JSON-Begleitdatei. Pyramid-Vorlagen nutzen die Tierchen. **Waterpark** bietet einen 30-s-Short und einen 10-Minuten-Parktag in **1080p60**; seine Vorschau startet im Dauerbetrieb. Endliche Wasserpark-Filme werden vor dem Export auf einen vollständigen Abschluss geprüft.
 
 <details>
-<summary>Alle 18 Produktionsvorlagen und zusätzliche Varianten</summary>
+<summary>Alle 20 Produktionsvorlagen und zusätzliche Varianten</summary>
 
 | Szenario | Short | Langvideo |
 |---|---|---|
+| Schnecke gegen Stempel | [Ein Rennen bis zum Ziel](presets/production/foerderduell-short.json) | [10 Minuten wechselnde Lieferungen](presets/production/foerderduell-long.json) |
 | Naval Battle | [Short](presets/production/naval-short.json) | [Langvideo](presets/production/naval-long.json) |
 | Klassische Kugelfabrik | [Short](presets/production/marble-short.json) | [Langvideo](presets/production/marble-long.json) |
 | Marble Works | [Mini-Auftrag](presets/production/marbleworks-short.json) | [Vollständiger Auftrag](presets/production/marbleworks-long.json) |

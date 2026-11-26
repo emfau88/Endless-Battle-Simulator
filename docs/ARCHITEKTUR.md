@@ -88,11 +88,13 @@ Parameternamen dürfen nicht mit Kern-Schlüsseln kollidieren: `version`, `name`
 - Bei Matter.js vor `Engine.create`: `Common._nextId = 0; Common._seed = 0;`. In `destroy()` aufräumen
   (`Events.off`, `Composite.clear`, `Engine.clear`).
 - Objekte fest begrenzen (Pools); nichts wächst mit der Laufzeit.
+- Ein Szenario kann mit `shouldReplayPreview(sim)` im laufenden Simulator ein Einzelrennen nach der Ergebnisanzeige neu starten. Der Export endet gemäß Exportplan.
 
 **Renderer:** `root` (PixiJS-Container), `draw()`, `destroy()` (eigene Texturen freigeben).
 
 - Eigenes Layout für 9:16 und 16:9.
 - Statische Grafik einmal in Texturen vorzeichnen, bewegte Teile als Sprites.
+- Dieselbe `CanvasScene` kann in einer HTML-Vorschau direkt auf einen übergebenen 2D-Canvas zeichnen. So verwendet die Ideenauswahl den Renderer des Förderduells.
 - Texte im Video englisch.
 
 ## 5 · Ton
@@ -129,8 +131,8 @@ Richtwert: Der 20-Minuten-Export der Pyramide in 1080p60 lief mit rund 21 Bilder
 
 ## 7 · Tests und Prüflauf
 
-- `scripts/test-ci.mjs` ordnet jede Testdatei über ihren Dateinamen einer von 18 Gruppen zu; der Prüflauf auf GitHub
-  startet jede Gruppe einzeln (`.github/workflows/ci.yml`).
+- `scripts/test-ci.mjs` ordnet jede Testdatei über ihren Dateinamen einer Prüfgruppe zu. GitHub startet
+  jede Gruppe einzeln (`.github/workflows/ci.yml`). Das Förderduell hat eine Szenario- und eine Exportgruppe.
 - **Referenz-Hashes** (`npm run golden`) decken Naval, Kugelfabrik und Mycelium ab. Die anderen Szenarien halten
   ihre Zustandsreferenzen in den eigenen Testdateien; ebenso der Naval-Modus „Ruhiges Duell“ (`test/naval-calm.test.mjs`).
 - Vorlage für den Rahmen eines Szenarios: `test/fixtures/dummy-scenario.js`.

@@ -13,6 +13,17 @@ R31 bis R36. Dieser Plan liefert Begründung, Reihenfolge und Paketbeschreibunge
 
 Drei Zustände: **Erledigt**, **Läuft**, **Offen**. Dazu **Entfällt** für gestrichene Schritte.
 
+**R45 · Schnecke gegen Stempel (Vorschau).** Aus den [fünf Entwürfen](SZENENIDEEN_2026-11-22.md) hat der Nutzer
+das Förderduell als Startszene gewählt. **Erledigt** sind der [Umsetzungsplan](SZENENPLAN_2026-11-22.md)
+und die [Bildprobe in Graphit, Stahl und Kupfer](FOERDERDUELL_BILDPROBE_2026-11-22.md#graphit-stahl-und-kupfer).
+Rennlogik, bewegte Szene, Ton und beide Produktionsvorlagen sind auf dem Szenenbranch integriert und
+[mit MP4-Ausgaben geprüft](FOERDERDUELL_2026-11-22.md). Die Schnecke schiebt die Kugeln mit ihrer
+rotierenden Windung. In beiden Formaten sieht man die Nabe und die Messingmarken am Blatt umlaufen.
+Die [Ideenauswahl](reference/szenenideen.html) spielt beide Zuläufe ab. Die Modellannahme einer unten geführten Kugel
+und die Messung der Drehung stehen im [Kontaktbericht](FOERDERDUELL_SCHNECKE_2026-11-24.md#sichtbare-drehung-im-simulator).
+**Offen** ist die Sichtabnahme der Bewegung.
+Die [Kippkaskade](KIPPKASKADE_2026-11-22.md) bleibt Reserve.
+
 ### Block 0 · Sichern und aufräumen (R31)
 
 | Schritt | Stand | Ergebnis |

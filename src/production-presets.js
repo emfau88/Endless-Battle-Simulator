@@ -2,11 +2,18 @@
 // presets/production carry the same values for CLI use; tests check both paths.
 (function () {
   'use strict';
-  const labels = { naval: 'Seeschlacht', marble: 'Kugelfabrik', scrap: 'Scrap Wars', mycelium: 'Myzel', pyramid: 'Pyramide', territory: 'Territory Wars / Hex Dominion', marbleworks: 'Marble Works', waterpark: 'Wasserpark', cloudwars: 'Cloud Wars', knockout: 'Marble Knockout' };
+  const labels = { naval: 'Seeschlacht', marble: 'Kugelfabrik', scrap: 'Scrap Wars', mycelium: 'Myzel', pyramid: 'Pyramide', territory: 'Territory Wars / Hex Dominion', marbleworks: 'Marble Works', waterpark: 'Wasserpark', cloudwars: 'Cloud Wars', knockout: 'Marble Knockout', foerderduell: 'Schnecke gegen Stempel' };
   EBS.productionPreset = (scenario, kind, seed = 42) => {
     if (!Object.hasOwn(labels, scenario) || !['short', 'long'].includes(kind)) throw new Error('Unbekannte Produktionsvorlage.');
     if (scenario === 'marbleworks') return EBS.MarbleProduction.preset(kind, seed);
     const short = kind === 'short';
+    if (scenario === 'foerderduell') return {
+      version: 1, name: short ? 'Schnecke gegen Stempel – Zwei Schübe' : 'Schnecke gegen Stempel – Rennserie',
+      scenario, seed, params: { mode: short ? 'single' : 'series', supply: short ? 'bursts' : 'mixed', rulesVersion: EBS.Foerderduell.Auger.rulesVersion },
+      video: { aspect: short ? '9:16' : '16:9', resolution: 1080, fps: 30, durationSec: short ? 12.3 : 600,
+        tempo: 1, audio: true, volume: { master: 100 }, quality: { crf: 20, preset: 'medium', bitrate: null } },
+      view: { hud: true, camera: false },
+    };
     if (scenario === 'waterpark') return {
       version: 1, name: `Wasserpark – ${short ? 'Vier Tiere (30 Sekunden)' : 'Ein Parktag (10 Minuten)'}`,
       scenario, seed,

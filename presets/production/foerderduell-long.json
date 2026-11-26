@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "name": "Schnecke gegen Stempel – Rennserie",
+  "scenario": "foerderduell",
+  "seed": 42,
+  "params": {
+    "mode": "series",
+    "supply": "mixed",
+    "rulesVersion": "contact-v2"
+  },
+  "video": {
+    "aspect": "16:9",
+    "resolution": 1080,
+    "fps": 30,
+    "durationSec": 600,
+    "tempo": 1,
+    "audio": true,
+    "volume": {
+      "master": 100
+    },
+    "quality": {
+      "crf": 20,
+      "preset": "medium",
+      "bitrate": null
+    }
+  },
+  "view": {
+    "hud": true,
+    "camera": false
+  }
+}
