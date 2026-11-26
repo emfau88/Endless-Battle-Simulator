@@ -89,4 +89,6 @@ Vorhandene Exportoptionen bedeuten keine vollständige Abnahme jeder Kombination
 
 Wie es weitergeht: [Gesamtplan](docs/GESAMTPLAN_2026-11-16.md) · Aufbau: [Architektur](docs/ARCHITEKTUR.md) · Regeln für Assistenten: [AGENTS.md](AGENTS.md)
 
+Hintergrund für Betreiber und Produktionsagenten: [YouTube-Kanalwissen für SimCascade](docs/YOUTUBE_KANALWISSEN_2026-11-18.md) — Qualitätsmaßstab, Variation, Auswertung und Plattformregeln mit Quellen; keine Arbeitsanweisung und kein Kanal-Audit.
+
 Technik: JavaScript, PixiJS, Matter.js, Three.js; Videoexport über Playwright und FFmpeg. Szenarien liegen in `src/scenarios/`, die Exportpipeline in `lib/`. Bestehende Tests: `npm test`, Simulationsreferenzen: `npm run golden`.

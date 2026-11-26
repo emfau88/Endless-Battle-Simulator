@@ -10,6 +10,9 @@ Die **einzige aktive Aufgabenliste** des Projekts. Kurz gehalten: Stand, was jet
 **Projektziel:** SimCascade veröffentlicht regelmäßig eigenständige, gut lesbare Simulationsvideos mit sauberem Ton:
 Shorts in 9:16 und längere Videos in 16:9. Alle Texte im Video sind englisch.
 
+Hintergrundwissen, keine zusätzliche Aufgabenliste: [YouTube-Kanalwissen für SimCascade](YOUTUBE_KANALWISSEN_2026-11-18.md)
+(Quellenstand 18.11.2026; keine Arbeitsanweisung und kein Kanal-Audit).
+
 ## 1 · Stand am 16.11.2026
 
 | Punkt | Stand |

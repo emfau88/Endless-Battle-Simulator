@@ -13,6 +13,10 @@ R31 bis R36. Dieser Plan liefert Begründung, Reihenfolge und Paketbeschreibunge
 
 Drei Zustände: **Erledigt**, **Läuft**, **Offen**. Dazu **Entfällt** für gestrichene Schritte.
 
+**Erledigt am 18.11.2026:** Die Recherche zum professionellen Betrieb von SimCascade ist als
+[kompaktes Kanalwissen](YOUTUBE_KANALWISSEN_2026-11-18.md) dokumentiert. Reine Informationsgrundlage mit Quellen;
+keine neue Arbeitsanweisung, kein Kanal-Audit und keine Änderung an Produktionsplänen oder offenen Aufgaben.
+
 ### Block 0 · Sichern und aufräumen (R31)
 
 | Schritt | Stand | Ergebnis |
