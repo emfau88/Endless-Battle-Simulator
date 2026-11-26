@@ -21,7 +21,8 @@ Dieser Bericht wird je Paket fortgeschrieben.
 | G3 THE TOWER komplett, Casting, Vorlage „Short · Turm“ | **Erledigt** (25.11.) |
 | G4 THE GAUNTLET Abschnitte 1 bis 5 | **Erledigt** (26.11.) |
 | G5 THE GAUNTLET komplett, Einstiegsflug, Podest | **Erledigt** (26.11.) |
-| G6 Drehbuch-Casting, Vorlage „Langvideo“ | **Erledigt** (26.11.). G7 offen. |
+| G6 Drehbuch-Casting, Vorlage „Langvideo“ | **Erledigt** (26.11.) |
+| G7 Abschluss Teil 2, Geschmacksfragen | **Erledigt** (26.11.). Offen: Antworten des Nutzers, ganzer Export nur auf Auftrag. |
 
 ---
 
@@ -1257,3 +1258,75 @@ node export.mjs --config presets/production/knockout-long.json --clip-start 176 
   Rennen mit Drehbuch.
 - `test/knockout-browser.test.mjs`, Test „Short (M7)“: grün, mit beiden Vorlagen-Dateien gleich Oberfläche und der
   Langvideo-Vorlage aus `GAUNTLET_CAST`.
+
+## G7 · Abschluss Teil 2 und gesammelte Geschmacksfragen (26.11.2026)
+
+**Was jetzt da ist:**
+
+- Ablauf „Gesamtlevel mit Kamerafahrt“ (ohne „in Arbeit“, beide Level sind fertig):
+  - **THE TOWER** (9:16): 16 Murmeln, drei Abschnitte, Ziel mit Fotofinish, rund 38 s.
+  - **THE GAUNTLET** (16:9): 20 Murmeln, zehn Abschnitte, Einstiegsflug, Kamera „Fahrt“ (oder „Abschnitte“), Finale
+    mit Starttor, Podest, rund 3:20 min.
+- Vorlagen-Knöpfe „Short · Turm (rund 38 Sekunden)“ und jetzt „Langvideo · The Gauntlet (rund 3½ Minuten)“. Beide
+  nehmen gecastete Läufe: der Turm einen Seed mit Fotofinish, THE GAUNTLET ein Drehbuch mit Geschichte.
+- Das Rennen Bahn für Bahn (Teil 1) mit seinen Short-Fassungen und Drehbüchern bleibt über „Ablauf“ wählbar.
+- Kommandozeile, der ganze Export nur auf Auftrag:
+
+  ```bash
+  node export.mjs --config presets/production/knockout-short.json --out output/knockout-short.mp4
+  ```
+
+  ```bash
+  node export.mjs --config presets/production/knockout-long.json --out output/knockout-long.mp4
+  ```
+
+- Casting: `node scripts/knockout-casting.mjs --level tower` (Short) und `--story` (Drehbuch fürs Langvideo).
+
+**Proben von Teil 2 (lokal, je 20 s, unter `output/knockout-lab/`):**
+
+| Probe | Datei |
+|---|---|
+| Turm, erster Abschnitt (G1) | `g1-tower-20s.mp4` |
+| Gauntlet, erster Abschnitt, Kamera „Fahrt“ und „Abschnitte“ (G1) | `g1-gauntlet-fahrt-20s.mp4`, `g1-gauntlet-abschnitte-20s.mp4` |
+| Turm aus der Vorlage: Anfang und Finale (G3) | `g3-tower-start-20s.mp4`, `g3-tower-end-20s.mp4` |
+| Gauntlet aus der Vorlage: Einstieg, zwei Schleusen, Finale (G6) | `g6-gauntlet-start-20s.mp4`, `g6-gauntlet-schleusen-20s.mp4`, `g6-gauntlet-finale-20s.mp4` |
+
+**Gesammelte Geschmacksfragen** (mit Empfehlung; gebaut ist jeweils die Empfehlung):
+
+1. **Länge Langvideo:** rund 3:20 min statt der geplanten 6 min. Mit 20 Murmeln sind die Abschnitte schnell voll.
+   Empfehlung: so lassen, das Video hat keinen Leerlauf. Länger ginge mit zwei, drei weiteren Abschnitten (etwa der
+   breiten Treppe aus dem Plan).
+2. **Geschichte im Langvideo:** Welches Drehbuch? Seed 1 (GREEN gewinnt, die letzten Rettungen kurz vor dem Finale;
+   Empfehlung, in der Vorlage), Seed 4 (GREEN gewinnt, eine Rettung um Haaresbreite, dafür zieht sich `TILT` 40 s) oder
+   Seed 2 (SILVER wird knapp Zweite).
+3. **Finale mit Starttor und Nagelfeld:** Ohne das lag Platz 2 im Median 1,2 s zurück. Mit Tor wartet das Feld kurz
+   (`FINAL SPRINT`), dann entscheidet das Nagelfeld. Empfehlung: so lassen.
+4. **Texte am Anfang:** Flug mit `20 MARBLES. ONE COURSE.` / `ONLY THE FASTEST GO ON.`, dann `THE GAUNTLET` /
+   `10 STAGES. ONE CHAMPION.` Empfehlung: so lassen.
+5. **Einblendung für die Geschichte:** Bisher erzählt sich die Außenseiterin nur durchs Rennen. Eine kleine
+   Einblendung bei der dritten knappen Rettung (etwa `GREEN SURVIVES AGAIN!`) wäre möglich. Empfehlung: erst das
+   Video ansehen.
+6. **Podest:** 8 s mit `CHAMPION`. Empfehlung: so lassen.
+7. **Level-Namen** im Video (`THE TOWER`, `THE GAUNTLET`), **Streckenleiste** unten, **Lampen** an den Schleusen und
+   Einblendungen wie `NEW LEADER`: Empfehlung: alles so lassen.
+8. **Standard-Ablauf:** Öffnet man das Szenario ohne Vorlage, startet noch das Rennen Bahn für Bahn. Empfehlung: nach
+   der Abnahme das Gesamtlevel zum Standard machen.
+9. **Weitere Türme für Shorts**, etwa einer je Woche mit neuem Hauptelement? Empfehlung: erst Short und Langvideo ganz
+   exportieren und ansehen.
+10. **Aus dem ersten Plan:** Murmelnamen als Farbwörter, keine Musik. Empfehlung: so lassen.
+11. **Nächster Schritt:** ganzer Export von Short (THE TOWER, rund 38 s) und Langvideo (THE GAUNTLET, rund 3:21 min),
+    nur auf Auftrag.
+
+**Grenzen:**
+
+- Der Szenario-Name trägt weiter „(in Arbeit)“, bis der Nutzer Short und Langvideo abgenommen hat.
+- Eigene Kamerapunkte (Totale beim Einsturz und über der Weiche, Zoom in den Ringen) fehlen; die Kamera folgt dem Feld.
+- Das Riesenrad steht noch nicht in der Element-Galerie.
+- Das Drehbuch gilt nur mit den Einstellungen der Vorlage (Einstiegsflug an, Zeitlupe an).
+- 7 von 100 freien Läufen brauchen einen Anstoß; die Vorlagen nehmen nur Läufe ohne.
+
+**Nachweise:**
+
+- Die Beschriftung des Langvideo-Knopfs hieß noch „10 Bahnen“; nachgezogen. Sonst nur Text.
+- Gelaufen: Browser-Test „Short (M7)“ (Vorlagen, Oberfläche). Die Rechnung ist seit G6 unverändert.
+- Nicht gelaufen: voller `npm test`, ganzer Export.

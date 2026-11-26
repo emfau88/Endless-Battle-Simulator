@@ -395,7 +395,7 @@ nachgezogen.
 | G4 | THE GAUNTLET Abschnitte 1 bis 5 mit Fallschacht, Hebe-Rad und Einsturz-Strecke | 100 Läufe bis zur fünften Schleuse ohne Hänger. **Stand 26.11.: erledigt**, mit Abweichungen nach Messung (Riesenrad mit Gondeln statt Schaufelrad, hebt rund 800 E; Brücke mit fester Fangbahn, 15 Planken, Bruchkante bis 800 E/s; Kippbretter mit Grundneigung) ([Bericht](MARBLE_KNOCKOUT_2026-11-25.md#g4--the-gauntlet-abschnitte-1-bis-5-26112026)) |
 | G5 | Abschnitte 6 bis 10 mit Weiche und Finale, Einstiegsflug, Podest | 100 ganze Läufe ohne Hänger, Länge rund 6 min. **Stand 26.11.: erledigt**, mit Abweichungen nach Messung (Finale mit Starttor und Nagelfeld für knappe Zieleinläufe; Hammergasse als eine Spur; Ringausbruch mit zwei Ringen; Länge rund 3:15 min) ([Bericht](MARBLE_KNOCKOUT_2026-11-25.md#g5--the-gauntlet-komplett-abschnitte-6-bis-10-einstiegsflug-podest-26112026)) |
 | G6 | Drehbuch-Casting fürs Gesamtlevel, Kapitel, Vorlage „Langvideo · Gesamtlevel“ | 20-s-Proben: Einstieg mit Flug, eine Schleuse, Finale. **Stand 26.11.: erledigt** (Geschichte: Außenseiterin im Fotofinish statt nur aufs Podest, weil im Finale nur drei fahren; Proben mit zwei Schleusen) ([Bericht](MARBLE_KNOCKOUT_2026-11-25.md#g6--drehbuch-casting-fürs-gesamtlevel-vorlage-langvideo-26112026)) |
-| G7 | Bericht, gesammelte Geschmacksfragen, README | — |
+| G7 | Bericht, gesammelte Geschmacksfragen, README | — **Stand 26.11.: erledigt** ([Bericht](MARBLE_KNOCKOUT_2026-11-25.md#g7--abschluss-teil-2-und-gesammelte-geschmacksfragen-26112026)) |
 
 **Stopps:** Nur nach G1 ist ein harter Stopp. Danach wird mit den Empfehlungen durchgebaut. Am Ende liegen dem Nutzer
 die 20-s-Proben und die gesammelten Fragen vor. Der ganze Export kommt nur auf Auftrag.
@@ -423,6 +423,8 @@ Nur gezielt, kein voller `npm test`.
 ---
 
 ## 11 · Gesammelte Geschmacksfragen (werden am Ende gestellt)
+
+> **Stand 26.11.:** gestellt im [Bericht, Abschnitt G7](MARBLE_KNOCKOUT_2026-11-25.md#g7--abschluss-teil-2-und-gesammelte-geschmacksfragen-26112026), ergänzt um die Fragen aus dem Bau.
 
 Beim Stopp nach G1 entscheidet der Nutzer nur: Kamera im Querformat als Fahrt oder in Abschnitten? Passen Action und
 Feldgröße? Alles andere wird mit der Empfehlung gebaut und am Ende gefragt:

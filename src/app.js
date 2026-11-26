@@ -401,7 +401,7 @@ async function bootLive() {
     $('btnShortPreset').textContent = production ? 'Short · Mini-Auftrag' : c.scenario === 'waterpark' ? 'Short · 30 Sekunden'
       : c.scenario === 'scrap' ? 'Short · eine Runde (rund 30 Sekunden)' : c.scenario === 'knockout' ? 'Short · Turm (rund 38 Sekunden)' : 'Short · 1 Minute';
     $('btnLongPreset').textContent = production ? 'Langvideo · Vollständiger Auftrag'
-      : c.scenario === 'scrap' ? 'Langvideo · Turnier (8 Runden)' : c.scenario === 'knockout' ? 'Langvideo · 10 Bahnen (rund 5 Minuten)' : 'Langvideo · 10 Minuten';
+      : c.scenario === 'scrap' ? 'Langvideo · Turnier (8 Runden)' : c.scenario === 'knockout' ? 'Langvideo · The Gauntlet (rund 3½ Minuten)' : 'Langvideo · 10 Minuten';
     for (const ctl of session.scenario.controls) {
       const el = $('p-' + ctl.key), v = c.params[ctl.key];
       if (!el) continue;

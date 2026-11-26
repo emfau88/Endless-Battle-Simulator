@@ -3,6 +3,8 @@
  *
  * Murmel-Ausscheidungsrennen: Langvideo (16:9) mit 12 Murmeln über 10 Bahnen, auf jeder Bahn scheidet die letzte
  * aus; Short (9:16) mit 8 Murmeln über 3 Bahnen. Dazu die Element-Galerie und eine einzelne Bahn zum Ansehen.
+ * Teil 2 (Gesamtlevel mit Kamerafahrt, die Vorlagen zeigen darauf): THE TOWER hochkant mit 16 Murmeln, THE GAUNTLET
+ * quer mit 20 Murmeln; Level: knockout/levels.js und knockout/level.js, Ablauf: knockout/levelsim.js.
  * Physik: knockout/physics.js, Bausteine: knockout/elements.js, Bahnen: knockout/stages.js, Ablauf:
  * knockout/simulation.js, Bild: knockout/art.js und knockout/renderer.js.
  * Quadrat 1:1 zeigt das Querformat mit Rand oben und unten (die Bahnen sind für 16:9 gebaut).
@@ -98,7 +100,7 @@ class KnockoutScenarioSim extends KS.KnockoutSimulation {
   setParam(k, v) { this.cfg = normalizeParams({ ...this.cfg, [k]: v }); }
   setTimeScale(s) { this.dt = DT * s; this.timeScale = s; }
 }
-/** Gesamtlevel mit Kamerafahrt (R43 Teil 2, in Arbeit): THE TOWER hochkant, THE GAUNTLET quer. */
+/** Gesamtlevel mit Kamerafahrt (R43 Teil 2): THE TOWER hochkant, THE GAUNTLET quer. */
 class KnockoutLevelScenarioSim extends EBS.KnockoutLevelSim.KnockoutLevelSimulation {
   constructor({ seed, params, world, timeScale = 1 }) {
     const w = simWorld(world);
@@ -157,7 +159,7 @@ EBS.registerScenario({
   defaults,
   controls: [
     { key: 'mode', label: 'Ablauf', type: 'select', restart: true, rebuildUi: true,
-      options: [['race', 'Ganzes Rennen (Bahn für Bahn)'], ['level', 'Gesamtlevel mit Kamerafahrt (in Arbeit)'], ['stage', 'Eine Bahn'], ['gallery', 'Galerie der Bausteine']] },
+      options: [['race', 'Ganzes Rennen (Bahn für Bahn)'], ['level', 'Gesamtlevel mit Kamerafahrt'], ['stage', 'Eine Bahn'], ['gallery', 'Galerie der Bausteine']] },
     { key: 'cam', label: 'Kamera im Querformat (Gesamtlevel)', type: 'select', restart: true, visible: (p) => p.mode === 'level',
       options: [['ride', 'Fahrt: folgt dem Feld'], ['sections', 'Abschnitte: fest, gleitet zum nächsten']] },
     { key: 'intro', label: 'Einstiegsflug übers Level (Querformat)', type: 'select', restart: true, affectsDuration: true, visible: (p) => p.mode === 'level',
