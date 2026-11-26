@@ -1,4 +1,4 @@
-# Scrap Wars: offene Punkte – Stand 22.11.2026 (R40)
+# Scrap Wars: offene Punkte – Stand 25.11.2026 (R40)
 
 Angelegt als Übergabe nach dem Stopp am 20.11.2026, seit dem 21.11. je Paket nachgezogen: was fertig ist, was offen ist und wo es weitergeht. Die aktive
 Aufgabenliste bleibt die [ROADMAP](ROADMAP.md); hier stehen die Einzelheiten. Bezug: [Ausbau-Plan](SCRAP_AUSBAU_PLAN_2026-11-19.md),
@@ -44,7 +44,17 @@ Alle Pakete des Plans sind gebaut. Offen sind nur noch Urteile und Aufträge des
 
 ### Merge
 
-- Pull Request #48 (Branch `scrap/s1-darstellung`) als Merge-Commit nach `main`: braucht die Freigabe des Nutzers.
+- Erledigt am 25.11.: Pull Request #48 mit Freigabe des Nutzers als Merge-Commit auf `main` (`8f9d2b3`).
+
+### Weiter in R44
+
+- Das 8-bis-10-Minuten-Langvideo mit Drehbuch auf der neuen Karte „Jungle Ruins“ ist ein eigener Punkt (R44,
+  [Bericht](SCRAP_LANGVIDEO_DSCHUNGEL_2026-11-25.md)). Die Arbeitskopie `.claude/worktrees/scrap-s1` arbeitet dafür
+  jetzt auf dem Branch `scrap/dschungel`.
+- Stand 25.11.: Karte, Drehbuch-Modus und Drehbuch „Comeback“ (12 Runden, 8:57) fertig. Das ganze Video auf Auftrag:
+  `node export.mjs --config presets/scrap-jungle-drehbuch.json --out output/scrap-jungle-drehbuch.mp4`
+  Proben lokal: `output/scrap-long/dschungel-probe-20s-seed458.mp4` (Karte) und
+  `output/scrap-long/drehbuch-probe-20s-finale.mp4` (Ende des Finales). Die Fragen stehen am Ende des Berichts.
 
 ## 3 · Fragen an den Nutzer
 
@@ -71,9 +81,9 @@ Alle Pakete des Plans sind gebaut. Offen sind nur noch Urteile und Aufträge des
 ## 4 · Aufräumen (jeder Schritt braucht die Freigabe des Nutzers)
 
 - **Branches** lokal und auf GitHub, alle zusammengeführt: `scrap/e0-kopfzeile`, `scrap/v4-taktik`, `scrap/t2-ton`,
-  `scrap/s1-short`; nach dem Merge dieses Stands auch `scrap/s1-darstellung`.
-- **Arbeitskopien:** `.claude/worktrees/scrap-e0` und `.claude/worktrees/scrap-v4`; nach dem Merge auch
-  `.claude/worktrees/scrap-s1`.
+  `scrap/s1-short` und (seit dem 25.11. zusammengeführt) `scrap/s1-darstellung`.
+- **Arbeitskopien:** `.claude/worktrees/scrap-e0` und `.claude/worktrees/scrap-v4`. `.claude/worktrees/scrap-s1`
+  wird für R44 weiter gebraucht.
 - **Nur lokal** in `.claude/worktrees/scrap-s1/output/scrap-long/`: die 20-Sekunden-Probe des Langvideos
   (`scrap-long-probe-20s-v2-seed458.mp4`), die ältere mit Seed 431 und die Turnier-Casting-Protokolle.
 - **Nur lokal** in `.claude/worktrees/scrap-s1/output/scrap-short/`: die 20-Sekunden-Probe des aktuellen Stands

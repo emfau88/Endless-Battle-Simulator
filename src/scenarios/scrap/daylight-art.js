@@ -159,7 +159,7 @@
     g.restore();line(g,bevel+2,-6,w-bevel-2,-6,wood?'#f6d89f':stone?'#d9dfd7':'#f9f2d9',1.1);
     const result={canvas:c,shadow,pad,width,height};if(cache.size>=160)cache.clear();cache.set(key,result);return result;
   }
-  function rubble(g,b) {
+  function rubble(g,b,palette=colors) {
     const wood=b.material==='wood',seed=b.id+71;
     g.save();g.translate(b.x+b.w/2,b.y+b.h/2);
     const dust=g.createRadialGradient(0,0,0,0,0,Math.max(b.w,b.h)*.58);dust.addColorStop(0,'#596d5b17');dust.addColorStop(1,'#596d5b00');
@@ -171,7 +171,7 @@
       const pts=wood?[[-size*1.3,-2],[size*1.3,-1],[size,2],[-size,2]]:[[-size,-size*.4],[0,-size*.6],[size*.8,0],[size*.4,size*.4],[-size*.5,size*.5]];
       g.save();g.translate(1.4,1.8);g.rotate(angle);polygon(g,pts);g.fillStyle='#3f554b35';g.fill();g.restore();
       g.rotate(angle);
-      polygon(g,pts);g.fillStyle=colors[b.material];g.fill();line(g,-size,-size*.4,0,-size*.6,'#ece8cb70',.7);
+      polygon(g,pts);g.fillStyle=palette[b.material];g.fill();line(g,-size,-size*.4,0,-size*.6,'#ece8cb70',.7);
       if(wood)line(g,-size,0,size,0,'#79562e5c',.55);g.restore();
     }
     g.restore();

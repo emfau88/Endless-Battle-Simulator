@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "name": "Scrap Wars – Jungle Ruins, Drehbuch „Comeback“ (12 Runden, rund 9 Minuten)",
+  "scenario": "scrap",
+  "seed": 1,
+  "params": {
+    "arena": "jungle",
+    "rulesVersion": "v4",
+    "items": "rockets",
+    "episodeMode": "tournament",
+    "script": "jungle-comeback",
+    "repeatRounds": true,
+    "endPauseSec": 4,
+    "soundMix": "soft-v1"
+  },
+  "video": {
+    "aspect": "16:9",
+    "resolution": 1080,
+    "fps": 30,
+    "durationSec": 540,
+    "tempo": 1,
+    "audio": true,
+    "volume": {
+      "master": 100
+    },
+    "quality": {
+      "crf": 20,
+      "preset": "medium",
+      "bitrate": null
+    }
+  },
+  "view": {
+    "hud": true,
+    "camera": false
+  }
+}

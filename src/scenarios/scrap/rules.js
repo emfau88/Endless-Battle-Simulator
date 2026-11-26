@@ -13,6 +13,8 @@
       [190,255,90,50],[620,255,90,50],[190,595,90,50],[620,595,90,50],
     ] },
     sunshine: { name: 'SUNNY YARD', blocks: null },
+    // D1 · Nur Taktik-Arena (v4) mit den Raketen-Regeln; Karte in tactics.js
+    jungle: { name: 'JUNGLE RUINS', blocks: null },
   };
   const modules = {
     plating: { name: 'PLATING', note: '+15% ARMOR / -8% SPEED', hp: 1.15, speed: .92, cooldown: 1 },

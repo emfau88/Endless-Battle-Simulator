@@ -346,8 +346,9 @@
     if(wood&&large)line(g,-half+1,-.2,half-1,.15,'#47332377',.55);
     g.restore();
   }
-  function rubble(g,b,sunny=false) {
-    if(sunny)return EBS.ScrapDaylightArt.rubble(g,b);
+  // palette: eigene Trümmerfarben einer Tageslicht-Karte (R44 Dschungel); ohne Angabe die Farben von Sunny Yard
+  function rubble(g,b,sunny=false,palette) {
+    if(sunny)return EBS.ScrapDaylightArt.rubble(g,b,palette);
     const key=`rubble-p4:${b.material}:${b.w}:${b.h}:${b.id}`;
     let texture=rubbleTextures.get(key);
     if(!texture) {
@@ -368,7 +369,7 @@
     }
     g.drawImage(texture,b.x-16,b.y-16,b.w+32,b.h+32);
   }
-  function breakEffect(g,e,under,sunny=false) {
+  function breakEffect(g,e,under,sunny=false,palette=sunnyColors) {
     const u=e.age/e.ttl;if(u>=1)return;
     g.save();g.translate(e.x,e.y);
     if(under) {
@@ -379,7 +380,7 @@
       if(sunny) {
         // Preserve Sunny Yard's existing palette, size and particle silhouette.
         g.translate(Math.cos(a)*d,Math.sin(a)*d-u*(1-u)*18);g.rotate(a+u*2);
-        g.fillStyle=sunnyColors[e.material];g.fillRect(-size,-2,size*2,e.material==='wood'?3:5);
+        g.fillStyle=palette[e.material];g.fillRect(-size,-2,size*2,e.material==='wood'?3:5);
       } else fragment(g,Math.cos(a)*d,Math.sin(a)*d-u*(1-u)*18,a+u*2,
         Object.hasOwn(rubbleColors,e.material)?e.material:'stone',size,false,i);
       g.restore();

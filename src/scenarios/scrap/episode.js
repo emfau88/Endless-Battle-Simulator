@@ -7,7 +7,7 @@
   const { clamp, num, bool, hashSeed, fnv1a } = EBS.util;
   const EVENT_LIMIT = 4096;
   const normalizeParams = (p = {}) => withShort(p, {
-    rulesVersion: p.rulesVersion === 'v4' ? 'v4' : p.arena === 'sunshine' ? 'v3' : ['v2','v3'].includes(p.rulesVersion) ? p.rulesVersion : 'classic',
+    rulesVersion: p.rulesVersion === 'v4' || p.arena === 'jungle' ? 'v4' : p.arena === 'sunshine' ? 'v3' : ['v2','v3'].includes(p.rulesVersion) ? p.rulesVersion : 'classic',
     episodeMode: p.episodeMode === 'tournament' ? 'tournament' : 'endless',
     arena: Object.hasOwn(EBS.ScrapRules.arenas, p.arena) ? p.arena : 'yard',
     workshop: p.episodeMode === 'tournament' && bool(p.workshop, false),
@@ -18,9 +18,38 @@
   function withShort(p, out) {
     if (p.layout === 'short' && out.rulesVersion === 'v4' && out.arena === 'sunshine') out.layout = 'short';
     // L2 · Raketen-Regeln als Schalter (nur Taktik-Arena). Ohne den Schalter fehlt der Schlüssel ebenfalls.
-    if (p.items === 'rockets' && out.rulesVersion === 'v4') out.items = 'rockets';
+    // D1 · Die Dschungel-Karte gibt es nur in der Taktik-Arena und immer mit den Raketen-Regeln.
+    if ((p.items === 'rockets' || out.arena === 'jungle') && out.rulesVersion === 'v4') out.items = 'rockets';
+    // D2 · Drehbuch: nur im Turnier und nur auf der Arena, für die es gecastet ist. Ohne Drehbuch fehlt der Schlüssel.
+    if (out.episodeMode === 'tournament' && out.rulesVersion === 'v4' && Object.hasOwn(SCRIPTS, p.script) && SCRIPTS[p.script].arena === out.arena) {
+      out.script = p.script; out.workshop = false;
+    }
     return out;
   }
+  // D2 · Drehbuch fürs Langvideo: eine Zeile je Runde. Roboter 0–3 = EMBER, AZURE, AMBER, MOSS.
+  //   winner: Sieger · second: wer als Letzter ausscheidet (Schlussduell) · firstOut: wer zuerst ausscheidet
+  //   close: Sieger am Ende unter 20 % Leben · rocket: letzter K.o. durch eine Rakete · seed: Runden-Seed aus dem Casting
+  // Jede Runde ist echt simuliert; der Seed ist so gewählt, dass sie genau so ausgeht (in Chromium gerechnet, nur quer).
+  // Seeds suchen: node scripts/scrap-script-casting.mjs --script <id> --from 1 --to 3000; prüfen: … --check.
+  // Nach jeder Änderung an v4, den Raketen-Regeln oder der Karte neu casten; test/scrap-script.test.mjs prüft im Browser.
+  const SCRIPTS = {
+    // Comeback: Die ersten drei Runden gewinnen drei verschiedene, EMBER zieht davon, AMBER (sechs Runden ohne Sieg)
+    // holt mit drei Siegen in Folge auf; vor dem Finale steht es 4:4, das Finale endet knapp mit einer Rakete.
+    'jungle-comeback': { arena: 'jungle', rounds: [
+      { winner: 0, seed: 2695 },
+      { winner: 1, seed: 37 },
+      { winner: 3, seed: 1684 },
+      { winner: 0, close: true, seed: 1154 },
+      { winner: 1, rocket: true, seed: 1941 },
+      { winner: 0, firstOut: 2, seed: 516 },
+      { winner: 2, firstOut: 0, seed: 1842 },
+      { winner: 2, close: true, seed: 2937 },
+      { winner: 2, second: 0, rocket: true, seed: 2628 },
+      { winner: 0, firstOut: 2, seed: 2508 },
+      { winner: 2, second: 1, close: true, seed: 2848 },
+      { winner: 2, second: 0, close: true, rocket: true, seed: 1892 },
+    ] },
+  };
   const SHORT_END_SEC = 2.5;
   // S2 · Zeitlupe beim letzten K.o. (nur Short): 0,5 s Videozeit mit Tempo 0,35, davon 0,3 s vor dem letzten Treffer
   // (die Simulation läuft langsamer) und 0,2 s danach (die Effekte laufen langsamer). Der Plan wird vorab berechnet:
@@ -59,8 +88,9 @@
         full: true, kind: 'portrait', short: true };
     }
     if (params.rulesVersion === 'v3' || params.rulesVersion === 'v4') {
-      const portrait=h>w, aw=portrait?EBS.ScrapMaterials.height:EBS.ScrapMaterials.width;
-      const ah=portrait?EBS.ScrapMaterials.width:EBS.ScrapMaterials.height, top=portrait?132:80;
+      // Kartengröße je Arena (R44: Dschungel 1352 × 702, sonst 1040 × 540); die Karte füllt das Bild unter der Kopfleiste
+      const portrait=h>w, size=EBS.ScrapTactics.arenaSize(params.arena), aw=portrait?size.h:size.w;
+      const ah=portrait?size.w:size.h, top=portrait?132:80;
       const scale=Math.min((w-24)/aw,(h-top-12)/ah),width=aw*scale,height=ah*scale;
       return { x:(w-width)/2,y:top+(h-top-12-height)/2,width,height,size:Math.min(width,height),
         scale,arenaW:aw,arenaH:ah,full:true,kind:portrait?'portrait':w>h?'landscape':'square' };
@@ -126,6 +156,9 @@
       this.step = 0; this.t = 0; this.simTicks = 0; this.accumulator = 0;
       this.roundNumber = 0; this.completedRounds = 0; this.phase = 'running'; this.pauseUntil = 0;
       this.wins = [0, 0, 0, 0]; this.draws = 0;
+      // D2 · Drehbuch: feste Runden-Seeds, Rundenzahl aus dem Drehbuch (sonst acht). Nicht im Zustands-Hash; cfg.script genügt.
+      this.script = this.cfg.script ? SCRIPTS[this.cfg.script] : null;
+      this.totalRounds = this.script ? this.script.rounds.length : 8;
       this.roundResults = []; this.outroUntil = 0;
       // L1 · Rundenstarts für die Kapitelzeiten (Videoschritt je Runde). Nicht Teil des Zustands-Hashes;
       // das Ereignisprotokoll ist begrenzt und verliert in langen Videos die frühen Runden.
@@ -152,7 +185,8 @@
     }
     _startRound() {
       this.roundNumber++;
-      this.roundSeed = this.roundNumber === 1 ? this.seed : hashSeed('scrap-round-v1', this.seed, this.roundNumber);
+      this.roundSeed = this.script ? this.script.rounds[this.roundNumber - 1].seed >>> 0
+        : this.roundNumber === 1 ? this.seed : hashSeed('scrap-round-v1', this.seed, this.roundNumber);
       const Round = this.cfg.rulesVersion === 'v4' ? TacticalRound : this.cfg.rulesVersion === 'v3' ? MaterialRound : this.cfg.rulesVersion === 'classic' && this.cfg.arena === 'yard' && !this.cfg.workshop ? ObservedRound : ImprovedRound;
       const options = { seed: this.roundSeed, rulesVersion: this.cfg.rulesVersion, arena: this.cfg.arena,
         portrait: this.world.h > this.world.w, short: this.short, upgrades: this.workshop.modules,
@@ -221,7 +255,7 @@
             // Short: Sieger 2,5 s groß zeigen, danach Schluss
             this.phase = 'outro'; this.outroUntil = this.step + SHORT_END_SEC * 60;
             if (this.slow) this.slow.endStep = this.step;
-          } else if (tournament && this.completedRounds === 8) {
+          } else if (tournament && this.completedRounds === this.totalRounds) {
             this.phase = 'outro'; this.outroUntil = this.step + 5 * 60;
             this._event('tournament_end', undefined, undefined, { champions: this.champions(), wins: [...this.wins] });
           } else {
@@ -270,7 +304,7 @@
         workshop: JSON.parse(JSON.stringify(this.workshop)),
         pauseRemaining: this.phase === 'pause' ? (this.pauseUntil - this.step) / 60 : 0,
         roundHash: this.roundSim.stateHash(), eventSeq: this.eventSeq,
-        summary: this.cfg.episodeMode === 'tournament' && this.completedRounds === 8
+        summary: this.cfg.episodeMode === 'tournament' && this.completedRounds === this.totalRounds
           ? `Turnier beendet · ${this.champions().map(id => this.roundSim.robots[id].name).join(' + ')} · ${Math.max(...this.wins)} Siege`
           : `Runde ${this.roundNumber} · ${s.summary}` };
     }
@@ -307,7 +341,7 @@
       if (this.roundNumber !== this.completedRounds + (this.phase === 'running' ? 1 : 0)) errors.push('Rundenzähler inkonsistent');
       if (this.phase === 'running' && this.roundSim.phase !== 'running') errors.push('Aktive Runde bereits beendet');
       if (this.phase === 'pause' && this.pauseUntil <= this.step) errors.push('Rundenpause überschritten');
-      if (this.cfg.episodeMode === 'tournament' && (this.completedRounds > 8 || this.roundNumber > 8)) errors.push('Turnier hat mehr als acht Runden');
+      if (this.cfg.episodeMode === 'tournament' && (this.completedRounds > this.totalRounds || this.roundNumber > this.totalRounds)) errors.push('Turnier hat zu viele Runden');
       if (![this.camera.x,this.camera.y,this.camera.zoom].every(Number.isFinite) || this.camera.zoom < 1 || this.camera.zoom > 1.4) errors.push('Kamerazustand ungültig');
       if (this.workshop.installed.some(n => !Number.isInteger(n) || n < 0 || n > 1) || this.workshop.balances.some(n => !Number.isInteger(n) || n < 0 || n > 3) ||
           this.workshop.modules.some(m => m !== null && !Object.hasOwn(EBS.ScrapRules.modules, m))) errors.push('Werkstattgrenzen verletzt');
@@ -344,5 +378,5 @@
     const size = world || (cfg.video ? EBS.videoSize(cfg.video) : null);
     return !size || (size.h ?? size.logicalHeight) > (size.w ?? size.logicalWidth);
   }
-  EBS.Scrap = { Episode, normalizeParams, layout, EVENT_LIMIT, createExportPlan, hasNaturalEnd, SHORT_END_SEC, SLOW, SHORT_SEEDS, castSeed, LONG_SEEDS, castTournamentSeed };
+  EBS.Scrap = { Episode, normalizeParams, layout, EVENT_LIMIT, createExportPlan, hasNaturalEnd, SHORT_END_SEC, SLOW, SHORT_SEEDS, castSeed, LONG_SEEDS, castTournamentSeed, SCRIPTS };
 })();
