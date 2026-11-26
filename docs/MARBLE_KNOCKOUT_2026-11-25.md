@@ -26,6 +26,7 @@ Dieser Bericht wird je Paket fortgeschrieben.
 | G8 Gruben: OUT-Kiste, Schacht mit Rahmen, Abgrund | **Erledigt** (26.11.) |
 | CI: Knockout-Prüfungen im Zeitbudget | **Erledigt** (26.11.), CI grün |
 | G9 Zwei Rennen mit Gesamtwertung, Langvideo rund 7 min | **Erledigt** (26.11.) |
+| G9 Nachtrag: Vorlage „Langvideo“ in 1440p mit 60 fps | **Erledigt** (26.11.) |
 
 ---
 
@@ -1476,3 +1477,46 @@ entscheidet also den Titel. Dritte gesamt ist LILAC mit 22 Punkten.
 - Während Rennen 2 zeigt nur die Startkarte den Gesamtstand. Eine kleine Gesamtanzeige im Rennen wäre eine
   Geschmacksfrage für später.
 - Ein Rennbild kostet ohne Grafikkarte viel Zeit. Der ganze Export lief mit Grafikkarte.
+
+## G9 · Nachtrag: Langvideo in 1440p mit 60 fps (26.11.2026)
+
+**Auftrag:** Der Nutzer fragte, ob das Video 60 fps und übliche YouTube-Qualität hat. Es hatte 1080p mit 30 fps und
+rund 3,9 Mbit/s, weniger als YouTube für 1080p empfiehlt. Auf Wunsch des Nutzers: Video neu in 1440p mit 60 fps
+exportieren und die Vorlage „Langvideo“ dauerhaft so einstellen.
+
+**Umsetzung:**
+
+- Vorlage „Langvideo“ (Oberfläche und `presets/production/knockout-long.json`): 1440p, 60 fps, CRF 16 statt 1080p,
+  30 fps, CRF 20. Ab 1440p vergibt YouTube den besseren Codec, und die Murmeln laufen mit 60 fps flüssiger. Das ist
+  dieselbe Einstellung wie beim Myzel. Das Short bleibt bei 1080p mit 30 fps.
+- Rechnung, Rennen, Bild und Ton bleiben unverändert.
+- Exporttest der Vorlagen (`test/helpers/production-preset-export.mjs`): Er liest Auflösung und Bildrate jetzt aus der
+  Vorlage statt fest 1080p30. Beim Knockout-Langvideo rendert er 1 s statt 3 s, damit die Renderzeit ohne Grafikkarte
+  in der CI auf dem bisherigen Stand bleibt.
+
+**Messwerte des neuen Exports** (lokal mit Grafikkarte, Einstellungen wie die neue Vorlage, Zwischenbilder mit
+JPEG-Qualität 0,95):
+`node export.mjs --config presets/production/knockout-long.json --resolution 1440 --fps 60 --crf 16 --jpeg-quality 0.95 --gpu --out output/knockout-zwei-rennen-1440p60.mp4`
+
+- Fertig in 31:07 min (13,7 Bilder/s). 2560 × 1440, 60 Bilder/s, 25 573 Bilder, 426,2 s, rund 11,7 Mbit/s, 592 MB.
+- Ton wie bisher: 8971 Ereignisse, −24,6 LUFS, Spitze −6 dBFS. Dieselben 22 Kapitel, derselbe Ausgang (GREEN 26
+  Punkte).
+- Prüfung des Exports OK (Codec, Auflösung, Bildrate, Bildzahl, Dauer, Simulationszustand).
+- Zustands-Hash am Ende `a9a70ffa` statt `ff073bba`: Mit 30 fps rechnet das Video zwei Schritte je Bild und endet
+  deshalb einen Schritt (1/60 s) später, 426,233 s statt 426,217 s.
+- Das Video liegt nur lokal in `output/` (nicht im Repository).
+
+**Nachweise:**
+
+- `node --test --test-name-pattern "knockout/long" test/presets-export-knockout.test.mjs`: grün (38 s, 60 Bilder in
+  2560 × 1440).
+- `node --test test/knockout-level.test.mjs`: 14 von 14 grün (143 s), darunter „Vorlage gleich Datei“ für das
+  Langvideo.
+- Kontaktbogen aus dem fertigen Video, lokal: `output/knockout-lab/zwei-rennen-1440p60-bogen.jpg` (neun Bilder;
+  Tabellen, Texte und Podest sitzen auch in 1440p).
+- Nicht gelaufen: Short-Teil des Exporttests, Referenz-Hashes (Simulation unverändert), voller `npm test`.
+
+**Grenzen:**
+
+- Der ganze Export dauert lokal rund dreimal so lange (31 statt 10,5 min), die Datei ist knapp dreimal so groß.
+- Der Ton bleibt bewusst leise (−24,6 LUFS). YouTube macht leise Videos nicht lauter.

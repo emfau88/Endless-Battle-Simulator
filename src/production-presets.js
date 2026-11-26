@@ -32,7 +32,8 @@
     // Kamerafahrt, Einstiegsflug, Podest) nach einem gecasteten Drehbuch (seit G6). Das Rennen Bahn für Bahn bleibt
     // über „Ablauf“ wählbar. Seit G9 sind es im Langvideo zwei Rennen mit Gesamtwertung (rund 7 Minuten, gecastete
     // Paarung mit Drehbüchern); ein einzelnes Rennen bleibt über „Rennen im Querformat“ wählbar. Beide enden mit dem
-    // Rennende (40 s und 420 s sind nur Startwerte).
+    // Rennende (40 s und 420 s sind nur Startwerte). Das Langvideo exportiert in 1440p mit 60 fps und CRF 16: Ab 1440p
+    // vergibt YouTube den besseren Codec, und die Murmeln laufen mit 60 fps flüssiger (seit G9, wie Myzel).
     if (scenario === 'knockout') {
       const cast = short ? null : EBS.Knockout.castSeries(seed);
       return {
@@ -41,8 +42,8 @@
         params: short ? { mode: 'level', slowmo: 'on', marks: 'on', display: 'on', videoEnd: 'finish' }
           : { mode: 'level', cam: 'ride', intro: 'on', series: 'two', slowmo: 'on', marks: 'on', display: 'on', videoEnd: 'finish',
             script: cast.script, seed2: cast.seed2, script2: cast.script2 },
-        video: { aspect: short ? '9:16' : '16:9', resolution: 1080, fps: 30, durationSec: short ? 40 : 420, tempo: 1, audio: true,
-          volume: { master: 100 }, quality: { crf: 20, preset: 'medium', bitrate: null } },
+        video: { aspect: short ? '9:16' : '16:9', resolution: short ? 1080 : 1440, fps: short ? 30 : 60, durationSec: short ? 40 : 420,
+          tempo: 1, audio: true, volume: { master: 100 }, quality: { crf: short ? 20 : 16, preset: 'medium', bitrate: null } },
         view: { hud: true, camera: false },
       };
     }
