@@ -14,6 +14,7 @@ test('Scrap-Optik: Bilder nach Seek entsprechen laufendem Zeichnen, auch über d
       for (const [rulesVersion, arena, aspect] of [
         ['v3', 'yard', '16:9'], ['v3', 'yard', '9:16'], ['v3', 'sunshine', '16:9'],
         ['v3', 'sunshine', '9:16'], ['classic', 'yard', '16:9'], ['v2', 'yard', '9:16'],
+        ['v4', 'sunshine', '16:9'], ['v4', 'sunshine', '9:16'],
       ]) {
         const cfg = EBS.normalizeConfig({ scenario: 'scrap', seed: 42, params: { rulesVersion, arena },
           video: { aspect, resolution: 720 }, view: { hud: true, camera: false } });
@@ -31,9 +32,13 @@ test('Scrap-Optik: Bilder nach Seek entsprechen laufendem Zeichnen, auch über d
         if (probe.sim.phase !== 'pause') throw Error('Expected first round to finish');
         const endStep = probe.sim.step;
         const blastStep = probe.sim.events.find(e => e.type === 'blast')?.step ?? 430;
+        // v4: Kisten im Wackeln nach der Landung und kurz nach dem ersten Ausbruch (Bretter, Staub)
+        const crateTargets = rulesVersion === 'v4' ? ['crate_land', 'crate_break']
+          .map(type => Math.ceil((probe.sim.events.find(e => e.type === type).step + 8) / 2) * 2) : [];
         probe.renderer.destroy(); probe.sim.destroy();
         const targets = [Math.ceil((blastStep + 6) / 2) * 2, Math.ceil((endStep + 42) / 2) * 2,
           Math.ceil((endStep + 210) / 2) * 2];
+        targets.push(...crateTargets); // hinten anfügen: targets[2] bleibt die nächste Runde
         const longSeek = rulesVersion === 'v3' && arena === 'yard' && aspect === '16:9';
         if (longSeek) targets.push(2100); // Explicit simulate(20) -> 35 s regression.
         // Include a fresh explosion, an end pause and the next round. Drawing

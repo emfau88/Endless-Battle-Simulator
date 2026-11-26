@@ -459,7 +459,8 @@ stehen. Der Ton gefällt. Umgesetzt nach meiner Empfehlung, vorher und nachher a
 
 **Anzeige im Hochformat (`cloudwars/layout.js`):** Automatisch heißt hochkant jetzt „nur Einblendungen“: keine
 Farbpunkte und Massebalken mehr. Alle Meldungen (Titel, Gewitter, „… IS GONE“, Sieg, Wetter) stehen nacheinander auf
-einer festen Zeile bei 17 % der Bildhöhe statt 30 %, knapp unter den Symbolen der Plattform; Schrift 58 statt 68
+einer festen Zeile am oberen Rand bei 6,5 % der Bildhöhe statt 30 %, zwischen den Symbolen der Plattform in den Ecken
+(zuerst 17 %, auf Wunsch des Nutzers ganz nach oben); Schrift 58 statt 68
 (Sieg 70 statt 80). Die schlanke Anzeige bleibt im Schalter „Anzeige“ wählbar, neu ist dort „Nur Einblendungen“. Das
 Querformat ist unverändert.
 

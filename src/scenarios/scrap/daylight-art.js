@@ -176,50 +176,79 @@
     }
     g.restore();
   }
-  function pad(g,pad) {
-    const color=pad.kind==='rocket'?'#d6b66e':'#92c9d2';
+  // Waffen und Stationen (R40, Variante A): weiße Marke mit großem Symbol – Rakete oder Blitz für den Blaster –,
+  // ohne Zahlen. Die Station ist ein heller Ring, der sich beim Aufladen füllt und das kommende Symbol blass zeigt.
+  // Das leichte Schweben hängt nur an der Rundenzeit, damit ein Sprung dasselbe Bild liefert.
+  const INK='#22343b',PAPER='#fbf8ef';
+  function circle(g,x,y,r,fill,stroke,width=1) {
+    g.beginPath();g.arc(x,y,r,0,Math.PI*2);
+    if(fill){g.fillStyle=fill;g.fill();}if(stroke){g.strokeStyle=stroke;g.lineWidth=width;g.stroke();}
+  }
+  function weaponIcon(g,kind,color) {
+    g.fillStyle=color;
+    if(kind!=='rocket'){polygon(g,[[2.5,-12],[-7,1.5],[-1,1.5],[-3.5,12],[7,-2],[1,-2],[4,-12]]);g.fill();return;}
+    g.save();g.rotate(Math.PI/4);
+    polygon(g,[[0,-12],[4,-6],[4,5],[-4,5],[-4,-6]]);g.fill();
+    polygon(g,[[-4,0],[-8,7],[-4,5]]);g.fill();polygon(g,[[4,0],[8,7],[4,5]]);g.fill();
+    polygon(g,[[-2.5,6.5],[0,11.5],[2.5,6.5]]);g.fill();
+    circle(g,0,-4,1.6,PAPER);g.restore();
+  }
+  function pad(g,pad,occupied) {
+    const charged=1-Math.min(1,Math.max(0,pad.readyIn/pad.period));
     g.save();g.translate(pad.x,pad.y);
-    rect(g,-31,-27,68,65,5,'#43595035');rect(g,-33,-33,66,66,4,'#5f7678');
-    rect(g,-31,-31,62,62,3,'#344a53');line(g,-29,-31,29,-31,'#cbd2c0',1);
-    for(const x of [-26,26])for(const y of [-26,26]){ellipse(g,x,y,1.8,1.8,'#8fa2a1');line(g,x-1,y,x+1,y,'#354c54',.7);}
-    ellipse(g,0,0,23,23,'#253b45');
-    g.beginPath();g.arc(0,0,25,-Math.PI/2,-Math.PI/2+Math.PI*2*(1-Math.min(1,pad.readyIn/pad.period)));g.strokeStyle=color;g.lineWidth=2;g.stroke();
-    g.textAlign='center';g.textBaseline='middle';g.font='700 13px "Segoe UI",sans-serif';g.fillStyle='#e9e5d5';
-    g.fillText(pad.readyIn<=0?'READY':String(Math.ceil(pad.readyIn)).padStart(2,'0'),0,-2);
-    g.font='600 5px "Segoe UI",sans-serif';g.fillStyle=color;g.fillText(pad.kind.toUpperCase(),0,13);
+    circle(g,0,0,31,'#d8d2bf','#9f9a87',1.5);circle(g,0,0,25,'#e9e4d4');
+    g.setLineDash([3.2,2.6]);circle(g,0,0,28,null,'#a9a491',2.2);g.setLineDash([]);
+    if(!occupied) {
+      g.beginPath();g.arc(0,0,28,-Math.PI/2,-Math.PI/2+Math.PI*2*charged);
+      g.strokeStyle=INK;g.lineWidth=3.2;g.lineCap='round';g.stroke();
+      g.globalAlpha=.28;weaponIcon(g,pad.kind,INK);
+    }
     g.restore();
   }
-  function pickupSprites(renderer,kind,loaded) {
-    const cache=renderer._daylightPickups||(renderer._daylightPickups=new Map()),key=kind+':'+loaded;
-    if(cache.has(key))return cache.get(key);
-    const sprite=canvas(64,64),g=sprite.getContext('2d');g.scale(2,2);g.translate(18,31);
-    renderer._weapon(g,kind,loaded,kind==='rocket'?'#d6b66e':'#92c9d2',true);
-    // The actual weapon silhouette casts the shadow; there is no generic oval.
-    const shadow=canvas(64,64),sg=shadow.getContext('2d');sg.drawImage(sprite,0,0);
-    sg.globalCompositeOperation='source-in';sg.fillStyle='#233d3652';sg.fillRect(0,0,shadow.width,shadow.height);
-    const result={sprite,shadow};cache.set(key,result);return result;
-  }
-  function pickup(g,p,t,renderer) {
-    const empty=!!p.empty||p.ammo<=0,color=p.kind==='rocket'?'#d6b66e':'#92c9d2';
-    const angle=(noise(p.id,13)-.5)*1.5,{sprite,shadow}=pickupSprites(renderer,p.kind,!empty);
+  function pickup(g,p,t) {
+    const empty=!!p.empty||p.ammo<=0,bob=empty?0:Math.sin(t*3.2+p.id*1.7);
     g.save();g.translate(p.x,p.y);
-    if(empty)g.globalAlpha=Math.max(.15,Math.min(.68,.68-(p.age||0)*.13));
-    else {
-      // Fine circular pickup brackets are UI paint, separate from the cast shadow.
-      for(let i=0;i<4;i++) {
-        const a=i*Math.PI/2+.16;
-        g.beginPath();g.arc(0,0,24,a,a+.4);g.strokeStyle=color+'a6';g.lineWidth=1.3;g.stroke();
-      }
-    }
-    // Translate in arena space BEFORE rotating the silhouette. Every weapon has
-    // the same down-right light vector, irrespective of its own orientation.
-    g.save();g.translate(3,4);g.rotate(angle);g.drawImage(shadow,-32,-32,64,64);g.restore();
-    g.save();g.rotate(angle);g.drawImage(sprite,-32,-32,64,64);g.restore();
-    if(!empty) {
-      rect(g,-10,18,20,10,2,'#172c32');g.textAlign='center';g.textBaseline='middle';
-      g.font='700 7px "Segoe UI",sans-serif';g.fillStyle=color;g.fillText(String(Math.max(0,Math.ceil(p.ammo))),0,23);
+    if(empty)g.globalAlpha=Math.max(.12,Math.min(.5,.5-(p.age||0)*.1));
+    circle(g,3,5+bob*.6,16,'#233d3640');
+    g.translate(0,-1.5-bob*1.5);circle(g,0,0,16.5,PAPER,INK,2.4);
+    weaponIcon(g,p.kind,empty?'#8b989b':INK);
+    g.restore();
+  }
+  // Short: Geladene Waffen als drehende Münzen. Die Münze steht aufrecht und dreht sich um die Hochachse (alle im
+  // Gleichtakt, eine Umdrehung in 1,8 s); von der Seite sieht man nur den dunklen Rand. Das Symbol bleibt lesbar,
+  // weil beide Seiten dasselbe zeigen. Neue Waffen an den Stationen wachsen in 0,3 s auf. Alles hängt nur an der
+  // Rundenzeit und am Alter der Waffe. Leere, abgelegte Waffen bleiben die flache, blasse Marke.
+  const COIN={radius:19,edge:5,turn:1.8,pop:.3,rim:{rocket:'#d9622b',blaster:'#2c8fc4'}};
+  function coin(g,p,t) {
+    if(p.empty||p.ammo<=0){pickup(g,p,t);return;}
+    const R=COIN.radius,phase=t/COIN.turn*Math.PI*2,c=Math.cos(phase),s=Math.sin(phase),w=Math.abs(c);
+    const born=t-(p.age||0),u=born>.05?Math.min(1,Math.max(0,(p.age||0)/COIN.pop)):1;
+    const grow=u>=1?1:Math.max(0,1+2.2*Math.pow(u-1,3)+1.2*Math.pow(u-1,2)),bob=Math.sin(t*3.2);
+    if(grow<.01)return;
+    const front=Math.sign(c||1)*COIN.edge/2*s,rim=COIN.rim[p.kind]||INK;
+    g.save();g.translate(p.x,p.y);
+    g.beginPath();g.ellipse(3,7,(4+13*w)*grow,6*grow,0,0,Math.PI*2);g.fillStyle='#233d3640';g.fill();
+    g.translate(0,-5-bob*1.5);g.scale(grow,grow);
+    // Rand: hintere Fläche, Band dazwischen und Umriss in dunkler Farbe
+    g.fillStyle=INK;
+    g.beginPath();g.ellipse(-front,0,R*w+2.2,R+2.2,0,0,Math.PI*2);g.fill();
+    g.beginPath();g.ellipse(front,0,R*w+2.2,R+2.2,0,0,Math.PI*2);g.fill();
+    g.fillRect(-Math.abs(front),-R-2.2,Math.abs(front)*2,R*2+4.4);
+    if(w>.06) {
+      g.beginPath();g.ellipse(front,0,R*w,R,0,0,Math.PI*2);g.fillStyle=rim;g.fill();
+      g.beginPath();g.ellipse(front,0,R*w*.8,R*.8,0,0,Math.PI*2);g.fillStyle=PAPER;g.fill();
+      g.save();g.translate(front,0);g.scale(w*1.05,1.05);weaponIcon(g,p.kind,INK);g.restore();
     }
     g.restore();
   }
-  EBS.ScrapDaylightArt={floor,block,rubble,pad,pickup,colors};
+  // Short: flache Münze von vorn (Abzeichen am Namensschild und bei der Aufnahme)
+  function badge(g,x,y,kind,scale,alpha) {
+    if(alpha<=0||scale<=0)return;
+    const R=COIN.radius;
+    g.save();g.translate(x,y);g.scale(scale,scale);g.globalAlpha*=alpha;
+    circle(g,0,0,R+2.2,INK);circle(g,0,0,R,COIN.rim[kind]||INK);circle(g,0,0,R*.8,PAPER);
+    g.scale(1.05,1.05);weaponIcon(g,kind,INK);
+    g.restore();
+  }
+  EBS.ScrapDaylightArt={floor,block,rubble,pad,pickup,coin,badge,colors};
 })();
