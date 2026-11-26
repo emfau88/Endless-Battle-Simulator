@@ -158,7 +158,8 @@
     g.restore();
   }
 
-  // Liegende Teile: Blechsplitter (E2), Trümmer (E4). Flug, dann bleiben sie bis Rundenende liegen.
+  // Liegende Teile: Blechsplitter (E2), Trümmer (E4). Flug, dann bleiben sie bis Rundenende liegen
+  // (im Short blenden die Bretter der Startkisten aus).
   function debris(g, items, sunny) {
     g.save(); g.lineJoin = 'round';
     for (const d of items) {
@@ -167,8 +168,10 @@
       const shape = () => d.kind === 'plank' ? poly(g, [[-s, -s * .2], [s * .9, -s * .26], [s, s * .2], [-s * .85, s * .24]])
         : d.kind === 'splinter' ? poly(g, [[-s, -s * .45], [s * .7, -s * .6], [s, s * .35], [-s * .6, s * .55]])
         : poly(g, [[-s, -s * .6], [-s * .1, -s], [s * .9, -s * .5], [s, s * .5], [0, s], [-s * .8, s * .7]]);
-      g.save(); g.translate(x + 1.2, y + 1.8); g.rotate(rot); shape(); g.fillStyle = rgba(OUTLINE, sunny ? .22 : .35); g.fill(); g.restore();
-      g.save(); g.translate(x, y - hop); g.rotate(rot); shape(); outlined(g, d.color, true, sunny ? 1 : .8, sunny ? .7 : .5); g.restore();
+      // alpha nur bei ausblendenden Teilen (Bretter im Short); ohne das Feld bleibt alles wie bisher
+      const fade = d.alpha !== undefined;
+      g.save(); if (fade) g.globalAlpha = d.alpha; g.translate(x + 1.2, y + 1.8); g.rotate(rot); shape(); g.fillStyle = rgba(OUTLINE, sunny ? .22 : .35); g.fill(); g.restore();
+      g.save(); if (fade) g.globalAlpha = d.alpha; g.translate(x, y - hop); g.rotate(rot); shape(); outlined(g, d.color, true, sunny ? 1 : .8, sunny ? .7 : .5); g.restore();
     }
     g.restore();
   }
