@@ -11,7 +11,7 @@ import vm from 'node:vm';
 const root = fileURLToPath(new URL('../', import.meta.url));
 export const SCRAP_MAP_FILE = join(root, 'test/fixtures/scrap-material-maps.json');
 const paths = ['core.js', 'scenarios/scrap/simulation.js', 'scenarios/scrap/rules.js',
-  'scenarios/scrap/materials.js', 'scenarios/scrap/episode.js'];
+  'scenarios/scrap/materials.js', 'scenarios/scrap/tactics.js', 'scenarios/scrap/episode.js'];
 const sha = value => createHash('sha256').update(value).digest('hex');
 
 export function computeScrapMapHashes() {
