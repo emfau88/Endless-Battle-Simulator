@@ -1,4 +1,4 @@
-// Scrap Wars · Dschungel-Karte „Jungle Ruins“ (R42/D1): eigene Arena der Taktik-Arena, immer mit den Raketen-Regeln.
+// Scrap Wars · Dschungel-Karte „Jungle Ruins“ (R44/D1): eigene Arena der Taktik-Arena, immer mit den Raketen-Regeln.
 // Die bisherigen Karten prüfen scripts/scrap-map-hashes.mjs, npm run golden und test/scrap-v4.test.mjs.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

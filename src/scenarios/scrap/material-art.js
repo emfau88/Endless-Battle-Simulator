@@ -346,7 +346,7 @@
     if(wood&&large)line(g,-half+1,-.2,half-1,.15,'#47332377',.55);
     g.restore();
   }
-  // palette: eigene Trümmerfarben einer Tageslicht-Karte (R42 Dschungel); ohne Angabe die Farben von Sunny Yard
+  // palette: eigene Trümmerfarben einer Tageslicht-Karte (R44 Dschungel); ohne Angabe die Farben von Sunny Yard
   function rubble(g,b,sunny=false,palette) {
     if(sunny)return EBS.ScrapDaylightArt.rubble(g,b,palette);
     const key=`rubble-p4:${b.material}:${b.w}:${b.h}:${b.id}`;

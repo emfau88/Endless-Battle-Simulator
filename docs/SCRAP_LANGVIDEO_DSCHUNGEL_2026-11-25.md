@@ -1,4 +1,4 @@
-# Scrap Wars: Langvideo im Dschungel – Bericht (R42)
+# Scrap Wars: Langvideo im Dschungel – Bericht (R44)
 
 Stand 25.11.2026. Offene Aufgaben stehen in der [ROADMAP](ROADMAP.md), Erledigtes im [CHANGELOG](CHANGELOG.md).
 

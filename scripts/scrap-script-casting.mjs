@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Casting für das Drehbuch-Langvideo (R42/D2): sucht für jede Zeile des Drehbuchs einen Runden-Seed, der genau das
+// Casting für das Drehbuch-Langvideo (R44/D2): sucht für jede Zeile des Drehbuchs einen Runden-Seed, der genau das
 // liefert, was die Zeile festlegt. Gerechnet in Chromium wie der Export (Node rechnet sin/cos anders).
 // Das Drehbuch selbst steht in src/scenarios/scrap/episode.js (SCRIPTS); hier stehen nur Suche und Prüfung.
 //   node scripts/scrap-script-casting.mjs --script jungle-comeback --from 1 --to 3000

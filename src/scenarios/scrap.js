@@ -540,7 +540,7 @@
       this.arena = new ArenaRenderer(this.arenaCanvas, { dpr: 1, quality: 1 });
       this.arena.episode = this.sim;
       this.arena.materialArena=!!this.layout.full;
-      // Tageslicht-Look: Sunny Yard und (R42) Jungle Ruins; der Dschungel hat eigenen Boden, eigene Deckungen und Trümmerfarben
+      // Tageslicht-Look: Sunny Yard und (R44) Jungle Ruins; der Dschungel hat eigenen Boden, eigene Deckungen und Trümmerfarben
       this.jungle = ctx.sim.cfg.arena === 'jungle';
       this.arena.sunny=ctx.sim.cfg.arena==='sunshine'||this.jungle;
       if (this.jungle) this.arena.palette = EBS.ScrapJungleArt.palette;

@@ -46,9 +46,9 @@ Alle Pakete des Plans sind gebaut. Offen sind nur noch Urteile und Aufträge des
 
 - Erledigt am 25.11.: Pull Request #48 mit Freigabe des Nutzers als Merge-Commit auf `main` (`8f9d2b3`).
 
-### Weiter in R42
+### Weiter in R44
 
-- Das 8-bis-10-Minuten-Langvideo mit Drehbuch auf der neuen Karte „Jungle Ruins“ ist ein eigener Punkt (R42,
+- Das 8-bis-10-Minuten-Langvideo mit Drehbuch auf der neuen Karte „Jungle Ruins“ ist ein eigener Punkt (R44,
   [Bericht](SCRAP_LANGVIDEO_DSCHUNGEL_2026-11-25.md)). Die Arbeitskopie `.claude/worktrees/scrap-s1` arbeitet dafür
   jetzt auf dem Branch `scrap/dschungel`.
 - Stand 25.11.: Karte, Drehbuch-Modus und Drehbuch „Comeback“ (12 Runden, 8:57) fertig. Das ganze Video auf Auftrag:
@@ -83,7 +83,7 @@ Alle Pakete des Plans sind gebaut. Offen sind nur noch Urteile und Aufträge des
 - **Branches** lokal und auf GitHub, alle zusammengeführt: `scrap/e0-kopfzeile`, `scrap/v4-taktik`, `scrap/t2-ton`,
   `scrap/s1-short` und (seit dem 25.11. zusammengeführt) `scrap/s1-darstellung`.
 - **Arbeitskopien:** `.claude/worktrees/scrap-e0` und `.claude/worktrees/scrap-v4`. `.claude/worktrees/scrap-s1`
-  wird für R42 weiter gebraucht.
+  wird für R44 weiter gebraucht.
 - **Nur lokal** in `.claude/worktrees/scrap-s1/output/scrap-long/`: die 20-Sekunden-Probe des Langvideos
   (`scrap-long-probe-20s-v2-seed458.mp4`), die ältere mit Seed 431 und die Turnier-Casting-Protokolle.
 - **Nur lokal** in `.claude/worktrees/scrap-s1/output/scrap-short/`: die 20-Sekunden-Probe des aktuellen Stands

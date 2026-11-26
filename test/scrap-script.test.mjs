@@ -1,4 +1,4 @@
-// Scrap Wars · Drehbuch-Modus (R42/D2): Turnier mit festen Runden-Seeds, jede Runde geht aus wie ihre Zeile.
+// Scrap Wars · Drehbuch-Modus (R44/D2): Turnier mit festen Runden-Seeds, jede Runde geht aus wie ihre Zeile.
 // Node prüft Schlüssel, Drehbuch und Ablauf; ob die Runden wirklich so ausgehen, prüft der Browser-Test (Chromium
 // rechnet sin/cos wie der Export, Node nicht).
 import { test, before, after } from 'node:test';

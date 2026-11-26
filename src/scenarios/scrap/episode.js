@@ -88,7 +88,7 @@
         full: true, kind: 'portrait', short: true };
     }
     if (params.rulesVersion === 'v3' || params.rulesVersion === 'v4') {
-      // Kartengröße je Arena (R42: Dschungel 1352 × 702, sonst 1040 × 540); die Karte füllt das Bild unter der Kopfleiste
+      // Kartengröße je Arena (R44: Dschungel 1352 × 702, sonst 1040 × 540); die Karte füllt das Bild unter der Kopfleiste
       const portrait=h>w, size=EBS.ScrapTactics.arenaSize(params.arena), aw=portrait?size.h:size.w;
       const ah=portrait?size.w:size.h, top=portrait?132:80;
       const scale=Math.min((w-24)/aw,(h-top-12)/ah),width=aw*scale,height=ah*scale;
