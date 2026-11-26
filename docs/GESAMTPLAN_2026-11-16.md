@@ -364,7 +364,7 @@ Dieser Abschnitt präzisiert 8.2 und 8.3; er ersetzt sie nicht.
 
 | N2e | **Ton** | Feste Mischung mit leisem Meeresrauschen statt Einmessung auf −14 LUFS; Klänge für Segeldurchschuss und Versenkung; 100 % ist wieder Standard. Episode bei −20,6 LUFS, Begrenzer höchstens −6,7 dB. | **Erledigt**, vom Nutzer freigegeben (PR #29) |
 
-| N2f | **Finale** | Schlusspfiff kurz vor dem Videoende (5 % der Länge, 10 bis 20 s), Sieger nach Punktestand, Schriftzug mit Endstand, Wimpelkette und Feuerwerk, weiße Flagge beim Verlierer. Nur ab 90 s Videolänge. | **Vorschau**, wartet auf Freigabe (Branch `naval/finale`) |
+| N2f | **Finale** | Schlusspfiff kurz vor dem Videoende (5 % der Länge, 10 bis 20 s), Sieger nach Punktestand, Schriftzug mit Endstand, Wimpelkette und Feuerwerk, weiße Flagge beim Verlierer. Nur ab 90 s Videolänge. | **Vorschau**, im ruhigen Duell einzeln zuschaltbar (`finaleV1`). Die Sichtabnahme ist offen. |
 
 Die Runden sind Teil des ruhigen Duells geworden; ein eigener Modus `rounds` wie in 8.3 geplant entfällt damit. Die
 Short-Vorlage „Who sinks first?“ aus N2 steht noch aus.

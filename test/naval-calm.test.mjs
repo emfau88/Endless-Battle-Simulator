@@ -123,7 +123,7 @@ test('Ruhiges Duell: Finale am Videoende – Schlusspfiff, Sieger, Feuerwerk; ku
   // 2-Minuten-Video: das Finale dauert 10 Sekunden und beginnt bei 1:50
   const video = { aspect: '16:9', durationSec: 120 }, runs = [];
   for (let k = 0; k < 2; k++) {
-    const page = await open({ params: { mode: 'calm' }, video });
+    const page = await open({ params: { mode: 'calm', finaleV1: true }, video });
     let s = await run(page, 109);
     assert.equal(s.final, null, 'Finale hat zu früh begonnen');
     s = await run(page, 2);                                    // Schlusspfiff bei 110 s
@@ -146,7 +146,11 @@ test('Ruhiges Duell: Finale am Videoende – Schlusspfiff, Sieger, Feuerwerk; ku
   }
   assert.deepEqual(runs[0], runs[1], 'zwei Läufe mit gleichem Seed weichen im Finale ab');
   // Videos unter 90 Sekunden (hier der Standard von 45 s) haben kein Finale
-  const short = await open(CALM), s = await run(short, 60);
+  const legacy = await open({ params: CALM.params, video });
+  assert.equal((await run(legacy, 120)).final, null);
+  assert.equal(await hash(legacy), REFERENCE[1], 'frühere Langvideos behalten ihre Zustandsreferenz');
+  await legacy.close();
+  const short = await open({ ...CALM, params: { ...CALM.params, finaleV1: true } }), s = await run(short, 60);
   assert.equal(s.final, null);
   await short.close();
 });

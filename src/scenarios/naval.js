@@ -436,7 +436,10 @@ class NavalBattle {
     this.step++; this.t = this.step * this.dt;
     this._processHits();
     this._updateBalls();
-    if (this.calm) { this._updateRockets(); this._updateFinale(); }
+    if (this.calm) {
+      this._updateRockets();
+      if (this.cfg.finaleV1) this._updateFinale();
+    }
     this._updateShipDamage();
     this.particles.update(this.dt, this._surfaceNow);
     this.shake *= 0.9;
@@ -2179,7 +2182,7 @@ EBS.registerScenario({
   // Video) – Himmel erreicht das Morgengrauen am Videoende (mindestens 10 min), Sternschnuppe etwa alle 75 s (jedes
   // Video ab 8 s hat mindestens eine), Wal etwa alle 3½ Minuten, goldene Kugel mit Zähler.
   defaults: {
-    mode: 'endless',
+    mode: 'endless', finaleV1: false,
     ships: 2, cannons: 4, fireRate: 1, projectileSpeed: 1, intensity: 0.35, ballsPerCannon: 5, recycleVisible: true,
     goldenBall: true, sky: true, skyMinutes: 0, meteors: true, meteorEvery: 75, whales: true, whaleEvery: 210,
   },
@@ -2188,6 +2191,7 @@ EBS.registerScenario({
     // resetMix: der Modus bringt eine eigene Standardmischung mit; rebuildUi: Regler und Klangliste neu aufbauen
     { key: 'mode', label: 'Modus', type: 'select', restart: true, rebuildUi: true, resetMix: true,
       options: [['endless', 'Endlos (Standard)'], ['calm', 'Ruhiges Duell (in Arbeit)']] },
+    { key: 'finaleV1', label: 'Finale am Videoende (Vorschau)', type: 'check', restart: true, visible: (p) => p.mode === 'calm' },
     { key: 'ships', label: 'Anzahl der Schiffe', type: 'select', restart: true, options: [[2, '2 Schiffe'], [3, '3 Schiffe'], [4, '4 Schiffe']] },
     // im ruhigen Duell legt der Modus die Kanonenzahl fest (2 je Schiff)
     { key: 'cannons', label: 'Kanonen pro Schiff', type: 'range', restart: true, min: 1, max: 6, step: 1, format: (v) => String(v), visible: (p) => p.mode !== 'calm' },
@@ -2206,6 +2210,7 @@ EBS.registerScenario({
   normalizeParams(p) {
     return {
       mode: Object.hasOwn(MODES, p.mode) ? p.mode : 'endless',
+      ...(p.mode === 'calm' && bool(p.finaleV1, false) ? { finaleV1: true } : {}),
       ships: clamp(Math.round(num(p.ships, 2)), 2, 4),
       cannons: clamp(Math.round(num(p.cannons, 4)), 1, 6),
       fireRate: clamp(num(p.fireRate, 1), 0.2, 3),

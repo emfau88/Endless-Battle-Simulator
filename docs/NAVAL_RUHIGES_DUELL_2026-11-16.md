@@ -22,7 +22,7 @@ node export.mjs --scenario naval --param mode=calm --duration 20 --aspect 16:9 -
 Seit dem zweiten Paket enthalten: Runden mit Versenkung, Punktestand und neuem Schiff (Abschnitt 3a).
 Seit dem dritten Paket enthalten: die Rakete vom Heck (Abschnitt 3b). Seit dem vierten: der Auftritt der goldenen Kugel
 (Abschnitt 3c).
-Als Vorschau in einem eigenen Branch: das Finale am Videoende (Abschnitt 3f).
+Im Modus „Ruhiges Duell“ aktiviert der Schalter „Finale am Videoende (Vorschau)“ das optionale Finale (Abschnitt 3f).
 Noch **nicht** enthalten: Wetter.
 
 ## 2 · Werte des Modus
@@ -169,9 +169,9 @@ Notlösung stand die Gesamtlautstärke auf 65 %.
 
 Die Mischung ist damit etwas leiser, aber die Schüsse behalten ihren Anschlag.
 
-## 3f · Finale am Videoende (Vorschau, wartet auf Freigabe)
+## 3f · Finale am Videoende (Vorschau)
 
-Bisher stand am Videoende einfach der Spielstand da. Vom Nutzer am 17.11. als nächster Schritt beauftragt.
+Bestehende Einstellungen spielen das ruhige Duell weiter bis zum Ende. Die Vorschau lässt sich mit `--param finaleV1=true` oder über den Schalter im Menü einschalten. Vom Nutzer am 17.11. als nächster Schritt beauftragt.
 
 - **Schlusspfiff:** Kurz vor dem Videoende schweigen Kanonen und Raketen; Kugeln, die noch fliegen, zählen nicht
   mehr. Das Finale dauert 5 % der Videolänge, mindestens 10 und höchstens 20 Sekunden (10 Minuten: ab 9:40).
