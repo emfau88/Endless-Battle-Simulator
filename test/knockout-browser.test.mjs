@@ -71,12 +71,13 @@ test('Seek-Regel: Sprung und durchgehende Wiedergabe ergeben dasselbe Bild (zwö
 
 // Ein Gesamtlevel-Bild kostet ohne Grafikkarte knapp 3 s; darum sechs Zeitpunkte je Format und drei Bilder Vorlauf.
 // Turm (ab G3): zwei Zeitpunkte im Finale, der letzte kurz nach dem Sieg (Seed 3 gewinnt bei 31,1 s: Ziel, Glitzern,
-// Siegerzeile). Gauntlet (ab G4): dazu Hebe-Rad (42 s) und einbrechende Brücke (54 s).
+// Siegerzeile). Gauntlet: Einstiegsflug (0,4 s und 4,1 s, ab G5), Titelkarte, Start, Hebe-Rad (49 s) und
+// einbrechende Brücke (61 s); seit G5 liegt alles um die 7 s des Flugs später.
 test('Gesamtlevel (G2): Chromium rechnet wie Node; Seek-Regel mit Kamera an sechs Zeitpunkten je Format', async () => {
   const EBS = loadKnockout();
   for (const [aspect, seed, marks] of [
     ['9:16', 3, [0.4, 5.2, 10.2, 12.6, 26.0, 31.4]],
-    ['16:9', 3, [0.4, 4.1, 10.3, 16.6, 42.0, 54.0]],
+    ['16:9', 3, [0.4, 4.1, 10.3, 16.6, 49.0, 61.0]],
   ]) {
     const sim = makeSim(EBS, { seed, aspect, params: { mode: 'level' } }), node = [];
     for (const t of [5, 12]) { while (sim.step < t * 60) sim.stepOnce(); node.push(sim.stateHash()); }

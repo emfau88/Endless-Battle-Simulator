@@ -111,7 +111,7 @@
       }
       // fin: Ziellinie statt Schleuse (letzter Abschnitt, Sieger)
       sections.push({ i, id: s.id, title: s.title, world: s.world, hazard: !!s.hazard, placeholder: !!s.placeholder,
-        els: [e0, b.elements.length], sch: out.sch || null, fin: out.fin || null, frame: out.frame || null, ride: !!out.ride,
+        els: [e0, b.elements.length], sch: out.sch || null, fin: out.fin || null, frame: out.frame || null, ride: !!out.ride, hold: out.hold || null,
         from, to: pts.length - 1, keep: spec.quota[i] });
     });
     b.setPath(pts);

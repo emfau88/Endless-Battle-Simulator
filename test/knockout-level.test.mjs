@@ -72,6 +72,13 @@ function run(seed, params, world) {
   let closedAt = -1, releasedAt = -1, alive0 = -1, px = cam.x, py = cam.y, pz = cam.z, maxV = 0;
   while (s.phase !== 'end' && s.t < 300) {
     s.stepOnce();
+    // Einstiegsflug (Langvideo): eigene Bahn, eigener Test; hier nur: Bild in der Welt
+    if (s.phase === 'intro') {
+      const v = CAM.view(cam), b = s.bounds;
+      assert.ok(v.x0 >= b.x0 - 1e-6 && v.x1 <= b.x1 + 1e-6 && v.y0 >= b.y0 - 1e-6 && v.y1 <= b.y1 + 1e-6, 'Flug außerhalb der Welt');
+      px = cam.x; py = cam.y; pz = cam.z;
+      continue;
+    }
     // Kamera: Zoom im Rahmen und langsam, Tempo begrenzt, Bild nie außerhalb der Welt
     assert.ok(cam.z >= o.zmin - 1e-9 && cam.z <= o.zmax + 1e-9, `Zoom ${cam.z}`);
     assert.ok(Math.abs(cam.z - pz) <= o.zrate * dt + 1e-9, 'Zoom zu schnell');
@@ -117,14 +124,40 @@ for (const [name, world, params, seeds] of [['Turm (9:16)', PORT, {}, [1, 2]], [
       assert.ok(s.camStats.leaderIn / s.camStats.frames > 0.9, `Spitze im Bild ${(100 * s.camStats.leaderIn / s.camStats.frames).toFixed(0)} %`);
       assert.ok(s.cuts.length >= 1 && s.cuts.length <= locks.length);
       if (fin) {
-        // Komplettes Level: ein Sieger, das Video endet kurz danach (Short höchstens 45 s)
         assert.ok(s.winner >= 0 && s.roster[s.winner].alive, `Seed ${seed}: Sieger`);
-        assert.ok(Math.abs(s.t - (s.winnerT + s.R.endHold)) < 2 * s.dt, 'Ende nach dem Halt');
-        assert.ok(s.t < 45, `Länge ${s.t.toFixed(1)} s`);
+        if (s.R.podium) {
+          // Langvideo (ab G5): Podest mit den drei im Ziel, das Video endet nach dem Podest
+          assert.equal(s.podium.length, Math.min(3, left), 'drei auf dem Podest');
+          assert.equal(s.podium[0], s.winner);
+          assert.ok(s.podiumT >= s.winnerT && Math.abs(s.t - (s.podiumT + s.R.podium)) < 2 * s.dt, 'Ende nach dem Podest');
+          assert.equal(s.runners.reduce((a, u) => a + u.nudges, 0), 0, 'kein Anstoß');
+        } else {
+          // Short: Das Video endet kurz nach dem Sieg, höchstens 45 s
+          assert.ok(Math.abs(s.t - (s.winnerT + s.R.endHold)) < 2 * s.dt, 'Ende nach dem Halt');
+          assert.ok(s.t < 45, `Länge ${s.t.toFixed(1)} s`);
+        }
       } else assert.ok(s.t < 24 * locks.length, `Länge bis zur letzten fertigen Schleuse ${s.t.toFixed(1)} s`);
     }
   });
 }
+
+test('Einstiegsflug (G5): Kamera fliegt vom Ziel zum Start, die Welt steht still; abschaltbar, nur im Querformat', () => {
+  const s = create(2, {}, LAND), ref = create(2, { intro: 'off' }, LAND), fin = s.sections[s.sections.length - 1].fin;
+  assert.deepEqual([s.phase, ref.phase, create(2, {}, PORT).phase], ['intro', 'ready', 'ready']);
+  const v = CAM.view(s.cam);
+  assert.ok(fin.ax > v.x0 && fin.ax < v.x1 && fin.ay > v.y0 && fin.ay < v.y1, 'Ziel im ersten Bild');
+  let zMin = 1;
+  while (s.phase === 'intro') {
+    s.stepOnce(); zMin = Math.min(zMin, s.cam.z);
+    if (s.phase === 'intro') assert.equal(s.world.t, 0, 'Welt steht während des Flugs');
+  }
+  assert.ok(Math.abs(s.t - s.R.intro) < 2 * s.dt, `Flug ${s.t.toFixed(2)} s`);
+  assert.ok(zMin < 0.65, 'unterwegs herausgezoomt');
+  // Danach steht die Kamera wie ohne Flug beim Start
+  assert.ok(Math.abs(s.cam.x - ref.cam.x) < 1 && Math.abs(s.cam.y - ref.cam.y) < 1 && Math.abs(s.cam.z - ref.cam.z) < 1e-6, 'Übergang ohne Sprung');
+  // Kapitel: Intro bei 0, Stage 1 nach dem Flug
+  assert.deepEqual(JSON.parse(JSON.stringify(s.chapterLog.slice(0, 2))), [{ t: 0, title: 'Intro' }, { t: s.R.intro, title: 'Stage 1: The Drop' }]);
+});
 
 test('Vorlage „Short“ (seit G3): der Turm auf einem geprüften Seed mit Fotofinish, Datei gleich Oberfläche', () => {
   const p = JSON.parse(JSON.stringify(EBS.productionPreset('knockout', 'short')));
@@ -176,12 +209,23 @@ test('Zeichnen verändert den Zustand nicht (LevelPainter mit leerem Zeichenkont
   for (const world of [PORT, LAND]) {
     const sim = create(4, {}, world), painter = new EBS.KnockoutRender.LevelPainter(sim, 1), g = stub();
     // bis ins Finale (Turm: Ziel, Sieger, PHOTO FINISH aus dem Zustand)
-    for (const t of [0.5, 5, 11, 14, 30, 39]) {
-      while (sim.t < t && sim.phase !== 'end') sim.stepOnce();
+    const check = (t) => {
       const before = sim.stateHash(), seq = sim.eventSeq;
       painter.paint(g); painter.paint(g);
       assert.equal(sim.stateHash(), before, `bei ${t} s`);
       assert.equal(sim.eventSeq, seq);
+    };
+    for (const t of [0.5, 5, 11, 14, 30, 39]) {
+      while (sim.t < t && sim.phase !== 'end') sim.stepOnce();
+      check(t);
+    }
+    // Gauntlet (ab G5): Starttor im Finale (FINAL SPRINT), Podest, letztes Bild
+    if (world === LAND) {
+      for (const at of [() => sim.holdAllT >= 0, () => sim.podiumOn, () => sim.phase === 'end']) {
+        while (!at() && sim.phase !== 'end') sim.stepOnce();
+        check(sim.t.toFixed(1));
+      }
+      assert.ok(sim.podiumOn && sim.notes.some((n) => n.kind === 'sprint'), 'Tor und Podest erreicht');
     }
     if (painter.dispose) painter.dispose();
   }

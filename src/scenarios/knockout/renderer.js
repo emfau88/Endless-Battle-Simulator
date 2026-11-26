@@ -129,8 +129,9 @@
       A.text(g, lines[1], W / 2, H * 0.47 + 62, small ? 40 : 44, { align: 'center', weight: 800, spacing: 5, color: A.S.sub, alpha: Math.min(1, k) });
     }
 
-    podium(g) {
-      const sim = this.sim, W = sim.W, H = sim.H, k = Math.min(1, sim.phaseT / 0.5), p = sim.podium || [];
+    /** Podest; age: Sekunden seit dem Erscheinen (alter Ablauf: Phasenzeit, Gesamtlevel: seit podiumT). */
+    podium(g, age = this.sim.phaseT) {
+      const sim = this.sim, W = sim.W, H = sim.H, k = Math.min(1, age / 0.5), p = sim.podium || [];
       g.save(); g.globalAlpha = 0.6 * k; g.fillStyle = '#000'; g.fillRect(0, 0, W, H); g.restore();
       const blocks = [[0, W / 2, 300, '#e3b23c'], [1, W / 2 - 260, 220, '#c8ced4'], [2, W / 2 + 260, 160, '#c58a52']];
       const base = H * 0.82, r = sim.r * 2.4;
@@ -140,7 +141,7 @@
         g.fillStyle = col; g.beginPath(); g.roundRect(x - 120, base - h * k, 240, h * k, 10); g.fill();
         A.text(g, String(i + 1), x, base - h * k + 70, 64, { align: 'center', weight: 900, color: 'rgba(0,0,0,0.55)' });
         const M = sim.roster[id];
-        A.marble(g, x, base - h * k - r - 4, r, M.name, M.color, 0.3 + i, { crown: i === 0 });
+        A.marble(g, x, base - h * k - r - 4, r, M.name, M.color, 0.3 + i, { crown: i === 0, band: M.band });
         A.text(g, M.name, x, base - h * k - 2 * r - 40, 40, { align: 'center', weight: 900, spacing: 2 });
         g.restore();
       }
@@ -312,7 +313,13 @@
     levelOverlay(g) {
       const sim = this.sim, W = sim.W, H = sim.H, short = sim.format === 'short', sec = sim.sec, lv = sim.level;
       if (!this.hud || sim.cfg.display === 'off') return;
-      const alive = sim.roster.filter((m) => m.alive).length, since = sim.t - Math.max(sim.secT, sim.R.ready);
+      // Einstiegsflug: nur die Karte, keine Anzeige
+      if (sim.phase === 'intro') {
+        this.card(g, [`${sim.roster.length} MARBLES. ONE COURSE.`, 'ONLY THE FASTEST GO ON.'], fade(sim.phaseT, 0.6, sim.introT - 1.8, 0.8));
+        return;
+      }
+      const podium = sim.podiumT >= 0 && sim.t >= sim.podiumT;
+      const alive = sim.roster.filter((m) => m.alive).length, since = sim.t - Math.max(sim.secT, (sim.introT || 0) + sim.R.ready);
       if (short) {
         if (sim.secNo === 0 && sim.t < 3.2) {
           // Schon im ersten Bild voll sichtbar (Vorschaubild des Shorts)
@@ -330,9 +337,11 @@
           A.text(g, sec.title, 58, 122, 28, { weight: 800, spacing: 3, color: A.S.sub });
           A.text(g, sec.fin ? `${alive} LEFT · ONE WINS` : `${alive} LEFT · TOP ${sim.keep}`, 1790, 80, 46, { weight: 900, align: 'right', spacing: 1 });
         }
-        A.outTube(g, sim, 1856, 178, 1012, 56);
-        if (sim.phase !== 'end' && sim.cfg.bar !== 'off') this.courseBar(g);
-        if (sim.phase === 'ready') this.card(g, [lv.title, `${sim.roster.length} MARBLES. ONLY THE FASTEST GO ON.`], fade(sim.phaseT + 0.3, 0.3, sim.R.ready - 0.9, 0.5));
+        if (!podium) A.outTube(g, sim, 1856, 178, 1012, 56);
+        if (sim.phase !== 'end' && !podium && sim.cfg.bar !== 'off') this.courseBar(g);
+        // Nach dem Einstiegsflug steht dessen Satz schon im Bild; die Karte nennt dann Stufen und Ziel
+        const sub = sim.introT ? `${n} STAGES. ONE CHAMPION.` : `${sim.roster.length} MARBLES. ONLY THE FASTEST GO ON.`;
+        if (sim.phase === 'ready') this.card(g, [lv.title, sub], fade(sim.phaseT + 0.3, 0.3, sim.R.ready - 0.9, 0.5));
         else if (!sec.placeholder && since >= 0 && since < 1.4) this.card(g, [`STAGE ${no}`, sec.title], fade(since, 0.1, 0.9, 0.4), true);
       }
       const now = sim.t, outs = sim.notes.filter((x) => x.kind === 'out' && now - x.t < 2.0);
@@ -344,12 +353,17 @@
       }
       const traps = sim.notes.filter((x) => x.kind === 'traps' && now - x.t < 1.8);
       if (traps.length) A.text(g, 'TRAPS CLOSED', W / 2, short ? H * 0.62 : H * 0.58, short ? 56 : 40, { align: 'center', weight: 900, spacing: 3, color: '#b8f5c8', alpha: fade(now - traps[0].t, 0.15, 1.2, 0.45) });
+      // Starttor im Finale: alle warten, gleich geht es los
+      const sprint = sim.notes.find((x) => x.kind === 'sprint' && now - x.t < 2.6);
+      if (sprint) A.text(g, 'FINAL SPRINT', W / 2, short ? H * 0.3 : 250, short ? 80 : 60, { align: 'center', weight: 900, spacing: 4, outline: true, color: '#ffe9a8', alpha: fade(now - sprint.t, 0.15, 1.9, 0.5), max: W * 0.9 });
       // Kurze Einblendung: neue Führende oder großer Sprung (höchstens eine je 4 s, aus dem Zustand)
       const hl = sim.notes.filter((x) => (x.kind === 'leader' || x.kind === 'jump') && now - x.t < 2.2).pop();
       if (hl && sim.winnerT < 0 && !(hl.kind === 'leader' && sim.leader !== hl.rid)) {   // Führung schon wieder verloren: weg
         const name = sim.roster[hl.rid].name, line = hl.kind === 'leader' ? `NEW LEADER: ${name}` : `${name} +${hl.n} PLACES!`;
         A.text(g, line, W / 2, short ? H * 0.2 : 176, short ? 54 : 34, { align: 'center', weight: 900, spacing: 3, outline: true, color: hl.kind === 'leader' ? '#ffe9a8' : '#c9f3ff', alpha: fade(now - hl.t, 0.15, 1.6, 0.45), max: W * 0.9 });
       }
+      // Podest (Langvideo): ersetzt die Siegerzeile
+      if (podium) { this.podium(g, sim.t - sim.podiumT); return; }
       // Sieg: groß der Name, bei knappem Einlauf darunter PHOTO FINISH (beides aus dem Zustand, bis zum Ende)
       if (sim.winnerT >= 0 && sim.winner >= 0) {
         const k = fade(now - sim.winnerT, 0.2, 99, 0.3), y = short ? H * 0.42 : H * 0.46;

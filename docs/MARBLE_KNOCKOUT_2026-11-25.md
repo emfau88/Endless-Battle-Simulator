@@ -19,7 +19,8 @@ Dieser Bericht wird je Paket fortgeschrieben.
 | G1 Gesamtlevel: Grundlage und erste Abschnitte | **Erledigt** (25.11.). Der Nutzer hat für das Querformat die Kamera **„Fahrt“** gewählt. |
 | G2 Bild fertig, Ton nach Bildlage, Sichern und Laden | **Erledigt** (25.11.) |
 | G3 THE TOWER komplett, Casting, Vorlage „Short · Turm“ | **Erledigt** (25.11.) |
-| G4 THE GAUNTLET Abschnitte 1 bis 5 | **Erledigt** (26.11.). G5 bis G7 offen. |
+| G4 THE GAUNTLET Abschnitte 1 bis 5 | **Erledigt** (26.11.) |
+| G5 THE GAUNTLET komplett, Einstiegsflug, Podest | **Erledigt** (26.11.). G6 und G7 offen. |
 
 ---
 
@@ -1051,3 +1052,126 @@ node scripts/knockout-frames.mjs --mode level --seed 2 --times 26,39,43,52,55,67
 - `npm run golden`: identisch mit der Referenz. Die neuen Schalter `bias` (Kippbrett) und `speed` (Brücke) ändern ohne
   Angabe nichts.
 - Nicht gelaufen: Scrap-Hashes (Scrap unberührt), voller `npm test`.
+
+## G5 · THE GAUNTLET komplett: Abschnitte 6 bis 10, Einstiegsflug, Podest (26.11.2026)
+
+**Umfang:**
+
+- **Abschnitt 6 `SPLIT & DRUM` (8 → TOP 7):**
+  - Trichter unter der Schleuse auf eine Weiche (Flip-Flop): Sie schickt die Murmeln abwechselnd nach rechts und links.
+  - Rechts eine lange Bahn (5°) mit zwei Schiebetoren im Wechseltakt, links ein kurzer Weg an eine Wand, darunter eine
+    Bahn mit Förderband zurück nach rechts. Beide Wege treffen sich vor der **Drehtrommel** (Radius 4,4 d, zwei
+    Öffnungen, zwei Schaufeln, wiegt hin und her). Darunter die Fangbahn in die Schleuse.
+- **Abschnitt 7 `HAMMER ALLEY` (7 → TOP 6, Sturz zählt):**
+  - Bahn nach links, zuerst 9° steil, dann 4°. Drei Löcher mit Deckel (der Deckel schließt, sobald einer raus ist),
+    vier Pendelhämmer über der Bahn im versetzten Takt.
+- **Abschnitt 8 `SHIFTING FLOORS` (6 → TOP 5):** drei wandernde Böden wie im Turm, dann die Fangbahn in die Schleuse.
+- **Abschnitt 9 `RING ESCAPE` (5 → TOP 3):** Trichter (20°) in einen Kanal, der von vorn in zwei gegenläufige Ringe
+  führt (innen ein Schlitz, außen zwei), darunter die Fangbahn in die Schleuse.
+- **Abschnitt 10 `GRAND FINAL` (3 → Platz 1 bis 3):**
+  - Lange Abfahrt über alle drei Spalten: Bahn nach links mit Drehkreuz, Wippe an der Wand, Bahn nach rechts mit
+    Schanze.
+  - **Starttor:** Es öffnet erst, wenn alle drei davor warten (dann 1,2 s Pause), spätestens 10 s nach der Ersten.
+    Dazu groß `FINAL SPRINT`. Die Kamera zeigt die Wartenden und die Letzte, die noch kommt.
+  - Hinter dem Tor eine kurze Rampe, ein **Nagelfeld** (vier Reihen) über einem Trichter, dann die offene Zielgerade
+    mit Ziel, Schiene und Wand.
+- **Podest** (nur Langvideo): 1,5 s nach Platz 3 erscheint das Podest (`CHAMPION`, Gold, Silber, Bronze) und steht
+  8 s. Kommen Platz 2 oder 3 nicht an, erscheint es spätestens 10 s nach dem Sieg. Kapitel `Winner` und `Podium`.
+- **Einstiegsflug** (nur Langvideo, Schalter „Einstiegsflug übers Level“, an): Die Kamera fliegt in 7 s vom Ziel
+  rückwärts über die Mitte jedes Abschnitts zum Start, unterwegs bis 0,6 herausgezoomt, weich an- und abgebremst. Dazu
+  die Karte `20 MARBLES. ONE COURSE.` / `ONLY THE FASTEST GO ON.`, danach die Titelkarte `THE GAUNTLET` /
+  `10 STAGES. ONE CHAMPION.` Die Welt steht während des Flugs still. Kapitel `Intro` bei 0:00, `Stage 1` nach dem Flug.
+- **Kamera:**
+  - In der zweiten Hälfte eines Abschnitts zeigt sie jetzt auch die Murmeln um die Schnittlinie selbst (mit Rand), nicht
+    nur ihre Stelle auf der Ideallinie. Auf den Böden lag die Ideallinie weit neben der Murmel.
+  - Fassung „Abschnitte“: Abschnitte, die auch ganz herausgezoomt nicht ins Bild passen (6 bis 10), fahren mit.
+- **Behoben:**
+  - Nach der Trommel in Abschnitt 6 blieben Murmeln außen auf den Ringen von Abschnitt 9 liegen, weil sie die
+    Trommel-Ebene behielten. Jetzt beginnt jeder Abschnitt mit der Grundebene.
+  - Hammergasse: Mit 4° rollten die sieben als Kette mit rund 90 E/s an, und der erste Hammer schob die ganze Kette
+    immer wieder bergauf zurück (erste Abnahme: 16 von 100 Läufen mit Anstößen, ein Abschnitt bis 44 s). Jetzt 6° nach
+    dem steilen Anfang.
+  - Volles Becken: Sind nach einem Sturz genau so viele übrig, wie weiterkommen, muss jede ins Becken. Die Letzte lag
+    dann oben auf den anderen, genau auf der Lichtschranke, und wurde nie gezählt (ein Lauf festgefahren). Liegt eine
+    Murmel still im Becken über der Lichtschranke, zählt sie jetzt als angekommen statt einen Stoß zu bekommen. Läufe
+    ohne Stoß ändert das nicht, der Turm bleibt also gleich.
+
+**Abweichungen vom Plan (nach Messung):**
+
+| Plan | Messung | Jetzt |
+|---|---|---|
+| Ringausbruch wie im Turm (Trichter 12°, Kanal 1,6 d) | Am Hals verkeilten sich Murmeln zu einem Bogen. Mit Kanal 2,1 d klemmten sich zwei schräg übereinander an den Wänden fest (2 von 12 ganzen Läufen) | Trichter 20°, Kanal innen 2,2 Murmeln breit: Breiter als zwei Murmeln hält kein Keil |
+| Ringausbruch mit drei Ringen | Nicht alle fünf passten hinein, Schlange im Kanal, Anstöße | zwei Ringe, der innere 2,8 d |
+| Hammergasse über zwei Spuren | Gebaut als eine Spur. Der Sturz lag zuerst immer am ersten Loch gleich am Anfang; ein zusätzlicher Hammer über fester Bahn am Anfang hielt das ganze Feld 26 s auf. Mit 4° danach staute sich das Feld vor dem ersten Hammer (siehe Behoben) | eine Spur mit steilem Anfang (9°), dann 6°, drei Löcher mit Deckel, vier Hämmer |
+| Finale: Drehkreuz, Kippbrett, Schanze, offene Zielgerade | Platz 2 im Median 1,2 s, Platz 3 6,5 s zurück; Wippe und Drehkreuz trennen das Feld um ganze Takte. Fotofinish (unter 0,3 s) in 1 von 16 Finals | dazu Starttor und Nagelfeld mit Trichter: Fotofinish in 10 von 16 Finals |
+| Länge rund 6 min | Abschnitte dauern 8 bis 28 s (Median) statt rund 28 s | rund 3:15 min mit Flug und Podest |
+| Totale beim Einsturz und über der Weiche, Zoom 1,1 in den Ringen | — | noch nicht; die Kamera folgt wie bisher |
+
+**Abnahme (Seeds 1 bis 100, ganze Läufe mit Einstiegsflug und Podest):**
+
+- 100 von 100 Läufen enden mit Sieger und Podest zu dritt. Niemand bleibt hängen, kein Zeitlimit.
+- 7 Läufe brauchen je einen Anstoß: viermal auf den Kippbrettern, zweimal am Rad (beides G4), einmal im Finale an
+  der Wippe. Das Casting nimmt nur Läufe ohne Anstoß.
+- Die erste Abnahme vor den beiden Korrekturen oben hatte einen festgefahrenen Lauf und 16 Läufe mit Anstößen (28
+  Stück, davon 10 Läufe in der Hammergasse).
+
+**Messwerte (dieselben 100 Läufe):**
+
+| | Median | Spanne |
+|---|---|---|
+| Videolänge bis zum Ende des Podests | 196 s (3:16 min) | 179 bis 224 s |
+| Finale beginnt nach | 155 s | |
+| Sieg nach Beginn des Finales | 29,9 s | bis 35,7 s |
+| Abstand Platz 2 hinter Platz 1 | 0,72 s | unter 0,3 s (`PHOTO FINISH`): 35 von 100; unter 0,15 s: 27 |
+| Abstand Platz 3 hinter Platz 1 | 2,68 s | alle drei unter 1,5 s: 18 von 100 |
+| Alle drei warten am Starttor (sonst öffnet es nach 10 s) | | 94 von 100 |
+| Führungswechsel je Lauf / im Finale / je Minute | 57 / 3 / 17,9 | |
+| Stürze je Lauf | 2 | zusammen 196 |
+| Führende im Bild / Aus im Bild | 93,7 % | 965 von 974 Aus |
+
+| Abschnitt | Dauer bis zur Freigabe (Median, längste) |
+|---|---|
+| 1 `THE DROP` (ab Startschuss) | 13,9 s, 15,4 s |
+| 2 `TURNSTILES` | 18,2 s, 20,0 s |
+| 3 `THE WHEEL` | 13,4 s, 17,3 s |
+| 4 `THE COLLAPSE` | 13,2 s, 19,0 s |
+| 5 `TILT` | 27,6 s, 36,9 s |
+| 6 `SPLIT & DRUM` | 23,6 s, 37,0 s |
+| 7 `HAMMER ALLEY` | 14,5 s, 33,9 s |
+| 8 `SHIFTING FLOORS` | 10,4 s, 14,3 s |
+| 9 `RING ESCAPE` | 8,5 s, 11,4 s |
+| 10 `GRAND FINAL` | rund 30 s bis zum Sieg, dann Podest |
+
+**Bildblatt (lokal):** `output/knockout-lab/g5-blatt.jpg`, Seed 2: Einstiegsflug mit Karte, Titelkarte, Hammergasse
+mit Sturz und `TRAPS CLOSED`, zwei warten am Starttor, `FINAL SPRINT`, `CYAN WINS!`, Podest CYAN, MAROON, RED.
+
+```bash
+node scripts/knockout-frames.mjs --mode level --seed 2 --times 0.3,3.5,9.0,121,165,173.3,180.3,187 --aspect 16:9 --cols 2 --scale 0.5 --out output/knockout-lab/g5-blatt.jpg
+```
+
+**Grenzen:**
+
+- Das Video dauert rund 3:15 min statt 6 min. Die Abschnitte sind kürzer als geplant, weil 20 Murmeln sie schnell
+  füllen. Längere Abschnitte oder mehr Abschnitte wären möglich (Geschmacksfrage am Ende).
+- Ein echtes Fotofinish (unter 0,3 s) gibt es von selbst in 35 von 100 Läufen; Platz 3 liegt meist weit zurück. Die
+  Vorlage soll darum einen gecasteten Lauf nehmen (G6).
+- In den Final-Proben gewann meist die, die als Erste am Tor lag (12 von 16).
+- Das Rennen mit Einstiegsflug ist nicht bitgleich mit dem ohne Flug (die Zeit ist um 7 s verschoben, Rundungen in
+  Zeitvergleichen kippen einzelne Schritte). Gecastet wird mit Flug.
+- Eigene Kamerapunkte (Totale beim Einsturz und über der Weiche, Zoom in den Ringen) fehlen noch. Die Fassung
+  „Abschnitte“ fährt in den Abschnitten mit, die ganz herausgezoomt nicht ins Bild passen.
+- Das Riesenrad steht noch nicht in der Element-Galerie.
+- Im Ausscheider-Rohr oben rechts steht der oberste Name dicht unter `OUT`, wenn 17 Murmeln draußen sind.
+- Keine Videoprobe exportiert; die 20-s-Proben kommen mit G6.
+
+**Nachweise:**
+
+- `test/knockout-level.test.mjs`: 11 Tests grün. Neu: „Einstiegsflug (G5)“ (Flug rund 7 s, Ziel im ersten Bild, Welt
+  steht still, Übergang ohne Sprung, Kapitel). Das Ende prüft mit Podest: drei auf dem Podest, Siegerin oben, Ende
+  nach dem Podest. Die Zeichenprobe zeichnet auch Starttor, Podest und Ende.
+- `test/knockout-browser.test.mjs`, Tests „Gesamtlevel (G2)“ und „Beide Formate“: grün. Die Seek-Zeitpunkte im
+  Querformat sind um den Flug verschoben (0,4 s im Flug, dann 4,1 bis 61 s). Gelaufen vor der Korrektur der
+  Hammergasse; alle Zeitpunkte liegen davor.
+- `test/knockout.test.mjs`: 8 Tests grün, der alte Ablauf ist unverändert.
+- `npm run golden`: identisch mit der Referenz.
+- Nicht gelaufen: Scrap-Hashes (Scrap unberührt), voller `npm test`, kein Videoexport.

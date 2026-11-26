@@ -79,7 +79,8 @@ function normalizeParams(input) {
   if (Array.isArray(p.script) && p.script.every((v) => Number.isInteger(v) && v >= 0)) out.script = p.script.slice(0, 16);
   if (Number.isInteger(p.field) && p.field >= 2 && p.field <= 12) out.field = p.field;
   // Gesamtlevel (Teil 2): Kamera im Querformat als Fahrt oder in festen Abschnitten (nur in diesem Ablauf gesetzt)
-  if (out.mode === 'level') out.cam = p.cam === 'sections' ? 'sections' : 'ride';
+  // Einstiegsflug übers ganze Level (nur THE GAUNTLET, seit G5), abschaltbar
+  if (out.mode === 'level') { out.cam = p.cam === 'sections' ? 'sections' : 'ride'; out.intro = p.intro === 'off' ? 'off' : 'on'; }
   return out;
 }
 
@@ -159,6 +160,8 @@ EBS.registerScenario({
       options: [['race', 'Ganzes Rennen (Bahn für Bahn)'], ['level', 'Gesamtlevel mit Kamerafahrt (in Arbeit)'], ['stage', 'Eine Bahn'], ['gallery', 'Galerie der Bausteine']] },
     { key: 'cam', label: 'Kamera im Querformat (Gesamtlevel)', type: 'select', restart: true, visible: (p) => p.mode === 'level',
       options: [['ride', 'Fahrt: folgt dem Feld'], ['sections', 'Abschnitte: fest, gleitet zum nächsten']] },
+    { key: 'intro', label: 'Einstiegsflug übers Level (Querformat)', type: 'select', restart: true, affectsDuration: true, visible: (p) => p.mode === 'level',
+      options: [['on', 'An (7 s)'], ['off', 'Aus']] },
     { key: 'short', label: 'Short-Bahnen (hochkant)', type: 'select', restart: true, enabled: (p) => p.mode === 'race' || p.mode === 'stage',
       options: [['A', 'A: Pick your color'], ['B', 'B: Follow the gold one'], ['C', 'C: Who survives the floors']] },
     { key: 'stage', label: 'Bahn (Eine Bahn, quer)', type: 'select', restart: true, enabled: (p) => p.mode === 'stage',

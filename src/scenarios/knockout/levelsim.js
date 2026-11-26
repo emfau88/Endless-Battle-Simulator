@@ -5,7 +5,9 @@
  * weiter; ist das Becken voll, schließt der Deckel, und alle übrigen sind raus. Nach der Freigabe fällt das Feld in den
  * nächsten Abschnitt. Der bisherige Ablauf „Bahn für Bahn“ (simulation.js) bleibt unberührt.
  * Der letzte Abschnitt (ab G3) endet statt in einer Schleuse an einer Ziellinie: Platz 1 ist Sieger, Platz 2 unter
- * 0,3 s dahinter gibt PHOTO FINISH, das Video endet endHold Sekunden nach dem Sieg.
+ * 0,3 s dahinter gibt PHOTO FINISH, das Video endet endHold Sekunden nach dem Sieg. Im Langvideo (ab G5) folgt
+ * stattdessen das Podest für Platz 1 bis 3; davor fliegt die Kamera zum Einstieg einmal über das ganze Level, und im
+ * Finale hält ein Starttor (hold) das Feld, bis alle davor warten.
  *
  * Die Kamera ist Simulationszustand (camera.js) und folgt dem Rennstand: in der ersten Hälfte eines Abschnitts der
  * Spitzengruppe mit Vorschau, in der zweiten Hälfte dem Kampf an der Schnittlinie samt Becken, beim Schließen hält sie
@@ -59,8 +61,13 @@
       });
       this.runners.forEach((u) => { this.progress(u); u.best = u.prog; });
       this.leader = -1; this.leadChanges = 0; this.order = []; this.cut = Infinity; this.endAt = -1; this.noteLeader = -2; this.leaderSince = 0;
-      this.winnerRt = 0; this.finalGap = -1;
-      this.cam = null; this.phase = 'ready'; this.phaseT = 0; this.raceStart = 0;
+      this.winnerRt = 0; this.finalGap = -1; this.podium = null; this.podiumT = -1; this.podiumOn = false;
+      // Einstieg (Langvideo, Plan 3): Die Kamera fliegt vom Ziel über das ganze Level zum Start. Die Welt steht dabei
+      // still. Das Rennen danach ist trotzdem nicht bitgleich mit dem ohne Flug (die Videozeit ist um introT
+      // verschoben, Rundungen in Zeitvergleichen kippen einzelne Schritte); gecastet wird mit Flug.
+      this.introT = this.R.intro && params.intro !== 'off' ? this.R.intro : 0;
+      this.cam = null; this.phase = this.introT ? 'intro' : 'ready'; this.phaseT = 0; this.raceStart = 0;
+      if (this.introT) this.chapterLog.push({ t: 0, title: 'Intro' });
       this.enterSection(0);
       // Kamera: steht zu Beginn schon richtig (kein Anfahren im ersten Bild)
       const mode = this.format === 'long' && params.cam === 'sections' ? 'sections' : 'ride';
@@ -71,6 +78,7 @@
       const f = this.focus();
       this.cam.z = Math.max(this.cam.o.zmin, Math.min(this.cam.o.zmax, f.z)); this.cam.x = f.x; this.cam.y = f.y;
       CAM.fit(this.cam); this.cam.gx = this.cam.x; this.cam.gy = this.cam.y;
+      if (this.introT) { this.fly = this.flightPath(this.cam.x, this.cam.y, this.cam.z); this.flyCam(0); }
       this.ranking();
     }
 
@@ -84,10 +92,11 @@
       this.outHere = 0; this.placeCount = 0; this.closeT = -1; this.releaseT = -1;
       this.secT = this.t; this.secRt = this.world.t; this.final = !!sec.fin; this.winnerT = -1; this.winner = -1;
       this.sampleNo = -1; for (const u of this.runners) u.hist = [];  // Ränge der letzten 2 s (für `+n PLACES!`)
+      this.holdT = -1; this.holdAllT = -1; this.holdOpen = false;      // Starttor im Abschnitt (Finale: FINAL SPRINT)
       this.trapsClosed = this.needOut === 0;
       if (this.trapsClosed) this.closeTrapsOf(sec);
       if (sec.placeholder) this.endAt = this.t + this.R.endHold;
-      else this.chapterLog.push({ t: this.t, title: `Stage ${i + 1}: ${titleCase(sec.title)}` });
+      else this.chapterLog.push({ t: i === 0 ? this.introT : this.t, title: `Stage ${i + 1}: ${titleCase(sec.title)}` });
       this.emit('stage', this.camX(), this.camY(), i, -1);
     }
     closeTrapsOf(sec) {
@@ -100,6 +109,10 @@
     stepOnce() {
       const dt = this.dt;
       switch (this.phase) {
+        case 'intro':
+          if (this.phaseT < this.introT) break;
+          this.setPhase('ready');
+          // falls through: Der erste Schritt der Vorbereitung rechnet schon, wie ohne Flug
         case 'ready':
           this.physics(dt);
           if (this.phaseT >= this.R.ready) {
@@ -148,14 +161,23 @@
           this.progress(u);
           const v2 = m.vx * m.vx + m.vy * m.vy;
           if (u.prog > u.best + RULES.stuckMin) { u.best = u.prog; u.idle = 0; }
-          else if (m.collide && m.zone < 0 && v2 < RULES.stillSpeed * RULES.stillSpeed) u.idle += h;
-          if (m.collide && u.idle > RULES.stuckWindow * (u.nudges + 1) && u.nudges < 3) { u.nudges++; this.nudge(u); }
+          else if (m.collide && m.zone < 0 && v2 < RULES.stillSpeed * RULES.stillSpeed && !this.waiting(m)) u.idle += h;
+          if (m.collide && u.idle > RULES.stuckWindow * (u.nudges + 1) && u.nudges < 3) {
+            // Liegt sie schon im Becken, nur oben auf den anderen über der Lichtschranke (das Becken ist voll, weil
+            // genau so viele übrig sind, wie weiterkommen), zählt sie als angekommen statt einen Stoß zu bekommen.
+            // Läufe ohne Stoß ändert das nicht.
+            if (sch && this.closeT < 0 && this.inBasin(m)) {
+              u.finished = true; u.finishT = rt; u.place = ++this.placeCount;
+              this.emit('finish', m.x, m.y, u.place, Math.min(11, u.place - 1));
+            } else { u.nudges++; this.nudge(u); }
+          }
           if (m.collide && u.idle > RULES.stuckOut) { this.stats.stuck++; this.hatch(u, 'stuck'); continue; }
         }
         if (this.inKill(m) || this.outside(m)) this.fell(u);
       }
       this.ranking();
       this.headlines();
+      if (sec.hold && !this.holdOpen) this.holdGate();
       if (sch && this.closeT < 0) {
         if (this.placeCount >= this.cut) this.close();
         else if (rt - this.secRt > RULES.stageLimit) { this.stats.timeUp++; this.close(); }
@@ -165,10 +187,39 @@
         if (rt - this.secRt > RULES.stageLimit) { this.stats.timeUp++; this.endAt = this.t; }
         else this.checkSlowFinal();
       }
+      // Podest: kommen Platz 2 oder 3 nicht an, steht es spätestens 10 s nach dem Sieg mit denen, die da sind
+      if (fin && this.R.podium && this.winnerT >= 0 && this.podiumT < 0 && this.t > this.winnerT + 10) this.startPodium();
+      if (this.podiumT >= 0 && !this.podiumOn && this.t >= this.podiumT) {
+        this.podiumOn = true;
+        this.emit('podium', this.camX(), this.camY(), 0, this.podium[0]);
+      }
       if (sch && this.closeT >= 0 && this.releaseT < 0 && this.t >= this.closeT + this.R.release) this.release();
       // Nachzügler, die lange nach dem Schließen noch unterwegs sind, verschwinden durch eine Klappe
       if (this.closeT >= 0) for (const u of this.runners) if (u.late && u.hatchT < 0 && u.pm.active && this.t > this.closeT + this.R.lateMax) this.hatch(u, 'late');
       if (this.endAt >= 0 && this.t >= this.endAt) this.setPhase('end');
+    }
+    /** Liegt die Murmel im Becken der Schleuse (zwischen den Wänden, unter der Öffnung, über der Lichtschranke)? */
+    inBasin(m) {
+      const sch = this.sec.sch, s = sch.sense;
+      return m.x > s.ax && m.x < s.bx && m.y > Math.min(sch.ey, sch.fy) && m.y <= s.ay;
+    }
+    /** Wartet die Murmel vor einem geschlossenen Starttor? (Dann zählt Stillstand nicht als Hängen.) */
+    waiting(m) {
+      const hd = this.sec.hold;
+      return !!hd && !this.holdOpen && m.x > hd.x0 && m.x < hd.x1 && m.y > hd.y0 && m.y < hd.y1;
+    }
+    /** Starttor: öffnet settle Sekunden, nachdem alle im Rennen davor warten, spätestens wait Sekunden nach der
+     *  Ersten. Dazu die Einblendung FINAL SPRINT. */
+    holdGate() {
+      const hd = this.sec.hold, live = this.runners.filter((u) => !u.out && !u.finished && u.pm.active);
+      const n = live.filter((u) => this.waiting(u.pm)).length;
+      if (n && this.holdT < 0) this.holdT = this.t;
+      if (n && n === live.length && this.holdAllT < 0) { this.holdAllT = this.t; this.notes.push({ kind: 'sprint', t: this.t }); }
+      if ((this.holdAllT >= 0 && this.t >= this.holdAllT + hd.settle) || (this.holdT >= 0 && this.t >= this.holdT + hd.wait)) {
+        this.holdOpen = true; hd.gate.setOpen(this.world.t, true);
+        this.emit('gate', hd.gate.x, hd.gate.y, 1, -1);
+        if (this.holdAllT < 0) this.notes.push({ kind: 'sprint', t: this.t });
+      }
     }
     inKill(m) {
       if (!m.collide) return false;
@@ -191,13 +242,15 @@
       this.ranking();
     }
     /** Zieleinlauf im Finale (t in Bahnzeit). Platz 1 ist Sieger; liegt Platz 2 weniger als 0,3 s dahinter, gibt es
-     *  die Einblendung PHOTO FINISH. Das Video endet endHold Sekunden nach dem Sieg. */
+     *  die Einblendung PHOTO FINISH. Ohne Podest endet das Video endHold Sekunden nach dem Sieg; mit Podest (Langvideo)
+     *  erscheint es podiumDelay Sekunden nach Platz 3 und steht podium Sekunden. */
     arrive(u, t) {
       const m = u.pm;
       u.finished = true; u.finishT = t; u.place = ++this.placeCount;
       this.emit('finish', m.x, m.y, u.place, Math.min(11, u.place - 1));
       if (u.place === 1) {
-        this.winner = u.rid; this.winnerT = this.t; this.winnerRt = t; this.endAt = this.t + this.R.endHold;
+        this.winner = u.rid; this.winnerT = this.t; this.winnerRt = t;
+        if (!this.R.podium) this.endAt = this.t + this.R.endHold;
         this.emit('winner', m.x, m.y, 1, u.rid); this.notes.push({ kind: 'winner', t: this.t, rid: u.rid });
         this.chapterLog.push({ t: this.t, title: 'Winner' });
       } else if (u.place === 2) {
@@ -205,6 +258,14 @@
         this.finalGap = gap;
         if (gap < 0.3) this.notes.push({ kind: 'photo', t: this.t, gap });
       }
+      if (this.R.podium && this.podiumT < 0 && u.place >= Math.min(3, this.nIn)) this.startPodium();
+    }
+    /** Podest mit den ersten drei im Ziel (Plätze aus der Zielreihenfolge). */
+    startPodium() {
+      const top = this.runners.filter((u) => u.finished && !u.out).sort((a, b) => a.place - b.place).slice(0, 3);
+      this.podium = top.map((u) => u.rid);
+      this.podiumT = this.t + this.R.podiumDelay; this.endAt = this.podiumT + this.R.podium;
+      this.chapterLog.push({ t: this.podiumT, title: 'Podium' });
     }
     /** Zeitlupe im Finale: die beiden Ersten liegen kurz vor dem Ziel weniger als slowGapFinal auseinander. */
     checkSlowFinal() {
@@ -220,7 +281,9 @@
       const sch = this.sec.sch;
       this.releaseT = this.t; sch.release(this.world.t);
       this.emit('gate', sch.cx, sch.floorY, 1, -1);
-      for (const u of this.runners) if (!u.out) { u.finished = false; u.place = 0; u.idle = 0; u.best = u.prog; }
+      // Jeder Abschnitt beginnt mit der Grundmaske: Nach einer Trommel (Zone) stießen die Murmeln sonst auch mit den
+      // Ringen des nächsten Ringausbruchs zusammen und blieben außen auf ihnen liegen, statt von vorn hineinzufallen.
+      for (const u of this.runners) if (!u.out) { u.finished = false; u.place = 0; u.idle = 0; u.best = u.prog; u.pm.mask = 1; u.pm.zone = -1; }
       if (this.secNo + 1 < this.sections.length) this.enterSection(this.secNo + 1);
       this.ranking();
     }
@@ -303,13 +366,14 @@
     focus() {
       const sec = this.sec, sch = sec.sch, path = this.lv.path, cam = this.cam;
       const zfit = (w, h) => CAM.zoomFor(cam || { W: this.W, H: this.H }, w, h, 1.05);
-      // „Abschnitte“: feste Einstellung je Abschnitt; Abschnitte mit freiem Fall oder Hebe-Rad (ride) fahren mit
+      // „Abschnitte“: feste Einstellung je Abschnitt; Abschnitte mit freiem Fall oder Hebe-Rad (ride) fahren mit, ebenso
+      // Abschnitte, die auch ganz herausgezoomt nicht ins Bild passen (seit G5 die meisten ab Abschnitt 6)
       if (cam && cam.mode === 'sections' && !sec.ride) {
-        const fr = sec.frame || sch.box;
-        return { x: (fr.x0 + fr.x1) / 2, y: (fr.y0 + fr.y1) / 2, z: zfit(fr.x1 - fr.x0, fr.y1 - fr.y0), hold: true, lag: 0.75 };
+        const fr = sec.frame || sch.box, z = zfit(fr.x1 - fr.x0, fr.y1 - fr.y0);
+        if (z >= cam.o.zmin) return { x: (fr.x0 + fr.x1) / 2, y: (fr.y0 + fr.y1) / 2, z, hold: true, lag: 0.75 };
       }
       const span = this.format === 'long' ? this.W : this.H, look = this.R.look * span;
-      if (this.phase === 'ready' || this.phase === 'race' && this.world.t - this.raceStart < 0.8) {
+      if (this.phase === 'intro' || this.phase === 'ready' || this.phase === 'race' && this.world.t - this.raceStart < 0.8) {
         // Start: Regal und Anfang der Strecke
         // (Querformat: das Regal steht ein Viertel unter dem oberen Rand, frei von der Anzeige oben)
         const s = this.stage.start, [px] = LV.pointAt(path, look);
@@ -330,6 +394,12 @@
         const [ex, ey] = LV.pointAt(path, sec.p1);
         return { x: ex, y: ey, z: 1, hold: false };
       }
+      if (sec.hold && this.holdT >= 0 && !this.holdOpen) {
+        // Starttor: Wartende und die Letzte, die noch kommt, zugleich im Bild
+        const hd = sec.hold, q = live[live.length - 1].pm;
+        const x0 = Math.min(hd.x0, q.x), x1 = Math.max(hd.x1, q.x), y0 = Math.min(hd.y0, q.y), y1 = Math.max(hd.y1, q.y);
+        return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, z: Math.min(1, zfit(x1 - x0 + 400, y1 - y0 + 300)), hold: false };
+      }
       const top = live.slice(0, 3), lp = top.reduce((s, u) => s + u.prog, 0) / top.length;
       if (!sch || lp < (sec.p0 + sec.p1) / 2) {
         const [x, y] = LV.pointAt(path, Math.min(lp + look, sec.p1));
@@ -338,10 +408,47 @@
       // Zweite Hälfte: Kampf um den letzten freien Platz, Becken und Schnittlinie zugleich im Bild
       const free = Math.max(1, this.cut - this.placeCount), pair = live.slice(Math.max(0, free - 1), free + 1);
       const cp = pair.reduce((s, u) => s + u.prog, 0) / pair.length, [qx, qy] = LV.pointAt(path, cp);
-      const bx = sch.box, x0 = Math.min(qx, bx.x0), x1 = Math.max(qx, bx.x1), y0 = Math.min(qy, bx.y0), y1 = Math.max(qy, bx.y1);
+      const bx = sch.box;
+      let x0 = Math.min(qx, bx.x0), x1 = Math.max(qx, bx.x1), y0 = Math.min(qy, bx.y0), y1 = Math.max(qy, bx.y1);
+      // dazu die Murmeln selbst mit Rand (auf Böden im Zickzack liegt die Stelle der Ideallinie weit neben der Murmel)
+      const pad = 3 * this.r;
+      for (const u of pair) { x0 = Math.min(x0, u.pm.x - pad); x1 = Math.max(x1, u.pm.x + pad); y0 = Math.min(y0, u.pm.y - pad); y1 = Math.max(y1, u.pm.y + pad); }
       return { x: (x0 + x1) / 2, y: (y0 + y1) / 2, z: Math.min(1, zfit(x1 - x0, y1 - y0)), hold: false };
     }
+    /** Flugbahn des Einstiegs: vom Ziel rückwärts über die Mitte jedes Abschnitts bis zur Einstellung beim Start
+     *  (ex, ey, ez), viermal an den Ecken geglättet. Rechnet nur mit +, −, ×, ÷ und Math.sqrt (wie camera.js). */
+    flightPath(ex, ey, ez) {
+      const secs = this.sections, last = secs[secs.length - 1], f = last.fin;
+      let P = [f ? [f.ax, (f.ay + f.by) / 2] : LV.pointAt(this.lv.path, last.p1)];
+      for (let i = secs.length - 2; i >= 1; i--) { const fr = secs[i].frame || secs[i].sch.box; P.push([(fr.x0 + fr.x1) / 2, (fr.y0 + fr.y1) / 2]); }
+      P.push([ex, ey]);
+      for (let it = 0; it < 4; it++) {
+        const Q = [P[0]];
+        for (let i = 0; i < P.length - 1; i++) {
+          const [ax, ay] = P[i], [bx, by] = P[i + 1];
+          Q.push([0.75 * ax + 0.25 * bx, 0.75 * ay + 0.25 * by], [0.25 * ax + 0.75 * bx, 0.25 * ay + 0.75 * by]);
+        }
+        Q.push(P[P.length - 1]); P = Q;
+      }
+      const acc = [0];
+      for (let i = 1; i < P.length; i++) { const dx = P[i][0] - P[i - 1][0], dy = P[i][1] - P[i - 1][1]; acc.push(acc[i - 1] + Math.sqrt(dx * dx + dy * dy)); }
+      return { P, acc, ez };
+    }
+    /** Kamera im Einstieg zur Zeit s: weich anfahren und abbremsen (smootherstep), unterwegs bis 0,6 herausgezoomt. */
+    flyCam(s) {
+      const cam = this.cam, { P, acc, ez } = this.fly, k = Math.min(1, s / this.introT);
+      const e = k * k * k * (10 + k * (6 * k - 15)), L = e * acc[acc.length - 1];
+      let i = 1;
+      while (i < P.length - 1 && acc[i] < L) i++;
+      const seg = acc[i] - acc[i - 1], q = seg > 0 ? (L - acc[i - 1]) / seg : 1;
+      const w = Math.min(1, 6 * k * (1 - k)), sw = w * w * (3 - 2 * w), z0 = 0.85 + (ez - 0.85) * k;
+      cam.z = z0 + (0.6 - z0) * sw;
+      cam.x = P[i - 1][0] + (P[i][0] - P[i - 1][0]) * q; cam.y = P[i - 1][1] + (P[i][1] - P[i - 1][1]) * q;
+      CAM.fit(cam);
+      cam.gx = cam.x; cam.gy = cam.y; cam.vx = 0; cam.vy = 0;
+    }
     camera(dt) {
+      if (this.phase === 'intro') { this.flyCam(this.phaseT + dt); return; }
       const f = this.focus(), cam = this.cam;
       CAM.update(cam, f.x, f.y, f.z, dt, f.hold, f.lag);
       if (this.phase === 'race') {
@@ -375,7 +482,7 @@
       return {
         sim: prim(this), slow: { ...this.slow }, stats: { ...this.stats }, camStats: { ...this.camStats },
         notes: json(this.notes), outList: this.outList.slice(), chapterLog: json(this.chapterLog), cuts: json(this.cuts),
-        order: this.order.slice(), roster: this.roster.map((m) => ({ ...m })),
+        order: this.order.slice(), roster: this.roster.map((m) => ({ ...m })), podium: this.podium ? this.podium.slice() : null,
         runners: this.runners.map((u) => ({ ...prim(u), hist: u.hist.slice() })),
         marbles: this.world.marbles.map((m) => prim(m)), worldT: this.world.t,
         bodies: this.world.bodies.map((b) => [b.enabled, b.x, b.y, b.a, b.vx, b.vy, b.w, b.c, b.s, b.shapes.map((s) => [s.wax, s.way, s.wbx, s.wby, s.ux, s.uy, s.speed])]),
@@ -388,6 +495,7 @@
       this.slow = { ...s.slow }; this.stats = { ...s.stats }; this.camStats = { ...s.camStats };
       this.notes = JSON.parse(JSON.stringify(s.notes)); this.outList = s.outList.slice(); this.chapterLog = JSON.parse(JSON.stringify(s.chapterLog));
       this.cuts = JSON.parse(JSON.stringify(s.cuts)); this.order = s.order.slice(); this.roster = s.roster.map((m) => ({ ...m }));
+      this.podium = s.podium ? s.podium.slice() : null;
       this.runners.forEach((u, i) => { Object.assign(u, s.runners[i]); u.hist = s.runners[i].hist.slice(); });
       this.world.marbles.forEach((m, i) => Object.assign(m, s.marbles[i]));
       this.world.t = s.worldT;

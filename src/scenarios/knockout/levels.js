@@ -4,9 +4,10 @@
  * Welt-Koordinaten; c = { W, H, r, d, T, n, short, keep, i, prev } (W, H: Größe der Welt, keep: Plätze in der
  * Schleuse, prev: Ergebnis des vorigen Abschnitts). Rückgabe { path, sch, entry, exit, frame }.
  *
- * Stand Paket G4: THE TOWER komplett (drei Abschnitte, Ziel und Sieger). THE GAUNTLET hat die Abschnitte 1 bis 5
- * (Nagelwand, Drehkreuze mit Fallschacht, Hebe-Rad, einstürzende Brücke, Kippbretter), danach eine Auffangschale
- * („TO BE CONTINUED“). Plan: docs/MARBLE_KNOCKOUT_GESAMTLEVEL_PLAN_2026-11-25.md, Abschnitte 2 und 3.
+ * Stand Paket G5: Beide Level komplett. THE TOWER: drei Abschnitte, Ziel und Sieger. THE GAUNTLET: zehn Abschnitte
+ * (Nagelwand, Drehkreuze mit Fallschacht, Riesenrad, einstürzende Brücke, Kippbretter, Weiche mit Trommel,
+ * Hammergasse, wandernde Böden, Ringausbruch, Finale mit Starttor und Nagelfeld), Podest für Platz 1 bis 3.
+ * Plan: docs/MARBLE_KNOCKOUT_GESAMTLEVEL_PLAN_2026-11-25.md, Abschnitte 2 und 3.
  * Maßregeln aus den Proben der Bahnen gelten weiter: zwischen Stift und Wand gut 1,4 d frei, unter einem Trichterhals
  * rund 2 d Luft, von oben beregnete Drehkreuze tragen ein Dach (sonst bleiben Murmeln darauf liegen).
  */
@@ -41,12 +42,6 @@
   function wallNoses(b, c, xl, xr, ys) {
     const d = c.d, w = 0.9 * d, h = 0.6 * d;
     for (const y of ys) { b.wall([[xl, y - h], [xl + w, y]]); b.wall([[xr, y - h], [xr - w, y]]); }
-  }
-  /** Auffangschale nach dem letzten gebauten Abschnitt (nur bis die Level fertig sind). */
-  function catchTray(b, c, pts, sign, path) {
-    b.track(pts);
-    b.sign(sign[0], sign[1], 'TO BE CONTINUED', { size: c.short ? 30 : 26, h: 10 });
-    return { path, entry: c.prev.exit };
   }
 
   // ======================================================================= THE TOWER (Short)
@@ -287,12 +282,160 @@
     void deg;
     return { path, sch, entry: c.prev.exit, exit: [sch.cx, sch.floorY], frame: { x0: 60, y0: y0 - 400, x1: 2300, y1: E(ex) + 600 } };
   }
-  function gauntletSoon(b, c) {
-    const [x, y] = c.prev.exit;
-    // links eine hohe Wand: Aus dem Becken fallende Murmeln prallen ab und rollten sonst über den Rand
-    const out = catchTray(b, c, [[x - 420, y + 20], [x - 400, y + 280], [x + 40, y + 290], [x + 150, y + 120]], [x - 540, y + 260], [[x, y + 10], [x, y + 260]]);
-    out.frame = { x0: x - 700, y0: y - 600, x1: x + 400, y1: y + 400 };
-    return out;
+  // 6 · SPLIT & DRUM (8 → 7): Trichter unter der Schleuse, dann die Weiche. Sie schickt abwechselnd nach rechts auf den
+  // kurzen Weg mit zwei Ampeltoren und nach links auf den langen Weg: Kehre, unten zurück mit einem Förderband, das die
+  // Richtung wechselt. Der kurze Weg endet über dem langen; ab dort fahren alle gemeinsam von vorn in die Drehtrommel.
+  // Unter der Trommel eine breite Fangbahn nach rechts in die Schleuse.
+  // Die Ideallinie folgt dem kurzen Weg: Wer unten auf dem langen fährt, zählt so weit, wie er rechts steht.
+  function gauntletSplit(b, c) {
+    const d = c.d, [x0, y0] = c.prev.exit, k5 = tand(5), k10 = tand(10), kB = tand(3.5), kD = tand(8);
+    // Trichter (10°): fängt das ganze Feld aus dem Klappboden und lässt es einzeln auf die Weiche
+    const ty = y0 + 180, tw = 260, hw = 1.0 * d, ny = ty + (tw - hw) * k10;
+    b.track([[x0 - tw, ty], [x0 - hw, ny]]); b.track([[x0 + tw, ty], [x0 + hw, ny]]);
+    b.wall([[x0 - tw, ty - 3 * d], [x0 - tw, ty]]); b.wall([[x0 + tw, ty - 3 * d], [x0 + tw, ty]]);
+    const fy = ny + 1.6 * d;
+    b.flipflop({ x: x0, y: fy, len: 3.2 * d, ang: 0.45 });
+    // Kurzer Weg rechts (5°) mit zwei Ampeltoren; er endet über dem langen Weg
+    const ax = x0 + 2.4 * d, ay = fy + 1.6 * d, A = (x) => ay + (x - ax) * k5, axe = 3300;
+    b.track([[ax, ay], [axe, A(axe)]]);
+    b.gate({ x: 2550, y: A(2550), h: 0.84 * d, open: 1.4, period: 3.2 });
+    b.gate({ x: 3000, y: A(3000), h: 0.84 * d, open: 1.4, period: 3.2, phase: 1.6 });
+    // Langer Weg links (5°) bis zur Kehre, unten zurück nach rechts (3,5°) mit Förderband
+    const bx = x0 - 2.4 * d, by = fy + 1.6 * d, Bl = (x) => by + (bx - x) * k5, xw = 1150;
+    b.track([[bx, by], [xw + 1.7 * d, Bl(xw + 1.7 * d)]]); b.wall([[xw, Bl(xw) - 3 * d], [xw, Bl(xw) + 330]]);
+    const ry = Bl(xw) + 300, Rw = (x) => ry + (x - xw) * kB;
+    // Trommel: Mitte etwas über der Bahnhöhe dort; das letzte Stück fährt von vorn hinein (8°)
+    const R = 4.4 * d, dx = 3950, xl = dx - R - 20, dy = Rw(xl) + (dx - 0.5 * d - xl) * kD - 15;
+    b.track([[xw, ry], [1750, Rw(1750)]]);
+    b.conveyor({ pts: [[1750, Rw(1750)], [2350, Rw(2350)]], v: 380, half: 3.5 });
+    b.track([[2350, Rw(2350)], [xl, Rw(xl)]]);
+    b.track([[xl, Rw(xl)], [dx - 0.5 * d, Rw(xl) + (dx - 0.5 * d - xl) * kD]], { front: true });
+    b.drum({ x: dx, y: dy, R, gaps: [0, PI], gapW: 1.5 * d, rps: 0.14, fins: 2, finL: 0.9 * d, rock: { amp: 0.5, period: 4.3 } });
+    // Fangbahn unter der Trommel (7°) nach rechts in die Schleuse, links ein Anschlag
+    const k7 = tand(7), cxs = dx - R - 160, cy = dy + R + 150, C = (x) => cy + (x - cxs) * k7, ex = dx + R + 260;
+    b.wall([[cxs, cy - 3 * d], [cxs, cy]]); b.track([[cxs, cy], [ex, C(ex)]]);
+    const sch = LV.schleuse(b, c, { ex, ey: C(ex), dir: 1, slope: 7, keep: c.keep, outLen: 1.4 * d, pitW: 2.0 });
+    const o = 0.7 * d;
+    const path = [[x0, y0 + 10], [x0, ny - o], [ax, ay - o], [axe, A(axe) - o], [axe + d, Rw(axe + d) - o], [xl, Rw(xl) - o],
+      [dx, dy], [dx, dy + R + 0.5 * d], [dx + 0.5 * R, C(dx + 0.5 * R) - o], [ex - 0.5 * d, C(ex) - o], ...sch.path];
+    return { path, sch, entry: c.prev.exit, exit: [sch.cx, sch.floorY],
+      frame: { x0: xw - 100, y0: y0 - 300, x1: ex + 500, y1: sch.floorY + 300 } };
+  }
+  // 7 · HAMMER ALLEY (7 → 6, Sturz zählt): langes Sims nach links mit drei Löchern über dem Abgrund und vier
+  // Pendelhämmern. Wer ins Loch fällt, ist raus; nach dem ersten Sturz schließen Deckel die Löcher. Der letzte Hammer
+  // steht über fester Bahn und schlägt nur zurück. (Ein Hammer gleich am Anfang schlug das ganze Feld immer wieder an
+  // die Wand zurück, bis zu 26 s lang.) Am Ende die Schleuse links.
+  function gauntletHammers(b, c) {
+    const d = c.d, [x0, y0] = c.prev.exit, k6 = tand(6), k9 = tand(9), hw = 1.6 * d;
+    // Erst 300 E steiler (9°): Mit 4° ab der Wand rollten die Letzten aus der Schleuse so langsam an, dass immer eine
+    // von ihnen gleich ins erste Loch fiel. Danach 6° statt 4°: Mit 4° rollten die sieben als Kette mit rund 90 E/s an,
+    // und der erste Hammer schob die ganze Kette immer wieder bergauf zurück (16 von 100 Läufen mit Anstößen).
+    const xr = 4640, yc = y0 + 180, xk = xr - 300, yk = yc + 300 * k9, at = (x) => (x > xk ? yc + (xr - x) * k9 : yk + (xk - x) * k6), ex = 2200;
+    b.wall([[xr, yc - 3 * d], [xr, yc]]); b.track([[xr, yc], [xk, yk]]);
+    const holes = [3850, 3350, 2850];
+    let xs = xk;
+    holes.forEach((h) => {
+      // Vor jedem Loch eine flache Kante (wie auf Bahn 7): Schnelle springen darüber, Langsame fallen hinein
+      const xe = h + hw / 2;
+      b.track([[xs, at(xs)], [xe + 0.6 * d, at(xe + 0.6 * d)], [xe, at(xe) - 0.12 * d]]);
+      xs = h - hw / 2;
+      // Grube breiter als das Loch: Wer schräg hindurchfällt (Hammertreffer), fällt sonst an ihr vorbei
+      b.pit(h - 2.2 * d, h + 2.2 * d, at(h) + 6, at(h) + 2.4 * d, { kill: true, depth: 1.1 * d });
+      b.lid({ x0: h - hw / 2 + b.rad, y0: at(h - hw / 2), x1: h + hw / 2 - b.rad, y1: at(h + hw / 2) });
+    });
+    b.track([[xs, at(xs)], [ex, at(ex)]]);
+    [...holes, 2450].forEach((h, i) => b.hammer({ px: h + 1.4 * d, py: at(h) - 6 * d, L: 5.6 * d, amp: 0.8, period: 2.4, phase: i * 0.37 }));
+    const sch = LV.schleuse(b, c, { ex, ey: at(ex), dir: -1, slope: 7, keep: c.keep, outLen: 1.4 * d, pitW: 2.0 });
+    const o = 0.7 * d, path = [[x0, y0 + 10], [x0, at(x0) - o], [xk, yk - o], [ex + 0.5 * d, at(ex) - o], ...sch.path];
+    return { path, sch, entry: c.prev.exit, exit: [sch.cx, sch.floorY], frame: { x0: ex - 600, y0: yc - 700, x1: xr + 300, y1: sch.floorY + 300 } };
+  }
+  // 8 · SHIFTING FLOORS (6 → 5): drei wandernde Böden wie im Turm, zwischen zwei Wänden unter der Schleuse. Jeder
+  // fällt zu einer Wand hin ab und endet dort offen; die oberen zwei haben ein Loch als Abkürzung. Unter dem untersten
+  // eine Bahn nach rechts in die Schleuse.
+  function gauntletFloors(b, c) {
+    const d = c.d, [x0, y0] = c.prev.exit, kF = tand(10), k7 = tand(7);
+    const xl = 1500, xr = 2600, cx = (xl + xr) / 2, ys = [y0 + 230, y0 + 480, y0 + 730], dirs = [1, -1, 1];
+    b.wall([[xl, y0 + 80], [xl, ys[2] + 120]]); b.wall([[xr, y0 + 80], [xr, ys[2] - 40]]);
+    b.floors({ xl, xr, travel: 3 * d, periods: [1.8, 2.2, 2.6],
+      levels: ys.map((y, i) => ({ y, dir: dirs[i], slope: 10, hole: [3 * d, 1.5 * d, undefined][i] })) });
+    const fl = (i, x) => ys[i] + dirs[i] * (x - cx) * kF;
+    const xa = 2250, ya = ys[2] + 250, E = (x) => ya + (x - xa) * k7, ex = 3000;
+    b.wall([[xa, ya - 2 * d], [xa, ya]]); b.track([[xa, ya], [ex, E(ex)]]);
+    const sch = LV.schleuse(b, c, { ex, ey: E(ex), dir: 1, slope: 7, keep: c.keep, outLen: 1.4 * d, pitW: 2.0 });
+    const o = 0.8 * d, pl = xl + 60, pr = xr - 60;
+    const path = [[x0, y0 + 10], [x0, fl(0, x0) - o], [pr, fl(0, pr) - o], [pr, fl(1, pr) - o], [pl, fl(1, pl) - o],
+      [pl, fl(2, pl) - o], [pr, fl(2, pr) - o], [pr + 10, E(pr + 10) - 0.7 * d], [ex - 0.5 * d, E(ex) - 0.7 * d], ...sch.path];
+    return { path, sch, entry: c.prev.exit, exit: [sch.cx, sch.floorY], frame: { x0: xl - 300, y0: y0 - 300, x1: ex + 500, y1: sch.floorY + 300 } };
+  }
+  // 9 · RING ESCAPE (5 → 3): Trichter unter der Schleuse in einen Kanal, der von vorn in zwei gegenläufige Ringe führt
+  // (innen ein Schlitz, außen zwei). Darunter eine Fangbahn nach rechts in die Schleuse.
+  function gauntletRings(b, c) {
+    const d = c.d, [x0, y0] = c.prev.exit, k20 = tand(20), k8 = tand(8);
+    // Trichter 20°, Kanal innen 2,2 Murmeln breit: Mit 12° und 1,6 d verkeilten sich Murmeln am Hals zu einem Bogen;
+    // in einem Kanal zwischen einer und zwei Murmelbreiten (2,1 d, innen 1,8) klemmten sich zwei schräg übereinander
+    // an den Wänden fest (2 von 12 ganzen Läufen). Breiter als zwei Murmeln hält kein Keil.
+    const hw = 1.27 * d, tw = 300, Fy = y0 + 180, nl = x0 - hw, nr = x0 + hw, ny = Fy + (tw - hw) * k20;
+    b.track([[x0 - tw, Fy], [nl, ny]]); b.track([[x0 + tw, Fy], [nr, ny]]);
+    b.wall([[x0 - tw, Fy - 3 * d], [x0 - tw, Fy]]); b.wall([[x0 + tw, Fy - 3 * d], [x0 + tw, Fy]]);
+    const cy = ny + 5 * d + 80;
+    b.wall([[nl, ny], [nl, cy - 0.6 * d]], { front: true }); b.wall([[nr, ny], [nr, cy - 0.6 * d]], { front: true });
+    // Zwei Ringe, der innere größer als im Turm: Mit drei Ringen (innen 2,2 d) passten nicht alle fünf hinein, die
+    // übrigen standen im Kanal Schlange und brauchten Anstöße (Abschnitt bis 33 s)
+    b.rings({ x: x0, y: cy, radii: [2.8 * d, 5.0 * d], rps: [0.3, -0.2], slots: [1, 2], slotW: 1.5 * d });
+    const xa = x0 - 400, ya = cy + 300, E = (x) => ya + (x - xa) * k8, ex = 3700;
+    b.wall([[xa, ya - 3 * d], [xa, ya]]); b.track([[xa, ya], [ex, E(ex)]]);
+    const sch = LV.schleuse(b, c, { ex, ey: E(ex), dir: 1, slope: 8, keep: c.keep, outLen: 1.4 * d, pitW: 2.0 });
+    const o = 0.7 * d;
+    const path = [[x0, y0 + 10], [x0, ny - 0.3 * d], [x0, cy], [x0, cy + 5.6 * d], [x0 + 100, E(x0 + 100) - o], [ex - 0.5 * d, E(ex) - o], ...sch.path];
+    return { path, sch, entry: c.prev.exit, exit: [sch.cx, sch.floorY], frame: { x0: x0 - 800, y0: y0 - 300, x1: ex + 500, y1: sch.floorY + 300 } };
+  }
+  // 10 · GRAND FINAL (3 → Platz 1 bis 3): lange Abfahrt über alle drei Spalten. Unter der Schleuse eine Bahn nach
+  // links mit einem Drehkreuz, an ihrem Ende eine Wippe an der Wand, dann die Bahn nach rechts mit einer Schanze bis
+  // zum Starttor. Das Tor öffnet erst, wenn alle drei davor warten (FINAL SPRINT); dahinter eine kurze Rampe, ein
+  // Nagelfeld und die offene Zielgerade. Hinter dem Ziel eine Schiene bis an die Wand.
+  // Abweichung vom Plan nach Messung (16 Läufe): ohne Tor, mit zwei Schanzen und offener Zielgerade lag Platz 2 im
+  // Median 1,2 s und Platz 3 6,5 s zurück (Wippe und Drehkreuz trennen das Feld um ganze Takte), Platz 2 nur einmal
+  // unter 0,3 s. Mit Tor und Nagelfeld: zehnmal unter 0,3 s.
+  function gauntletFinal(b, c) {
+    const d = c.d, [x0, y0] = c.prev.exit, k4 = tand(4), k5 = tand(5);
+    const polyY = (P) => (x) => { for (let i = 1; i < P.length; i++) if (x <= P[i][0]) return P[i - 1][1] + (P[i][1] - P[i - 1][1]) * (x - P[i - 1][0]) / (P[i][0] - P[i - 1][0]); return P[P.length - 1][1]; };
+    const run = (P, x, kk) => { const [px, py] = P[P.length - 1]; P.push([x, py + (x - px) * kk]); };
+    const xr = x0 + 280, Ay = y0 + 180, A = (x) => Ay + (xr - x) * k4, xa = 700, xw = 600;
+    b.wall([[xr, Ay - 3 * d], [xr, Ay]]); b.track([[xr, Ay], [xa, A(xa)]]);
+    turnstileOn(b, c, A, 2600, 0.5, 0.15);
+    // Wippe wie im Finale des alten Ablaufs: links 20 Luft zur Wand (schmaler als eine Murmel), rechts der Ausgang
+    const len = 12 * d, tx = xw + 20 + len / 2, ty = A(xa) + 150;
+    b.wall([[xw, A(xa) - 3 * d], [xw, ty + 110]]);
+    b.tilt({ x: tx, y: ty, len, amp: 0.26, period: 6, lips: 0 });
+    // Bahn nach rechts: Anlauf, Schanze (kurz 18° hinab, dann 10° hinauf), Starttor, Rampe (5°) bis zur Kante
+    const kD = tand(18), kU = tand(10), xg = 2500, xk = 3000, C = [[tx + len / 2 + 40, ty + 95]];
+    run(C, 1800, k4); run(C, 1940, kD); run(C, 2020, -kU); run(C, xg, k4); run(C, xk, k5);
+    b.track(C);
+    const Cy = polyY(C);
+    const gate = b.gate({ x: xg, y: Cy(xg), h: 0.84 * d, mode: 'manual', open0: 0, kind: 'sprint' });
+    // Nagelfeld hinter der Kante (Stifte 2,4 d auseinander) zwischen zwei Wänden, darunter ein Trichter (25°, Hals
+    // innen 2,2 Murmeln breit wie bei den Ringen): Alle kommen an derselben Stelle auf die Zielgerade, nur zu
+    // verschiedenen Zeiten. (Ohne Trichter entschied, wo eine Murmel auf der Zielbahn landete: bis 3 s Abstand.)
+    const px0 = xk + 60, py0 = Cy(xk) + 80, dx = 2.4 * d, dy = 1.5 * d, rows = 4, cols = 5;
+    b.pegField({ x0: px0, y0: py0, cols, rows, dx, dy, rad: 0.16 * d });
+    const xl = xk - 20, xR = px0 + (cols - 1) * dx + 80, xn = (xl + xR) / 2, hw = 1.27 * d, k25 = tand(25);
+    const fy = py0 + (rows - 1) * dy + 90, ny = fy + (xn - hw - xl) * k25;
+    b.wall([[xl, Cy(xk) + 2 * b.rad], [xl, fy]]); b.wall([[xR, Cy(xk) - 3 * d], [xR, fy]]);
+    b.track([[xl, fy], [xn - hw, ny]]); b.track([[xR, fy], [xn + hw, ny]]);
+    // Zielgerade nach rechts (5°) unter dem Hals, links ein Anschlag; dahinter die Schiene (1,5°) bis an die Wand
+    const zx = xn - 2 * d, zy = ny + 2.2 * d, xf = 4500, xe = 5150, Z = [[zx, zy]];
+    run(Z, xf, k5); run(Z, xe, tand(1.5));
+    b.track(Z);
+    const Zy = polyY(Z);
+    b.wall([[zx, zy - 2 * d], [zx, zy]]); b.wall([[xe, Zy(xe)], [xe, Zy(xe) - 1.4 * d]]);
+    const lo = Zy(xf) - b.rad, hi = lo - 3 * d;
+    b.finishLine({ ax: xf, ay: lo, bx: xf, by: hi });
+    const o = 0.7 * d;
+    const path = [[x0, y0 + 10], [x0, A(x0) - o], [xa, A(xa) - o], [xa, ty - o], [tx + len / 2, ty - o],
+      ...C.slice(1).map(([x]) => [x, Cy(x) - o]), [xn, fy - d], [xn, ny], [xn, Zy(xn) - o], [xf, Zy(xf) - o]];
+    // Wartebereich vor dem Tor (Murmelmitten); wait: spätestens so lange nach der Ersten öffnet das Tor trotzdem
+    const hold = { gate, x0: xg - 6 * d, x1: xg + 10, y0: Cy(xg) - 3 * d, y1: Cy(xg) + d, wait: 10, settle: 1.2 };
+    return { path, fin: b.finish, hold, entry: c.prev.exit, exit: null, frame: { x0: xw - 200, y0: y0 - 300, x1: c.W, y1: Zy(xe) + 300 } };
   }
 
   const LEVELS = {
@@ -312,15 +455,21 @@
     gauntlet: {
       id: 'gauntlet', title: 'THE GAUNTLET', format: 'long',
       r: 24, T: 16, field: FIELD20, quota: [17, 14, 12, 10, 8, 7, 6, 5, 3, 1], stages: 10,
-      rules: { ready: 3.2, release: 1.2, look: 0.25, endHold: 2.6, lateMax: 6 },
-      bounds: { x0: 0, y0: -200, x1: 5300, y1: 7400 },
+      // intro: Einstiegsflug in Sekunden; podium: Podest steht so lange, podiumDelay nach Platz 3
+      rules: { ready: 3.2, release: 1.2, look: 0.25, endHold: 2.6, lateMax: 6, intro: 7, podium: 8, podiumDelay: 1.5 },
+      bounds: { x0: 0, y0: -200, x1: 5300, y1: 13500 },
+      gold: [4200, 12750, 1600],                                           // goldener Schimmer ums Ziel
       sections: [
         { id: 'drop', title: 'THE DROP', world: 'night', build: gauntletDrop },
         { id: 'turnstiles', title: 'TURNSTILES', world: 'forest', build: gauntletTurnstiles },
         { id: 'wheel', title: 'THE WHEEL', world: 'sand', build: gauntletWheel },
         { id: 'collapse', title: 'THE COLLAPSE', world: 'petrol', hazard: true, build: gauntletCollapse },
         { id: 'tilt', title: 'TILT', world: 'dusk', build: gauntletTilt },
-        { id: 'soon', title: 'TO BE CONTINUED', world: 'petrol', placeholder: true, build: gauntletSoon },
+        { id: 'split', title: 'SPLIT & DRUM', world: 'plum', build: gauntletSplit },
+        { id: 'hammers', title: 'HAMMER ALLEY', world: 'slate', hazard: true, build: gauntletHammers },
+        { id: 'floors', title: 'SHIFTING FLOORS', world: 'ice', build: gauntletFloors },
+        { id: 'rings', title: 'RING ESCAPE', world: 'violet', build: gauntletRings },
+        { id: 'final', title: 'GRAND FINAL', world: 'gold', build: gauntletFinal },
       ],
     },
   };
