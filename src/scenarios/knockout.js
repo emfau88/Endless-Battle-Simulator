@@ -4,7 +4,8 @@
  * Murmel-Ausscheidungsrennen: Langvideo (16:9) mit 12 Murmeln über 10 Bahnen, auf jeder Bahn scheidet die letzte
  * aus; Short (9:16) mit 8 Murmeln über 3 Bahnen. Dazu die Element-Galerie und eine einzelne Bahn zum Ansehen.
  * Teil 2 (Gesamtlevel mit Kamerafahrt, die Vorlagen zeigen darauf): THE TOWER hochkant mit 16 Murmeln, THE GAUNTLET
- * quer mit 20 Murmeln; Level: knockout/levels.js und knockout/level.js, Ablauf: knockout/levelsim.js.
+ * quer mit 20 Murmeln; Level: knockout/levels.js und knockout/level.js, Ablauf: knockout/levelsim.js. Langvideo seit G9
+ * als zwei Rennen mit Gesamtwertung: knockout/series.js.
  * Physik: knockout/physics.js, Bausteine: knockout/elements.js, Bahnen: knockout/stages.js, Ablauf:
  * knockout/simulation.js, Bild: knockout/art.js und knockout/renderer.js.
  * Quadrat 1:1 zeigt das Querformat mit Rand oben und unten (die Bahnen sind für 16:9 gebaut).
@@ -83,6 +84,14 @@ function normalizeParams(input) {
   // Gesamtlevel (Teil 2): Kamera im Querformat als Fahrt oder in festen Abschnitten (nur in diesem Ablauf gesetzt)
   // Einstiegsflug übers ganze Level (nur THE GAUNTLET, seit G5), abschaltbar
   if (out.mode === 'level') { out.cam = p.cam === 'sections' ? 'sections' : 'ride'; out.intro = p.intro === 'off' ? 'off' : 'on'; }
+  // Zwei Rennen mit Gesamtwertung (G9, nur THE GAUNTLET im Querformat): Rennen 2 mit eigenem Seed und Drehbuch
+  if (out.mode === 'level') {
+    out.series = p.series === 'two' ? 'two' : 'one';
+    if (out.series === 'two') {
+      if (Number.isInteger(p.seed2) && p.seed2 >= 0) out.seed2 = p.seed2;
+      if (Array.isArray(p.script2) && p.script2.every((v) => Number.isInteger(v) && v >= 0)) out.script2 = p.script2.slice(0, 16);
+    }
+  }
   return out;
 }
 
@@ -111,7 +120,23 @@ class KnockoutLevelScenarioSim extends EBS.KnockoutLevelSim.KnockoutLevelSimulat
   setParam(k, v) { this.cfg = normalizeParams({ ...this.cfg, [k]: v }); }
   setTimeScale(s) { this.dt = DT * s; this.timeScale = s; }
 }
-const createSim = (ctx) => (normalizeParams(ctx.params).mode === 'level' ? new KnockoutLevelScenarioSim(ctx) : new KnockoutScenarioSim(ctx));
+/** Zwei Rennen durch THE GAUNTLET mit Gesamtwertung (G9); jedes Rennen ist ein KnockoutLevelScenarioSim. */
+class KnockoutSeriesScenarioSim extends EBS.KnockoutSeries.KnockoutSeriesSimulation {
+  constructor({ seed, params, world, timeScale = 1 }) {
+    const w = simWorld(world);
+    super({ seed, params: normalizeParams(params), world: w, make: (s, p) => new KnockoutLevelScenarioSim({ seed: s, params: p, world: w, timeScale }) });
+    this.timeScale = timeScale;
+    this.audioWorldWidth = w.w;
+  }
+  setParam(k, v) { super.setParam(k, normalizeParams({ ...this.cfg, [k]: v })[k]); }
+}
+const createSim = (ctx) => {
+  const p = normalizeParams(ctx.params);
+  if (p.mode !== 'level') return new KnockoutScenarioSim(ctx);
+  // Die Serie gibt es nur im Querformat (das Short bleibt ein Rennen durch THE TOWER)
+  const w = simWorld(ctx.world);
+  return p.series === 'two' && w.w > w.h ? new KnockoutSeriesScenarioSim(ctx) : new KnockoutLevelScenarioSim(ctx);
+};
 
 class KnockoutRenderer extends EBS.CanvasScene {
   constructor({ sim, view, world, renderScale = 1 }) {
@@ -121,7 +146,8 @@ class KnockoutRenderer extends EBS.CanvasScene {
     this.fit = Math.min(world.w / sim.W, world.h / sim.H);
     this.ox = (world.w - sim.W * this.fit) / 2; this.oy = (world.h - sim.H * this.fit) / 2;
     const R = EBS.KnockoutRender;
-    this.painter = sim.mode === 'level' ? new R.LevelPainter(sim, renderScale * this.fit) : new R.Painter(sim, renderScale * this.fit);
+    const s = renderScale * this.fit;
+    this.painter = sim.series ? new R.SeriesPainter(sim, s) : sim.mode === 'level' ? new R.LevelPainter(sim, s) : new R.Painter(sim, s);
   }
   paint(g) {
     const w = this.world;
@@ -164,6 +190,8 @@ EBS.registerScenario({
       options: [['ride', 'Fahrt: folgt dem Feld'], ['sections', 'Abschnitte: fest, gleitet zum nächsten']] },
     { key: 'intro', label: 'Einstiegsflug übers Level (Querformat)', type: 'select', restart: true, affectsDuration: true, visible: (p) => p.mode === 'level',
       options: [['on', 'An (7 s)'], ['off', 'Aus']] },
+    { key: 'series', label: 'Rennen im Querformat (Gesamtlevel)', type: 'select', restart: true, affectsDuration: true, visible: (p) => p.mode === 'level',
+      options: [['one', 'Ein Rennen (rund 3,5 min)'], ['two', 'Zwei Rennen mit Gesamtwertung (rund 7 min)']] },
     { key: 'short', label: 'Short-Bahnen (hochkant)', type: 'select', restart: true, enabled: (p) => p.mode === 'race' || p.mode === 'stage',
       options: [['A', 'A: Pick your color'], ['B', 'B: Follow the gold one'], ['C', 'C: Who survives the floors']] },
     { key: 'stage', label: 'Bahn (Eine Bahn, quer)', type: 'select', restart: true, enabled: (p) => p.mode === 'stage',
@@ -189,6 +217,7 @@ EBS.registerScenario({
     if (sim.mode === 'gallery') return [{ key: 'element', label: 'Baustein', value: sim.spec.label }];
     const s = sim.snapshot();
     return [
+      ...(sim.series ? [{ key: 'race', label: 'Rennen', value: `${s.race} / ${s.races}${s.standings.length ? ` · gesamt vorn ${s.standings[0].name} (${s.standings[0].total})` : ''}` }] : []),
       { key: 'stage', label: 'Bahn', value: `${s.stage + 1} / ${s.stages} · ${s.title}` },
       { key: 'alive', label: 'Im Rennen', value: fmtInt(s.alive) },
       { key: 'lead', label: 'Vorne', value: s.order[0] || '–' },
@@ -253,5 +282,19 @@ const GAUNTLET_CAST = [
 /** Drehbuch zum Grund-Seed (sonst das erste, die Empfehlung). */
 const castGauntlet = (seed) => GAUNTLET_CAST.find((c) => c.seed === seed) || GAUNTLET_CAST[0];
 
-EBS.Knockout = { normalizeParams, simWorld, SHORT_CAST, castShortSeed, TOWER_CAST, castTowerSeed, LONG_CAST, castLong, GAUNTLET_CAST, castGauntlet };
+// Zwei Rennen mit Gesamtwertung (G9, scripts/knockout-casting.mjs --series): Paarungen aus GAUNTLET_CAST, jedes Rennen
+// mit seinem Drehbuch. Der erste Eintrag ist die Empfehlung für die Vorlage.
+const SERIES_CAST = [
+  // Rennen 1 (Seed 2): BLACK gewinnt, GREEN wird nur Zehnte (1 Punkt). Rennen 2 (Seed 4): BLACK scheidet schon in
+  // Abschnitt 1 aus, GREEN gewinnt im Fotofinish (0,124 s) und ist mit 26 zu 25 Punkten Gesamtsiegerin; als Zweite
+  // im Ziel wäre es BLACK geworden. Video rund 7:05 min
+  { seed: 2, seed2: 4 },
+];
+/** Paarung zum Grund-Seed (sonst die erste) samt beiden Drehbüchern. */
+const castSeries = (seed) => {
+  const c = SERIES_CAST.find((x) => x.seed === seed) || SERIES_CAST[0];
+  return { seed: c.seed, script: castGauntlet(c.seed).script.slice(), seed2: c.seed2, script2: castGauntlet(c.seed2).script.slice() };
+};
+
+EBS.Knockout = { normalizeParams, simWorld, SHORT_CAST, castShortSeed, TOWER_CAST, castTowerSeed, LONG_CAST, castLong, GAUNTLET_CAST, castGauntlet, SERIES_CAST, castSeries };
 })();
