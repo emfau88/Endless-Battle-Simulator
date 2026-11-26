@@ -171,6 +171,23 @@ test('Vorlage „Short“ (seit G3): der Turm auf einem geprüften Seed mit Foto
   assert.equal(s.runners.reduce((a, u) => a + u.nudges, 0), 0, 'kein Anstoß');
 });
 
+test('Vorlage „Langvideo“ (seit G6): THE GAUNTLET mit Drehbuch, die Geschichte hält, Datei gleich Oberfläche', () => {
+  const p = JSON.parse(JSON.stringify(EBS.productionPreset('knockout', 'long')));
+  assert.deepEqual(p, JSON.parse(readFileSync(new URL('../presets/production/knockout-long.json', import.meta.url), 'utf8')));
+  const cast = EBS.Knockout.GAUNTLET_CAST[0];
+  assert.deepEqual([p.params.mode, p.params.cam, p.params.intro, p.seed, p.params.script], ['level', 'ride', 'on', cast.seed, JSON.parse(JSON.stringify(cast.script))]);
+  const s = create(p.seed, p.params, LAND), id = (name) => s.roster.findIndex((m) => m.name === name);
+  while (s.phase !== 'end' && s.t < 400) s.stepOnce();
+  assert.equal(s.phase, 'end');
+  assert.equal(s.runners.reduce((a, u) => a + u.nudges, 0) + s.stats.stuck + s.stats.timeUp, 0, 'kein Anstoß, niemand sitzt fest');
+  const fins = s.runners.filter((u) => u.finished && !u.out).sort((a, b) => a.place - b.place).map((u) => u.rid);
+  assert.ok(fins.slice(0, 2).includes(id(cast.underdog)), `${cast.underdog} im Fotofinish`);
+  const L = s.roster[id(cast.leader)];
+  assert.deepEqual([s.sections[L.outStage].id, L.how], ['hammers', 'fell'], `${cast.leader} stürzt in der Hammergasse`);
+  assert.ok(s.finalGap >= 0 && s.finalGap < 0.15, `Fotofinish ${s.finalGap.toFixed(3)} s`);
+  assert.equal(s.podium.length, 3);
+});
+
 test('Gleicher Seed ergibt denselben Lauf samt Kamera, anderer Seed einen anderen', () => {
   const go = (seed, world) => { const s = create(seed, {}, world); for (let i = 0; i < 60 * 12; i++) s.stepOnce(); return [s.stateHash(), s.placeCount, s.outList.join()]; };
   assert.deepEqual(go(5, PORT), go(5, PORT));

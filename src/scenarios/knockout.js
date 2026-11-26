@@ -191,8 +191,8 @@ EBS.registerScenario({
       { key: 'alive', label: 'Im Rennen', value: fmtInt(s.alive) },
       { key: 'lead', label: 'Vorne', value: s.order[0] || '–' },
       { key: 'out', label: 'Raus', value: s.out.length ? s.out.join(', ') : '–' },
-      // Drehbuch (M8): feste Seeds je Bahn aus dem Casting; gilt nur mit seinem Grund-Seed
-      { key: 'script', label: 'Drehbuch', value: sim.cfg.script ? (EBS.Knockout.LONG_CAST.some((c) => c.seed === sim.seed) ? 'an' : 'an (anderer Seed)') : 'aus' },
+      // Drehbuch (M8, G6): feste Seeds je Bahn bzw. Abschnitt aus dem Casting; gilt nur mit seinem Grund-Seed
+      { key: 'script', label: 'Drehbuch', value: sim.cfg.script ? ((sim.mode === 'level' ? EBS.Knockout.GAUNTLET_CAST : EBS.Knockout.LONG_CAST).some((c) => c.seed === sim.seed) ? 'an' : 'an (anderer Seed)') : 'aus' },
     ];
   },
   panelNote: (sim) => sim.snapshot().summary,
@@ -232,5 +232,24 @@ const LONG_CAST = [
 /** Drehbuch zum Grund-Seed (sonst das erste, die Empfehlung). */
 const castLong = (seed) => LONG_CAST.find((c) => c.seed === seed) || LONG_CAST[0];
 
-EBS.Knockout = { normalizeParams, simWorld, SHORT_CAST, castShortSeed, TOWER_CAST, castTowerSeed, LONG_CAST, castLong };
+// Gesamtlevel THE GAUNTLET (G6, scripts/knockout-casting.mjs --story): Drehbuch Abschnitt für Abschnitt, gerechnet mit
+// Einstiegsflug. Geschichte: Die Außenseiterin entkommt dreimal knapp und kämpft im Finale im Fotofinish um den Sieg,
+// ein früher Spitzenreiter stürzt in der Hammergasse, Platz 1 und 2 trennen weniger als 0,15 s, niemand braucht einen
+// Anstoß. 0 im Drehbuch heißt Grund-Seed. Der erste Eintrag ist die Empfehlung für die Vorlage: Die knappen
+// Rettungen verteilen sich übers Video (die letzten beiden kurz vor dem Finale), und kein Abschnitt zieht sich.
+const GAUNTLET_CAST = [
+  // GREEN entkommt in Abschnitt 2, 8 und 9 knapp und gewinnt, LIME stürzt in der Hammergasse, Fotofinish 0,125 s,
+  // Podest GREEN, PINK, YELLOW, Video 3:21 min
+  { seed: 1, script: [0, 0, 4012558754, 0, 0, 0, 1012860517, 2432261259, 3248022227, 1003354678], underdog: 'GREEN', leader: 'LIME' },
+  // GREEN entkommt in Abschnitt 2, 3 und 5 knapp (in 5 um weniger als eine Murmelbreite) und gewinnt, NAVY stürzt in
+  // der Hammergasse, Fotofinish 0,124 s, Podest GREEN, YELLOW, ORANGE, Video 3:31 min (TILT dauert 40 s)
+  { seed: 4, script: [0, 3879832192, 791229985, 0, 1761338124, 0, 2558919375, 3751665676, 461732041, 176347750], underdog: 'GREEN', leader: 'NAVY' },
+  // SILVER entkommt in Abschnitt 2, 3 und 9 knapp und wird Zweite, MINT stürzt in der Hammergasse, Fotofinish 0,150 s,
+  // Podest BLACK, SILVER, BROWN, Video 3:14 min
+  { seed: 2, script: [0, 1004446663, 1738348783, 0, 73999703, 1601878192, 3456007667, 0, 3783823125, 1495263803], underdog: 'SILVER', leader: 'MINT' },
+];
+/** Drehbuch zum Grund-Seed (sonst das erste, die Empfehlung). */
+const castGauntlet = (seed) => GAUNTLET_CAST.find((c) => c.seed === seed) || GAUNTLET_CAST[0];
+
+EBS.Knockout = { normalizeParams, simWorld, SHORT_CAST, castShortSeed, TOWER_CAST, castTowerSeed, LONG_CAST, castLong, GAUNTLET_CAST, castGauntlet };
 })();

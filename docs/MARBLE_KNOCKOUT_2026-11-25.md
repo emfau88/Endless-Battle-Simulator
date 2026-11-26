@@ -20,7 +20,8 @@ Dieser Bericht wird je Paket fortgeschrieben.
 | G2 Bild fertig, Ton nach Bildlage, Sichern und Laden | **Erledigt** (25.11.) |
 | G3 THE TOWER komplett, Casting, Vorlage „Short · Turm“ | **Erledigt** (25.11.) |
 | G4 THE GAUNTLET Abschnitte 1 bis 5 | **Erledigt** (26.11.) |
-| G5 THE GAUNTLET komplett, Einstiegsflug, Podest | **Erledigt** (26.11.). G6 und G7 offen. |
+| G5 THE GAUNTLET komplett, Einstiegsflug, Podest | **Erledigt** (26.11.) |
+| G6 Drehbuch-Casting, Vorlage „Langvideo“ | **Erledigt** (26.11.). G7 offen. |
 
 ---
 
@@ -1175,3 +1176,84 @@ node scripts/knockout-frames.mjs --mode level --seed 2 --times 0.3,3.5,9.0,121,1
 - `test/knockout.test.mjs`: 8 Tests grün, der alte Ablauf ist unverändert.
 - `npm run golden`: identisch mit der Referenz.
 - Nicht gelaufen: Scrap-Hashes (Scrap unberührt), voller `npm test`, kein Videoexport.
+
+## G6 · Drehbuch-Casting fürs Gesamtlevel, Vorlage „Langvideo“ (26.11.2026)
+
+**Umfang:**
+
+- **Drehbuch-Casting** für THE GAUNTLET (`scripts/knockout-casting.mjs --story`). Die Geschichte ist die aus M8,
+  aufs Gesamtlevel übertragen:
+  - **Außenseiterin:** die erste, die in Abschnitt 1 bis 3 als Letzte ins Becken kommt und weniger als 2,5
+    Murmelbreiten vor der Ersten draußen liegt. Danach entkommt sie noch zweimal so knapp und kämpft im Finale im
+    Fotofinish um den Sieg (Platz 1 oder 2).
+  - **Spitzenreiter:** eine der drei besten Platzsummen in Abschnitt 1 bis 3; er stürzt in der Hammergasse.
+  - **Fotofinish:** Platz 1 und 2 weniger als 0,15 s auseinander (Plan, Abschnitt 8).
+  - **Pflicht in jedem Abschnitt:** kein Anstoß, niemand sitzt fest, kein Zeitlimit.
+- **Sichern und Laden statt Neuaufbau:** Ein Kandidat rechnet nur seinen Abschnitt. Der Zustand an der Freigabe wird
+  gesichert und in eine neue Simulation mit dem Kandidaten-Seed für diesen Abschnitt geladen. Das Ende eines
+  Kandidaten ist gleich der Anfang des nächsten Abschnitts. Rückschau wie in M8: Vor der Hammergasse und vor dem
+  Finale bleiben mehrere Varianten offen. Höchstens 900 Probeläufe je Grund-Seed. Am Ende rechnet eine Gegenprobe das
+  ganze Rennen am Stück und prüft die Geschichte noch einmal.
+- **Drehbuch-Wert 0 heißt Grund-Seed** (vorher war 0 ein eigener Seed). Das Casting probiert in jedem Abschnitt
+  zuerst 0, so bleibt ein Abschnitt, der schon passt, wie ohne Drehbuch. Kein bestehender Lauf ist betroffen: Der Turm
+  läuft ohne Drehbuch.
+- **Ganzlauf-Casting** `--level gauntlet` rechnet jetzt bis 400 s; `--photo` setzt die Grenze fürs knappe Finale.
+- **Vorlage „Langvideo“** zeigt jetzt auf THE GAUNTLET: Grund-Seed 1 mit Drehbuch, Kamera „Fahrt“, Einstiegsflug an,
+  Länge automatisch bis zum Ende des Podests. Das Rennen Bahn für Bahn bleibt über „Ablauf“ wählbar, seine Drehbücher
+  (`LONG_CAST`) bleiben erhalten. Die Anzeige „Drehbuch“ in der Seitenleiste kennt jetzt beide Listen.
+- **Kapitel** (seit G5) für die Vorlage, wie sie der Export schreibt: 0:00 Intro, 0:07 Stage 1, 0:25 Stage 2,
+  0:44 Stage 3, 0:56 Stage 4, 1:11 Stage 5, 1:36 Stage 6, 1:58 Stage 7, 2:15 Stage 8, 2:26 Stage 9, 2:36 Stage 10,
+  3:06 Winner, 3:12 Podium. Das Video endet nach 3:21 min.
+
+**Casting (Grund-Seeds 1 bis 8 parallel, je Abschnitt bis zu 16 Kandidaten):**
+
+| Grund-Seed | Ergebnis | Probeläufe |
+|---|---|---|
+| **1 (Vorlage)** | GREEN entkommt in Abschnitt 2, 8 und 9 knapp (1,9 / 1,9 / 2,3 Breiten) und gewinnt; LIME stürzt in der Hammergasse; Fotofinish 0,125 s; Podest GREEN, PINK, YELLOW; 3:21 min | 153 |
+| 4 | GREEN entkommt in Abschnitt 2, 3 und 5 (2,2 / 1,5 / unter 0,1 Breiten) und gewinnt; NAVY stürzt; Fotofinish 0,124 s; 3:31 min, `TILT` dauert 40 s | 109 |
+| 2 | SILVER entkommt in Abschnitt 2, 3 und 9 (2,5 / 1,5 / 2,3) und wird Zweite; MINT stürzt; Fotofinish 0,150 s; Sieger BLACK; 3:14 min | 125 |
+| 3, 8 | scheitern in Abschnitt 4: keiner der 16 Kandidaten erfüllt die Pflichten | 62, 50 |
+| 5, 6, 7 | abgebrochen, als drei Drehbücher fertig waren (sie standen im Finale mit erst einer knappen Rettung) | – |
+
+Alle drei Gegenproben am Stück: Die Geschichte hält. Rechenzeit: ein Probelauf rund 5 s, die ersten drei Drehbücher
+nach rund 20 min (acht Prozesse parallel).
+
+Empfehlung für die Vorlage ist Grund-Seed 1: Die knappen Rettungen verteilen sich übers Video, die letzten zwei kommen
+kurz vor dem Finale, und kein Abschnitt zieht sich. GREEN ist in diesem Lauf sechsmal die Letzte im Becken.
+
+**Proben (lokal, je 20 s, aus der Vorlage):**
+
+| Probe | Datei unter `output/knockout-lab/` |
+|---|---|
+| Einstiegsflug, Titelkarte, Start und THE DROP | `g6-gauntlet-start-20s.mp4` |
+| Zwei knappe Schleusen vor dem Finale: GREEN als Letzte rein in `SHIFTING FLOORS` und `RING ESCAPE` | `g6-gauntlet-schleusen-20s.mp4` |
+| Finale: `FINAL SPRINT`, Nagelfeld, Fotofinish mit Zeitlupe, `GREEN WINS!`, Podest | `g6-gauntlet-finale-20s.mp4` |
+
+```bash
+node export.mjs --config presets/production/knockout-long.json --clip-start 0 --clip-duration 20 --out output/knockout-lab/g6-gauntlet-start-20s.mp4
+node export.mjs --config presets/production/knockout-long.json --clip-start 138 --clip-duration 20 --out output/knockout-lab/g6-gauntlet-schleusen-20s.mp4
+node export.mjs --config presets/production/knockout-long.json --clip-start 176 --clip-duration 20 --out output/knockout-lab/g6-gauntlet-finale-20s.mp4
+```
+
+**Grenzen:**
+
+- Das Drehbuch gilt nur mit den Einstellungen der Vorlage. Mit Einstiegsflug aus oder Zeitlupe aus rechnet das Rennen
+  anders, und die Geschichte hält nicht mehr.
+- Die Geschichte erzählt sich nur durch das Rennen. Es gibt keine Einblendung wie `UNDERDOG`.
+- Zwei von acht Grund-Seeds finden in Abschnitt 4 keine Fortsetzung; ein Casting braucht je Grund-Seed 110 bis 150
+  Probeläufe.
+- Der kleine Unterschied beim Laden: Der Bandlauf des Förderbands in Abschnitt 6 (nur fürs Bild) behält den Wert des
+  gesicherten Laufs. Die Physik ist gleich, die Gegenprobe rechnet ohnehin am Stück.
+- Das ganze Langvideo ist nicht exportiert (nur auf Auftrag).
+
+**Nachweise:**
+
+- `test/knockout-level.test.mjs`: 12 Tests grün. Neu: „Vorlage Langvideo (seit G6)“ (Datei gleich Oberfläche, ganzer
+  Lauf: Außenseiterin im Fotofinish, Spitzenreiter stürzt in der Hammergasse, unter 0,15 s, kein Anstoß).
+- `npm run golden`: identisch mit der Referenz.
+- Die drei Proben bestehen die Prüfung des Exports (Codec, Auflösung, Bildrate, Bildzahl, Dauer, Simulationszustand).
+- Nicht gelaufen: Scrap-Hashes (Scrap unberührt), voller `npm test`, ganzer Export.
+- `test/knockout.test.mjs`: 8 Tests grün. Der Test des alten Drehbuchs prüft die Vorlage nicht mehr, nur noch das
+  Rennen mit Drehbuch.
+- `test/knockout-browser.test.mjs`, Test „Short (M7)“: grün, mit beiden Vorlagen-Dateien gleich Oberfläche und der
+  Langvideo-Vorlage aus `GAUNTLET_CAST`.

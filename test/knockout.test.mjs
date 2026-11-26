@@ -136,11 +136,9 @@ test('Drehbuch (M8): Außenseiterin im Finale, Spitzenreiter stürzt auf Bahn 7,
   assert.deepEqual([L.outStage, L.how], [6, 'fell'], `${cast.leader} stürzt auf Bahn 7`);
   const fin = sim.runners.filter((u) => !u.out).sort((a, b) => a.place - b.place);
   assert.ok(fin[1].finishT - fin[0].finishT < 0.3, `Fotofinish ${(fin[1].finishT - fin[0].finishT).toFixed(3)} s`);
-  // Die Vorlage trägt das Drehbuch; Datei und Oberfläche sind gleich
+  // Das Drehbuch geht unverändert durch die Parameter. Die Vorlage „Langvideo“ zeigt seit G6 auf THE GAUNTLET
+  // (geprüft in test/knockout-level.test.mjs); dieses Rennen bleibt über den Ablauf mit Drehbuch wählbar.
   assert.deepEqual(plain(sc.normalizeParams({ script: cast.script }).script), plain(cast.script));
-  const preset = plain(EBS.productionPreset('knockout', 'long'));
-  assert.deepEqual([preset.seed, preset.params.script], [cast.seed, plain(cast.script)]);
-  assert.deepEqual(preset, JSON.parse(readFileSync(new URL('../presets/production/knockout-long.json', import.meta.url), 'utf8')));
 });
 
 test('Export: Länge aus dem Ablauf bis zum Ende des Podests', () => {

@@ -28,17 +28,17 @@
       view: { hud: true, camera: false },
     };
     // Marble Knockout: Short als Gesamtlevel THE TOWER (16 Murmeln, eine Fahrt durch den Turm, Ziel mit Fotofinish)
-    // auf einem geprüften Casting-Seed (seit G3; das Rennen Bahn für Bahn bleibt über „Ablauf“ wählbar);
-    // Langvideo mit 12 Murmeln auf 10 Bahnen nach einem gecasteten Drehbuch (Grund-Seed und ein Seed je Bahn).
-    // Beide enden mit dem Rennende (40 s und 300 s sind nur Startwerte).
+    // auf einem geprüften Casting-Seed (seit G3); Langvideo als Gesamtlevel THE GAUNTLET (20 Murmeln, zehn Abschnitte,
+    // Kamerafahrt, Einstiegsflug, Podest) nach einem gecasteten Drehbuch (seit G6). Das Rennen Bahn für Bahn bleibt
+    // über „Ablauf“ wählbar. Beide enden mit dem Rennende (40 s und 200 s sind nur Startwerte).
     if (scenario === 'knockout') {
-      const cast = short ? null : EBS.Knockout.castLong(seed);
+      const cast = short ? null : EBS.Knockout.castGauntlet(seed);
       return {
-        version: 1, name: `${labels[scenario]} – ${short ? 'Short (The Tower)' : 'Langvideo (10 Bahnen, Drehbuch)'}`,
+        version: 1, name: `${labels[scenario]} – ${short ? 'Short (The Tower)' : 'Langvideo (The Gauntlet, Drehbuch)'}`,
         scenario, seed: short ? EBS.Knockout.castTowerSeed(seed) : cast.seed,
         params: short ? { mode: 'level', slowmo: 'on', marks: 'on', display: 'on', videoEnd: 'finish' }
-          : { mode: 'race', short: 'A', slowmo: 'on', marks: 'on', display: 'on', videoEnd: 'finish', script: cast.script.slice() },
-        video: { aspect: short ? '9:16' : '16:9', resolution: 1080, fps: 30, durationSec: short ? 40 : 300, tempo: 1, audio: true,
+          : { mode: 'level', cam: 'ride', intro: 'on', slowmo: 'on', marks: 'on', display: 'on', videoEnd: 'finish', script: cast.script.slice() },
+        video: { aspect: short ? '9:16' : '16:9', resolution: 1080, fps: 30, durationSec: short ? 40 : 200, tempo: 1, audio: true,
           volume: { master: 100 }, quality: { crf: 20, preset: 'medium', bitrate: null } },
         view: { hud: true, camera: false },
       };

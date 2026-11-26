@@ -14,11 +14,15 @@
 //
 // Gesamtlevel (R43 Teil 2): ganzes Level je Seed, Prüfpunkte unten bei castLevelMain:
 //   node scripts/knockout-casting.mjs --level tower [--from 1 --to 200]
+//   node scripts/knockout-casting.mjs --level gauntlet [--from 1 --to 20 --photo 0.3]
+//
+// Gesamtlevel-Drehbuch (G6): THE GAUNTLET Abschnitt für Abschnitt mit Sichern und Laden, je Grund-Seed:
+//   node scripts/knockout-casting.mjs --story [--from 1 --to 3 --tries 16 --photo 0.15 --escapes 3]
 import { loadKnockout, makeSim } from './knockout-lab.mjs';
 
 const argv = process.argv.slice(2);
 const arg = (n, d) => { const i = argv.indexOf('--' + n); return i >= 0 && argv[i + 1] !== undefined ? argv[i + 1] : d; };
-const from = Number(arg('from', 1)), to = Number(arg('to', argv.includes('--long') ? 3 : 200)), top = Number(arg('top', 12));
+const from = Number(arg('from', 1)), to = Number(arg('to', argv.includes('--long') || argv.includes('--story') ? 3 : 200)), top = Number(arg('top', 12));
 
 const EBS = loadKnockout(), P = EBS.KnockoutSim.KnockoutSimulation.prototype;
 // Anstöße und Festsitzen mitzählen (die Simulation selbst bleibt unverändert)
@@ -236,14 +240,16 @@ function castLongMain() {
 //   3. das Finale knapp ist (Platz 1 und 2 unter 0,8 s oder Zeitlupe)   4. die Führung im Finale wechselt
 //   5. niemand einen Anstoß braucht oder festsitzt     6. mit --gold: GOLD erreicht das Finale
 //   node scripts/knockout-casting.mjs --level tower [--from 1 --to 200 --top 12 --cut 1.5 --gold --list --best 24]
+// Langvideo (gauntlet): Länge bis 600 s, Finale knapp mit --photo (Standard 0,8 s). Ein Lauf rechnet rund eine Minute.
 function castLevelMain() {
   const id = arg('level', 'tower'), spec = EBS.KnockoutLevels.LEVELS[id], aspect = spec.format === 'short' ? '9:16' : '16:9';
-  const MAX_LEN = spec.format === 'short' ? 40 : 600, GAP = 0.8, CUT = Number(arg('cut', 1.5)), gold = argv.includes('--gold'), rows = [];
+  const MAX_LEN = spec.format === 'short' ? 40 : 600, GAP = Number(arg('photo', 0.8)), CUT = Number(arg('cut', 1.5)), gold = argv.includes('--gold'), rows = [];
+  const T_MAX = spec.format === 'short' ? 120 : 400;
   for (let seed = from; seed <= to; seed++) {
     const sim = makeSim(EBS, { seed, aspect, params: { mode: 'level' } });
     const last = sim.sections.length - 1;
     let leads = 0, lastLead = -1, cand = -1, held = 0, sample = 0, f0 = -1;
-    while (sim.phase !== 'end' && sim.t < 120) {
+    while (sim.phase !== 'end' && sim.t < T_MAX) {
       sim.stepOnce();
       if (sim.secNo !== last || sim.winnerT >= 0) continue;
       if (f0 < 0) f0 = sim.t;
@@ -275,4 +281,133 @@ function castLevelMain() {
   for (const r of good.slice(0, top)) console.log(`${String(r.seed).padStart(5)} | ${r.len.toFixed(1).padStart(5)} | ${f(r.gap)} s${r.slow ? ' Z' : '  '}  | ${f(r.cut)} d | ${String(r.leads).padStart(7)} | ${String(r.falls).padStart(6)} | ${r.goldIn ? ' ja ' : ' –  '} | ${r.winner}`);
 }
 
-if (argv.includes('--long')) castLongMain(); else if (argv.includes('--level')) castLevelMain(); else castShortMain();
+// ===================================================================== Gesamtlevel-Drehbuch (G6)
+// Geschichte wie in M8, auf THE GAUNTLET übertragen:
+//   Außenseiterin: die erste knapp Gerettete in Abschnitt 1 bis 3 (als Letzte ins Becken, weniger als 2,5
+//                  Murmelbreiten vor der Ersten draußen); danach entkommt sie noch zweimal so knapp und kämpft im
+//                  Finale im Fotofinish um den Sieg (Platz 1 oder 2)
+//   Spitzenreiter: eine der drei besten Platzsummen in Abschnitt 1 bis 3 (ohne die Außenseiterin), stürzt in der
+//                  Hammergasse (Abschnitt 7)
+//   Fotofinish:    Platz 1 und 2 weniger als --photo Sekunden auseinander (Standard 0,15 s, Plan Abschnitt 8)
+// Anders als in M8 rechnet ein Kandidat nur seinen Abschnitt: Der Zustand an der Freigabe (saveState) wird in eine
+// neue Simulation mit dem Kandidaten-Seed für diesen Abschnitt geladen (loadState). Drehbuch-Wert 0 heißt Grund-Seed;
+// Kandidat 0 kommt zuerst, so bleibt ein Abschnitt, der schon passt, wie ohne Drehbuch. Pflicht in jedem Abschnitt:
+// kein Anstoß, niemand sitzt fest, kein Zeitlimit. Die Gegenprobe rechnet das ganze Rennen am Stück.
+const STORY = { escD: 2.5, branch: { 5: 6, 8: 10 }, budget: 900 };
+
+/** Abschnitt i rechnen: aus dem Zustand snap (null: von vorn) mit dem Drehbuch script bis zur nächsten Freigabe. */
+function runSection(base, script, i, snap) {
+  const sim = makeSim(EBS, { seed: base, aspect: '16:9', params: { mode: 'level', script } });
+  if (snap) sim.loadState(snap);
+  const nud = () => sim.runners.reduce((a, u) => a + u.nudges, 0), bad = () => sim.stats.stuck + sim.stats.timeUp;
+  const n0 = nud(), b0 = bad(), c0 = sim.cuts.length;
+  let lastIn = -1, order = null;
+  while (sim.phase !== 'end' && sim.t < 600) {
+    const closed = sim.closeT >= 0;
+    sim.stepOnce();
+    if (sim.secNo > i) break;
+    if (!closed && sim.closeT >= 0) {
+      // Schleuse zu: Reihenfolge im Becken und die Letzte drinnen
+      const inside = sim.runners.filter((u) => u.finished && !u.out).sort((a, b) => a.place - b.place);
+      order = inside.map((u) => u.rid); lastIn = inside.length ? inside[inside.length - 1].rid : -1;
+    }
+  }
+  const last = sim.secNo === sim.sections.length - 1 && sim.phase === 'end';
+  if (sim.secNo === i && !last) return null;
+  const fins = last ? sim.runners.filter((u) => u.finished && !u.out).sort((a, b) => a.place - b.place).map((u) => u.rid) : [];
+  return {
+    order: last ? fins : order || [], alive: sim.runners.filter((u) => !u.out).map((u) => u.rid),
+    out: sim.roster.filter((m) => m.outStage === i).map((m) => ({ rid: m.id, how: m.how })),
+    nudges: nud() - n0, stuck: bad() - b0, lastIn, gapD: sim.cuts.length > c0 ? sim.cuts[sim.cuts.length - 1].gap : Infinity,
+    photo: last && sim.finalGap >= 0 ? sim.finalGap : Infinity, snap: last ? null : sim.saveState(), t: sim.t,
+  };
+}
+
+function castStory(base, K, PHOTO, ESC_N) {
+  const spec = EBS.KnockoutLevels.LEVELS.gauntlet, N = spec.sections.length, LAST = N - 1;
+  const HAM = spec.sections.findIndex((s) => s.id === 'hammers'), name = (rid) => spec.field[rid];
+  let tried = 0, deepest = 0;
+  function candidates(st, i) {
+    const tries = i === HAM || i === LAST ? 4 * K : K, list = [];
+    const want = st.escapes < ESC_N && i < LAST && i !== HAM ? 12 : 2, many = (STORY.branch[i] || 1) > 1;
+    for (let k = 0; k < tries && tried < STORY.budget; k++) {
+      const cand = k === 0 ? 0 : EBS.util.hashSeed(base, 'cast', i, k) >>> 0, rec = runSection(base, [...st.script, cand], i, st.snap);
+      tried++;
+      if (!rec || rec.stuck || rec.nudges) continue;
+      if (st.U >= 0 && !rec.alive.includes(st.U)) continue;                                     // Außenseiterin bleibt
+      if (i >= 3 && i < HAM && !st.L.some((rid) => rec.alive.includes(rid))) continue;           // ein Spitzenreiter bleibt
+      const fallen = i === HAM ? st.L.filter((rid) => rec.out.some((o) => o.rid === rid && o.how === 'fell')) : [];
+      if (i === HAM && !fallen.length) continue;                                                // Sturz in der Gasse
+      if (i === LAST && !(rec.photo < PHOTO && rec.order.slice(0, 2).includes(st.U))) continue; // Fotofinish mit ihr
+      const esc = i < LAST && rec.gapD < STORY.escD && (st.U < 0 ? i <= 2 && rec.lastIn >= 0 : rec.lastIn === st.U);
+      let s = 2 + (esc && st.escapes < ESC_N ? 10 : 0);
+      if (i === LAST) s += 5 * (PHOTO - rec.photo) / PHOTO;
+      list.push({ cand, rec, s, esc, fallen });
+      if (!many && s >= want) break;
+    }
+    return list.sort((a, b) => b.s - a.s);
+  }
+  function apply(st, i, c) {
+    const r = c.rec, n = { ...st, script: [...st.script, c.cand], snap: r.snap, sum: { ...st.sum }, expectOut: { ...st.expectOut }, log: [...st.log] };
+    if (n.U < 0 && c.esc) n.U = r.lastIn;
+    if (c.esc) n.escapes++;
+    r.out.forEach((o) => { n.expectOut[o.rid] = i; });
+    if (i <= 2) r.order.forEach((rid, p) => { n.sum[rid] = (n.sum[rid] || 0) + p + 1; });
+    if (i === 2) n.L = r.order.filter((rid) => rid !== n.U).sort((a, b) => n.sum[a] - n.sum[b] || a - b).slice(0, 3);
+    if (i === HAM) n.leader = c.fallen.slice().sort((a, b) => n.sum[a] - n.sum[b] || a - b)[0];
+    n.log.push(`Abschnitt ${String(i + 1).padStart(2)}: Seed ${c.cand}${c.esc ? ` · ${name(n.U)} entkommt (${r.gapD.toFixed(1)} Breiten)` : ''}`
+      + `${r.out.length ? ' · raus ' + r.out.map((o) => `${name(o.rid)} (${o.how})`).join(', ') : ''}`
+      + `${i === 2 ? ` · frühe Spitze ${n.L.map(name).join(', ')}` : ''}${i === HAM ? ` · ${name(n.leader)} stürzt in der Hammergasse` : ''}`
+      + `${i === LAST ? ` · Fotofinish ${r.photo.toFixed(3)} s, Sieger ${name(r.order[0])}` : ''} · bis ${r.t.toFixed(1)} s`);
+    return n;
+  }
+  function dfs(st, i) {
+    if (i === N) return st.escapes >= ESC_N ? st : null;
+    if (i === 3 && st.U < 0) return null;
+    deepest = Math.max(deepest, i);
+    const list = candidates(st, i);
+    // Fortschritt auf stderr (die Ausgabe selbst bleibt kurz)
+    console.error(`  Grund-Seed ${base} · Abschnitt ${i + 1}: ${list.length} gültig · ${tried} Probeläufe · knapp entkommen ${st.escapes}`);
+    for (const c of list.slice(0, STORY.branch[i] || 1)) {
+      const r = dfs(apply(st, i, c), i + 1);
+      if (r || tried >= STORY.budget) return r;
+    }
+    return null;
+  }
+  const done = dfs({ script: [], snap: null, U: -1, L: [], leader: -1, escapes: 0, sum: {}, expectOut: {}, log: [] }, 0);
+  if (!done) return { ok: false, failedAt: deepest + 1, tried, log: [] };
+  // Abschnitte, deren Kandidat der Grund-Seed ist, brauchen keinen Eintrag; Nullen am Ende fallen weg
+  const script = done.script.slice();
+  while (script.length && !script[script.length - 1]) script.pop();
+  return { ok: true, script, underdog: name(done.U), leader: name(done.leader), escapes: done.escapes, log: done.log, tried, expectOut: done.expectOut };
+}
+
+/** Gegenprobe: ganzes Rennen am Stück mit Drehbuch. */
+function verifyStory(base, r, PHOTO) {
+  const sim = makeSim(EBS, { seed: base, aspect: '16:9', params: { mode: 'level', script: r.script } }), errors = [];
+  while (sim.phase !== 'end' && sim.t < 600) sim.stepOnce();
+  sim.roster.forEach((m) => { if ((r.expectOut[m.id] ?? -1) !== m.outStage) errors.push(`${m.name}: raus in Abschnitt ${m.outStage + 1} statt ${(r.expectOut[m.id] ?? -1) + 1}`); });
+  const id = (n) => sim.roster.findIndex((m) => m.name === n), L = sim.roster[id(r.leader)];
+  const fins = sim.runners.filter((u) => u.finished && !u.out).sort((a, b) => a.place - b.place).map((u) => u.rid);
+  const nud = sim.runners.reduce((a, u) => a + u.nudges, 0) + sim.stats.stuck + sim.stats.timeUp;
+  if (!fins.slice(0, 2).includes(id(r.underdog))) errors.push('Außenseiterin nicht im Fotofinish');
+  if (L.how !== 'fell' || sim.sections[L.outStage].id !== 'hammers') errors.push('Spitzenreiter stürzt nicht in der Hammergasse');
+  if (!(sim.finalGap >= 0 && sim.finalGap < PHOTO)) errors.push(`kein Fotofinish (${sim.finalGap.toFixed(3)} s)`);
+  if (nud) errors.push(`${nud} Anstöße oder Festsitzen`);
+  return { errors, len: sim.t, photo: sim.finalGap, podium: (sim.podium || []).map((i) => sim.roster[i].name) };
+}
+
+function castStoryMain() {
+  const K = Number(arg('tries', 16)), PHOTO = Number(arg('photo', 0.15)), ESC_N = Number(arg('escapes', 3));
+  for (let base = from; base <= to; base++) {
+    const r = castStory(base, K, PHOTO, ESC_N);
+    console.log(`\nGrund-Seed ${base}: ${r.ok ? 'Geschichte vollständig' : `scheitert in Abschnitt ${r.failedAt}`} (${r.tried} Probeläufe)`);
+    for (const l of r.log) console.log('  ' + l);
+    if (!r.ok) continue;
+    const v = verifyStory(base, r, PHOTO);
+    console.log(`  Gegenprobe am Stück: ${v.errors.length ? 'FEHLER ' + v.errors.join('; ') : 'Geschichte hält'} · Video ${v.len.toFixed(1)} s, Fotofinish ${v.photo.toFixed(3)} s, Podest ${v.podium.join(', ')}`);
+    if (!v.errors.length) console.log(`  { seed: ${base}, script: ${JSON.stringify(r.script)}, underdog: '${r.underdog}', leader: '${r.leader}' },`);
+  }
+}
+
+if (argv.includes('--long')) castLongMain(); else if (argv.includes('--story')) castStoryMain(); else if (argv.includes('--level')) castLevelMain(); else castShortMain();

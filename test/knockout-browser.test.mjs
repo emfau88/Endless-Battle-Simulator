@@ -41,6 +41,8 @@ test('Short (M7): Chromium rechnet dieselben Hochformat-Rennen wie Node; Vorlage
       }
       // Die Short-Vorlage ist seit G3 der Turm auf einem geprüften Casting-Seed
       assert.ok(await page.evaluate(() => EBS.Knockout.TOWER_CAST.includes(EBS.productionPreset('knockout', 'short', 1).seed)));
+      // Die Langvideo-Vorlage ist seit G6 THE GAUNTLET mit gecastetem Drehbuch
+      assert.ok(await page.evaluate(() => EBS.Knockout.GAUNTLET_CAST.some((c) => c.seed === EBS.productionPreset('knockout', 'long').seed)));
     }
     await page.close();
     assert.deepEqual(web, node, `Short ${short}`);

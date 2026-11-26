@@ -45,10 +45,11 @@
       // Welt: alle Abschnitte in einem Physik-Kern
       const bo = spec.bounds, d = 2 * this.r, wld = new P.World(PHYS);
       const b = new E.Builder(wld, { r: this.r, T: this.T, W: bo.x1, H: bo.y1, rng: new EBS.RNG(EBS.util.hashSeed(this.seed, 'level', spec.id)) });
-      // Drehbuch: ein Seed je Abschnitt (params.script); ohne Eintrag gilt der Grund-Seed
+      // Drehbuch: ein Seed je Abschnitt (params.script); ohne Eintrag oder mit 0 gilt der Grund-Seed (seit G6: So
+      // lässt das Casting einen Abschnitt, der schon passt, wie ohne Drehbuch)
       const script = Array.isArray(params.script) ? params.script : null;
       this.script = script;
-      const rngFor = (i) => new EBS.RNG(EBS.util.hashSeed(this.seed, 'section', spec.id, i, script && script[i] !== undefined ? script[i] : ''));
+      const rngFor = (i) => new EBS.RNG(EBS.util.hashSeed(this.seed, 'section', spec.id, i, script && script[i] ? script[i] : ''));
       this.lv = LV.build(spec, b, { W: bo.x1, H: bo.y1, r: this.r, d, T: this.T, n: this.roster.length, short: this.format === 'short', rngFor });
       this.world = wld; this.stage = b.result(); this.sections = this.lv.sections; this.bounds = bo;
       this.killPits = this.stage.pits.filter((p) => p.kill);
