@@ -1,0 +1,264 @@
+{
+  "profile": "scrap-soft-v1",
+  "sampleRate": 48000,
+  "recipe": "Hörprobe B2 „sauber“ mit Kistenklängen (R40, T1/K5), scripts/build-scrap-audio.mjs",
+  "sources": {
+    "scifi": "https://kenney.nl/assets/sci-fi-sounds",
+    "impact": "https://kenney.nl/assets/impact-sounds",
+    "license": "CC0-1.0"
+  },
+  "note": "Each sound is equal-loudness (loudest 50 ms window, bass below 150 Hz weighted down) and then scaled by one shared storage factor. Levels live in the Scrap sound table.",
+  "storageGainDb": -23.115,
+  "tool": "ffmpeg version N-121425-g0bc54cddb1-20251013 Copyright (c) 2000-2025 the FFmpeg developers",
+  "sourceFiles": [
+    {
+      "file": "scrap-source/explosionCrunch_000.ogg",
+      "pack": "scifi",
+      "sha256": "4b597d658d0ae101f0a030fbeea5fc3a4292ab85f017470a8254a8e7959cbd69"
+    },
+    {
+      "file": "scrap-source/explosionCrunch_002.ogg",
+      "pack": "scifi",
+      "sha256": "be2b8ddc62e4a24c91e2e77793de98549ce216faf2f323a917e7d6f34321ff97"
+    },
+    {
+      "file": "scrap-source/explosionCrunch_003.ogg",
+      "pack": "scifi",
+      "sha256": "8c7197bb3a1c504690319c3abe0e62a5423ee246dd70caab57963d0b7aa8144f"
+    },
+    {
+      "file": "scrap-source/forceField_001.ogg",
+      "pack": "scifi",
+      "sha256": "5574e69dd04e5f59322c5ddffde5978f077b09170ae5e29cec0bd9901828cd90"
+    },
+    {
+      "file": "scrap-source/forceField_003.ogg",
+      "pack": "scifi",
+      "sha256": "15e3fe971ffd3415e5ab641d3a4d043fb31f6712b0956315b524ba29c3889cda"
+    },
+    {
+      "file": "scrap-source/impactMetal_000.ogg",
+      "pack": "scifi",
+      "sha256": "956c6612a256aa1a67a2327fffe2454f6b1d82e4c1c2be28fd66916335d5b1d6"
+    },
+    {
+      "file": "scrap-source/impactMetal_001.ogg",
+      "pack": "scifi",
+      "sha256": "4a2b76f20052819c6ace57cc5ba55ec58deffcf74e3ed30694d619c582cc8e8e"
+    },
+    {
+      "file": "scrap-source/impactMetal_002.ogg",
+      "pack": "scifi",
+      "sha256": "0c1bb4db8a4d48b2b8c2e65a175d9056b845f1063837599995d81be1c5957d2c"
+    },
+    {
+      "file": "scrap-source/impactMetal_004.ogg",
+      "pack": "scifi",
+      "sha256": "0032710d1fc88c217946cd54492f275eb4363bb8025a4bc1b7ce08df7b3c60de"
+    },
+    {
+      "file": "scrap-source/impactWood_heavy_000.ogg",
+      "pack": "impact",
+      "sha256": "15ff82332f342c30e469215539e1cc57e11b221aa2cf7e11e811d313a9927f3d"
+    },
+    {
+      "file": "scrap-source/impactWood_heavy_002.ogg",
+      "pack": "impact",
+      "sha256": "ce1e06f2a05f2634c645cb72f6a1623e64bc2d92be34917430a61031fb6597d4"
+    },
+    {
+      "file": "scrap-source/impactWood_medium_001.ogg",
+      "pack": "impact",
+      "sha256": "15271dbe8e2872dbb0ff1aeb7b12b2d2b92b7c1951c88532b9ab9158c36dfc73"
+    },
+    {
+      "file": "scrap-source/laserSmall_000.ogg",
+      "pack": "scifi",
+      "sha256": "72b589eadd41781257ac859e4f4d030222e623390e4a1a83f6d05329a6e026f1"
+    },
+    {
+      "file": "scrap-source/laserSmall_003.ogg",
+      "pack": "scifi",
+      "sha256": "cfa4391ca280933f567ce81c646b16f7cb2a090866eae674159a20f07641833c"
+    },
+    {
+      "file": "scrap-source/laserSmall_004.ogg",
+      "pack": "scifi",
+      "sha256": "a464e34436f3c2a09f0e3a03dc0658a9036148062bbf293722007df4cfd8ff08"
+    },
+    {
+      "file": "scrap-source/lowFrequency_explosion_000.ogg",
+      "pack": "scifi",
+      "sha256": "3cb48d86dab63140cfb9aaeea4d4a6846abaca5831d157d8adbec0490da26343"
+    },
+    {
+      "file": "scrap-source/lowFrequency_explosion_001.ogg",
+      "pack": "scifi",
+      "sha256": "cdda50600a4928f2f1b8371224d53c171ac799c1cf2c30b11999508985250b3b"
+    }
+  ],
+  "samples": [
+    {
+      "name": "scrap-b2-blaster-0",
+      "preEncodePcmSha256": "814afa49e2be4e65c64959f137522f7d983a4ea6e76df4e9dc1eeef876b52961",
+      "oggSha256": "06d3b38481ea011b95db24949c9885076905d3b8594868b70d089e4d4df67e13",
+      "seconds": 0.1773,
+      "decodedPeak": 0.166475
+    },
+    {
+      "name": "scrap-b2-blaster-1",
+      "preEncodePcmSha256": "04a6ed54dbe825ebfd1f17516435fb0c107fd7aefae10a941e46ffd68f09a053",
+      "oggSha256": "56f785dc5964f07d7465a064a303333ad76b8d7ec724e2aa0e41ae288ad2e641",
+      "seconds": 0.1973,
+      "decodedPeak": 0.504856
+    },
+    {
+      "name": "scrap-b2-blaster-2",
+      "preEncodePcmSha256": "d04ec5e0658e4c2121882f36ac670887a9dccc8d04011664cc665995928bdece",
+      "oggSha256": "faf580b3a0d7d7451f99d9dccf85158f98a2e1f6316ef2406b33e3f77615565c",
+      "seconds": 0.1973,
+      "decodedPeak": 0.160168
+    },
+    {
+      "name": "scrap-b2-rocket-0",
+      "preEncodePcmSha256": "578f736a3a413d488d7c97655e7c63e39b147c467e628a767c78484cc1938496",
+      "oggSha256": "8fb554473b84942b32c5902300e4263440c85976c8f8197e6823e181a5a82615",
+      "seconds": 0.4473,
+      "decodedPeak": 0.147211
+    },
+    {
+      "name": "scrap-b2-rocket-1",
+      "preEncodePcmSha256": "3d61939b47c486898a416618391afce2401f1bc2235e51005bcdc6b0e0db87d6",
+      "oggSha256": "7b542717d785f6938adb5537d45130287f28520da25947e10138d3fb10887ffd",
+      "seconds": 0.3773,
+      "decodedPeak": 0.206422
+    },
+    {
+      "name": "scrap-b2-blast-0",
+      "preEncodePcmSha256": "4165d28580c310c90c9d80f5cb8729cadfc92ea08d1346c1f4720cad6b7a7481",
+      "oggSha256": "70257a85db2e4e9ab631558c1fa2fe8e278c4c12b483f3d679451f5e94afd606",
+      "seconds": 0.5973,
+      "decodedPeak": 0.326175
+    },
+    {
+      "name": "scrap-b2-blast-1",
+      "preEncodePcmSha256": "6e68792836be61c21446fa1db0d3e4e055f059a143ffe005369a93b012e7edb2",
+      "oggSha256": "490cbbeb23d9497309448b575b433985361235ed20c2e98243c4f675eec77b9e",
+      "seconds": 0.5973,
+      "decodedPeak": 0.327982
+    },
+    {
+      "name": "scrap-b2-hit-0",
+      "preEncodePcmSha256": "7762d6551e59d6f0ad39765635082658675b1082ae709709b8c365684d960cf4",
+      "oggSha256": "71015383ed7277e1cbdf62a5b137123fe7c599f58e45a77b39d0481cdc78cc71",
+      "seconds": 0.2973,
+      "decodedPeak": 0.192972
+    },
+    {
+      "name": "scrap-b2-hit-1",
+      "preEncodePcmSha256": "117ece780ec8e66093265fe590866a7622fee82bd0c01fccedefa169bfee47b2",
+      "oggSha256": "e311cb3a34bb4903405695720be26534aedcbfff737f1de8b0003e36acde92c4",
+      "seconds": 0.2473,
+      "decodedPeak": 0.142612
+    },
+    {
+      "name": "scrap-b2-hit-2",
+      "preEncodePcmSha256": "f8b51409b50260a2fef40a00cec271020dc6e6065002e36bcdd8cecd7d4de7d5",
+      "oggSha256": "74f3acf42a1e95d40c2df7f99e65792e4e6d908619466a8ed016e17f85cf4651",
+      "seconds": 0.2973,
+      "decodedPeak": 0.206253
+    },
+    {
+      "name": "scrap-b2-wood",
+      "preEncodePcmSha256": "0ba775338917183585bd8e3893c41d94b490e0b10ef56a20f40f2f6fc97adecb",
+      "oggSha256": "0f18c200d9877b56fd35fdd9f323bc89f8549443f49d23c1b8621e59d44af0fb",
+      "seconds": 0.1973,
+      "decodedPeak": 0.229737
+    },
+    {
+      "name": "scrap-b2-stone",
+      "preEncodePcmSha256": "efaa7c4105037b686320020f6bf70ccc02b9815aaca3fcf8c76bcd9f42009d55",
+      "oggSha256": "d5e5f96ff8da318375e64486a1d9fc5c8c73bf554b4337aa16a81b1e81e5bda4",
+      "seconds": 0.2173,
+      "decodedPeak": 0.119806
+    },
+    {
+      "name": "scrap-b2-concrete",
+      "preEncodePcmSha256": "ab9071eb48da58fec42fe14785b8a20468c28d11cdc6d95a7070569205770356",
+      "oggSha256": "ddf9aed07aaad52e1e964a4ccf274a995dfcc6011d5da6f0a1f97e72be669a4a",
+      "seconds": 0.2707,
+      "decodedPeak": 0.131943
+    },
+    {
+      "name": "scrap-b2-break-wood",
+      "preEncodePcmSha256": "d1b7d89e9597e6b01965299a3d1611441f1de70e3b48351048274b85c1ecaa76",
+      "oggSha256": "ea11a8f3bbfd1c8e41ce2cf3f38893b0fc43358d16fb841c76ef93323f598454",
+      "seconds": 0.3454,
+      "decodedPeak": 0.267141
+    },
+    {
+      "name": "scrap-b2-break-stone",
+      "preEncodePcmSha256": "492f9412033d13e44994ae4e6584d197dccf0c384235c5074725942c82ca2b3a",
+      "oggSha256": "776b9c7c5bd9538da102cadb50b43c68e9e344470d1f1032be33cc56e2ab3051",
+      "seconds": 0.3473,
+      "decodedPeak": 0.144677
+    },
+    {
+      "name": "scrap-b2-break-concrete",
+      "preEncodePcmSha256": "33512795c4d24c4f90b320704e8dcdcfd14e88e9a7953827138069ceeeff0108",
+      "oggSha256": "59183a366755578f2c5dfb78f5333c5245a177d37ae4fcca60b8fe1941862125",
+      "seconds": 0.3473,
+      "decodedPeak": 0.145954
+    },
+    {
+      "name": "scrap-b2-ko",
+      "preEncodePcmSha256": "3aa47084609a60d92903569e53a4cdfef06fb1153bcd8d3e1338d521aa0d9d6f",
+      "oggSha256": "f061a6de0c6779ce5e33ec188bbc8fdbed209d8efbb281151818d7ddac346f88",
+      "seconds": 0.7973,
+      "decodedPeak": 0.329965
+    },
+    {
+      "name": "scrap-b2-pickup",
+      "preEncodePcmSha256": "4efbed905121ba3f127302aab71e03e230fbd1099609a27f28a41e678568903f",
+      "oggSha256": "8a45b5c3198ca298a91e9421b7545b5ba23848d5648880bac78ecd40163d7cec",
+      "seconds": 0.1573,
+      "decodedPeak": 0.166785
+    },
+    {
+      "name": "scrap-b2-drop",
+      "preEncodePcmSha256": "2ea4d5900f960f9c4c79c7d31b625bffaf9dcc747d0f7444bba5bec7b6f69ba9",
+      "oggSha256": "3ee463aaccc20999131c5b74c6dfb7fd5a269e479ff83b366792b6d1284c4d43",
+      "seconds": 0.1973,
+      "decodedPeak": 0.123329
+    },
+    {
+      "name": "scrap-b2-crate-land",
+      "preEncodePcmSha256": "4a06aba05c5fa65b7e88c321554442f9599b88e494e4f1ccced63ad89c784808",
+      "oggSha256": "8a651f7f631e3397cd3c4c8f4526597ae78e934917d82f31745397c25f322e51",
+      "seconds": 0.3473,
+      "decodedPeak": 0.265738
+    },
+    {
+      "name": "scrap-b2-crate-break",
+      "preEncodePcmSha256": "9e119ca4d4df89b0ede40939cab7fb508bb5abfb12e8564212acfb445e4a54c8",
+      "oggSha256": "46b6019d1042dd7203468d9410715617bccfd44f614f081477429df3bfc7e949",
+      "seconds": 0.3675,
+      "decodedPeak": 0.189297
+    }
+  ],
+  "wind": {
+    "file": "scrap-wind-loop.ogg",
+    "channels": 2,
+    "vorbisQuality": 2,
+    "seconds": 31,
+    "loopStartSec": 1,
+    "loopEndSec": 31,
+    "crossfadeSec": 4,
+    "targetLufs": -48,
+    "fileLufs": -20.3,
+    "fileTruePeakDb": -6.5,
+    "gainDb": -27.7,
+    "preEncodePcmSha256": "0efcd6716950b2be6d448009a4da55322e561849e9831ad5b99742675a995cc7",
+    "oggSha256": "a3120835ac6f49cab0f3f10a90a9fab16f6c7d3ad3461ac9918a3287820dc6d4"
+  }
+}

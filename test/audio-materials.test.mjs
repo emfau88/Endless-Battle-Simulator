@@ -8,7 +8,7 @@ import {loadSamples,buildVoices,renderTrack,processTrack,measureEncodedAudio,SAM
 import {run,ffmpegBin} from '../lib/exporter.mjs';
 
 const context=vm.createContext({});context.window=context;
-for(const file of ['core.js','canvas-scene.js',...['simulation','renderer','rules','materials','daylight-art','material-art','episode'].map(f=>`scenarios/scrap/${f}.js`),'scenarios/scrap.js']) {
+for(const file of ['core.js','canvas-scene.js',...['simulation','renderer','rules','materials','tactics','daylight-art','material-art','episode'].map(f=>`scenarios/scrap/${f}.js`),'scenarios/scrap.js']) {
   vm.runInContext(readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),context,{filename:file});
 }
 const {EBS}=context,audio=JSON.parse(JSON.stringify(EBS.getScenario('scrap').audio));

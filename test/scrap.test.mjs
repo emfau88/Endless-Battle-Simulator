@@ -6,7 +6,7 @@ import vm from 'node:vm';
 
 const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const context = vm.createContext({}); context.window = context;
-for (const path of ['core.js', 'canvas-scene.js', 'scenarios/scrap/simulation.js', 'scenarios/scrap/renderer.js', 'scenarios/scrap/rules.js', 'scenarios/scrap/materials.js', 'scenarios/scrap/daylight-art.js', 'scenarios/scrap/material-art.js', 'scenarios/scrap/episode.js', 'scenarios/scrap.js']) {
+for (const path of ['core.js', 'canvas-scene.js', 'scenarios/scrap/simulation.js', 'scenarios/scrap/renderer.js', 'scenarios/scrap/rules.js', 'scenarios/scrap/materials.js', 'scenarios/scrap/tactics.js', 'scenarios/scrap/daylight-art.js', 'scenarios/scrap/material-art.js', 'scenarios/scrap/effects-art.js', 'scenarios/scrap/episode.js', 'scenarios/scrap.js']) {
   vm.runInContext(read('src/' + path), context, { filename: path });
 }
 const { EBS } = context;

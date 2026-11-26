@@ -95,6 +95,7 @@
     const b=2*(fx*dx+fy*dy),d=b*b-4*a*c;if(d<0)return null;
     const t=(-b-Math.sqrt(d))/(2*a);return t>=0&&t<=1?t:null;
   }
+  // Methods read this.bounds (the same 1040 × 540 numbers in v3); v4 Short uses a smaller map.
   class MaterialRound extends EBS.ScrapRules.Round {
     constructor(options) {
       super({ ...options, rulesVersion:'v2' });
@@ -132,20 +133,20 @@
         const chase=d>350?.85:d<165?-.8:.18,side=.65*r.turnBias;
         r.goalX=r.x+(dx*chase-dy*side)/d*160;r.goalY=r.y+(dy*chase+dx*side)/d*160;
       }
-      r.goalX=clamp(r.goalX,EDGE+r.r+5,WIDTH-EDGE-r.r-5);
-      r.goalY=clamp(r.goalY,EDGE+r.r+5,HEIGHT-EDGE-r.r-5);
+      r.goalX=clamp(r.goalX,EDGE+r.r+5,this.bounds.w-EDGE-r.r-5);
+      r.goalY=clamp(r.goalY,EDGE+r.r+5,this.bounds.h-EDGE-r.r-5);
     }
     _safeDrop(r) {
       for(let i=0;i<8;i++) {
         const a=r.angle+Math.PI/2+i*Math.PI/4,x=r.x+Math.cos(a)*27,y=r.y+Math.sin(a)*27;
-        if(x>EDGE+12&&x<WIDTH-EDGE-12&&y>EDGE+12&&y<HEIGHT-EDGE-12&&!this.blocks.some(b=>b.alive&&distanceToBox(x,y,b)<13))return{x,y};
+        if(x>EDGE+12&&x<this.bounds.w-EDGE-12&&y>EDGE+12&&y<this.bounds.h-EDGE-12&&!this.blocks.some(b=>b.alive&&distanceToBox(x,y,b)<13))return{x,y};
       }
       return{x:r.x,y:r.y};
     }
     _resolveRobot(r) {
       const lo=EDGE+r.r;
-      if(r.x<lo){r.x=lo;this._reflect(r,1,0);}if(r.x>WIDTH-lo){r.x=WIDTH-lo;this._reflect(r,-1,0);}
-      if(r.y<lo){r.y=lo;this._reflect(r,0,1);}if(r.y>HEIGHT-lo){r.y=HEIGHT-lo;this._reflect(r,0,-1);}
+      if(r.x<lo){r.x=lo;this._reflect(r,1,0);}if(r.x>this.bounds.w-lo){r.x=this.bounds.w-lo;this._reflect(r,-1,0);}
+      if(r.y<lo){r.y=lo;this._reflect(r,0,1);}if(r.y>this.bounds.h-lo){r.y=this.bounds.h-lo;this._reflect(r,0,-1);}
       for(let pass=0;pass<2;pass++)for(const b of this.blocks)if(b.alive) {
         let dx=r.x-clamp(r.x,b.x,b.x+b.w),dy=r.y-clamp(r.y,b.y,b.y+b.h),d=Math.hypot(dx,dy),penetration;
         if(d>=r.r)continue;
@@ -168,7 +169,7 @@
       const keep=[];
       for(const p of this.projectiles) {
         p.px=p.x;p.py=p.y;
-        const nx=p.x+p.vx*dt,ny=p.y+p.vy*dt,lo=EDGE+p.radius,hiX=WIDTH-lo,hiY=HEIGHT-lo;
+        const nx=p.x+p.vx*dt,ny=p.y+p.vy*dt,lo=EDGE+p.radius,hiX=this.bounds.w-lo,hiY=this.bounds.h-lo;
         let hitT=1.00001,robot=null,block=null,hit=false;
         if(nx<lo||nx>hiX||ny<lo||ny>hiY) {
           const candidates=[];
@@ -206,9 +207,9 @@
       // Replace only the reference square boundary assertion with the actual
       // rectangle. All health, cover, weapon and pool assertions still apply.
       result.errors=result.errors.filter(e=>!/^Robot \d+: outside arena$/.test(e));
-      for(const r of this.robots)if(r.x<EDGE+r.r-.05||r.x>WIDTH-EDGE-r.r+.05||r.y<EDGE+r.r-.05||r.y>HEIGHT-EDGE-r.r+.05)result.errors.push(`Robot ${r.id}: outside material arena`);
-      for(const b of this.blocks)if(!materials[b.material]||b.maxHp!==materials[b.material].hp||b.x<EDGE||b.y<EDGE||b.x+b.w>WIDTH-EDGE||b.y+b.h>HEIGHT-EDGE)result.errors.push(`Block ${b.id}: invalid material/geometry`);
-      for(const p of this.pickups)if(!p.empty&&(p.x<EDGE||p.y<EDGE||p.x>WIDTH-EDGE||p.y>HEIGHT-EDGE||this.blocks.some(b=>b.alive&&distanceToBox(p.x,p.y,b)<13)))result.errors.push(`Pickup ${p.id}: unreachable placement`);
+      for(const r of this.robots)if(r.x<EDGE+r.r-.05||r.x>this.bounds.w-EDGE-r.r+.05||r.y<EDGE+r.r-.05||r.y>this.bounds.h-EDGE-r.r+.05)result.errors.push(`Robot ${r.id}: outside material arena`);
+      for(const b of this.blocks)if(!materials[b.material]||b.maxHp!==materials[b.material].hp||b.x<EDGE||b.y<EDGE||b.x+b.w>this.bounds.w-EDGE||b.y+b.h>this.bounds.h-EDGE)result.errors.push(`Block ${b.id}: invalid material/geometry`);
+      for(const p of this.pickups)if(!p.empty&&(p.x<EDGE||p.y<EDGE||p.x>this.bounds.w-EDGE||p.y>this.bounds.h-EDGE||this.blocks.some(b=>b.alive&&distanceToBox(p.x,p.y,b)<13)))result.errors.push(`Pickup ${p.id}: unreachable placement`);
       result.ok=!result.errors.length;return result;
     }
   }
