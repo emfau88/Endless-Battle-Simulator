@@ -129,23 +129,27 @@
       A.text(g, lines[1], W / 2, H * 0.47 + 62, small ? 40 : 44, { align: 'center', weight: 800, spacing: 5, color: A.S.sub, alpha: Math.min(1, k) });
     }
 
-    /** Podest; age: Sekunden seit dem Erscheinen (alter Ablauf: Phasenzeit, Gesamtlevel: seit podiumT). */
-    podium(g, age = this.sim.phaseT) {
-      const sim = this.sim, W = sim.W, H = sim.H, k = Math.min(1, age / 0.5), p = sim.podium || [];
-      g.save(); g.globalAlpha = 0.6 * k; g.fillStyle = '#000'; g.fillRect(0, 0, W, H); g.restore();
+    /** Podest; age: Sekunden seit dem Erscheinen (alter Ablauf: Phasenzeit, Gesamtlevel: seit podiumT). Zwei Rennen
+     *  (G9): list, title und pts (Punkte je Platz) für das Podest der Gesamtwertung, sonst der Titel aus sim.labels;
+     *  mul < 1 blendet das ganze Podest aus (Übergang zur Tabelle). */
+    podium(g, age = this.sim.phaseT, list = null, title = null, pts = null, mul = 1) {
+      const sim = this.sim, W = sim.W, H = sim.H, k = Math.min(1, age / 0.5), p = list || sim.podium || [];
+      const fo = (o) => (mul < 1 ? { ...o, alpha: mul } : o);
+      g.save(); g.globalAlpha = 0.6 * k * mul; g.fillStyle = '#000'; g.fillRect(0, 0, W, H); g.restore();
       const blocks = [[0, W / 2, 300, '#e3b23c'], [1, W / 2 - 260, 220, '#c8ced4'], [2, W / 2 + 260, 160, '#c58a52']];
       const base = H * 0.82, r = sim.r * 2.4;
       for (const [i, x, h, col] of blocks) {
         const id = p[i]; if (id === undefined) continue;
-        g.save(); g.globalAlpha = k;
+        g.save(); g.globalAlpha = k * mul;
         g.fillStyle = col; g.beginPath(); g.roundRect(x - 120, base - h * k, 240, h * k, 10); g.fill();
-        A.text(g, String(i + 1), x, base - h * k + 70, 64, { align: 'center', weight: 900, color: 'rgba(0,0,0,0.55)' });
+        A.text(g, String(i + 1), x, base - h * k + 70, 64, fo({ align: 'center', weight: 900, color: 'rgba(0,0,0,0.55)' }));
+        if (pts) A.text(g, `${pts[i]} PTS`, x, base - h * k + 122, 30, fo({ align: 'center', weight: 900, spacing: 2, color: 'rgba(0,0,0,0.6)' }));
         const M = sim.roster[id];
         A.marble(g, x, base - h * k - r - 4, r, M.name, M.color, 0.3 + i, { crown: i === 0, band: M.band });
-        A.text(g, M.name, x, base - h * k - 2 * r - 40, 40, { align: 'center', weight: 900, spacing: 2 });
+        A.text(g, M.name, x, base - h * k - 2 * r - 40, 40, fo({ align: 'center', weight: 900, spacing: 2 }));
         g.restore();
       }
-      A.text(g, 'CHAMPION', W / 2, 150, 72, { align: 'center', weight: 900, spacing: 6, alpha: k, color: '#fff3c4' });
+      A.text(g, title || (sim.labels && sim.labels.podium) || 'CHAMPION', W / 2, 150, 72, { align: 'center', weight: 900, spacing: 6, alpha: k * mul, color: '#fff3c4' });
     }
   }
 
@@ -338,9 +342,11 @@
     levelOverlay(g) {
       const sim = this.sim, W = sim.W, H = sim.H, short = sim.format === 'short', sec = sim.sec, lv = sim.level;
       if (!this.hud || sim.cfg.display === 'off') return;
+      // Zwei Rennen (G9): eigene Karten, RACE n vor der Stufe, Titel des Podests (sim.labels, nur Darstellung)
+      const L = sim.labels || {};
       // Einstiegsflug: nur die Karte, keine Anzeige
       if (sim.phase === 'intro') {
-        this.card(g, [`${sim.roster.length} MARBLES. ONE COURSE.`, 'ONLY THE FASTEST GO ON.'], fade(sim.phaseT, 0.6, sim.introT - 1.8, 0.8));
+        this.card(g, L.intro || [`${sim.roster.length} MARBLES. ONE COURSE.`, 'ONLY THE FASTEST GO ON.'], fade(sim.phaseT, 0.6, sim.introT - 1.8, 0.8));
         return;
       }
       const podium = sim.podiumT >= 0 && sim.t >= sim.podiumT;
@@ -358,7 +364,7 @@
       } else {
         const no = sim.secNo + 1, n = lv.stages || sim.sections.length;
         if (sim.phase !== 'end' && !sec.placeholder && sim.winnerT < 0) {
-          A.text(g, `STAGE ${no}/${n}`, 56, 80, 46, { weight: 900, spacing: 1 });
+          A.text(g, `${L.tag || ''}STAGE ${no}/${n}`, 56, 80, 46, { weight: 900, spacing: 1 });
           A.text(g, sec.title, 58, 122, 28, { weight: 800, spacing: 3, color: A.S.sub });
           A.text(g, sec.fin ? `${alive} LEFT · ONE WINS` : `${alive} LEFT · TOP ${sim.keep}`, 1790, 80, 46, { weight: 900, align: 'right', spacing: 1 });
         }
@@ -366,7 +372,7 @@
         if (sim.phase !== 'end' && !podium && sim.cfg.bar !== 'off') this.courseBar(g);
         // Nach dem Einstiegsflug steht dessen Satz schon im Bild; die Karte nennt dann Stufen und Ziel
         const sub = sim.introT ? `${n} STAGES. ONE CHAMPION.` : `${sim.roster.length} MARBLES. ONLY THE FASTEST GO ON.`;
-        if (sim.phase === 'ready') this.card(g, [lv.title, sub], fade(sim.phaseT + 0.3, 0.3, sim.R.ready - 0.9, 0.5));
+        if (sim.phase === 'ready') this.card(g, L.ready || [lv.title, sub], fade(sim.phaseT + 0.3, 0.3, sim.R.ready - 0.9, 0.5));
         else if (!sec.placeholder && since >= 0 && since < 1.4) this.card(g, [`STAGE ${no}`, sec.title], fade(since, 0.1, 0.9, 0.4), true);
       }
       const now = sim.t, outs = sim.notes.filter((x) => x.kind === 'out' && now - x.t < 2.0);
@@ -392,12 +398,90 @@
       // Sieg: groß der Name, bei knappem Einlauf darunter PHOTO FINISH (beides aus dem Zustand, bis zum Ende)
       if (sim.winnerT >= 0 && sim.winner >= 0) {
         const k = fade(now - sim.winnerT, 0.2, 99, 0.3), y = short ? H * 0.42 : H * 0.46;
-        A.text(g, `${sim.roster[sim.winner].name} WINS!`, W / 2, y, short ? 120 : 96, { align: 'center', weight: 900, spacing: 2, outline: true, alpha: k, color: '#fff3c4', max: W * 0.9 });
+        A.text(g, `${sim.roster[sim.winner].name} WINS${L.win || ''}!`, W / 2, y, short ? 120 : 96, { align: 'center', weight: 900, spacing: 2, outline: true, alpha: k, color: '#fff3c4', max: W * 0.9 });
         const ph = sim.notes.find((x) => x.kind === 'photo');
         if (ph) A.text(g, 'PHOTO FINISH', W / 2, y + (short ? 92 : 74), short ? 52 : 40, { align: 'center', weight: 900, spacing: 6, outline: true, color: '#c9f3ff', alpha: fade(now - ph.t, 0.15, 99, 0.3) });
       }
     }
   }
 
-  EBS.KnockoutRender = { Painter, LevelPainter };
+  // ======================================================================= Zwei Rennen (R43 Teil 2, Paket G9)
+  // Das laufende Rennen zeichnet ein LevelPainter (beim Wechsel zu Rennen 2 neu vorbereitet, die Kacheln hängen am
+  // Level des Rennens); darüber die Tabellen und das Podest der Gesamtwertung. Alle Zeiten aus dem Zustand der Serie.
+  const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
+  class SeriesPainter {
+    constructor(sim, scale = 1) { this.sim = sim; this.scale = scale; this.hud = true; this.cache = null; this.front = null; this.inner = new LevelPainter(sim.cur, scale); }
+    setSim(sim) { this.sim = sim; this.inner.setSim(sim.cur); }
+    dispose() { this.inner.dispose(); }
+
+    paint(g) {
+      const s = this.sim, X = EBS.KnockoutSeries, ph = s.phase, age = s.phaseT;
+      if (this.inner.sim !== s.cur) this.inner.setSim(s.cur);
+      // Anzeige des Rennens aus, sobald eine Tabelle oder das Podest der Gesamtwertung steht
+      const over = ph === 'table1' || ph === 'table2' || ph === 'champion' || ph === 'end';
+      this.inner.hud = this.hud && !over;
+      this.inner.paint(g);
+      if (!this.hud || s.cfg.display === 'off') return;
+      if (ph === 'table1' || ph === 'table2') {
+        // Übergang: erst blendet das Podest des Rennens aus, dann die Tabelle ein (die Titel stehen an derselben Stelle)
+        const race = s.cur;
+        if (age < 0.35 && race.podium && race.podiumT >= 0) this.inner.podium(g, race.t - race.podiumT, null, null, null, 1 - age / 0.35);
+        const inn = clamp01(age / 0.25), a = clamp01((age - 0.2) / 0.35);
+        if (ph === 'table1') {
+          // Nach Rennen 1: steht, bis der Flug von Rennen 2 (hinter ihr) fast vorbei ist; beim Wechsel fast deckend
+          const total = X.HOLD1 + (s.runs[0].R.intro || 7), out = clamp01((total - age) / 0.8), bump = clamp01(1 - Math.abs(age - X.HOLD1) / 0.35);
+          this.table(g, s.tables[0], false, age, Math.min(a, out), Math.min(inn, out) * (0.8 + 0.17 * bump));
+        } else this.table(g, s.tables[1], true, age, a, inn * 0.82);
+      } else if (over) {
+        // Podest der Gesamtwertung: die Tabelle blendet aus, das Podest wächst kurz danach
+        const tab = s.tables[1], top = tab.slice(0, 3), t = ph === 'champion' ? age : X.CHAMP + age;
+        if (t < 0.75) this.table(g, tab, true, X.TABLE2 + t, clamp01(1 - t / 0.3), 0.82 * clamp01(1 - t / 0.75));
+        if (t > 0.25) this.inner.podium(g, t - 0.25, top.map((r) => r.rid), 'CHAMPION', top.map((r) => r.total));
+        const M = s.runs[0].roster[top[0].rid];
+        A.text(g, `${M.name} · ${top[0].total} POINTS FROM TWO RACES`, s.W / 2, 212, 30, { align: 'center', weight: 800, spacing: 4, color: A.S.sub, alpha: clamp01((t - 0.7) / 0.5) });
+      }
+    }
+
+    /** Gesamtwertung, die ersten zehn. final: Spalten je Rennen und Gesamt, Zeilen erscheinen von Platz 10 bis 1 (zur
+     *  selben Zeit wie die Töne in series.js), darunter der Abstand des Siegers. a: Deckkraft der Tabelle, dim: der
+     *  Abdunklung dahinter. */
+    table(g, tab, final, age, a, dim) {
+      const s = this.sim, X = EBS.KnockoutSeries, W = s.W, H = s.H, names = s.runs[0].roster, rows = tab.slice(0, 10), n = rows.length;
+      const x0 = 420, x1 = 1500, cy = (k) => 290 + (k - 1) * 64;
+      if (dim > 0) { g.save(); g.globalAlpha = dim; g.fillStyle = '#04070d'; g.fillRect(0, 0, W, H); g.restore(); }
+      if (a <= 0) return;
+      A.text(g, final ? 'FINAL STANDINGS' : 'STANDINGS AFTER RACE 1', W / 2, 128, 66, { align: 'center', weight: 900, spacing: 5, alpha: a, color: '#fff3c4' });
+      A.text(g, `POINTS FOR THE TOP 10: ${X.POINTS.join(' · ')}`, W / 2, 178, 26, { align: 'center', weight: 800, spacing: 4, alpha: a, color: A.S.sub });
+      const head = { align: 'center', weight: 800, spacing: 3, alpha: a * 0.8, color: A.S.sub, baseline: 'middle' };
+      if (final) { A.text(g, 'RACE 1', 1150, 236, 22, head); A.text(g, 'RACE 2', 1290, 236, 22, head); A.text(g, 'TOTAL', x1 - 40, 236, 22, { ...head, align: 'right' }); }
+      else A.text(g, 'POINTS', x1 - 40, 236, 22, { ...head, align: 'right' });
+      const at0 = final ? X.REVEAL0 : 0.5, gap = final ? X.REVEAL_GAP : 0.12;
+      rows.forEach((r, i) => {
+        const k = i + 1, rk = clamp01((age - (at0 + (n - k) * gap)) / 0.3);
+        if (rk <= 0) return;
+        const y = cy(k), dx = (1 - rk) * 60, al = a * rk, M = names[r.rid];
+        g.save(); g.globalAlpha = al; g.fillStyle = k === 1 ? 'rgba(227,178,60,0.26)' : 'rgba(255,255,255,0.07)';
+        g.beginPath(); g.roundRect(x0 + dx, y - 27, x1 - x0, 54, 12); g.fill(); g.restore();
+        const o = { weight: 900, baseline: 'middle', alpha: al };
+        A.text(g, String(k), x0 + 70 + dx, y + 1, 32, { ...o, align: 'right' });
+        g.save(); g.globalAlpha = al; A.marble(g, x0 + 116 + dx, y, 20, M.name, M.color, 0.4 + k, { noShadow: true, band: M.band }); g.restore();
+        A.text(g, M.name, x0 + 158 + dx, y + 1, 32, { ...o, spacing: 2 });
+        if (final) {
+          const c = { ...o, align: 'center', weight: 800, color: A.S.sub };
+          A.text(g, String(r.p[0]), 1150 + dx, y + 1, 30, c); A.text(g, String(r.p[1]), 1290 + dx, y + 1, 30, c);
+        }
+        A.text(g, String(r.total), x1 - 40 + dx, y + 1, 36, { ...o, align: 'right', color: k === 1 ? '#ffe9a8' : A.S.text });
+      });
+      // Abstand des Siegers (Schlusstabelle, kurz nach Platz 1); Gleichstand entscheidet Rennen 2
+      if (final && n > 1) {
+        const k = clamp01((age - (at0 + (n - 1) * gap + 0.9)) / 0.4), m = rows[0].total - rows[1].total, who = names[rows[0].rid].name;
+        const line = m > 0 ? `${who} WINS THE TITLE BY ${m} POINT${m === 1 ? '' : 'S'}` : `${who} WINS THE TITLE ON THE RACE 2 RESULT`;
+        if (k > 0) A.text(g, line, W / 2, 960, 44, { align: 'center', weight: 900, spacing: 3, outline: true, alpha: a * k, color: '#ffe9a8', max: W * 0.9 });
+      } else if (!final) {
+        A.text(g, 'NEXT: RACE 2 · NEW STARTING ORDER', W / 2, 960, 34, { align: 'center', weight: 900, spacing: 4, alpha: a * clamp01((age - 2) / 0.5), color: '#c9f3ff' });
+      }
+    }
+  }
+
+  EBS.KnockoutRender = { Painter, LevelPainter, SeriesPainter };
 })(typeof window !== 'undefined' ? window : globalThis);

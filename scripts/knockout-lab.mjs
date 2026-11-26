@@ -9,7 +9,8 @@ import vm from 'node:vm';
 
 export const FILES = ['src/core.js', 'src/scenarios/knockout/detmath.js', 'src/scenarios/knockout/physics.js', 'src/scenarios/knockout/elements.js',
   'src/scenarios/knockout/gallery.js', 'src/scenarios/knockout/stages.js', 'src/scenarios/knockout/simulation.js',
-  'src/scenarios/knockout/camera.js', 'src/scenarios/knockout/level.js', 'src/scenarios/knockout/levels.js', 'src/scenarios/knockout/levelsim.js'];
+  'src/scenarios/knockout/camera.js', 'src/scenarios/knockout/level.js', 'src/scenarios/knockout/levels.js', 'src/scenarios/knockout/levelsim.js',
+  'src/scenarios/knockout/series.js'];
 
 /** Lädt die Knockout-Module in einen eigenen Kontext und gibt EBS zurück. */
 export function loadKnockout(root = new URL('../', import.meta.url)) {
@@ -17,9 +18,24 @@ export function loadKnockout(root = new URL('../', import.meta.url)) {
   for (const p of FILES) vm.runInContext(readFileSync(new URL(p, root), 'utf8'), context, { filename: p });
   return context.EBS;
 }
-export const WORLD = { '16:9': { w: 1920, h: 1080 }, '9:16': { w: 1080, h: 1920 } };
+/** Dazu Bild und Szenario (knockout.js mit den Casting-Listen), mit einem Zeichenkontext, der nichts tut. */
+export function loadKnockoutScenario(root = new URL('../', import.meta.url)) {
+  const stub = () => new Proxy(function () {}, {
+    get: (_t, k) => (k === 'width' ? 10 : k === Symbol.toPrimitive ? () => 0 : k === 'then' ? undefined : stub()),
+    set: () => true, apply: () => stub(),
+  });
+  const context = vm.createContext({ console, document: { createElement: () => ({ width: 1, height: 1, getContext: () => stub() }) } });
+  context.window = context;
+  for (const p of [...FILES, 'src/canvas-scene.js', 'src/scenarios/knockout/art.js', 'src/scenarios/knockout/renderer.js', 'src/scenarios/knockout.js']) {
+    vm.runInContext(readFileSync(new URL(p, root), 'utf8'), context, { filename: p });
+  }
+  return context.EBS;
+}
+export const WORLD ={ '16:9': { w: 1920, h: 1080 }, '9:16': { w: 1080, h: 1920 } };
 export function makeSim(EBS, { seed = 1, aspect = '16:9', params = {} } = {}) {
   const p = { mode: 'race', short: 'A', stage: 0, element: 'all', slowmo: 'on', ...params };
+  // Zwei Rennen mit Gesamtwertung (G9): nur im Querformat
+  if (p.mode === 'level' && p.series === 'two' && aspect !== '9:16') return new EBS.KnockoutSeries.KnockoutSeriesSimulation({ seed, params: p, world: WORLD[aspect] });
   if (p.mode === 'level') return new EBS.KnockoutLevelSim.KnockoutLevelSimulation({ seed, params: p, world: WORLD[aspect] });
   return new EBS.KnockoutSim.KnockoutSimulation({ seed, params: p, world: WORLD[aspect] });
 }

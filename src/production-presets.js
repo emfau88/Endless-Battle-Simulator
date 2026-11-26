@@ -30,15 +30,18 @@
     // Marble Knockout: Short als Gesamtlevel THE TOWER (16 Murmeln, eine Fahrt durch den Turm, Ziel mit Fotofinish)
     // auf einem geprüften Casting-Seed (seit G3); Langvideo als Gesamtlevel THE GAUNTLET (20 Murmeln, zehn Abschnitte,
     // Kamerafahrt, Einstiegsflug, Podest) nach einem gecasteten Drehbuch (seit G6). Das Rennen Bahn für Bahn bleibt
-    // über „Ablauf“ wählbar. Beide enden mit dem Rennende (40 s und 200 s sind nur Startwerte).
+    // über „Ablauf“ wählbar. Seit G9 sind es im Langvideo zwei Rennen mit Gesamtwertung (rund 7 Minuten, gecastete
+    // Paarung mit Drehbüchern); ein einzelnes Rennen bleibt über „Rennen im Querformat“ wählbar. Beide enden mit dem
+    // Rennende (40 s und 420 s sind nur Startwerte).
     if (scenario === 'knockout') {
-      const cast = short ? null : EBS.Knockout.castGauntlet(seed);
+      const cast = short ? null : EBS.Knockout.castSeries(seed);
       return {
-        version: 1, name: `${labels[scenario]} – ${short ? 'Short (The Tower)' : 'Langvideo (The Gauntlet, Drehbuch)'}`,
+        version: 1, name: `${labels[scenario]} – ${short ? 'Short (The Tower)' : 'Langvideo (The Gauntlet, zwei Rennen)'}`,
         scenario, seed: short ? EBS.Knockout.castTowerSeed(seed) : cast.seed,
         params: short ? { mode: 'level', slowmo: 'on', marks: 'on', display: 'on', videoEnd: 'finish' }
-          : { mode: 'level', cam: 'ride', intro: 'on', slowmo: 'on', marks: 'on', display: 'on', videoEnd: 'finish', script: cast.script.slice() },
-        video: { aspect: short ? '9:16' : '16:9', resolution: 1080, fps: 30, durationSec: short ? 40 : 200, tempo: 1, audio: true,
+          : { mode: 'level', cam: 'ride', intro: 'on', series: 'two', slowmo: 'on', marks: 'on', display: 'on', videoEnd: 'finish',
+            script: cast.script, seed2: cast.seed2, script2: cast.script2 },
+        video: { aspect: short ? '9:16' : '16:9', resolution: 1080, fps: 30, durationSec: short ? 40 : 420, tempo: 1, audio: true,
           volume: { master: 100 }, quality: { crf: 20, preset: 'medium', bitrate: null } },
         view: { hud: true, camera: false },
       };

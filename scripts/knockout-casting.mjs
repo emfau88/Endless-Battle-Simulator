@@ -18,7 +18,11 @@
 //
 // Gesamtlevel-Drehbuch (G6): THE GAUNTLET Abschnitt für Abschnitt mit Sichern und Laden, je Grund-Seed:
 //   node scripts/knockout-casting.mjs --story [--from 1 --to 3 --tries 16 --photo 0.15 --escapes 3]
-import { loadKnockout, makeSim } from './knockout-lab.mjs';
+//
+// Zwei Rennen (G9): jede Paarung (Rennen 1, Rennen 2) aus GAUNTLET_CAST mit Gesamtwertung; gut ist eine Paarung, in der
+// das Fotofinish von Rennen 2 die Gesamtwertung entscheidet. Gegenprobe der ersten Paarung aus SERIES_CAST am Stück:
+//   node scripts/knockout-casting.mjs --series
+import { loadKnockout, loadKnockoutScenario, makeSim } from './knockout-lab.mjs';
 
 const argv = process.argv.slice(2);
 const arg = (n, d) => { const i = argv.indexOf('--' + n); return i >= 0 && argv[i + 1] !== undefined ? argv[i + 1] : d; };
@@ -410,4 +414,33 @@ function castStoryMain() {
   }
 }
 
-if (argv.includes('--long')) castLongMain(); else if (argv.includes('--story')) castStoryMain(); else if (argv.includes('--level')) castLevelMain(); else castShortMain();
+// ===================================================================== Zwei Rennen (G9)
+function castSeriesMain() {
+  const X = loadKnockoutScenario(), S = X.KnockoutSeries, races = [];
+  const name = (rid) => races[0].names[rid];
+  for (const c of X.Knockout.GAUNTLET_CAST) {
+    const sim = makeSim(X, { seed: c.seed, params: { mode: 'level', script: c.script } });
+    while (sim.phase !== 'end' && sim.t < 600) sim.stepOnce();
+    races.push({ seed: c.seed, len: sim.t, order: S.classify(sim), names: sim.roster.map((m) => m.name), gap: sim.finalGap });
+    console.log(`Seed ${c.seed}: ${sim.t.toFixed(1)} s · ` + races.at(-1).order.slice(0, 10).map((r, i) => `${i + 1}.${name(r)}`).join(' '));
+  }
+  const pts = (o, rid) => S.POINTS[o.indexOf(rid)] || 0;
+  const table = (o1, o2) => races[0].names.map((_, rid) => ({ rid, t: pts(o1, rid) + pts(o2, rid), q: o2.indexOf(rid) })).sort((a, b) => b.t - a.t || a.q - b.q);
+  for (const a of races) for (const b of races) {
+    if (a === b) continue;
+    const tab = table(a.order, b.order), swap = b.order.slice(); [swap[0], swap[1]] = [swap[1], swap[0]];
+    // Entscheidet das Fotofinish? Mit vertauschten Plätzen 1 und 2 in Rennen 2 hätte eine andere gewonnen
+    const decides = table(a.order, swap)[0].rid !== tab[0].rid;
+    console.log(`\nRennen 1 Seed ${a.seed}, Rennen 2 Seed ${b.seed} · Video rund ${(a.len + S.HOLD1 + b.len + S.TABLE2 + S.CHAMP).toFixed(0)} s · ` +
+      `vorn nach Rennen 1 ${name(a.order[0])} · Fotofinish entscheidet: ${decides ? 'ja' : 'nein'} (${b.gap.toFixed(3)} s)`);
+    console.log('  ' + tab.slice(0, 5).map((r, i) => `${i + 1}.${name(r.rid)} ${r.t}`).join(' · '));
+  }
+  // Gegenprobe: die empfohlene Paarung als Serie am Stück
+  const c = X.Knockout.castSeries(0), sim = makeSim(X, { seed: c.seed, params: { mode: 'level', series: 'two', ...c } });
+  while (sim.phase !== 'end' && sim.t < 900) sim.stepOnce();
+  const nud = sim.runs.reduce((s, r) => s + r.runners.reduce((a, u) => a + u.nudges, 0) + r.stats.stuck + r.stats.timeUp, 0);
+  console.log(`\nGegenprobe Serie ${c.seed} + ${c.seed2}: ${sim.t.toFixed(1)} s · ` + sim.tables[1].slice(0, 3).map((r, i) => `${i + 1}.${name(r.rid)} ${r.total}`).join(' · ') + ` · Anstöße ${nud}`);
+}
+
+if (argv.includes('--long')) castLongMain(); else if (argv.includes('--story')) castStoryMain(); else if (argv.includes('--level')) castLevelMain();
+else if (argv.includes('--series')) castSeriesMain(); else castShortMain();

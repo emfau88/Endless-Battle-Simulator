@@ -24,7 +24,8 @@ Dieser Bericht wird je Paket fortgeschrieben.
 | G6 Drehbuch-Casting, Vorlage „Langvideo“ | **Erledigt** (26.11.) |
 | G7 Abschluss Teil 2, Geschmacksfragen | **Erledigt** (26.11.). Offen: Antworten des Nutzers, ganzer Export nur auf Auftrag. |
 | G8 Gruben: OUT-Kiste, Schacht mit Rahmen, Abgrund | **Erledigt** (26.11.) |
-| CI: Knockout-Prüfungen im Zeitbudget | **Erledigt** (26.11.), CI-Lauf nach dem Push entscheidet |
+| CI: Knockout-Prüfungen im Zeitbudget | **Erledigt** (26.11.), CI grün |
+| G9 Zwei Rennen mit Gesamtwertung, Langvideo rund 7 min | **Erledigt** (26.11.) |
 
 ---
 
@@ -1390,3 +1391,88 @@ Zeitgrenzen, nicht wegen falscher Ergebnisse (lokal war alles grün):
 
 **Grenze:** Ein Rennbild bleibt ohne Grafikkarte teuer. Schneller ginge es mit vorgezeichneten Murmeln; das ändert die
 Optik leicht und gehört nicht zu diesem Schritt.
+
+## G9 · Zwei Rennen mit Gesamtwertung (26.11.2026)
+
+**Auftrag:** Das Langvideo soll ohne großen Aufwand auf rund 6 bis 8 Minuten wachsen. Empfehlung: zwei Rennen durch
+THE GAUNTLET mit Gesamtwertung, gerendert als ein Video. Der Nutzer hat zugestimmt und den ganzen Export beauftragt.
+
+**Umfang:**
+
+- Neuer Ablauf `src/scenarios/knockout/series.js`: Rennen 1, Tabelle `STANDINGS AFTER RACE 1`, Rennen 2 mit eigener
+  Aufstellung, `FINAL STANDINGS`, Podest `CHAMPION`. Jedes Rennen ist ein unveränderter Lauf aus `levelsim.js`. Die
+  Hülle reicht nur weiter, zählt die Punkte und rechnet Ereignisse und Kapitel auf die Zeit des ganzen Videos um.
+- Punkte wie in der Formel 1 für die ersten zehn: 25, 18, 15, 12, 10, 8, 6, 4, 2, 1. Platz im Rennen: erst die
+  Zielreihenfolge, dann wer noch fährt, dann die Ausgeschiedenen vom letzten Abschnitt zum ersten. Im selben Abschnitt
+  stehen die beim Schließen Draußengebliebenen vor den Gestürzten. Bei Gleichstand zählt der bessere Platz in Rennen 2.
+- Rennen 2 rechnet mit Einstiegsflug wie beim Casting. Der Flug läuft unsichtbar hinter der Tabelle. So stimmt jedes
+  Rennen genau mit seinem gecasteten Lauf überein.
+- Bild (alle Texte englisch):
+  - Karten `20 MARBLES. TWO RACES.`, `RACE 1 OF 2 · 10 STAGES` und vor Rennen 2
+    `RACE 2 OF 2 · BLACK LEADS WITH 25 POINTS`.
+  - Anzeige `RACE 1 · STAGE n/10`, Sieg `BLACK WINS RACE 1!`, Podest je Rennen (`RACE 1 · PODIUM`).
+  - Tabellen mit den ersten zehn. In der Schlusstabelle erscheinen die Zeilen von Platz 10 bis Platz 1, je mit einem
+    Ton. Danach kommt die Zeile `GREEN WINS THE TITLE BY 1 POINT`.
+  - Podest der Gesamtwertung mit Punkten und Fanfare.
+  - Weiche Übergänge: Erst blendet das Podest aus, dann die Tabelle ein. Beim Wechsel zu Rennen 2 ist die Tabelle
+    fast deckend.
+- Kapitel: je Rennen die Abschnitte und der Sieg, dazu die Tabellen. Ein Kapitel unter 10 s entfällt (Regel von
+  YouTube). Das erste beginnt bei 0:00.
+- Einstellung „Rennen im Querformat (Gesamtlevel)“: ein Rennen oder zwei mit Gesamtwertung. Die Serie gibt es nur im
+  Querformat, das Short bleibt THE TOWER.
+- Casting: `scripts/knockout-casting.mjs --series` wertet alle Paarungen der drei gecasteten Drehbücher und prüft die
+  empfohlene Paarung am Stück.
+- Vorlage „Langvideo“ zeigt jetzt auf die zwei Rennen: Rennen 1 mit Seed 2, Rennen 2 mit Seed 4, beide mit ihrem
+  Drehbuch. Ein einzelnes Rennen bleibt wählbar.
+
+**Geschichte der Vorlage:** BLACK gewinnt Rennen 1, GREEN wird nur Zehnte (1 Punkt). In Rennen 2 scheidet BLACK
+schon im ersten Abschnitt aus. GREEN gewinnt Rennen 2 im Fotofinish (0,124 s) und holt die Gesamtwertung mit 26 zu
+25 Punkten. Als Zweite im Ziel hätte GREEN nur 19 Punkte gehabt, dann wäre BLACK Gesamtsiegerin. Das Fotofinish
+entscheidet also den Titel. Dritte gesamt ist LILAC mit 22 Punkten.
+
+**Paarungen** (`--series`, je Rennen das Drehbuch aus `GAUNTLET_CAST`):
+
+| Rennen 1 | Rennen 2 | Video | Gesamt vorn | Fotofinish entscheidet |
+|---|---|---|---|---|
+| Seed 1 | Seed 4 | 7:12 | GREEN 50, YELLOW 33 | nein |
+| Seed 1 | Seed 2 | 6:56 | BLACK 35, GREEN 26 | ja |
+| Seed 4 | Seed 1 | 7:12 | GREEN 50, YELLOW 33 | nein |
+| Seed 4 | Seed 2 | 7:06 | GREEN 26, BLACK 25 | nein |
+| Seed 2 | Seed 1 | 6:56 | BLACK 35, GREEN 26 | nein |
+| **Seed 2** | **Seed 4** | **7:06** | **GREEN 26, BLACK 25** | **ja** (gewählt) |
+
+**Messwerte der Vorlage:**
+
+- Video 7:06 min: Rennen 1 bis zum Ende des Podests 3:14, Tabelle 11 s, Rennen 2 ab der Startkarte 3:23, Schlusstabelle
+  und Podest 17 s.
+- Keine Anstöße, niemand sitzt fest, beide Rennen mit Fotofinish (0,150 s und 0,124 s).
+- 22 Kapitel von `Intro · Race 1 · Stage 1: The Drop` bis `Final Standings`, alle mindestens 10 s lang. Die Kapitel
+  „Ring Escape“ beider Rennen entfallen, weil das Finale schon nach knapp 10 s beginnt.
+
+**Nachweise:**
+
+- `node --test test/knockout-level.test.mjs test/knockout.test.mjs`: 22 von 22 grün (153 s). Neu: Einstellungen der
+  Serie, Vorlage „Langvideo“ mit ganzer Serie am Stück (Geschichte, Punkte, Kapitel, fortlaufende Ereignisse, Zeichnen
+  ohne Zustandsänderung). Die bisherige Vorlagen-Prüfung läuft als „Ein Rennen (G6)“ weiter.
+- `npm run golden`: identisch mit der Referenz (36 Fälle).
+- `node scripts/knockout-casting.mjs --series`: Tabelle oben; Gegenprobe der Serie 2 + 4 am Stück: 425,7 s, GREEN 26,
+  BLACK 25, LILAC 22, keine Anstöße.
+- Seek-Regel im Browser über den Wechsel zu Rennen 2 (192 bis 200 s): Bild nach durchgehendem Zeichnen gleich Bild nach
+  Sprung, gleicher Zustand.
+- Standbilder aus Chromium, lokal: `output/knockout-lab/serie-standbilder.jpg` (Karten, Anzeige, Podeste, Tabellen) und
+  `output/knockout-lab/serie-uebergaenge.jpg` (Übergänge).
+- Ganzer Export im Auftrag des Nutzers, lokal mit Grafikkarte:
+  `node export.mjs --config presets/production/knockout-long.json --gpu --out output/knockout-zwei-rennen.mp4`.
+  Fertig in 10:34 min (20 Bilder/s). 1920 × 1080, 30 Bilder/s, 12 787 Bilder, 426,2 s, 206 MB. Ton: 8971 Ereignisse,
+  −24,6 LUFS, Spitze −6 dBFS. Prüfung des Exports OK (Codec, Auflösung, Bildrate, Bildzahl, Dauer,
+  Simulationszustand). Das Video liegt nur lokal in `output/` (nicht im Repository).
+- Kontaktbogen aus dem fertigen Video, lokal: `output/knockout-lab/zwei-rennen-video-bogen.jpg`.
+- Nicht gelaufen: Browser-Tests `knockout-browser`, `knockout-level-browser` und der Vorlagen-Exporttest (macht die CI),
+  voller `npm test`.
+
+**Grenzen:**
+
+- Rennen 2 fährt dieselbe Strecke noch einmal, nur mit anderer Aufstellung und anderen Drehbuch-Seeds.
+- Während Rennen 2 zeigt nur die Startkarte den Gesamtstand. Eine kleine Gesamtanzeige im Rennen wäre eine
+  Geschmacksfrage für später.
+- Ein Rennbild kostet ohne Grafikkarte viel Zeit. Der ganze Export lief mit Grafikkarte.

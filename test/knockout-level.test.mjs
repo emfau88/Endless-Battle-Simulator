@@ -171,12 +171,9 @@ test('Vorlage „Short“ (seit G3): der Turm auf einem geprüften Seed mit Foto
   assert.equal(s.runners.reduce((a, u) => a + u.nudges, 0), 0, 'kein Anstoß');
 });
 
-test('Vorlage „Langvideo“ (seit G6): THE GAUNTLET mit Drehbuch, die Geschichte hält, Datei gleich Oberfläche', () => {
-  const p = JSON.parse(JSON.stringify(EBS.productionPreset('knockout', 'long')));
-  assert.deepEqual(p, JSON.parse(readFileSync(new URL('../presets/production/knockout-long.json', import.meta.url), 'utf8')));
+test('Ein Rennen (G6): THE GAUNTLET mit dem empfohlenen Drehbuch, die Geschichte hält', () => {
   const cast = EBS.Knockout.GAUNTLET_CAST[0];
-  assert.deepEqual([p.params.mode, p.params.cam, p.params.intro, p.seed, p.params.script], ['level', 'ride', 'on', cast.seed, JSON.parse(JSON.stringify(cast.script))]);
-  const s = create(p.seed, p.params, LAND), id = (name) => s.roster.findIndex((m) => m.name === name);
+  const s = create(cast.seed, { cam: 'ride', intro: 'on', script: cast.script }, LAND), id = (name) => s.roster.findIndex((m) => m.name === name);
   while (s.phase !== 'end' && s.t < 400) s.stepOnce();
   assert.equal(s.phase, 'end');
   assert.equal(s.runners.reduce((a, u) => a + u.nudges, 0) + s.stats.stuck + s.stats.timeUp, 0, 'kein Anstoß, niemand sitzt fest');
@@ -186,6 +183,65 @@ test('Vorlage „Langvideo“ (seit G6): THE GAUNTLET mit Drehbuch, die Geschich
   assert.deepEqual([s.sections[L.outStage].id, L.how], ['hammers', 'fell'], `${cast.leader} stürzt in der Hammergasse`);
   assert.ok(s.finalGap >= 0 && s.finalGap < 0.15, `Fotofinish ${s.finalGap.toFixed(3)} s`);
   assert.equal(s.podium.length, 3);
+});
+
+test('Zwei Rennen (G9): Einstellungen nur im Gesamtlevel, Serie nur im Querformat', () => {
+  assert.equal(sc.normalizeParams({ mode: 'level' }).series, 'one');
+  assert.equal(sc.normalizeParams({ mode: 'race', series: 'two' }).series, undefined, 'nur im Gesamtlevel');
+  const p = sc.normalizeParams({ mode: 'level', series: 'two', seed2: 7, script2: [1, 2] });
+  assert.deepEqual([p.series, p.seed2, [...p.script2]], ['two', 7, [1, 2]]);
+  assert.equal(sc.normalizeParams({ mode: 'level', seed2: 7 }).seed2, undefined, 'Rennen 2 nur mit zwei Rennen');
+  assert.equal(sc.normalizeParams({ mode: 'level', series: 'two', script2: [1, -2] }).script2, undefined);
+  assert.equal(create(1, { series: 'two' }, LAND).series, true);
+  assert.equal(create(1, { series: 'two' }, PORT).series, undefined, 'Short bleibt ein Rennen durch den Turm');
+  assert.equal(create(1, { series: 'two' }, LAND).cur.seed, 1);
+  assert.equal(create(1, { series: 'two' }, LAND).plan[1].seed, 2, 'ohne seed2 der nächste Seed');
+});
+
+test('Vorlage „Langvideo“ (seit G9): zwei Rennen mit Gesamtwertung, die Geschichte hält, Datei gleich Oberfläche', () => {
+  const p = JSON.parse(JSON.stringify(EBS.productionPreset('knockout', 'long')));
+  assert.deepEqual(p, JSON.parse(readFileSync(new URL('../presets/production/knockout-long.json', import.meta.url), 'utf8')));
+  const cast = JSON.parse(JSON.stringify(EBS.Knockout.castSeries(p.seed)));
+  assert.deepEqual([p.params.mode, p.params.series, p.seed, p.params.script, p.params.seed2, p.params.script2],
+    ['level', 'two', cast.seed, cast.script, cast.seed2, cast.script2]);
+  const s = create(p.seed, p.params, LAND), seen = [];
+  let seq = 0;
+  while (s.phase !== 'end' && s.t < 900) {
+    s.stepOnce();
+    for (; seq < s.eventSeq; seq++) seen.push(s.events[seq % s.events.length]);
+  }
+  assert.equal(s.phase, 'end');
+  assert.ok(s.t > 360 && s.t < 480, `Länge ${s.t.toFixed(1)} s (6 bis 8 min)`);
+  const names = s.runs[0].roster.map((m) => m.name), name = (rid) => names[rid];
+  // Jedes Rennen ohne Anstoß, mit Fotofinish; alle 20 gewertet, je 101 Punkte
+  for (const r of s.runs) {
+    assert.equal(r.runners.reduce((a, u) => a + u.nudges, 0) + r.stats.stuck + r.stats.timeUp, 0, 'kein Anstoß');
+    assert.ok(r.finalGap >= 0 && r.finalGap < 0.3, `Fotofinish ${r.finalGap.toFixed(3)} s`);
+  }
+  for (const o of s.results) assert.deepEqual(o.slice().sort((a, b) => a - b), names.map((_, i) => i));
+  assert.equal(s.tables[1].reduce((a, r) => a + r.total, 0), 2 * 101);
+  // Geschichte: BLACK gewinnt Rennen 1, scheidet in Rennen 2 im ersten Abschnitt aus; GREEN (Rennen 1: Zehnte)
+  // gewinnt Rennen 2 im Fotofinish und damit die Gesamtwertung mit einem Punkt Vorsprung
+  assert.deepEqual([name(s.runs[0].winner), name(s.runs[1].winner)], ['BLACK', 'GREEN']);
+  assert.equal(s.runs[1].roster[names.indexOf('BLACK')].outStage, 0);
+  const [a, b] = s.tables[1];
+  assert.deepEqual([name(a.rid), a.total, name(b.rid), b.total], ['GREEN', 26, 'BLACK', 25]);
+  assert.equal(s.snapshot().winner, 'GREEN');
+  // Als Zweite in Rennen 2 wäre GREEN nicht Gesamtsiegerin: Das Fotofinish entscheidet die Wertung
+  assert.ok(a.p[0] + EBS.KnockoutSeries.POINTS[1] < b.total);
+  // Ereignisse fortlaufend in der Zeit des ganzen Videos; Kapitel ab 0:00, je mindestens 10 s
+  assert.ok(seen.every((e, i) => i === 0 || (e.seq === seen[i - 1].seq + 1 && e.step >= seen[i - 1].step)));
+  assert.ok(seen.some((e) => e.type === 'winner' && e.step > s.runs[0].t * 60 + 60), 'Ton beim Sieg in Rennen 2 und beim Gesamtsieg');
+  const ch = sc.chapters(s);
+  assert.equal(ch[0].timeSec, 0);
+  assert.ok(ch.every((c, i) => i === 0 || c.timeSec - ch[i - 1].timeSec >= 10), 'Kapitel je mindestens 10 s');
+  assert.ok(s.t - ch[ch.length - 1].timeSec >= 10);
+  for (const t of ['Standings After Race 1', 'Race 2 · Winner', 'Final Standings']) assert.ok(ch.some((c) => c.title === t), t);
+  // Zeichnen verändert den Zustand nicht (Painter der Serie mit leerem Zeichenkontext, auch im letzten Bild)
+  const painter = new EBS.KnockoutRender.SeriesPainter(s, 1), h = s.stateHash();
+  painter.paint(stub()); painter.paint(stub());
+  assert.equal(s.stateHash(), h);
+  painter.dispose();
 });
 
 test('Gleicher Seed ergibt denselben Lauf samt Kamera, anderer Seed einen anderen', () => {
