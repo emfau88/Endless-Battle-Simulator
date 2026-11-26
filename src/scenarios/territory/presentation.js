@@ -48,7 +48,37 @@
     for(const f of sim.factions){const t=sim.getTile(f.focusTile);if(!f.alive||!t||f.focusUntil<sim.time||t.owner===f.id)continue;ctx.beginPath();for(let k=0;k<6;k++){const a=Math.PI/6+k*Math.PI/3,p=view.project(t.x+Math.cos(a)*.77,t.height+.08,t.z+Math.sin(a)*.77);if(k===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);}ctx.closePath();ctx.strokeStyle=TEAMS[f.id].color+'bd';ctx.stroke();}
     ctx.restore();
   }
-  function drawLabels(reaction) {
+  function drawLabels() {
+    ctx.setTransform(size.dpr,0,0,size.dpr,0,0);ctx.clearRect(0,0,size.w,size.h);drawnGarrisons=[];drawnMovements=[];drawnRoutes=[];if(!sim||!view)return;syncOverlayState();const mobile=outputFormat==='portrait',scale=overlayScale();
+    drawFocusTargets();
+    for(const {move:m} of importantMoves.values())drawRoute(m);
+    const garrisonRects=[],hqRects=[];
+    if(garrisonMode!=='never')for(const t of sim.tiles){if(t.terrain==='mountain')continue;
+      const show=garrisonMode==='always'||t.hq>=0||t.terrain==='outpost'||t.id===selected||t.id===hover||frontUntil.has(t.id);if(!show)continue;
+      // A fixed place on the near edge of every tile; neither strength changes
+      // nor re-ranking of other fields can move or remove this plaque.
+      const az=view.camera?.azimuth||0,p=view.project(t.x+Math.sin(az)*.38,t.height+.06,t.z+Math.cos(az)*.38);if(!p)continue;
+      garrisonRects.push(badge(String(Math.floor(t.units)),p.x,p.y+3*scale,t.owner>=0?TEAMS[t.owner].color:'#aab8a4',{small:mobile,alpha:t.owner>=0?1:.88}));drawnGarrisons.push(t.id);
+    }
+    for(const f of sim.factions){if(!f.alive)continue;const t=sim.tiles[f.hq],p=view.project(t.x,t.height+2.15,t.z);if(!p||!Number.isFinite(p.x))continue;hqRects.push(badge(TEAMS[f.id].name,p.x,p.y-8*scale,TEAMS[f.id].color,{hq:true,small:mobile}));}
+    const occupied=[...hqRects],time=sim.time+(sim.phase==='running'?accum:0);
+    for(const state of importantMoves.values()){
+      const m=state.move,a=sim.tiles[m.from],b=sim.tiles[m.to],u=clamp((time-m.start)/m.duration,0,1),p=view.project(a.x+(b.x-a.x)*u,a.height+(b.height-a.height)*u+.19,a.z+(b.z-a.z)*u);if(!p)continue;
+      const text='→ '+m.amount;ctx.font=`600 ${12*scale}px ui-monospace,Consolas,monospace`;const w=ctx.measureText(text).width+15*scale,h=20*scale;
+      const choices=[[0,-23],[25,-28],[-25,-28],[0,-43],[37,-13],[-37,-13],[30,-46],[-30,-46],[0,-62]].map(([x,y])=>[x*scale,y*scale]);
+      if(!state.labelOffset){let best=choices[0],bestScore=Infinity;for(let i=0;i<choices.length;i++){const [dx,dy]=choices[i],box={x:p.x+dx-w/2,y:p.y+dy-h/2,w,h};const score=occupied.filter(r=>overlaps(box,r,4)).length*100+garrisonRects.filter(r=>overlaps(box,r,1)).length*3+i*.2;if(score<bestScore){bestScore=score;best=choices[i];}}state.labelOffset=best;}
+      let [dx,dy]=state.labelOffset,x=clamp(p.x+dx,w/2+5*scale,size.w-w/2-5*scale),y=clamp(p.y+dy,12*scale,size.h-18*scale);
+      // Never suppress an already visible marching strength for a collision.
+      // Resolve rare intersections outward and retain the new offset.
+      for(let n=0;n<4&&occupied.some(r=>overlaps({x:x-w/2,y:y-h/2,w,h},r,3*scale));n++){dy-=22*scale;y=clamp(p.y+dy,12*scale,size.h-18*scale);state.labelOffset=[dx,dy];}
+      ctx.save();ctx.strokeStyle=TEAMS[m.owner].color+'b5';ctx.lineWidth=scale;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(x,y+h/2-scale);ctx.stroke();ctx.beginPath();ctx.arc(p.x,p.y,2.1*scale,0,Math.PI*2);ctx.fillStyle=TEAMS[m.owner].color;ctx.fill();ctx.restore();
+      occupied.push(badge(text,x,y,TEAMS[m.owner].color,{small:mobile,march:true}));drawnMovements.push(m.id);
+    }
+  }
+
+  // Die ursprüngliche Fassung oben bleibt als Teil des archivierten V0.3-Renderers bytegleich.
+  // Bei einer HQ-Reaktion ist die zusätzliche Sprechblase ein Hindernis für Marschbeschriftungen.
+  function drawLabelsWithHqReaction(reaction) {
     ctx.setTransform(size.dpr,0,0,size.dpr,0,0);ctx.clearRect(0,0,size.w,size.h);drawnGarrisons=[];drawnMovements=[];drawnRoutes=[];if(!sim||!view)return;syncOverlayState();const mobile=outputFormat==='portrait',scale=overlayScale();
     drawFocusTargets();
     for(const {move:m} of importantMoves.values())drawRoute(m);
@@ -106,7 +136,8 @@
         // On the large map place march labels against the current frame's
         // obstacles, even when the previous frames were simulated off-screen.
         if (params.layout === 'wilds') for (const state of importantMoves.values()) state.labelOffset = null;
-        drawLabels(reaction);
+        if (params.layout === 'wilds' && reaction) drawLabelsWithHqReaction(reaction);
+        else drawLabels();
       },
       displayState() {
         return {garrisonMode,garrisonTileIds:[...drawnGarrisons],importantMoveIds:[...importantMoves.keys()],

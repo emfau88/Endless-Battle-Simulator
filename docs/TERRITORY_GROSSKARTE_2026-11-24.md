@@ -61,3 +61,5 @@ Die Großkarte enthält keinen Klang für normale Märsche. Eroberungen haben ei
 - Der ganze Verlauf wurde simuliert. Der vollständige Langfilm und die vollständige Testsuite waren nicht Teil dieses Nachtrags.
 
 Die Einzelbilder, die Acht-Bilder-Folge `bergpaesse-ablauf.jpg` und die MP4-Proben liegen in `output/territory-grosskarte/` im Hauptordner.
+
+Der Renderer verwendet für bestehende Karten weiterhin den archivierten Beschriftungsblock. Bei einer HQ-Reaktion auf der Großkarte berücksichtigt die zusätzliche Zeichenroutine auch die Sprechblase bei der Platzierung der Marschzahlen.
