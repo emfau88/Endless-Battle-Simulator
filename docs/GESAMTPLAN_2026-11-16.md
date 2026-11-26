@@ -29,6 +29,10 @@ Drei Zustände: **Erledigt**, **Läuft**, **Offen**. Dazu **Entfällt** für ges
 | 0.10 `output/` leeren | **Entfällt** | Siehe 0.3. |
 | 0.11 Schutz von `main`, Versionsmarke | **Offen** | Entscheidung des Nutzers steht aus. |
 
+**Erledigt – Dokumentation:** [Lokale Fundstelle des YouTube-Kanalaudits vom 18.11.2026](YOUTUBE_KANALAUDIT_2026-11-18.md)
+für künftige Agenten dokumentiert. Der vollständige Informationsbericht bleibt lokal und von Git
+ausgeschlossen. Keine Änderung an Kanal, Code oder freigegebener Umsetzungsreihenfolge.
+
 ### Blöcke 1 bis 5
 
 | Block | Stand | Ergebnis und nächster Schritt |
