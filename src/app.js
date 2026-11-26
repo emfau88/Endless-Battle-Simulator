@@ -360,9 +360,11 @@ async function bootLive() {
     durText.classList.toggle('bad', !!isError);
     $('durationOut').textContent = fmtTime(d);
     dur.value = UI_DURATIONS.some(([v]) => v === d) ? String(d) : '';
+    // Fester Text je Szenario oder, wenn er vom Modus abhängt, eine Funktion der Einstellungen
+    const durLabel = typeof session.scenario.durationLabel === 'function' ? session.scenario.durationLabel(cfg()) : session.scenario.durationLabel;
     durHint.textContent = natural ? (durationPending
-      ? session.scenario.durationLabel?.pending || 'Turnierdauer wird berechnet …'
-      : session.scenario.durationLabel?.complete || 'Automatisch: acht vollständige Runden und 5 Sekunden Gesamtergebnis.') : note || DUR_HINT;
+      ? durLabel?.pending || 'Turnierdauer wird berechnet …'
+      : durLabel?.complete || 'Automatisch: acht vollständige Runden und 5 Sekunden Gesamtergebnis.') : note || DUR_HINT;
     $('durationOut').textContent = durationPending ? '…' : fmtTime(d);
     durHint.classList.toggle('err', !!isError);
   };
@@ -397,8 +399,10 @@ async function bootLive() {
     scSel.value = c.scenario; $('seed').value = c.seed;
     const production = c.scenario === 'marbleworks';
     $('btnShortPreset').textContent = production ? 'Short · Mini-Auftrag' : c.scenario === 'foerderduell' ? 'Short · Ein Rennen'
-      : c.scenario === 'waterpark' ? 'Short · 30 Sekunden' : 'Short · 1 Minute';
-    $('btnLongPreset').textContent = production ? 'Langvideo · Vollständiger Auftrag' : 'Langvideo · 10 Minuten';
+      : c.scenario === 'waterpark' ? 'Short · 30 Sekunden'
+      : c.scenario === 'scrap' ? 'Short · eine Runde (rund 30 Sekunden)' : c.scenario === 'knockout' ? 'Short · Turm (rund 38 Sekunden)' : 'Short · 1 Minute';
+    $('btnLongPreset').textContent = production ? 'Langvideo · Vollständiger Auftrag'
+      : c.scenario === 'scrap' ? 'Langvideo · Turnier (8 Runden)' : c.scenario === 'knockout' ? 'Langvideo · The Gauntlet (rund 3½ Minuten)' : 'Langvideo · 10 Minuten';
     for (const ctl of session.scenario.controls) {
       const el = $('p-' + ctl.key), v = c.params[ctl.key];
       if (!el) continue;

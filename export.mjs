@@ -182,6 +182,7 @@ async function main() {
     console.log(`  Szenario:   ${r.cfg.scenario} · Seed ${r.cfg.seed} · Zustand-Hash ${r.stateHash}`);
     if (r.snapshot.summary) console.log(`  Stand:      ${r.snapshot.summary}`);
     if (r.sidecar) console.log(`  Konfig.:    ${r.sidecar}  (erneut: node export.mjs --config <diese Datei>)`);
+    if (r.chapters) console.log(`  Kapitel:    ${r.chapters.length} (${r.chapters.map(c => c.time).join(', ')})${r.sidecar ? ' · mit Titeln in der JSON-Datei' : ''}`);
     if (issues.length) { console.error('\nPRÜFUNG FEHLGESCHLAGEN:\n  - ' + issues.join('\n  - ')); process.exit(1); }
     console.log('  Prüfung:    OK (Codec, Auflösung, Bildrate, Frameanzahl, Dauer, Simulationszustand)');
   } catch (e) {

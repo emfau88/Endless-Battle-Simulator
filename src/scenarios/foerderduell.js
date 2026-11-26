@@ -11,7 +11,7 @@
     }
   };
   EBS.registerScenario({
-    id:'foerderduell',title:'Schnecke gegen Stempel',defaults,
+    id:'foerderduell',title:'Schnecke gegen Stempel (Vorschau)',defaults,
     normalizeParams(p) {
       return { rulesVersion:F.Auger.rulesVersion, mode:p.mode==='series'?'series':'single',
         supply:['mixed','bursts','steady','packets'].includes(p.supply)?p.supply:defaults.supply };

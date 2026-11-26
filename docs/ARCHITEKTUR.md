@@ -61,7 +61,8 @@ Anmeldung mit `EBS.registerScenario({ … })`.
 | `supportsCamera: false` | Schaltet den Kamera-Schalter ab |
 | `reframe(renderer, ctx)`, `canReframe(cfg)` | Formatwechsel ohne Neustart der Welt |
 | `supportsClips` (Wert oder Funktion) | Ausschnittsexport freigegeben; setzt die Seek-Regel voraus |
-| `hasNaturalDuration(cfg)`, `durationLabel` | Das Szenario bestimmt die Videolänge selbst (Auftrag, Turnier) |
+| `hasNaturalDuration(cfg)`, `durationLabel` (Wert oder Funktion der Einstellungen) | Das Szenario bestimmt die Videolänge selbst (Auftrag, Turnier, Short) |
+| `chapters(sim, cfg)` | Kapitel für die Videobeschreibung als `[{ timeSec, title }]`; der Export schreibt sie mit Zeitmarke in die JSON-Begleitdatei (`chapters`, `chaptersText`) |
 | `requiresPreflight(cfg)`, `createExportPlan(cfg, world)` | Vorlauf vor dem Export, der Ablauf und Dauer prüft |
 | `createAudioMixPlan(events, ctx)` | Tonmischung nach Bildausschnitt der Kamera |
 | `restartOnDuration` | Vorschau startet neu, wenn die Videolänge geändert wird |

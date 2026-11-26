@@ -84,4 +84,4 @@ Die übrigen Situationen sind gezeichnet. In Chromium ließen sich alle zehn Ans
 im hellen Design und bei 320 Pixeln im dunklen Design wechseln. Der Bildvergleich und die beiden Zielzeitenpaare
 wurden geprüft. Für die Ideenauswahl entfielen Simulationstests, Referenz-Hashes und Videoexport.
 Als Startszene wurde „Schnecke gegen Stempel“ gewählt. Die [Bildprobe](FOERDERDUELL_BILDPROBE_2026-11-22.md)
-zeigt die beiden Formate. Der nächste Schritt steht in der [Roadmap unter R42](ROADMAP.md).
+zeigt die beiden Formate. Der nächste Schritt steht in der [Roadmap unter R45](ROADMAP.md).
