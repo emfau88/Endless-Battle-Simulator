@@ -35,6 +35,13 @@ Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen i
 | R43, Marble Knockout, V0: Vorschau-Bilder der Bahn „Crumbling Bridge“ mitten im Rennen in drei Stilen (A Holz & Abendlicht als Empfehlung, B Hell & clean, C Glas & Nacht), je 1920 × 1080 und 1080 × 1920, mit einstürzender Brücke, rotem Ring für die Letzte, Krone für den Führenden, Röhre `OUT` und Kopfzeile. Zeichnung in `docs/reference/knockout-vorschau.js`, Aufruf `scripts/knockout-vorschau.mjs`; Bilder nur lokal. Kein Szenario-Code geändert. | Branch `murmelrennen/plan` | [Bericht](MARBLE_KNOCKOUT_2026-11-25.md) |
 | R43, Marble Knockout: Plan für ein neues Szenario, ein Murmel-Ausscheidungsrennen. Regel „12 marbles, 10 stages, the last one is out“, Finale zu dritt mit Podest; Shorts mit 8 Murmeln auf 3 Bahnen. Baukasten aus 29 Elementen in fünf Familien (Grundbahn, Drehen, Takt, Level verändert sich, Ausscheiden), zehn Bahnen mit Hauptelement und gesuchtem Moment, drei Short-Fassungen, Drehbuch und Casting Bahn für Bahn, eigener Physik-Kern mit gleichem Ergebnis in Node und Chromium, Stilbibel mit drei Varianten für die Vorschau, Ton, Pakete V0 und M1 bis M9. Kein Code geändert. | Branch `murmelrennen/plan` | [Plan](MARBLE_KNOCKOUT_PLAN_2026-11-25.md) |
 
+## 24.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| Cloud Wars erhält den zusätzlichen Ablauf Landschaftsreise mit fünf Stationen, ruhiger Kamera, Wasserklang und eigener Neun-Minuten-Vorlage. | `5f35a88` | [Landschaftsreise](CLOUD_LANDSCHAFTSREISE_2026-11-24.md) |
+| Unterschiedliche Hausgrundrisse und Gartennutzungen, fahrende Autos und Lieferwagen auf der Talstraße, Fahrräder am Ufer. Geprüft in 16:9 und 9:16. | `1e0c2aa` | [Darstellung und Prüfung](CLOUD_LANDSCHAFTSREISE_2026-11-24.md) |
+
 ## 22.11.2026
 
 | Was | Commit | Bericht |

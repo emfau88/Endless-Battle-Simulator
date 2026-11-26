@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "name": "Cloud Wars – Landschaftsreise am Fluss",
+  "scenario": "cloudwars",
+  "seed": 42,
+  "params": {
+    "mode": "landscape"
+  },
+  "video": {
+    "aspect": "16:9",
+    "durationSec": 540,
+    "resolution": 1080,
+    "fps": 30,
+    "tempo": 1,
+    "audio": true,
+    "volume": {
+      "master": 100,
+      "water": 100
+    },
+    "quality": {
+      "crf": 20,
+      "preset": "medium",
+      "bitrate": null
+    }
+  },
+  "view": {
+    "hud": false,
+    "camera": true
+  }
+}

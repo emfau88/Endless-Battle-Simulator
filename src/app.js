@@ -53,6 +53,8 @@ async function bootLive() {
   try { saved = JSON.parse(localStorage.getItem('ebs.cfg') || '{}'); } catch { /* privat/blockiert */ }
   const fromUrl = {};
   for (const [k, v] of params) if (!RESERVED.includes(k)) fromUrl[k] = v;
+  const linkedMode = params.get('mode');
+  if (EBS.scenarioModes.get(fromUrl.scenario || saved.scenario)?.has(linkedMode)) fromUrl.mode = linkedMode;
   // Unbekanntes Szenario im Link oder in der gespeicherten Konfiguration: sichtbar melden, Standard-Szenario starten
   const notices = [];
   let initial, staleSaved = false;
@@ -65,10 +67,14 @@ async function bootLive() {
     }
   }
   // Anderes Szenario als gespeichert (z. B. per Link): dessen Videostandards gelten, sofern der Link sie nicht selbst nennt
-  const sc0 = getScenario(initial.scenario);
+  const sc0 = getScenario(initial.scenario, initial.params);
+  if (sc0.mode && fromUrl.mode === sc0.mode && saved.params?.mode !== sc0.mode) {
+    initial = mergeConfig(sc0.presetForMode(sc0.mode, initial.seed), fromUrl);
+  }
   if (sc0.videoDefaults && saved.scenario !== initial.scenario) {
     const over = { ...sc0.videoDefaults };
-    for (const k of ['resolution', 'fps', 'tempo']) if (fromUrl[k] !== undefined) delete over[k];
+    for (const k of ['aspect', 'durationSec', 'resolution', 'fps', 'tempo']) if (fromUrl[k] !== undefined) delete over[k];
+    if (fromUrl.format !== undefined) delete over.aspect;
     if (['crf', 'preset'].some((k) => fromUrl[k] !== undefined)) delete over.quality;
     initial = mergeConfig(initial, { video: over });
   }
@@ -124,11 +130,14 @@ async function bootLive() {
     session.start({ scenario: scSel.value, seed: c.seed, video, view: c.view }); // neue Standardwerte des Szenarios
     acc = 0; fit(); save(); buildScenarioUi(); syncUi();
   });
+  function startPreset(preset) {
+    session.start(normalizeConfig(preset));
+    speed = 1; acc = 0; fit(); save(); buildScenarioUi(); syncUi();
+  }
   for (const [id, kind] of [['btnShortPreset', 'short'], ['btnLongPreset', 'long']]) {
     $(id).addEventListener('click', () => {
-      const preset = EBS.productionPreset(session.cfg.scenario, kind, session.cfg.seed);
-      session.start(normalizeConfig(preset));
-      speed = 1; acc = 0; fit(); save(); buildScenarioUi(); syncUi();
+      const selected = kind === 'long' && session.scenario.mode ? session.scenario.mode : kind;
+      startPreset(EBS.productionPreset(session.cfg.scenario, selected, session.cfg.seed));
     });
   }
   function buildScenarioUi() {
@@ -147,16 +156,19 @@ async function bootLive() {
       }
       const d = document.createElement('div'); d.className = 'ctl';
       d.innerHTML = `<label for="${id}">${c.label} <output id="o-${c.key}"></output></label>`;
-      let el;
+      let el, options = c.options;
       if (c.type === 'select') {
         el = document.createElement('select');
-        for (const [v, t] of c.options) el.add(new Option(t, v));
+        if (c.key === 'mode' && EBS.scenarioModes.has(sc.id)) {
+          options = options.concat(Array.from(EBS.scenarioModes.get(sc.id).values(), s => [s.mode, s.modeLabel]));
+        }
+        for (const [v, t] of options) el.add(new Option(t, v));
       } else {
         el = document.createElement('input'); el.type = 'range';
         Object.assign(el, { min: c.min, max: c.max, step: c.step });
       }
       el.id = id; d.appendChild(el); box.appendChild(d);
-      const value = () => c.type === 'select' ? c.options.find(([v]) => String(v) === el.value)[0] : +el.value;
+      const value = () => c.type === 'select' ? options.find(([v]) => String(v) === el.value)[0] : +el.value;
       el.addEventListener('input', () => {
         const v = value();
         if (c.format) $('o-' + c.key).textContent = c.format(v);
@@ -214,6 +226,7 @@ async function bootLive() {
     if (!sc.audio) return;
     row('master', 'Gesamtlautstärke');
     if (audio.background?.volumeKey) row(audio.background.volumeKey, audio.background.label || 'Hintergrund');
+    if (!Object.keys(events).length) return;
     const sub = document.createElement('div'); sub.className = 'subhead'; sub.textContent = 'Einzelne Klänge';
     box.appendChild(sub);
     for (const [key, def] of Object.entries(events)) row(key, def.label || key);
@@ -230,7 +243,8 @@ async function bootLive() {
     $('btnVolumeReset').disabled = !on;
     $('btnVolumeReset').textContent = currentAudio()?.defaultVolume ? 'Standardmischung wiederherstellen' : 'Alle auf Standard (100 %)';
     $('audioHint').textContent = !hasAudio ? 'Dieses Szenario hat noch keinen Ton.'
-      : on ? (currentAudio()?.mixProfile === 'naval-sea-v1' ? 'Ruhige Seeschlacht-Mischung mit durchgehendem Meeresrauschen und festen Pegeln. Gesamtlautstärke 100 % = Standard. '
+      : on ? (currentAudio()?.background && !Object.keys(currentAudio().events || {}).length ? 'Leises, durchgehendes Wassergeräusch. Gesamtlautstärke 100 % = Standard. '
+        : currentAudio()?.mixProfile === 'naval-sea-v1' ? 'Ruhige Seeschlacht-Mischung mit durchgehendem Meeresrauschen und festen Pegeln. Gesamtlautstärke 100 % = Standard. '
         : ['pyramid-water-v1', 'waterpark-water-v1'].includes(currentAudio()?.mixProfile) ? `Ruhige ${session.scenario.id === 'waterpark' ? 'Wasserpark' : 'Pyramiden'}-Mischung mit durchgehendem Wasserloop und leisen Aktionsgeräuschen. Gesamtlautstärke 70 % = Standard. `
         : usesCameraAudio() ? 'Der Ton folgt dem Kamerablick. 100 % = ruhige Standardmischung. Nach links leiser, nach rechts lauter. '
         : Number.isFinite(currentAudio()?.fixedGainDb) ? 'Leise, feste Mischung: nur wichtige Ereignisse sind hörbar. 100 % = Standard. Nach links leiser, nach rechts lauter. '
@@ -244,6 +258,13 @@ async function bootLive() {
   });
 
   function onParam(c, v) {
+    if (c.key === 'mode' && EBS.scenarioModes.has(session.cfg.scenario)) {
+      const next = getScenario(session.cfg.scenario, { mode: v });
+      if (next !== session.scenario) {
+        startPreset((next.presetForMode || session.scenario.presetForMode)(v, session.cfg.seed));
+        return;
+      }
+    }
     if (c.presets && c.presets[v]) {
       const preset = c.presets[v];
       for (const [key, value] of Object.entries(preset.params || {})) session.setParam(key, value);
@@ -402,6 +423,7 @@ async function bootLive() {
       : c.scenario === 'scrap' ? 'Short · eine Runde (rund 30 Sekunden)' : c.scenario === 'knockout' ? 'Short · Turm (rund 38 Sekunden)' : 'Short · 1 Minute';
     $('btnLongPreset').textContent = production ? 'Langvideo · Vollständiger Auftrag'
       : c.scenario === 'scrap' ? 'Langvideo · Turnier (8 Runden)' : c.scenario === 'knockout' ? 'Langvideo · The Gauntlet (rund 3½ Minuten)' : 'Langvideo · 10 Minuten';
+    if (session.scenario.mode) $('btnLongPreset').textContent = session.scenario.modeLabel;
     for (const ctl of session.scenario.controls) {
       const el = $('p-' + ctl.key), v = c.params[ctl.key];
       if (!el) continue;
@@ -500,7 +522,8 @@ async function bootLive() {
   $('btnSaveCfg').addEventListener('click', () => {
     const c = session.cfg, a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(c, null, 2) + '\n'], { type: 'application/json' }));
-    a.download = `${c.scenario}_seed${c.seed}_${c.video.aspect.replace(':', 'x')}.json`;
+    const name = session.scenario.mode ? c.scenario + '-' + session.scenario.mode : c.scenario;
+    a.download = `${name}_seed${c.seed}_${c.video.aspect.replace(':', 'x')}.json`;
     a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     sayConfig(`Gespeichert als ${a.download}.`);
   });

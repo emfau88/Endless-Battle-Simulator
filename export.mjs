@@ -175,7 +175,9 @@ async function main() {
     console.log(`\nFertig in ${fmt(r.elapsedSec)} (${(r.expectedFrames / r.elapsedSec).toFixed(1)} Frames/s)`);
     console.log(`  Datei:      ${r.file}`);
     console.log(`  Video:      ${r.codec} (${r.profile}, ${r.pixFmt}) ${r.width}×${r.height} @ ${r.fps} fps · ${r.bitrateKbps} kbit/s`);
-    console.log(r.audio
+    if (r.audio?.backgroundOnly) {
+      console.log(`  Ton:        ${r.audioStream.codec} ${r.audioStream.sampleRate} Hz, ${r.audioStream.channels} Kanäle · Hintergrund ${r.audio.encoded.lufs} LUFS · Spitze ${r.audio.encoded.truePeakDb} dBTP`);
+    } else console.log(r.audio
       ? `  Ton:        ${r.audioStream.codec} ${r.audioStream.sampleRate} Hz, ${r.audioStream.channels} Kanäle · ${r.audio.events} Ereignisse · Lautheit${r.exportOptions.clip ? ' der vollständigen Episode' : ''} ${r.audio.lufs} LUFS · Spitze ${r.audio.peakOutDb} dBFS${r.audio.limited ? ` (Begrenzer bis ${r.audio.maxReductionDb} dB)` : ''}`
       : '  Ton:        keiner');
     console.log(`  Dauer:      ${r.duration.toFixed(3)} s · ${r.frames} Frames · ${(r.sizeBytes / 1048576).toFixed(1)} MB`);

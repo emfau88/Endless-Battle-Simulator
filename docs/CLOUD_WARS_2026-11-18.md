@@ -474,3 +474,7 @@ Wolke am oberen Rand kurz verdecken. Rechenaufwand nicht eigens gemessen; es sin
 
 **Geprüft:** `test/cloudwars.test.mjs` (12 Tests, darunter Seek-Regel und Bildvergleich). Die Simulation ist nicht
 berührt, darum keine Referenz-Hashes und kein neues Casting.
+
+## Zusatz vom 24.11.2026 · Landschaftsreise
+
+Unter „Ablauf“ steht zusätzlich eine ruhige Fahrt entlang des Flusses zur Wahl. Simulation, Ortsgestaltung und Verkehr haben einen eigenen Ordner und eine eigene Produktionsvorlage. Der neue Bericht enthält den Bild- und Zustandsvergleich der bisherigen Abläufe. [Landschaftsreise](CLOUD_LANDSCHAFTSREISE_2026-11-24.md)

@@ -104,17 +104,26 @@ class RNG {
 //  Renderer:    root (PIXI.Container), draw(), destroy()
 // =====================================================================
 const scenarios = new Map();
+// Ein eigener Ablauf kann Simulation, Darstellung und Ton vollständig mitbringen.
+// In der Szenarioauswahl bleibt er unter seinem Hauptszenario.
+const scenarioModes = new Map();
 let defaultScenario = null;
 function registerScenario(def) {
   for (const k of ['id', 'title', 'defaults', 'normalizeParams', 'create', 'createRenderer']) {
     if (!def[k]) throw new Error(`Szenario unvollständig: "${k}" fehlt`);
   }
   def.controls = def.controls || [];
+  if (def.mode) {
+    if (!scenarios.has(def.id)) throw new Error('Unbekanntes Hauptszenario: ' + def.id);
+    if (!scenarioModes.has(def.id)) scenarioModes.set(def.id, new Map());
+    scenarioModes.get(def.id).set(def.mode, def);
+    return def;
+  }
   scenarios.set(def.id, def);
   if (!defaultScenario) defaultScenario = def.id;
   return def;
 }
-const getScenario = (id) => scenarios.get(id) || scenarios.get(defaultScenario);
+const getScenario = (id, params) => scenarioModes.get(id)?.get(params?.mode) || scenarios.get(id) || scenarios.get(defaultScenario);
 
 // =====================================================================
 //  Konfiguration (Schema-Version 1)
@@ -200,7 +209,7 @@ function normalizeConfig(input) {
     throw Object.assign(new Error(`Unbekanntes Szenario "${wanted}". Verfügbar: ${[...scenarios.keys()].join(', ') || 'keines'}`),
       { code: 'UNKNOWN_SCENARIO', scenario: wanted });
   }
-  const sc = getScenario(wanted);
+  const sc = getScenario(wanted, o.params);
   if (!sc) throw new Error('Kein Szenario registriert.');
   const v = o.video, q = v.quality, params = sc.normalizeParams({ ...sc.defaults, ...o.params });
   // Optionale Videostandards eines Szenarios (z. B. YouTube-Qualität); ohne Angabe gelten die allgemeinen Standards
@@ -212,10 +221,10 @@ function normalizeConfig(input) {
     seed: Math.abs(Math.floor(num(o.seed, 42))) >>> 0,
     params,
     video: {
-      aspect: ASPECTS[v.aspect] ? v.aspect : '9:16',
+      aspect: ASPECTS[v.aspect] ? v.aspect : (vd.aspect || '9:16'),
       resolution: RESOLUTIONS[+v.resolution] ? +v.resolution : RESOLUTIONS[vd.resolution] ? vd.resolution : 1080,
       fps: FPS_OPTIONS.includes(+v.fps) ? +v.fps : FPS_OPTIONS.includes(vd.fps) ? vd.fps : 30,
-      durationSec: clamp(num(v.durationSec, DEFAULT_DURATION), 1, MAX_DURATION),
+      durationSec: clamp(num(v.durationSec, vd.durationSec || DEFAULT_DURATION), 1, MAX_DURATION),
       tempo: sc.tempoRange ? clamp(num(v.tempo, sc.tempoRange.default), sc.tempoRange.min, sc.tempoRange.max)
         : TEMPO_OPTIONS.includes(+v.tempo) ? +v.tempo : 1,
       audio: bool(v.audio, true),      // Tonspur, sofern das Szenario eine Klangtabelle mitbringt
@@ -226,7 +235,7 @@ function normalizeConfig(input) {
         bitrate: parseBitrate(q.bitrate),
       },
     },
-    view: { hud: bool(o.view.hud, true), camera: sc.supportsCamera !== false && bool(o.view.camera, true) },
+    view: { hud: bool(o.view.hud, sc.viewDefaults?.hud ?? true), camera: sc.supportsCamera !== false && bool(o.view.camera, true) },
   };
 }
 /** Überschreibt eine bestehende Konfiguration teilweise (flach oder verschachtelt). */
@@ -381,7 +390,7 @@ class Session {
     const cfg = normalizeConfig(cfgIn);
     this.dispose();
     this.renderScale = this.fixedScale || videoSize(cfg.video).scale;
-    const sc = getScenario(cfg.scenario), a = ASPECTS[cfg.video.aspect], world = { w: a.w, h: a.h };
+    const sc = getScenario(cfg.scenario, cfg.params), a = ASPECTS[cfg.video.aspect], world = { w: a.w, h: a.h };
     const r = this.app.renderer;
     if (r.width !== world.w || r.height !== world.h || r.resolution !== this.renderScale) r.resize(world.w, world.h, this.renderScale);
     this.cfg = cfg; this.scenario = sc; this.world = world;
@@ -489,7 +498,7 @@ function installExportAPI(session, extra = {}) {
 Object.assign(EBS, {
   PHYS_HZ, DT, DT_MS, CONFIG_VERSION, VOLUME_PREFIX, VOLUME_MAX, DEFAULT_DURATION, MAX_DURATION, ASPECTS, RESOLUTIONS, FPS_OPTIONS, TEMPO_OPTIONS, X264_PRESETS, FX,
   videoSize, normalizeConfig, mergeConfig, liftConfig, parseBitrate, deepMerge,
-  registerScenario, getScenario, scenarios,
+  registerScenario, getScenario, scenarios, scenarioModes,
   util: { clamp, lerp, angleDiff, num, bool, fnv1a, hashSeed, lerpColor, fmtTime, fmtInt, fmtIntEn },
   RNG, Particles, ParticleView, canvasTex, getParticleTextures,
   createStage, glRendererName, Session, installExportAPI,
