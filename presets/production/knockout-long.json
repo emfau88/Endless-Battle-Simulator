@@ -40,8 +40,8 @@
   },
   "video": {
     "aspect": "16:9",
-    "resolution": 1080,
-    "fps": 30,
+    "resolution": 1440,
+    "fps": 60,
     "durationSec": 420,
     "tempo": 1,
     "audio": true,
@@ -49,7 +49,7 @@
       "master": 100
     },
     "quality": {
-      "crf": 20,
+      "crf": 16,
       "preset": "medium",
       "bitrate": null
     }

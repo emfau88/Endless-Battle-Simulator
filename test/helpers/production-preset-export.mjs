@@ -32,7 +32,10 @@ after(async () => {
 });
 
 for (const kind of ['short', 'long']) {
-  test(`Produktionsweg ${scenario}/${kind}: 1080p30, 3 Sekunden, Ton und herunterladbare MP4/JSON`, async t => {
+  // Das Knockout-Langvideo exportiert in 1440p mit 60 fps (rund 3,5-mal so viele Bildpunkte je Sekunde wie 1080p30);
+  // eine Sekunde hält die Renderzeit ohne Grafikkarte auf dem bisherigen Stand.
+  const probeSec = scenario === 'knockout' && kind === 'long' ? 1 : 3;
+  test(`Produktionsweg ${scenario}/${kind}: Auflösung und Bildrate der Vorlage, ${probeSec} s, Ton und herunterladbare MP4/JSON`, async t => {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
     const page = await ctx.newPage(), errors = [];
     page.on('pageerror', e => errors.push(e.message));
@@ -76,8 +79,9 @@ for (const kind of ['short', 'long']) {
       await page.selectOption('#p-episodeMode', 'endless');
       assert.equal(await page.isDisabled('#durationText'), false);
     } else assert.equal(await page.evaluate(() => EBS.app.cfg.video.durationSec), kind === 'short' ? 60 : 600);
-    await page.fill('#durationText', '3s'); await page.dispatchEvent('#durationText', 'change');
+    await page.fill('#durationText', `${probeSec}s`); await page.dispatchEvent('#durationText', 'change');
     const config = await page.evaluate(() => EBS.app.cfg);
+    const size = await page.evaluate(() => EBS.videoSize(EBS.app.cfg.video)), fps = config.video.fps;
     const [request] = await Promise.all([
       page.waitForRequest(req => req.url() === base + '/api/export' && req.method() === 'POST'), page.click('#btnExport'),
     ]);
@@ -86,7 +90,7 @@ for (const kind of ['short', 'long']) {
     // The physical 3D materials take longer in CI's software renderer; preserve the original scenarios' budget.
     // Marble Knockout: weiche Schatten und Abgründe rendern in Software rund 0,4 Bilder/s im Querformat. Seit dem
     // Gesamtlevel (Turm im Short) kostet ein 1080p-Bild ohne Grafikkarte lokal rund 2,5 s; die CI brauchte für den
-    // Short mehr als 420 s. Darum 900 s (die Datei hat 1200 s, das Langvideo zeigt in 3 s nur den Einstiegsflug).
+    // Short mehr als 420 s. Darum 900 s (die Datei hat 1200 s, das Langvideo zeigt in 1 s nur den Einstiegsflug).
     await page.waitForFunction(() => document.querySelector('#exportMsg a') || document.querySelector('#exportMsg').classList.contains('err'), null,
       { timeout: scenario === 'knockout' ? 900000 : scenario === 'marbleworks' ? 420000 : 180000 });
     status = await (await fetch(base + '/api/export')).json();
@@ -96,13 +100,14 @@ for (const kind of ['short', 'long']) {
     copyFileSync(file, join(evidence, `${scenario}-${kind}.mp4`)); copyFileSync(sidecar, join(evidence, `${scenario}-${kind}.json`));
     const meta = JSON.parse(readFileSync(sidecar, 'utf8')), probe = await probeVideo(file);
     assert.deepEqual(meta.config, config, 'Begleitdatei bewahrt die Einstellungen');
-    assert.deepEqual(verifyResult({ ...probe, audio: meta.audio, expectedWidth: kind === 'short' ? 1080 : 1920,
-      expectedHeight: kind === 'short' ? 1920 : 1080, expectedFrames: 90, expectedFps: 30, expectedDuration: 3 }), []);
+    assert.equal(config.video.aspect, kind === 'short' ? '9:16' : '16:9');
+    assert.deepEqual(verifyResult({ ...probe, audio: meta.audio, expectedWidth: size.width, expectedHeight: size.height,
+      expectedFrames: probeSec * fps, expectedFps: fps, expectedDuration: probeSec }), []);
     assert.equal(meta.audio.lost, 0); assert.equal(meta.video.encoder.preset, 'medium');
     const href = await page.getAttribute('#exportMsg a', 'href'); assert.equal(href, status.url);
     const downloaded = await fetch(base + href); assert.equal(downloaded.status, 200);
     assert.ok(Buffer.from(await downloaded.arrayBuffer()).equals(readFileSync(file)), 'Download liefert exakt die geprüfte Videodatei');
-    const frame = await run(ffmpegBin(), ['-y', '-v', 'error', '-ss', '2.5', '-i', file, '-frames:v', '1', join(evidence, `${scenario}-${kind}.jpg`)]);
+    const frame = await run(ffmpegBin(), ['-y', '-v', 'error', '-ss', String(probeSec - 0.5), '-i', file, '-frames:v', '1', join(evidence, `${scenario}-${kind}.jpg`)]);
     assert.equal(frame.code, 0, frame.stderr);
     assert.deepEqual(errors, []);
     t.diagnostic(JSON.stringify({ scenario, kind, frames: probe.frames, audio: meta.audio.encoded, elapsedSec: status.result.elapsedSec, evidence }));
