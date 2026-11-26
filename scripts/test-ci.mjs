@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
 const root=fileURLToPath(new URL('..',import.meta.url));
-const suites={core:[],audio:[],production:[],marbleworks:[],scrap:[],'scrap-browser':[],mycelium:[],pyramid:[],territory:[],waterpark:[],cloudwars:[],knockout:[],'knockout-browser':[],'knockout-level-browser':[], 'export-marbleworks-audio':[],
+const suites={core:[],audio:[],production:[],marbleworks:[],scrap:[],'scrap-browser':[],mycelium:[],pyramid:[],territory:[],waterpark:[],cloudwars:[],knockout:[],'knockout-browser':[],'knockout-level-browser':[],burrow:[], 'export-marbleworks-audio':[],
   ...Object.fromEntries(['naval','marble','scrap','mycelium','pyramid','territory','marbleworks','cloudwars','knockout'].map(id=>['export-'+id,[]]))};
 for(const file of readdirSync(join(root,'test')).filter(f=>f.endsWith('.test.mjs')).sort()) {
   const exportScenario=/^presets-export-(naval|marble|scrap|mycelium|pyramid|territory|marbleworks|cloudwars|knockout)\.test\.mjs$/.exec(file)?.[1];
@@ -15,7 +15,7 @@ for(const file of readdirSync(join(root,'test')).filter(f=>f.endsWith('.test.mjs
   // (seek checks of the old race and of the camera level, about 2-3 s per level frame without a GPU).
   const ownJob=['scrap-browser','knockout-browser','knockout-level-browser'].find((s)=>file===s+'.test.mjs');
   const suite=file==='marbleworks-export.test.mjs'?'export-marbleworks-audio':exportScenario?'export-'+exportScenario:ownJob?ownJob:file.startsWith('scrap')?'scrap':file.startsWith('audio')?'audio'
-    :file.startsWith('mycelium')?'mycelium':file.startsWith('pyramid')?'pyramid':file.startsWith('territory')?'territory':file.startsWith('waterpark')?'waterpark':file.startsWith('cloudwars')?'cloudwars':file.startsWith('knockout')?'knockout'
+    :file.startsWith('mycelium')?'mycelium':file.startsWith('pyramid')?'pyramid':file.startsWith('territory')?'territory':file.startsWith('waterpark')?'waterpark':file.startsWith('cloudwars')?'cloudwars':file.startsWith('knockout')?'knockout':file.startsWith('burrow')?'burrow'
     :['export.test.mjs','live.test.mjs','production.test.mjs'].includes(file)?'production'
     :/^(marble-production-|marbleworks-|production-marble-)/.test(file)?'marbleworks':'core';
   suites[suite].push(join('test',file));
