@@ -1446,7 +1446,8 @@ entscheidet also den Titel. Dritte gesamt ist LILAC mit 22 Punkten.
 - Video 7:06 min: Rennen 1 bis zum Ende des Podests 3:14, Tabelle 11 s, Rennen 2 ab der Startkarte 3:23, Schlusstabelle
   und Podest 17 s.
 - Keine Anstöße, niemand sitzt fest, beide Rennen mit Fotofinish (0,150 s und 0,124 s).
-- 24 Kapitel von `Intro · Race 1 · Stage 1: The Drop` bis `Final Standings`, alle mindestens 10 s lang.
+- 22 Kapitel von `Intro · Race 1 · Stage 1: The Drop` bis `Final Standings`, alle mindestens 10 s lang. Die Kapitel
+  „Ring Escape“ beider Rennen entfallen, weil das Finale schon nach knapp 10 s beginnt.
 
 **Nachweise:**
 
@@ -1460,6 +1461,12 @@ entscheidet also den Titel. Dritte gesamt ist LILAC mit 22 Punkten.
   Sprung, gleicher Zustand.
 - Standbilder aus Chromium, lokal: `output/knockout-lab/serie-standbilder.jpg` (Karten, Anzeige, Podeste, Tabellen) und
   `output/knockout-lab/serie-uebergaenge.jpg` (Übergänge).
+- Ganzer Export im Auftrag des Nutzers, lokal mit Grafikkarte:
+  `node export.mjs --config presets/production/knockout-long.json --gpu --out output/knockout-zwei-rennen.mp4`.
+  Fertig in 10:34 min (20 Bilder/s). 1920 × 1080, 30 Bilder/s, 12 787 Bilder, 426,2 s, 206 MB. Ton: 8971 Ereignisse,
+  −24,6 LUFS, Spitze −6 dBFS. Prüfung des Exports OK (Codec, Auflösung, Bildrate, Bildzahl, Dauer,
+  Simulationszustand). Das Video liegt nur lokal in `output/` (nicht im Repository).
+- Kontaktbogen aus dem fertigen Video, lokal: `output/knockout-lab/zwei-rennen-video-bogen.jpg`.
 - Nicht gelaufen: Browser-Tests `knockout-browser`, `knockout-level-browser` und der Vorlagen-Exporttest (macht die CI),
   voller `npm test`.
 
