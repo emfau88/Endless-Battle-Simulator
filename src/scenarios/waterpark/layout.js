@@ -97,7 +97,7 @@ const PLANS = {
   },
 };
 
-WP.createLayout = function (world, size = 36) {
+WP.createLayout = function (world, size = 36, jumpV2 = false) {
   const W = world.w, H = world.h, land = W > H * 1.2, R = size, GAP = 2 * R + 18, P = land ? PLANS.land : PLANS.port;
   // Swimmers grow towards the front of the lagoon (perspective), so they keep a wider distance there.
   const poolGap = 2 * R * (land ? 1.45 : 1.25) + 18, towerHW = Math.round(Math.max(R + 34, W * (P.towerW || 0) / 2));
@@ -122,8 +122,9 @@ WP.createLayout = function (world, size = 36) {
   const dir = P.seesaw.leftward ? -1 : 1, sLen = W * P.seesaw.length, back = sLen * (P.seesaw.pivot ?? .5);
   // Das Brett sitzt eine halbe Tierbreite (R) weiter zum Einstieg hin als der Ausguss: Das Tier landet so anderthalb R hinter
   // dem Drehpunkt, mit sichtbarem Hebel.
-  const pivotX = W * P.seesaw.x - dir * (sLen / 2 - back) - dir * R;
-  const seesaw = { x: pivotX, y: H * P.seesaw.y, length: sLen, back, front: sLen - back, land: R * 1.5,
+  const shift = jumpV2 ? R : 0;
+  const pivotX = W * P.seesaw.x - dir * (sLen / 2 - back) - dir * shift;
+  const seesaw = { x: pivotX, y: H * P.seesaw.y, length: sLen, back, front: sLen - back, land: R * .5 + shift,
     maxAngle: .16, hang: !!P.seesaw.hang, maxSpread: Math.abs(pivotX - xLift) - towerHW - 30 };
   const boardEnd = [seesaw.x + dir * seesaw.front, seesaw.y];
   // Landepunkt auf dem ruhenden Brett (langer Arm oben)

@@ -226,3 +226,21 @@ test('Pausierte Vorschau übernimmt Tageszeit und Schlussdarstellung ohne Bewegu
   sim._pendingGuest={type:'ufo',at:0,expires:100};sim.setParam('ufo',false);sim._updateDecorations();
   assert.equal(sim._pendingGuest,null);assert.ok(!sim.decorations.some(d=>d.type==='ufo'));
 });
+
+test('Wippe und Sprungfeder: alte Short-Einstellungen und opt-in Fahrprobe sind reproduzierbar', () => {
+  // Seed 42 bei 8, 16 und 30 Sekunden, gemessen vor der Integration auf 5314f83 und 0c6eaf1.
+  const cases = [
+    [worlds[0], {}, ['01140a8a', '23228b62', '950a2fde']],
+    [worlds[1], {}, ['17fe8ce2', '21d81749', '0a57836d']],
+    [worlds[0], { jumpV2: true }, ['564fef58', 'cd57ea96', 'af89e7ba']],
+    [worlds[1], { jumpV2: true }, ['17fe8ce2', 'b7c71433', '918642ff']],
+  ];
+  for (const [world, params, expected] of cases) {
+    const sim = create({ mode: 'short', ...params }, world, 30);
+    const actual = [8, 8, 14].map(seconds => {
+      simulate(sim, seconds);
+      return sim.stateHash();
+    });
+    assert.deepEqual(actual, expected);
+  }
+});

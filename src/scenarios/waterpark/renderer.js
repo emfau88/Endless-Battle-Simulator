@@ -609,7 +609,7 @@ class WaterparkRenderer extends EBS.CanvasScene {
     const launch = [...(this.sim.recent || [])].reverse().find(e => e.type === 'spring'), age = launch ? t - launch.t : 99;
     const rebound = age >= 0 && age < 1.1 ? -Math.sin(age * 14) * Math.exp(-age * 3.8) * 13 : 0;
     const loaded = this.sim.animals.some(b => b.state === 'route' && b.route === 3 && b.s < j.entryS && j.entryS - b.s < 40);
-    const by = j.y + R + (loaded ? 10 : rebound), base = j.y + R + 36, coil = [];
+    const by = j.y + R + (loaded ? (this.sim.cfg.jumpV2 ? 10 : 6) : rebound), base = j.y + R + 36, coil = [];
     const side = j.landing[0] < j.x ? -1 : 1, cx = j.x + 8 * side;        // the board reaches out towards the landing
     for (let i = 0; i <= 10; i++) coil.push([cx - 2 * side + (i % 2 ? 15 : -15), by + 10 + i * (base - by - 10) / 10]);
     line(g, coil, 7, '#3d4f58'); line(g, coil, 4, '#b3c0c8'); line(g, coil, 1.5, '#eef3f6', -1, -1);

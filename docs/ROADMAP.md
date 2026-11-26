@@ -51,7 +51,7 @@ R33 bündelt die bisherigen Einzelabnahmen **R18** (Naval), **R20** (Scrap Wars)
 | **R36** | **Wichtigste Verbesserungen je Szenario** | Höchstens drei je Szenario, Vorschlag im [Gesamtplan, Abschnitt 7](GESAMTPLAN_2026-11-16.md#7--block-3-die-wichtigsten-verbesserungen-je-szenario); Reihenfolge nach R33. |
 | **R32** | **Architektur absichern** | A1 (Beschreibung) ist erledigt. A2 Vertragstest für jedes Szenario; A4 bis A7 entstehen mit dem ersten Szenario, das sie braucht. |
 | **R23** | **Pyramid: Ausbau für lange Videos** | P2 und P3 erledigt. Offen: P4 seltene Ereignisse, P5 Rennen, P6 Ausschnittsexport (Abweichung in der Dämmerung). |
-| **R30** | **Waterpark: Abnahme und Short** | Wasserspiele am Tag, Fontänenshow am Ende, Trichter-Einlauf und „Titel aus“ sind gebaut ([Bericht](WASSERPARK_WASSERSPIELE_2026-11-17.md)). Offen: dein Urteil zu den Vorschau-Clips, 20-Sekunden-Probe mit Ton, danach der 10-Minuten-Export. Der Short braucht noch ein Drehbuch; weitere Vorschläge in der [Merkliste](WASSERPARK_OFFENE_PUNKTE_2026-11-16.md). Vorlagen-Exporttest fehlt noch. |
+| **R30** | **Waterpark: Abnahme und Short** | Wasserspiele am Tag, Fontänenshow am Ende, Trichter-Einlauf, „Titel aus“ und die zuschaltbare Fahrprobe für Wippe und Sprungfeder sind gebaut ([Bericht](WASSERPARK_WASSERSPIELE_2026-11-17.md)). Offen: dein Urteil zu den Vorschau-Clips, 20-Sekunden-Probe mit Ton, danach der 10-Minuten-Export. Der Short braucht noch ein Drehbuch; weitere Vorschläge in der [Merkliste](WASSERPARK_OFFENE_PUNKTE_2026-11-16.md). Vorlagen-Exporttest fehlt noch. |
 
 ## 4 · Später und Merkliste
 

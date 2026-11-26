@@ -9,7 +9,7 @@ const normalMode = params => params.mode !== 'short';
 const finiteMode = params => params.mode !== 'relax';
 const defaults = {
   mode: 'relax', animals: 16, size: 36, speed: 1, beltSpeed: 1, rollSpeed: 1, current: 1,
-  route0: true, route1: true, route2: true, route3: true,
+  route0: true, route1: true, route2: true, route3: true, jumpV2: false,
   dayCycle: true, dayMinutes: 0, dayStart: 0.12, nightDark: 0.7,
   ending: 'show', fireworks: false, decoDensity: 1, waterPlay: true, title: false,
   ufo: true, balloon: true, birds: true, shootingStars: true, fish: true, emotes: true,
@@ -67,6 +67,7 @@ function normalizeParams(input) {
   for (let i = 0; i < 4; i++) out[`route${i}`] = mode === 'short' || bool(p[`route${i}`], true);
   if (![0, 1, 2, 3].some(i => out[`route${i}`])) out.route0 = true;
   for (const key of ['ufo', 'balloon', 'birds', 'shootingStars', 'fish', 'emotes', 'fireflies', 'stars', 'sleepy', 'waterPlay', 'title']) out[key] = bool(p[key], defaults[key]);
+  if (bool(p.jumpV2, false)) out.jumpV2 = true;
   return out;
 }
 const controls = [
@@ -74,6 +75,7 @@ const controls = [
     options: [['short', 'Vier Tiere · kurzer Film'], ['day', 'Ein Tag im Wasserpark'], ['relax', 'Ruhiger Dauerbetrieb']],
     sets: { short: { animals: 4, route0: true, route1: true, route2: true, route3: true, decoDensity: 0.5 },
       day: { animals: 16, decoDensity: 1 }, relax: { animals: 12, decoDensity: 0.5, fireworks: false } } },
+  { key: 'jumpV2', label: 'Fahrprobe · neue Wippe und Sprungfeder', type: 'check', restart: true },
   { key: 'animals', label: 'Tierchen', type: 'range', min: 4, max: 24, step: 4, restart: true, enabled: normalMode, format: value => String(value) },
   { key: 'size', label: 'Größe der Tierchen', type: 'range', min: 24, max: 44, step: 1, restart: true, format: value => `${value * 2} px` },
   ...[['speed', 'Gesamttempo'], ['beltSpeed', 'Tempo des Aufzugs'], ['rollSpeed', 'Tempo der Rutschen'], ['current', 'Strömung im Rücklauf']]
