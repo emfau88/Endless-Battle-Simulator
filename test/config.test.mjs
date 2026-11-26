@@ -184,14 +184,14 @@ test('Export mit unbekanntem Szenario bricht mit klarer Meldung ab und erzeugt k
   const out = join(dir, 'unknown.mp4'), logs = [];
   await assert.rejects(
     exportVideo({ scenario: 'gibtsnicht', durationSec: 1 }, { out, log: (m) => logs.push(m) }),
-    (e) => e.code === 'UNKNOWN_SCENARIO' && /^Unbekanntes Szenario "gibtsnicht"\. Verfügbar: naval, marble, scrap, mycelium, pyramid, territory, marbleworks, waterpark, marblexl, cloudwars$/.test(e.message),
+    (e) => e.code === 'UNKNOWN_SCENARIO' && /^Unbekanntes Szenario "gibtsnicht"\. Verfügbar: naval, marble, scrap, mycelium, pyramid, territory, marbleworks, waterpark, marblexl, cloudwars, knockout, burrow$/.test(e.message),
   );
   assert.ok(!logs.some((m) => /Software-Renderer/.test(m)), 'unnötiger zweiter Startversuch: ' + logs.join(' | '));
   assert.deepEqual(readdirSync(dir).filter((f) => f.startsWith('unknown')), []);
   // nachgeladenes Szenario mit falscher ID: ebenfalls klare Meldung
   await assert.rejects(
     exportVideo({ scenario: 'dumy', durationSec: 1 }, { out, scripts: [join(ROOT, 'test', 'fixtures', 'dummy-scenario.js')] }),
-    (e) => e.code === 'UNKNOWN_SCENARIO' && /Verfügbar: naval, marble, scrap, mycelium, pyramid, territory, marbleworks, waterpark, marblexl, cloudwars, dummy/.test(e.message),
+    (e) => e.code === 'UNKNOWN_SCENARIO' && /Verfügbar: naval, marble, scrap, mycelium, pyramid, territory, marbleworks, waterpark, marblexl, cloudwars, knockout, burrow, dummy/.test(e.message),
   );
 });
 

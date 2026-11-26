@@ -2,6 +2,9 @@
 
 **Status: Recherche gesichert; Umsetzung nicht beauftragt und nicht priorisiert.**
 
+**Nachtrag 25.11.2026:** Burrow wird als eigenes Szenario in Draufsicht umgesetzt (R42, abweichend von der
+Seitenansicht unten). Stand: [Bericht Endless Burrow](BURROW_2026-11-25.md). Die Abriss-Karten bleiben unbeauftragt.
+
 Stand: 14.11.2026. Dieses Dokument hält die bereits durchgeführte Recherche und
 einen möglichen Integrationsweg fest. Es ist eine Entscheidungsgrundlage für
 später, keine zweite aktive Aufgabenliste. Die [Roadmap](ROADMAP.md) bleibt die

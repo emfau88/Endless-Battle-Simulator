@@ -35,6 +35,9 @@
     gradient.addColorStop(1, rgba(color, 0)); g.fillStyle = gradient;
     g.fillRect(x - radius, y - radius, radius * 2, radius * 2);
   };
+  // S1 · Short: Schilder 1,4-fach, Einstiegstext 2,5 s bei 22 % der Bildhöhe
+  // S2: Der Sieger erscheint 0,3 s nach dem letzten K.o., damit die Zeitlupe der Explosion frei bleibt
+  const SHORT_ART = { labels: 1.4, introSec: 2.5, introY: .22, winnerDelay: .3, winnerFade: .25, plankStay: 1, plankGone: 1.8, ringSec: .7 };
   class ArenaRenderer extends ScrapArena.Renderer {
     _scorchEvents() {
       const s = this.episode, marks = [];
@@ -92,7 +95,7 @@
       return c;
     }
     _pickup(g, p, t) {
-      if (this.sunny) { EBS.ScrapDaylightArt.pickup(g, p, t, this); return; }
+      if (this.sunny) { EBS.ScrapDaylightArt.pickup(g, p, t); return; }
       if (!this.materialArena) { super._pickup(g, p, t); return; }
       const empty = !!p.empty || p.ammo <= 0, color = p.kind === 'rocket' ? '#eeb779' : '#7cdbef';
       const { sprite, shadow } = this._pickupTexture(p.kind, empty), angle = (noise(p.id, 13) - .5) * 1.5;
@@ -128,42 +131,43 @@
       const bg = shadow.getContext('2d'); bg.filter = 'blur(3px)'; bg.drawImage(mask, 0, 0);
       const result = { sprite, shadow }; this._pickupTextures.set(key, result); return result;
     }
-    _labelLayout(robots, width, height) {
-      const labels = [], h = 16.5, margin = 18;
-      const overlaps = (a, b) => a.x < b.x + 60 && a.x + 60 > b.x && a.y < b.y + h + 2 && a.y + h + 2 > b.y;
+    // k = Maßstab der Schilder: 1 im Normalbild (alle Zahlen wie bisher), 1,4 im Short.
+    _labelLayout(robots, width, height, k = 1) {
+      const labels = [], h = 16.5 * k, wide = 58 * k, margin = 18;
+      const overlaps = (a, b) => a.x < b.x + wide + 2 && a.x + wide + 2 > b.x && a.y < b.y + h + 2 && a.y + h + 2 > b.y;
       // Sorting a copy keeps this pass independent of draw history and physics.
       for (const robot of robots.filter(r => r.alive !== false && r.hp > 0).slice().sort((a, b) => a.y - b.y || a.id - b.id)) {
-        const radius = Math.max(12, robot.r || 24), x = Math.max(margin, Math.min(width - margin - 58, robot.x - 29));
+        const radius = Math.max(12, robot.r || 24), x = Math.max(margin, Math.min(width - margin - wide, robot.x - wide / 2));
         const top = robot.y - radius - 6 - h, bottom = robot.y + radius + 10;
-        const candidates = [top, bottom, top - 20, bottom + 20, top - 40, bottom + 40];
+        const candidates = [top, bottom, top - 20 * k, bottom + 20 * k, top - 40 * k, bottom + 40 * k];
         let y = candidates.find(yy => yy >= margin && yy + h <= height - margin && !labels.some(b => overlaps({ x, y: yy }, b)));
         if (y === undefined) y = Math.max(margin, Math.min(height - margin - h, top));
-        labels.push({ robot, x, y, width: 58, height: h, below: y > robot.y,
+        labels.push({ robot, x, y, width: wide, height: h, below: y > robot.y,
           ammoY: y > robot.y ? y + h + 4 : robot.y + radius + 12 });
       }
       return labels;
     }
-    _labels(g, robots, width, height) {
-      const labels = this._labelLayout(robots, width, height);
+    _labels(g, robots, width, height, k = 1) {
+      const labels = this._labelLayout(robots, width, height, k);
       g.save();
       // Magazine pips stay below the machine; a lower nameplate moves them
       // beneath that plate so the two indicators never occupy the same row.
       for (const { robot, ammoY } of labels) if (robot.weapon) {
         const rocket = robot.weapon.kind === 'rocket', max = Math.max(1, robot.weapon.maxAmmo || (rocket ? 2 : 12));
         const count = Math.min(12, max), n = Math.max(0, Math.min(1, robot.weapon.ammo / max)) * count;
-        const gap = (rocket ? 4 : 1.8) * .8, wide = (rocket ? 9 : 3) * .8, total = count * wide + (count - 1) * gap;
+        const gap = (rocket ? 4 : 1.8) * .8 * k, wide = (rocket ? 9 : 3) * .8 * k, total = count * wide + (count - 1) * gap;
         for (let i = 0; i < count; i++) {
-          box(g, robot.x - total / 2 + i * (wide + gap), ammoY, wide, 3.2, .8);
+          box(g, robot.x - total / 2 + i * (wide + gap), ammoY, wide, 3.2 * k, .8 * k);
           g.fillStyle = i < n ? (rocket ? '#f1b773' : '#bbdee7') : '#273b47'; g.fill();
         }
       }
       for (const { robot, x, y } of labels) {
         const color = colorOf(robot), hp = Math.max(0, Math.min(1, robot.hp / Math.max(1, robot.maxHp)));
-        box(g, x, y, 58, 13, 3); g.fillStyle = rgba('#0c1820', .88); g.fill();
-        text(g, robot.name, x + 29, y + 6.5, 9, color, 'center', 800);
-        box(g, x + 5, y + 13, 48, 3.5, 1.2); g.fillStyle = '#050c11'; g.fill();
+        box(g, x, y, 58 * k, 13 * k, 3 * k); g.fillStyle = rgba('#0c1820', .88); g.fill();
+        text(g, robot.name, x + 29 * k, y + 6.5 * k, 9 * k, color, 'center', 800);
+        box(g, x + 5 * k, y + 13 * k, 48 * k, 3.5 * k, 1.2 * k); g.fillStyle = '#050c11'; g.fill();
         if (hp > 0) {
-          box(g, x + 5, y + 13, 48 * hp, 3.5, Math.min(1.2, 24 * hp));
+          box(g, x + 5 * k, y + 13 * k, 48 * k * hp, 3.5 * k, Math.min(1.2, 24 * hp) * k);
           g.fillStyle = hp < .25 ? '#f48562' : color; g.fill();
         }
       }
@@ -312,15 +316,23 @@
       const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
       const color = colorOf(robot), dead = robot.alive === false || finite(robot.hp, 1) <= 0;
       const speed = Math.hypot(finite(robot.vx), finite(robot.vy));
-      const chassisAngle = speed > 8 ? Math.atan2(robot.vy, robot.vx) : finite(robot.angle);
+      // v4 fährt wie ein Panzer: das Chassis zeigt die eigene Fahrtrichtung, der Turm wie bisher das Ziel
+      const chassisAngle = Number.isFinite(robot.heading) ? robot.heading : speed > 8 ? Math.atan2(robot.vy, robot.vx) : finite(robot.angle);
       const aim = finite(robot.angle), radius = Math.max(12, finite(robot.r, 24)), bodyScale = radius / 24;
       const stage = dead ? 2 : damageStage(robot), body = this._bodyTexture(color, dead, stage);
-      g.save(); g.translate(finite(robot.x), finite(robot.y));
+      // E1/E2: Rückstoß aus der Schusszeit (flashUntil = Schuss + 0,11 s), Schubs aus dem letzten Treffer (nudgeX/Y)
+      const fx = EBS.ScrapEffectsArt, shotAge = t - (finite(robot.flashUntil, -1) - .11), kick = dead ? 0 : fx.recoil(shotAge);
+      g.save(); g.translate(finite(robot.x) - Math.cos(aim) * 1.5 * kick * bodyScale + finite(robot.nudgeX),
+        finite(robot.y) - Math.sin(aim) * 1.5 * kick * bodyScale + finite(robot.nudgeY));
       if (!dead) glow(g, 0, 5, 40 * bodyScale, color, .10);
       g.save(); g.translate(5 * bodyScale, 8 * bodyScale); g.rotate(chassisAngle); g.scale(bodyScale, bodyScale);
       g.drawImage(body.scrapShadow, -52, -52, 104, 104); g.restore();
       g.save(); g.rotate(chassisAngle); g.scale(bodyScale, bodyScale);
       g.drawImage(body, -52, -52, 104, 104);
+      const hurtAge = t - (finite(robot.hurtUntil) - .22);
+      if (!dead && hurtAge >= 0 && hurtAge < .06) {
+        g.globalAlpha = .7 * (1 - hurtAge / .06); g.drawImage(fx.whiteOf(body), -52, -52, 104, 104); g.globalAlpha = 1;
+      }
       if (!dead && speed > 8) {
         const travel = (((finite(robot.x) + finite(robot.y)) * .28) % 5 + 5) % 5;
         for (const y of [-28, 20]) for (let x = -22; x < 17; x += 5)
@@ -347,18 +359,11 @@
         const mount = g.createLinearGradient(-4, -12, 16, 12);
         mount.addColorStop(0, '#93a6af'); mount.addColorStop(.32, '#536c7b'); mount.addColorStop(1, '#1a303f');
         g.fillStyle = mount; g.fill(); g.strokeStyle = '#122431'; g.lineWidth = 1.3; g.stroke();
-        const recoil = clamp((finite(robot.flashUntil) - t) * 32, 0, 4); g.translate(-recoil, 0);
+        g.translate(-6 * kick, 0);
         this._weapon(g, robot.weapon.kind, robot.weapon.ammo > 0, color);
         circle(g, 6, 0, 5.5); g.fillStyle = '#293f4c'; g.fill();
         circle(g, 6, 0, 2.1); g.fillStyle = '#7e9098'; g.fill(); stroke(g, 4.9, 0, 7.1, 0, '#1c2c36', .8);
-        if (robot.flashUntil > t) {
-          const rocket = robot.weapon.kind === 'rocket', muzzle = rocket ? 40 : 47;
-          const length = 9 + clamp((robot.flashUntil - t) * 100, 0, 14);
-          g.globalCompositeOperation = 'screen';
-          path(g, [[muzzle,-3],[muzzle+8,-6],[muzzle+5+length,0],[muzzle+8,6],[muzzle,3]]);
-          g.fillStyle = rocket ? '#ffd0a0' : '#d8f6ff'; g.fill();
-          glow(g, muzzle + 2, 0, 23, rocket ? '#ffb15c' : '#81d9ee', .34);
-        }
+        fx.muzzle(g, robot.weapon.kind === 'rocket' ? 40 : 47, shotAge, color, this.sunny);
         g.restore();
       } else {
         g.save(); g.rotate(aim); g.scale(bodyScale, bodyScale);
@@ -384,7 +389,8 @@
           if (e.type === 'ko' && e.round === episode.roundNumber && e.team === robot.id) { ko = e; break; }
         }
         const age = ko ? Math.max(0, (episode.step - ko.step) / 60) : Infinity;
-        if (age < 6) for (let i = 0; i < 2; i++) {
+        // In der Material-Arena raucht das Wrack über die Rauchebene (E5), hier nur in den älteren Arenen.
+        if (!robot.wreckSmoke && age < 6) for (let i = 0; i < 2; i++) {
           const phase = (age * .38 + i * .47) % 1, height = (16 + phase * 22) * bodyScale;
           const drift = Math.sin(age * 1.6 + i * 2.4) * 5 * bodyScale;
           const x = rearX + (i * 5 - 2.5) * bodyScale;
@@ -414,10 +420,6 @@
           g.restore();
         }
       }
-      if (robot.hurtUntil > t) {
-        circle(g, 0, 0, radius + 7); g.strokeStyle = rgba('#ffe6cf', clamp((robot.hurtUntil - t) * 5, 0, .8));
-        g.lineWidth = 2; g.stroke();
-      }
       g.restore();
     }
     _projectile(g, p) {
@@ -428,7 +430,7 @@
         for (let k = 8; k > 0; k--) {
           const dist = 10 + k * 6, jitter = noise(p.id, k) * Math.PI * 2;
           circle(g, p.x - ux * dist + Math.sin(jitter) * k * .9, p.y - uy * dist + Math.cos(jitter) * k * .9, 2 + k * 1.3);
-          g.fillStyle = `rgba(144,144,130,${(9 - k) * .016 * 1.6})`; g.fill();
+          g.fillStyle = this.sunny ? `rgba(109,106,98,${(9 - k) * .016 * 2})` : `rgba(144,144,130,${(9 - k) * .016 * 1.6})`; g.fill();
         }
         glow(g, p.x - ux * 9, p.y - uy * 9, 19, '#ffb25b', .29);
         g.translate(p.x, p.y); g.rotate(a);
@@ -439,33 +441,28 @@
         metal.addColorStop(0, '#d1d1b9'); metal.addColorStop(.5, '#8e9e9c'); metal.addColorStop(1, '#465e69');
         g.fillStyle = metal; g.fill(); path(g, [[6,-3],[11,0],[6,3]]); g.fillStyle = '#d88459'; g.fill();
         stroke(g, -4, -2, 5, -2, '#eff3da', .8);
-      } else {
-        const len = 26 + noise(p.id, 0) * 8;
-        g.globalCompositeOperation = 'screen'; g.lineCap = 'round';
-        stroke(g, p.x - ux * len, p.y - uy * len, p.x, p.y, '#6fd3ef40', 7);
-        const beam = g.createLinearGradient(p.x - ux * len, p.y - uy * len, p.x, p.y);
-        beam.addColorStop(0, '#f2fdff00'); beam.addColorStop(.25, '#f2fdffbb'); beam.addColorStop(1, '#f2fdff');
-        stroke(g, p.x - ux * len, p.y - uy * len, p.x, p.y, beam, 3);
-        glow(g, p.x, p.y, 10, '#6fd3ef', .35);
-      }
+      } else EBS.ScrapEffectsArt.bolt(g, p, palette[(p.owner ?? 0) % 4], this.sunny);
       g.restore();
     }
     _effect(g, e, under = false) {
       if (e.type === 'break' && e.material) { EBS.ScrapMaterialArt.breakEffect(g, e, under, this.sunny); return; }
       if (e.type === 'shot') return; // The weapon supplies its muzzle flash.
       if (!['hit', 'blast', 'ko'].includes(e.type)) { super._effect(g, e, under); return; }
-      if (under || e.age >= e.ttl) return;
+      const fx = EBS.ScrapEffectsArt;
+      if (e.age >= e.ttl) return;
+      if (e.type === 'hit') {
+        // Größe 24 = Treffer am Roboter (E2); Größe 17 = Einschlag des Blasters, an Deckung je Material (E3)
+        if (under) return;
+        if (e.size >= 20) fx.robotHit(g, e, this.sunny);
+        else if (e.cover) fx.coverHit(g, e, this.sunny);
+        else if (!e.onRobot) fx.impact(g, e);
+        return;
+      }
+      if (this.materialArena) { fx.blast(g, e, under, this.sunny, e.type === 'ko'); return; }
+      if (under) return;
       const u = Math.max(0, e.age / e.ttl), seed = e.seed >>> 0, tau = Math.PI * 2;
       g.save(); g.translate(e.x, e.y);
-      if (e.type === 'hit') {
-        g.globalCompositeOperation = 'screen';
-        if (u < .25) { circle(g, 0, 0, 6); g.fillStyle = rgba('#ffffff', .7 * (1 - u / .25)); g.fill(); }
-        glow(g, 0, 0, 10, '#ffe5aa', .3 * (1 - u));
-        for (let i = 0; i < 6; i++) {
-          const a = noise(seed, i) * tau, d = 2 + u * 13, len = (6 + noise(seed, i + 10) * 4) * (1 - u);
-          stroke(g, Math.cos(a) * d, Math.sin(a) * d, Math.cos(a) * (d + len), Math.sin(a) * (d + len), rgba('#ffe5aa', (1 - u) ** 2), 1.5);
-        }
-      } else {
+      {
         const s = Math.min(150, Math.max(4, e.size || 60)) * (e.type === 'ko' ? 1.25 : 1);
         for (let i = 0; i < 6; i++) {
           const a = noise(seed, i) * tau, d = s * (.12 + noise(seed, i + 10) * .18 + u * .15);
@@ -535,6 +532,8 @@
     constructor(ctx) {
       super(ctx);
       this.sim = ctx.sim; this.view = ctx.view; this.layout = layout(ctx.world, ctx.sim.cfg);
+      // Raketen-Regeln (Short oder Schalter): Münzen, Ring und Abzeichen, Startkisten in Teamfarbe, Bretter blenden aus
+      this.rocketLook = !!this.layout.short || ctx.sim.cfg.items === 'rockets';
       this.arenaCanvas = document.createElement('canvas');
       this.arena = new ArenaRenderer(this.arenaCanvas, { dpr: 1, quality: 1 });
       this.arena.episode = this.sim;
@@ -676,12 +675,19 @@
     paintMaterialArena(g) {
       const s=this.sim,r=s.roundSim,l=this.layout,art=EBS.ScrapMaterialArt,portrait=l.kind==='portrait';
       const final=s.cfg.episodeMode==='tournament'&&s.completedRounds===8;
-      const elapsed=s.phase==='pause'?s.cfg.endPauseSec-(s.pauseUntil-s.step)/60:final?Math.max(0,5-(s.outroUntil-s.step)/60):0;
+      // Short: Die Runde steht nach dem Sieg still; die letzten Effekte laufen über die Abspannzeit weiter.
+      // In der Zeitlupe (S2) altern sie langsamer: Szenenzeit statt Videozeit.
+      const elapsed=l.short?(r.phase==='ended'?Math.max(0,s.sceneTime(s.step)-s.sceneTime(s.outroUntil-EBS.Scrap.SHORT_END_SEC*60)):0)
+        :s.phase==='pause'?s.cfg.endPauseSec-(s.pauseUntil-s.step)/60:final?Math.max(0,5-(s.outroUntil-s.step)/60):0;
       const mapPoint=p=>portrait?{...p,x:r.bounds.h-p.y,y:p.x,
-        ...('vx' in p?{vx:-p.vy,vy:p.vx}:{}),...('angle' in p?{angle:p.angle+Math.PI/2}:{}),
+        ...('vx' in p?{vx:-p.vy,vy:p.vx}:{}),...('angle' in p?{angle:p.angle+Math.PI/2}:{}),...('heading' in p?{heading:p.heading+Math.PI/2}:{}),
         ...('px' in p?{px:r.bounds.h-p.py,py:p.px}:{})}:p;
       const robots=r.robots.map(mapPoint),effects=r.effects.slice(-100).map(e=>({...mapPoint(e),age:e.age+elapsed}));
       const blocks=portrait?r.blocks.map(b=>({...b,x:r.bounds.h-b.y-b.h,y:b.x,w:b.h,h:b.w})):r.blocks;
+      const fx=EBS.ScrapEffectsArt,scene=this._fxScene(mapPoint,robots);
+      // Quer liefert mapPoint die Simulationsobjekte selbst: Zusatzfelder nur auf Kopien, nie auf der Simulation
+      const shown=robots.map(robot=>{const n=scene.nudge.get(robot.id);return {...robot,nudgeX:n?n.x:0,nudgeY:n?n.y:0,wreckSmoke:true};});
+      for(const e of effects)if(e.type==='hit'&&e.size<20)this._annotateImpact(e,blocks,robots);
       const c=this.view.camera?s.camera:{x:r.bounds.w/2,y:r.bounds.h/2,zoom:1};
       const cx=portrait?r.bounds.h-c.y:c.x,cy=portrait?c.x:c.y;
       g.fillStyle='#10191f';g.fillRect(0,0,this.world.w,this.world.h);
@@ -696,20 +702,33 @@
         const t=art.block(b,this.arena._blocks,true);g.drawImage(t.shadow,b.x-t.pad,b.y-t.pad,t.width,t.height);
       }
       for(const b of blocks)if(!b.alive)art.rubble(g,b,sunny);
+      this._paintCrates(g,r,portrait,sunny,'under');
       for(const pad of r.pads) {
         const occupied=r.pickups.some(p=>!p.empty&&p.ammo>0&&Math.hypot(p.x-pad.x,p.y-pad.y)<40);
-        if(sunny)art.sunnyPad(g,mapPoint(pad));else art.pad(g,mapPoint(pad),occupied);
+        if(sunny)art.sunnyPad(g,mapPoint(pad),occupied);else art.pad(g,mapPoint(pad),occupied);
       }
       for(const e of effects)this.arena._effect(g,e,true);
-      for(const p of r.pickups)this.arena._pickup(g,mapPoint(p),r.t);
+      fx.debris(g,scene.debris,sunny);
+      // Short: Geladene Waffen stehen als drehende Münzen da (von Anfang an, nichts fällt vom Himmel)
+      for(const p of r.pickups){if(this.rocketLook&&sunny)EBS.ScrapDaylightArt.coin(g,mapPoint(p),r.t);else this.arena._pickup(g,mapPoint(p),r.t);}
       for(const b of blocks)if(b.alive) {
         const t=art.block(b,this.arena._blocks,sunny);g.drawImage(t.canvas,b.x-t.pad,b.y-t.pad,t.width,t.height);
       }
-      for(const robot of [...robots.filter(p=>!p.alive),...robots.filter(p=>p.alive)])this.arena._robot(g,robot,r.t);
+      this._paintCrates(g,r,portrait,sunny,'top');
+      for(const robot of [...shown.filter(p=>!p.alive),...shown.filter(p=>p.alive&&!p.caged)])this.arena._robot(g,robot,r.t);
+      this._paintCrates(g,r,portrait,sunny,'burst');
+      for(const t of scene.turrets)fx.turret(g,t,sunny);
       for(const p of r.projectiles)this.arena._projectile(g,mapPoint(p));
       for(const e of effects)this.arena._effect(g,e);
-      this.arena._labels(g,robots,l.arenaW,l.arenaH);
+      fx.puffs(g,scene.smoke);
+      // Short: Beim Nachladen füllen sich die Magazinpunkte wieder (nur Anzeige, auf Kopien der Roboter)
+      const reload=r.items?r.items.reload:0;
+      const labelled=r.items?robots.map(o=>o.weapon&&o.reloadUntil>r.t?{...o,weapon:{...o.weapon,ammo:o.weapon.maxAmmo*Math.max(0,1-(o.reloadUntil-r.t)/reload)}}:o):robots;
+      this.arena._labels(g,labelled,l.arenaW,l.arenaH,l.short?SHORT_ART.labels:1);
+      if(this.rocketLook){this._weaponBadges(g,robots,l.arenaW,l.arenaH);this._pickupRings(g,scene.rings);}
       g.restore();
+      // Short: keine Kopfleiste, kein Rundenbanner; nur Einstiegstext und Sieger
+      if(l.short){this.shortOverlay(g);return;}
       if(final)this.finale(g);
       else if(r.phase==='ended') {
         if (this._usesDarkMaterialArt()) this.materialRoundBanner(g);
@@ -723,8 +742,245 @@
       }
       if(this.view.hud)this.materialHud(g,final);
     }
+    // S1 · Short: Einstiegstext (0–2,5 s) und großer Sieger im Abspann. Beides folgt nur aus dem Episodenschritt
+    // und dem Rundenende im Ereignisprotokoll, nie aus gezeichneten Bildern (Seek-Regel).
+    shortOverlay(g) {
+      const s = this.sim, r = s.roundSim, l = this.layout, { w, h } = this.world, A = SHORT_ART, t = s.step / 60;
+      const title = (value, x, y, size, color) => {
+        g.font = `800 ${size}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+        g.strokeStyle = '#0c1820'; g.lineWidth = size * .2; g.strokeText(value, x, y);
+        g.fillStyle = color; g.fillText(value, x, y);
+      };
+      if (t < A.introSec) {
+        // Ab dem ersten Bild voll sichtbar (der Einstieg zählt), nur das Ausblenden ist weich
+        g.save(); g.globalAlpha = Math.max(0, Math.min(1, (A.introSec - t) / .3));
+        title('4 BOTS · 1 SURVIVOR', w / 2, h * A.introY, 82, '#fbf8ef');
+        title('PICK YOUR COLOR', w / 2, h * A.introY + 92, 56, '#ffe9a8');
+        g.restore();
+      }
+      if (r.phase !== 'ended') return;
+      const winner = r.robots.find(robot => robot.id === r.winner);
+      const since = (s.step - (s.outroUntil - EBS.Scrap.SHORT_END_SEC * 60)) / 60;
+      const p = Math.max(0, Math.min(1, (since - A.winnerDelay) / A.winnerFade));
+      if (p <= 0) return;
+      const x = l.x + l.width / 2, k = .8 + .2 * (1 - (1 - p) ** 3);
+      // Mitte der Arena; steht der Sieger selbst dort, rückt die Schrift knapp über oder unter ihn (er steht still).
+      let y = l.y + l.height / 2;
+      if (winner) {
+        const ry = l.y + winner.x * l.scale;
+        if (Math.abs(ry - y) < 170) y = ry >= y ? ry - 200 : ry + 200;
+      }
+      g.save(); g.globalAlpha = p;
+      // Weiches dunkles Band, damit die Schrift auch auf dem hellen Boden trägt
+      const band = g.createLinearGradient(0, y - 190, 0, y + 190);
+      band.addColorStop(0, 'rgba(12,24,32,0)'); band.addColorStop(.5, 'rgba(12,24,32,.5)'); band.addColorStop(1, 'rgba(12,24,32,0)');
+      g.fillStyle = band; g.fillRect(l.x, y - 190, l.width, 380);
+      // Schriftgröße 150, bei langen Namen so verkleinert, dass links und rechts Rand bleibt
+      const words = winner ? `${winner.name} WINS` : 'DRAW';
+      g.font = `800 150px ${FONT}`;
+      const size = Math.floor(150 * Math.min(1, l.width * .8 / g.measureText(words).width));
+      g.translate(x, y); g.scale(k, k);
+      title(words, 0, 0, size, winner ? colorOf(winner) : '#e6ebe6');
+      g.restore();
+    }
+    // E1–E5: liegende Splitter und Trümmer, abgesprengte Türme, Rauch und Treffer-Schubs aus dem Ereignisprotokoll
+    // der laufenden Runde. Zustandslos und seek-fest: Alter = Episodenschritt minus Ereignisschritt.
+    _fxScene(mapPoint, robots) {
+      const s = this.sim, ev = s.events || [], scene = { debris: [], turrets: [], smoke: [], nudge: new Map(), rings: [] };
+      const fx = EBS.ScrapEffectsArt, n = fx.noise, TAU = Math.PI * 2, sunny = this.arena.sunny, ts = s.timeScale || 1;
+      const smokeColor = sunny ? '#3a3936' : '#5d5b57', puffColor = sunny ? '#8d8a82' : '#9a9890';
+      const rubble = sunny ? ['#7d766a', '#5f5a52'] : ['#4e5559', '#3a4044'];
+      let columns = 0;
+      for (let i = ev.length - 1; i >= 0; i--) {
+        const e = ev[i];
+        if (e.round < s.roundNumber) break;
+        if (e.round !== s.roundNumber || !Number.isFinite(e.arenaX)) continue;
+        // Short mit Zeitlupe: Alter in Szenenzeit, damit Splitter und Rauch mit der Runde langsamer werden
+        const age = s.slow ? Math.max(0, s.sceneTime(s.step) - s.sceneTime(e.step)) : Math.max(0, (s.step - e.step) / 60) * ts;
+        const p = mapPoint({ x: e.arenaX, y: e.arenaY }), seq = e.seq;
+        const robot = e.team != null ? robots.find(r => r.id === e.team) : null, scale = Math.max(.5, (robot?.r || 24) / 24);
+        if (e.type === 'hit') {
+          if (age < .1 && robot && !scene.nudge.has(e.team)) {
+            const dx = robot.x - p.x, dy = robot.y - p.y, d = Math.hypot(dx, dy) || 1, k = 2 * Math.sin(Math.PI * age / .1);
+            scene.nudge.set(e.team, { x: dx / d * k, y: dy / d * k });
+          }
+          const count = 2 + (n(seq, 1) < .5 ? 1 : 0);
+          for (let k = 0; k < count && scene.debris.length < 40; k++) scene.debris.push({ kind: 'splinter', x: p.x, y: p.y, age, flight: .35,
+            dir: n(seq, k + 2) * TAU, dist: 12 + 8 * n(seq, k + 6), hop: 5, rot: n(seq, k + 10) * TAU, spin: 6 * (n(seq, k + 14) - .5),
+            size: 2.2 + n(seq, k + 18), color: fx.shade(palette[e.team % 4], .7) });
+        } else if (e.type === 'blast' || e.type === 'ko') {
+          const big = e.type === 'ko' ? 1.25 : 1, count = 6 + Math.floor(n(seq, 1) * 5);
+          for (let k = 0; k < count && scene.debris.length < 40; k++) scene.debris.push({ kind: 'chunk', x: p.x, y: p.y, age, flight: .5,
+            dir: n(seq, k + 20) * TAU, dist: (30 + 30 * n(seq, k + 40)) * big, hop: 14, rot: n(seq, k + 60) * TAU, spin: 8 * (n(seq, k + 80) - .5),
+            size: 2.4 + 2.2 * n(seq, k + 100), color: rubble[k % 2] });
+          if (age >= .1 && age < 2.5 && columns < 6) {
+            columns++;
+            const u = (age - .1) / 2.4, clouds = 6 + Math.floor(n(seq, 3) * 3);
+            for (let k = 0; k < clouds; k++) {
+              const a = n(seq, k + 120) * TAU, d = (8 + 22 * n(seq, k + 140)) * big;
+              scene.smoke.push({ x: p.x + Math.cos(a) * d + 8 * u, y: p.y + Math.sin(a) * d * .7 - 25 * u,
+                r: (9 + 7 * n(seq, k + 160)) * big * (1 + .7 * u), alpha: .5 * (1 - u) * Math.min(1, (age - .1) / .15), color: smokeColor });
+            }
+          }
+          if (e.type === 'ko') {
+            scene.turrets.push({ x: p.x, y: p.y, age, dir: n(seq, 7) * TAU, dist: 30 + 20 * n(seq, 8), rot: robot?.angle || 0,
+              spin: (n(seq, 9) < .5 ? -1 : 1) * (7 + 5 * n(seq, 10)), scale, color: palette[e.team % 4] });
+            // Wrack raucht bis Rundenende: drei Wölkchen je Sekunde, steigen 40 AE
+            if (columns < 6) {
+              columns++;
+              const base = robot || p, life = 1.4, start = .25;
+              for (let k = Math.max(0, Math.floor((age - start - life) * 3)); k <= Math.floor((age - start) * 3); k++) {
+                const a = age - start - k / 3; if (a < 0 || a >= life) continue;
+                const u = a / life;
+                scene.smoke.push({ x: base.x - 3 * scale + (n(seq, k + 200) - .5) * 8 + 6 * u, y: base.y - 4 * scale - 40 * u,
+                  r: (4 + 8 * u) * scale, alpha: .35 * (1 - u) * Math.min(1, a / .15), color: smokeColor });
+              }
+            }
+          }
+        } else if (e.type === 'pickup') {
+          // Short: Aufnahme sichtbar machen (Ring in Teamfarbe und aufsteigende Münze, 0,7 s)
+          if (this.rocketLook && robot && age < SHORT_ART.ringSec) scene.rings.push({ robot, age, kind: e.kind, color: palette[e.team % 4] });
+        } else if (e.type === 'crate_break') {
+          // Short: Startkisten und ihre Bretter in Teamfarbe, damit sie sich von der Holz-Deckung abheben
+          const team = palette[e.team % 4], planks = this.rocketLook && e.team != null ? [fx.shade(team, .95), fx.shade(team, .68), fx.shade(team, .82)] : ['#a8743f', '#7b532c', '#c08b52'];
+          // Short: Die Bretter bleiben nicht liegen, sie blenden von 1,0 s bis 1,8 s aus (ruhigeres Bild).
+          const fade = this.rocketLook ? Math.max(0, Math.min(1, (SHORT_ART.plankGone - age) / (SHORT_ART.plankGone - SHORT_ART.plankStay))) : 1;
+          // Bretter zählen nicht gegen die Grenze von 40 Teilen: höchstens vier Kisten je Runde
+          if (fade > 0) for (let k = 0; k < 9; k++) { const dir = (k + n(seq, k + 2)) / 9 * TAU; scene.debris.push({ kind: 'plank', x: p.x + Math.cos(dir) * 22, y: p.y + Math.sin(dir) * 22, age, flight: .45,
+            dir, dist: 30 + 26 * n(seq, k + 6), hop: 12, rot: n(seq, k + 10) * TAU, spin: 9 * (n(seq, k + 14) - .5),
+            size: 7 + 4 * n(seq, k + 18), color: planks[k % 3], ...(fade < 1 ? { alpha: fade } : {}) }); }
+          if (age < .8) {
+            const u = age / .8;
+            for (let k = 0; k < 7; k++) {
+              const a = (k + n(seq, k + 30)) / 7 * TAU, d = 18 + 34 * fx.easeOut(u);
+              scene.smoke.push({ x: p.x + Math.cos(a) * d, y: p.y + Math.sin(a) * d * .8 - 6 * u, r: 9 + 9 * u, alpha: .45 * (1 - u), color: puffColor });
+            }
+          }
+        } else if ((e.type === 'blaster' || e.type === 'rocket') && robot) {
+          const aim = robot.angle || 0;
+          if (age < .5) {
+            const u = age / .5;
+            scene.smoke.push({ x: p.x + Math.cos(aim) * 40 * scale, y: p.y + Math.sin(aim) * 40 * scale - 6 * u, r: 4 + 6 * u, alpha: .35 * (1 - u), color: puffColor });
+          }
+          if (e.type === 'rocket' && age < .7) {
+            const u = age / .7;
+            for (let k = 0; k < 3; k++) {
+              const side = (k - 1) * .7 + (n(seq, k + 30) - .5) * .4, d = (16 + 5 * k + 10 * u) * scale;
+              scene.smoke.push({ x: p.x + Math.cos(aim + Math.PI + side) * d, y: p.y + Math.sin(aim + Math.PI + side) * d - 4 * u,
+                r: 6 + 10 * u, alpha: .4 * (1 - u), color: puffColor });
+            }
+          }
+        }
+      }
+      return scene;
+    }
+    // Short: Ring in Teamfarbe um den Roboter, der gerade eine Rakete geholt hat, dazu eine aufsteigende Münze.
+    // Folgt nur aus dem Alter des Ereignisses.
+    _pickupRings(g, rings) {
+      const fx = EBS.ScrapEffectsArt, TAU = Math.PI * 2;
+      for (const ring of rings) {
+        const u = ring.age / SHORT_ART.ringSec, k = fx.easeOut(u), { x, y } = ring.robot;
+        g.save();
+        for (const [delay, width] of [[0, 6], [.25, 3]]) {
+          const v = (u - delay) / (1 - delay); if (v <= 0) continue;
+          g.beginPath(); g.arc(x, y, 30 + 40 * fx.easeOut(v), 0, TAU);
+          g.strokeStyle = fx.rgba(ring.color, .9 * (1 - v)); g.lineWidth = width * (1 - v) + 1; g.stroke();
+        }
+        EBS.ScrapDaylightArt.badge(g, x, y - 64 - 30 * k, ring.kind, 1 + .35 * Math.sin(Math.PI * Math.min(1, u * 2)), Math.min(1, (1 - u) * 3));
+        g.restore();
+      }
+    }
+    // Short: Wer Raketen trägt, bekommt die Raketen-Münze links an sein Namensschild
+    _weaponBadges(g, robots, width, height) {
+      const k = this.layout.short ? SHORT_ART.labels : 1;
+      for (const { robot, x, y } of this.arena._labelLayout(robots, width, height, k))
+        if (robot.weapon && robot.weapon.kind === 'rocket') EBS.ScrapDaylightArt.badge(g, x - 7 * k, y + 8 * k, 'rocket', .5 * k, 1);
+    }
+    // K1 · Startkisten (nur v4): Schatten wächst bis zum Aufschlag, Kiste mit Teamband, Staubring, Wackeln vor dem Ausbruch.
+    // Alles folgt aus der Rundenzeit und den Kistenzeiten der Simulation; kein Zustand im Renderer.
+    _paintCrates(g, r, portrait, sunny, layer) {
+      if (!Array.isArray(r.crates)) return;
+      const art = EBS.ScrapMaterialArt, fx = EBS.ScrapEffectsArt, t = r.t, TAU = Math.PI * 2;
+      const dust = sunny ? '#c9b48c' : '#8c8274', ink = '#0a1218';
+      for (const c0 of r.crates) {
+        if (layer === 'burst') {
+          // Ausbruch: vier Seitenwände fliegen 0,35 s nach außen, über dem Roboter
+          const u = (t - c0.openAt) / .35;
+          if (!c0.open || u < 0 || u >= 1) continue;
+          const c = portrait ? { ...c0, x: r.bounds.h - c0.y - c0.h, y: c0.x, w: c0.h, h: c0.w } : c0, cx = c.x + c.w / 2, cy = c.y + c.h / 2, k = fx.easeOut(u);
+          g.save();
+          g.beginPath(); g.arc(cx, cy, 26 + 30 * k, 0, TAU); g.fillStyle = fx.rgba(dust, .5 * (1 - u)); g.fill();
+          for (let i = 0; i < 4; i++) {
+            const a = i * Math.PI / 2, len = i % 2 ? c.h : c.w, out = c.w / 2 - 5 + 44 * k, spin = (fx.noise(c.id + 11, i) - .5) * 1.6 * k;
+            g.save(); g.translate(cx + Math.cos(a) * out, cy + Math.sin(a) * out); g.rotate(a + Math.PI / 2 + spin);
+            g.globalAlpha = 1 - u * u; g.beginPath(); g.roundRect(-len / 2, -5, len, 10, 2);
+            const team = palette[c.id % 4];
+            g.fillStyle = this.rocketLook ? fx.shade(team, i % 2 ? .7 : .92) : i % 2 ? '#a8743f' : '#c08b52'; g.fill(); g.strokeStyle = fx.rgba(ink, .6); g.lineWidth = 1.2; g.stroke();
+            g.restore();
+          }
+          g.restore();
+          continue;
+        }
+        if (c0.open) continue;
+        const c = portrait ? { ...c0, x: r.bounds.h - c0.y - c0.h, y: c0.x, w: c0.h, h: c0.w } : c0;
+        const cx = c.x + c.w / 2, cy = c.y + c.h / 2, block = { id: 40 + c.id, x: c.x, y: c.y, w: c.w, h: c.h, material: 'wood', hp: 38, maxHp: 38, alive: true };
+        const tex = art.block(block, this.arena._blocks, sunny), fall = .22, age = t - c.landAt;
+        if (layer === 'under') {
+          if (age < 0) {
+            const u = Math.max(0, Math.min(1, t / c.landAt)), k = u ** 1.5;
+            g.save(); g.beginPath(); g.ellipse(cx + 4 * k, cy + 6 * k, 10 + 38 * k, (10 + 38 * k) * .92, 0, 0, TAU);
+            g.fillStyle = fx.rgba(ink, .35 * k); g.fill(); g.restore();
+          } else if (sunny) g.drawImage(tex.shadow, c.x - tex.pad, c.y - tex.pad, tex.width, tex.height);
+          // Staubring beim Aufschlag, 0,5 s
+          if (age >= 0 && age < .5) {
+            const u = age / .5, k = fx.easeOut(u);
+            g.save(); g.beginPath(); g.ellipse(cx, cy + 4, 36 + 46 * k, (36 + 46 * k) * .85, 0, 0, TAU);
+            g.strokeStyle = fx.rgba(dust, .45 * (1 - u)); g.lineWidth = 10 * (1 - u) + 2; g.stroke();
+            for (let i = 0; i < 8; i++) {
+              const a = i / 8 * TAU + fx.noise(c.id + 3, i) * .6, d = 30 + 40 * k;
+              g.beginPath(); g.arc(cx + Math.cos(a) * d, cy + 4 + Math.sin(a) * d * .85, 6 + 8 * k, 0, TAU);
+              g.fillStyle = fx.rgba(dust, .4 * (1 - u)); g.fill();
+            }
+            g.restore();
+          }
+          continue;
+        }
+        if (age < -fall) continue;
+        g.save(); g.translate(cx, cy);
+        if (age < 0) { const u = 1 + age / fall; g.globalAlpha = Math.min(1, u * 1.6); g.scale(1.6 - .6 * u * u, 1.6 - .6 * u * u); }
+        else if (age < .12) { const s = 1 + .07 * Math.sin(Math.PI * age / .12); g.scale(s * 1.03, s * .97); }
+        const left = c0.openAt - t;
+        if (left < .45 && age >= 0) g.rotate(.06 * (1 - left / .45) * Math.sin(t * 52 + c.id));
+        g.drawImage(tex.canvas, -c.w / 2 - tex.pad, -c.h / 2 - tex.pad, tex.width, tex.height);
+        // Teamband quer über den Deckel, damit man sieht, wer in welcher Kiste steckt
+        const color = palette[c.id % 4], vertical = c.w < c.h;
+        if (this.rocketLook) {
+          // Short: ganzer Deckel in Teamfarbe mit hellem Rahmen, damit die Kiste nicht wie Holz-Deckung aussieht
+          g.beginPath(); g.roundRect(-c.w / 2 + 1.5, -c.h / 2 + 1.5, c.w - 3, c.h - 3, 5);
+          g.fillStyle = fx.rgba(color, .84); g.fill(); g.strokeStyle = fx.rgba(ink, .65); g.lineWidth = 1.8; g.stroke();
+          g.beginPath(); g.roundRect(-c.w / 2 + 9, -c.h / 2 + 9, c.w - 18, c.h - 18, 3);
+          g.strokeStyle = fx.rgba('#ffffff', .5); g.lineWidth = 2.2; g.stroke();
+          g.restore(); continue;
+        }
+        g.beginPath(); g.roundRect(vertical ? -6 : -c.w / 2 + 3, vertical ? -c.h / 2 + 3 : -10, vertical ? 12 : c.w - 6, vertical ? c.h - 14 : 12, 2);
+        g.fillStyle = fx.rgba(color, .9); g.fill(); g.strokeStyle = fx.rgba(ink, .55); g.lineWidth = 1.2; g.stroke();
+        g.restore();
+      }
+    }
+    // Ordnet einen Blaster-Einschlag (Effekt der Größe 17) einem Roboter oder einer Deckung zu, mit Richtung weg von der Deckung.
+    _annotateImpact(e, blocks, robots) {
+      for (const r of robots) if (Math.hypot(e.x - r.x, e.y - r.y) < (r.r || 24) + 8) { e.onRobot = true; return; }
+      let best = null, bestD = 7;
+      for (const b of blocks) {
+        const dx = Math.max(b.x - e.x, 0, e.x - b.x - b.w), dy = Math.max(b.y - e.y, 0, e.y - b.y - b.h), d = Math.hypot(dx, dy);
+        if (d < bestD) { best = b; bestD = d; }
+      }
+      if (!best) return;
+      const cx = (e.x - best.x - best.w / 2) / (best.w / 2), cy = (e.y - best.y - best.h / 2) / (best.h / 2), side = Math.abs(cx) > Math.abs(cy);
+      e.cover = best.material; e.nx = side ? Math.sign(cx) || 1 : 0; e.ny = side ? 0 : Math.sign(cy) || 1;
+    }
     _usesDarkMaterialArt() {
-      return this.sim.cfg.rulesVersion === 'v3' && this.sim.cfg.arena !== 'sunshine';
+      return ['v3','v4'].includes(this.sim.cfg.rulesVersion) && this.sim.cfg.arena !== 'sunshine';
     }
     _materialResultProgress(final = false) {
       const s = this.sim;
@@ -805,6 +1061,20 @@
       text(g, `${s.draws} DRAW${s.draws === 1 ? '' : 'S'}  ·  SEE YOU IN THE NEXT ARENA`, 500, 793, 21, '#9eb4bf', 'center');
       g.restore();
     }
+    // Weapon icon and ammo count in the status card; shared by the dark and the Sunny header.
+    _hudWeapon(g, robot, x, y, width, color) {
+      if (robot.weapon) {
+        g.save(); g.translate(x + width - 72, y + 35); g.scale(.8, .8);
+        this.arena._weapon(g, robot.weapon.kind, robot.weapon.ammo > 0, color, true); g.restore();
+      } else {
+        // An empty silhouette makes the missing weapon visible without
+        // adding another word to the compact status row.
+        g.save(); g.translate(x + width - 59, y + 35);
+        path(g, [[-9,-4],[2,-4],[2,-2],[12,-2],[12,2],[2,2],[2,5],[-9,5]]);
+        g.strokeStyle = '#8096a2'; g.lineWidth = 1.1; g.stroke(); g.restore();
+      }
+      text(g, robot.weapon ? Math.max(0, Math.ceil(robot.weapon.ammo)) : '—', x + width - 12, y + 35, 13, '#c4d1d6', 'right', 650);
+    }
     materialHudPolished(g, final) {
       const s = this.sim, r = s.roundSim, wide = this.world.w > 1500;
       const round = s.cfg.episodeMode === 'tournament' ? `ROUND ${s.roundNumber}/8` : `ROUND ${String(s.roundNumber).padStart(2, '0')}`;
@@ -833,17 +1103,7 @@
           if (fillWidth > 0) {
             box(g, x + 13, y + 32, fillWidth, 7, Math.min(3.5, fillWidth / 2)); g.fillStyle = color; g.fill();
           }
-          if (robot.weapon) {
-            g.save(); g.translate(x + width - 72, y + 35); g.scale(.8, .8);
-            this.arena._weapon(g, robot.weapon.kind, robot.weapon.ammo > 0, color, true); g.restore();
-          } else {
-            // An empty silhouette makes the missing weapon visible without
-            // adding another word to the compact status row.
-            g.save(); g.translate(x + width - 59, y + 35);
-            path(g, [[-9,-4],[2,-4],[2,-2],[12,-2],[12,2],[2,2],[2,5],[-9,5]]);
-            g.strokeStyle = '#8096a2'; g.lineWidth = 1.1; g.stroke(); g.restore();
-          }
-          text(g, robot.weapon ? Math.max(0, Math.ceil(robot.weapon.ammo)) : '—', x + width - 12, y + 35, 13, '#c4d1d6', 'right', 650);
+          this._hudWeapon(g, robot, x, y, width, color);
         } else text(g, 'KNOCKED OUT', x + width - 12, y + 35, 10, '#87969d', 'right', 650);
         if (s.cfg.workshop) {
           const key = robot.module || s.workshop.modules[robot.id];
@@ -864,7 +1124,7 @@
       const legendX=wide?240:this.world.w-326;
       ['wood','stone','concrete'].forEach((key,i)=>{
         const m=EBS.ScrapMaterials.materials[key],x=legendX+i*72;
-        box(g,x,46,9,9,1);g.fillStyle=s.cfg.arena==='sunshine'?EBS.ScrapMaterialArt.sunnyColors[key]:m.color;g.fill();text(g,m.name,x+14,51,10,'#9caeb6');
+        box(g,x,46,9,9,1);g.fillStyle=s.cfg.arena==='sunshine'?EBS.ScrapMaterialArt.sunnyColors[key]:m.color;g.fill();text(g,key.toUpperCase(),x+14,51,10,'#9caeb6');
       });
       const start=wide?480:12,y=wide?9:70,gap=12,ww=(this.world.w-start-12-gap*3)/4;
       r.robots.forEach((robot,i)=>{
@@ -873,9 +1133,9 @@
         g.fillStyle=color;g.fillRect(x,y+10,3,30);
         text(g,robot.name,x+13,y+17,wide?17:16,color);
         text(g,`${s.wins[robot.id]} W`,x+ww-12,y+17,14,color,'right');
-        const weapon=robot.weapon,info=!robot.alive?'OUT':weapon?`${weapon.kind==='rocket'?'RKT':'BLST'} ${weapon.ammo}`:'SEARCH';
-        text(g,info,x+ww-12,y+35,11,'#a9bac1','right',600);
-        const barWidth=ww-98;
+        if(robot.alive)this._hudWeapon(g,robot,x,y,ww,color);
+        else text(g,'KNOCKED OUT',x+ww-12,y+35,10,'#87969d','right',650);
+        const barWidth=ww-112;
         box(g,x+13,y+32,barWidth,5,2);g.fillStyle='#0b141b';g.fill();
         if(robot.alive) {box(g,x+13,y+32,barWidth*robot.hp/robot.maxHp,5,2);g.fillStyle=color;g.fill();}
         if(s.cfg.workshop) {
@@ -886,24 +1146,106 @@
     }
     destroy() { this.materialFloor=null;this.arena.destroy(); this.arenaCanvas.width = this.arenaCanvas.height = 1; super.destroy(); }
   }
+  /* Ton „soft-v1“ (R40, T2): die gewählte Hörprobe B2 „sauber“ mit leisem Wind. Fester Pegel ohne Lautheits-
+   * Einmessung; der Mischplan lässt nur die wichtigen Klänge durch. Die Dateien baut scripts/build-scrap-audio.mjs,
+   * Pegel als Dezibel-Stufen auf lautheitsgleichen Klängen. Fehlt der Schalter, bleibt der bisherige Ton. */
+  const softDb = d => 10 ** (d / 20), b2 = (...keys) => keys.map(k => 'scrap-b2-' + k);
+  const byMaterial = (wood, stone, concrete) => ({ variant: 'material', variants: { wood: { samples: b2(wood) }, stone: { samples: b2(stone) }, concrete: { samples: b2(concrete) } } });
+  // Fester Pegel +4,5 dB: Sunny Yard v4, je fünf Seeds hoch und quer à 60 s ergeben −21,6 bis −24,2 LUFS mit Wind
+  // (Median um −23). Nur K.o.- und Explosionsspitzen erreichen den Begrenzer.
+  const SOFT_AUDIO = { ceilingDb: -6, mixProfile: 'marbleworks-soft-v1', fixedGainDb: 4.5,
+    background: { file: 'scrap-wind-loop.ogg', label: 'Wind', volumeKey: 'wind', gainDb: -27.7, referenceMaster: 100,
+      loopStartSec: 1, loopEndSec: 31, fadeSec: .05 },
+    events: {
+      // Jeder Roboter feuert in seiner festen Tonlage (Ember, Azure, Amber, Moss).
+      blaster: { label: 'Blaster', samples: b2('blaster-0', 'blaster-1', 'blaster-2'), gain: softDb(-15), detune: .3,
+        variant: 'team', variants: { 0: { semis: -2 }, 1: { semis: 2 }, 2: { semis: 0 }, 3: { semis: -1 } } },
+      rocket: { label: 'Raketenstart', samples: b2('rocket-0', 'rocket-1'), gain: softDb(-16), detune: .5 },
+      hit: { label: 'Robotertreffer', samples: b2('hit-0', 'hit-1', 'hit-2'), gain: softDb(-10), detune: .6 },
+      cover_hit: { label: 'Deckungstreffer', samples: b2('wood'), gain: softDb(-16), detune: .6, ...byMaterial('wood', 'stone', 'concrete') },
+      blast: { label: 'Explosion', samples: b2('blast-0', 'blast-1'), gain: softDb(-3), detune: .5 },
+      break: { label: 'Deckung zerstört', samples: b2('break-wood'), gain: softDb(-11), detune: .5, ...byMaterial('break-wood', 'break-stone', 'break-concrete') },
+      pickup: { label: 'Waffenaufnahme', samples: b2('pickup'), gain: softDb(-15) },
+      upgrade: { label: 'Werkstattmodul', samples: b2('pickup'), gain: softDb(-15), semis: -2 },
+      drop: { label: 'Waffenabwurf', samples: b2('drop'), gain: softDb(-19) },
+      ko: { label: 'Roboter ausgeschaltet', samples: b2('ko'), gain: 1 },
+      crate_land: { label: 'Kiste landet', samples: b2('crate-land'), gain: softDb(-11) },
+      crate_break: { label: 'Kiste bricht auf', samples: b2('crate-break'), gain: softDb(-11) },
+    } };
+  // Rangfolge bei gleichem Zeitpunkt; ko und blast sind immer hörbar. Schritte = 1/60 s.
+  const SOFT_RANK = { ko: 0, blast: 2, break: 3, hit: 4, rocket: 5, blaster: 6, cover_hit: 7, pickup: 8, upgrade: 8, drop: 9, crate_land: 9, crate_break: 9 };
+  const SOFT_MIX = { minorWindow: 30, minorMax: 2, blasterWindow: 60, blasterMax: 3, blasterGap: 14, duckSteps: 18, duck: .5, pan: .35 };
+  // Vollständige Entscheidungen in Zeitfolge: Nichts Späteres ändert eine frühere Entscheidung.
+  function softMixPlan(events, { cfg, world }) {
+    if (cfg.params.soundMix !== 'soft-v1') return null;
+    const clamp = EBS.util.clamp, volume = cfg.video.volume || {}, decisions = new Map(), candidates = [], M = SOFT_MIX;
+    const stats = { total: events.length, audible: 0, unmapped: 0, muted: 0, densitySuppressed: 0, blasterSuppressed: 0, ducked: 0 };
+    for (const e of events) {
+      if (!Number.isInteger(e.seq) || !Number.isFinite(e.step) || decisions.has(e.seq)) throw new Error('Scrap: ungültiges Tonereignis.');
+      const x = Number.isFinite(e.x) ? e.x : world.w / 2, decision = { seq: e.seq, gain: 0, pan: clamp((x / world.w - .5) * 2 * M.pan, -M.pan, M.pan) };
+      decisions.set(e.seq, decision);
+      if (!Object.hasOwn(SOFT_AUDIO.events, e.type)) { stats.unmapped++; continue; }
+      if (volume[e.type] === 0 || volume.master === 0) { stats.muted++; continue; }
+      candidates.push(e);
+    }
+    candidates.sort((a, b) => a.step - b.step || SOFT_RANK[a.type] - SOFT_RANK[b.type] || a.seq - b.seq);
+    const minor = [], blasters = [], lastBlaster = new Map(); let duckUntil = -1;
+    for (const e of candidates) {
+      const decision = decisions.get(e.seq);
+      if (e.type === 'ko' || e.type === 'blast') { decision.gain = 1; duckUntil = e.step + M.duckSteps; stats.audible++; continue; }
+      while (minor.length && e.step - minor[0] >= M.minorWindow) minor.shift();
+      while (blasters.length && e.step - blasters[0] >= M.blasterWindow) blasters.shift();
+      if (minor.length >= M.minorMax) { stats.densitySuppressed++; continue; }
+      if (e.type === 'blaster') {
+        if (blasters.length >= M.blasterMax || (lastBlaster.has(e.team) && e.step - lastBlaster.get(e.team) < M.blasterGap)) { stats.blasterSuppressed++; continue; }
+        blasters.push(e.step); lastBlaster.set(e.team, e.step);
+      }
+      let gain = e.type === 'hit' ? clamp((e.p || 3) / 6, .5, 1) : e.type === 'cover_hit' ? .7 : 1;
+      if (e.step < duckUntil && (e.type === 'blaster' || e.type === 'hit' || e.type === 'cover_hit')) { gain *= M.duck; stats.ducked++; }
+      decision.gain = gain; minor.push(e.step); stats.audible++;
+    }
+    return { version: 1, profile: SOFT_AUDIO.mixProfile, events: events.map(e => decisions.get(e.seq)), stats };
+  }
+  const soundMixOf = p => p && p.soundMix === 'soft-v1' ? 'soft-v1' : 'classic';
   EBS.registerScenario({
     id: 'scrap', title: 'Scrap Wars',
     supportsClips: true,
     supportsCamera: false,
-    defaults: { rulesVersion: 'v3', episodeMode: 'endless', arena: 'yard', workshop: false, repeatRounds: true, endPauseSec: 3 },
+    defaults: { rulesVersion: 'v3', episodeMode: 'endless', arena: 'yard', workshop: false, repeatRounds: true, endPauseSec: 3, soundMix: 'classic', layout: 'standard', items: 'classic' },
     controls: [
       { key: 'episodeMode', label: 'Format', type: 'select', options: [['endless', 'Freie Videolänge'], ['tournament', 'Turnier · 8 Runden + Finale']], restart: true },
-      { key: 'rulesVersion', label: 'Arena / Kampfregeln', type: 'select', enabled: p => p.arena !== 'sunshine', options: [['v3', 'Große Arena · Holz, Stein, Beton'], ['v2', 'Bisherige Arena · flüssiger Kampf'], ['classic', 'Originalprototyp']], restart: true },
+      { key: 'rulesVersion', label: 'Arena / Kampfregeln', type: 'select', enabled: p => p.arena !== 'sunshine' || p.rulesVersion === 'v4', options: [['v4', 'Taktik-Arena · Startkisten, Zielwahl, Wegfindung'], ['v3', 'Große Arena · Holz, Stein, Beton'], ['v2', 'Bisherige Arena · flüssiger Kampf'], ['classic', 'Originalprototyp']], restart: true },
       { key: 'arena', label: 'Arena', type: 'select', options: [['yard', 'Scrapyard · ausgewogen'], ['foundry', 'Foundry · Deckungsgassen'], ['crossroads', 'Crossroads · offenes Zentrum'], ['sunshine', 'Sunny Yard · Tageslicht / Deckungsgassen']], restart: true },
+      // Short: nur Taktik-Arena auf Sunny Yard und nur im Hochformat; sonst bleibt das normale Bild.
+      { key: 'layout', label: 'Bildaufbau', type: 'select', enabled: p => p.rulesVersion === 'v4' && p.arena === 'sunshine',
+        options: [['standard', 'Normal · Kopfleiste, ganze Arena'], ['short', 'Short · kleine Karte, ohne Kopfleiste, eine Runde (nur Hochformat)']], restart: true },
+      // Raketen-Regeln: nur Taktik-Arena. Im Short gelten sie immer.
+      { key: 'items', label: 'Waffen', type: 'select', enabled: p => p.rulesVersion === 'v4' && p.layout !== 'short',
+        options: [['classic', 'Klassisch · Startwaffen und zwei Stationen'], ['rockets', 'Nur Raketen · Blaster lädt nach, Raketen von den zwei Stationen']], restart: true },
       { key: 'workshop', label: 'Werkstatt (experimentell, ein Modul je Roboter)', type: 'check', enabled: p => p.episodeMode === 'tournament', restart: true },
       { key: 'repeatRounds', label: 'Weitere Runden spielen', type: 'check', enabled: p => p.episodeMode !== 'tournament', restart: true },
       { key: 'endPauseSec', label: 'Ergebnis zeigen', type: 'range', min: 2, max: 8, step: 1, restart: true, format: v => `${v} s` },
+      // Nur Ton im Export; der Neustart baut die Lautstärkeregler für die gewählte Klangtabelle neu auf.
+      { key: 'soundMix', label: 'Ton', type: 'select', options: [['soft-v1', 'Weich · klare Klänge, leiser Wind, feste Mischung'], ['classic', 'Bisheriger Ton · auf −14 LUFS eingemessen']], restart: true, resetMix: true },
     ],
-    normalizeParams,
-    hasNaturalDuration: cfg => cfg.params.episodeMode === 'tournament',
+    // Die Simulation sieht soundMix nicht (eigene Normalisierung in der Episode), ihre Hashes bleiben gleich.
+    // layout steht hier immer (für den Schalter); die Episode kennt den Schlüssel nur im Short.
+    normalizeParams: p => { const n = normalizeParams(p); return { ...n, layout: n.layout || 'standard', items: n.items || 'classic', soundMix: soundMixOf(p) }; },
+    durationLabel: cfg => normalizeParams(cfg.params).layout === 'short'
+      ? { pending: 'Ablauf des Shorts wird berechnet …', complete: 'Automatisch: eine Runde bis zum Sieg und 2,5 Sekunden Abspann.' } : null,
+    audioForParams(p) { return soundMixOf(p) === 'soft-v1' ? SOFT_AUDIO : this.audio; },
+    createAudioMixPlan: softMixPlan,
+    hasNaturalDuration: cfg => EBS.Scrap.hasNaturalEnd(cfg),
     createExportPlan: EBS.Scrap.createExportPlan,
     create: ctx => new Episode(ctx),
     createRenderer: ctx => new ScrapRenderer(ctx),
+    // L1 · Kapitel für die Videobeschreibung: je Runde der Startzeitpunkt im Video. Ein einzelner Start (Short,
+    // eine Runde) ergibt keine Kapitel. Der Export schreibt die Liste in die JSON-Begleitdatei.
+    chapters(sim) {
+      const tournament = sim.cfg.episodeMode === 'tournament';
+      const list = sim.roundStarts.map(r => ({ timeSec: Number((r.step / 60).toFixed(3)), title: tournament && r.round === 8 ? 'Round 8 – Final' : `Round ${r.round}` }));
+      return list.length > 1 ? list : null;
+    },
     panelStats(sim) {
       const s = sim.snapshot();
       return [
@@ -938,6 +1280,9 @@
       upgrade: { label: 'Werkstattmodul', samples: ['synth:scrap-pickup'], gain: .28, semis: -2, minGap: .12 },
       drop: { label: 'Waffenabwurf', samples: ['impactTin_medium_000'], gain: .08, detune: .8 },
       ko: { label: 'Roboter ausgeschaltet', samples: ['impactMetal_light_003'], gain: .18, semis: -5 },
+      // Nur v4: Startkisten schlagen auf und brechen auf
+      crate_land: { label: 'Kiste landet', samples: ['impactWood_heavy_000'], gain: .16, semis: -5, minGap: .04 },
+      crate_break: { label: 'Kiste bricht auf', samples: ['impactWood_medium_000', 'impactWood_medium_001'], gain: .12, semis: -2, detune: .6 },
     } },
   });
 })();
