@@ -23,6 +23,7 @@ Dieser Bericht wird je Paket fortgeschrieben.
 | G5 THE GAUNTLET komplett, Einstiegsflug, Podest | **Erledigt** (26.11.) |
 | G6 Drehbuch-Casting, Vorlage „Langvideo“ | **Erledigt** (26.11.) |
 | G7 Abschluss Teil 2, Geschmacksfragen | **Erledigt** (26.11.). Offen: Antworten des Nutzers, ganzer Export nur auf Auftrag. |
+| G8 Gruben: OUT-Kiste, Schacht mit Rahmen, Abgrund | **Erledigt** (26.11.) |
 
 ---
 
@@ -1330,3 +1331,35 @@ node export.mjs --config presets/production/knockout-long.json --clip-start 176 
 - Die Beschriftung des Langvideo-Knopfs hieß noch „10 Bahnen“; nachgezogen. Sonst nur Text.
 - Gelaufen: Browser-Test „Short (M7)“ (Vorlagen, Oberfläche). Die Rechnung ist seit G6 unverändert.
 - Nicht gelaufen: voller `npm test`, ganzer Export.
+
+## G8 · Gruben: OUT-Kiste, Schacht mit Rahmen, Abgrund (26.11.2026)
+
+**Wunsch:** Die schwarzen Gruben sollen hochwertiger aussehen und zum Holz-Stil passen. Umgesetzt ist die Empfehlung
+vom 26.11., die der Nutzer freigegeben hat.
+
+**Was jetzt da ist (nur im Gesamtlevel, beide Formate):**
+
+- **OUT-Kiste** an jeder Schleuse: offene Holzkiste mit Latten, schräger Strebe, Eckpfosten und Nägeln, innen warmes
+  Dunkel. Wer zu spät kommt, fällt sichtbar hinein und verschwindet hinter der vorderen Latte.
+- **Schacht mit Rahmen** an den Fallstellen (drei Löcher der Hammergasse, Loch im Turm): Holzpfosten links und rechts,
+  unter den Bahn-Enden ein Balken mit schmalem Warnband, innen ein Verlauf von warm-dunkel zu schwarz, unten weich
+  auslaufend.
+- **Abgrund** unter der Einsturz-Brücke: Die vier Grubenstücke werden als ein Stück gezeichnet, das der schrägen Brücke
+  folgt. Unter den Planken warm-dunkel, nach unten lichter; die untere Bahn bleibt sichtbar. Kein schwarzer Block mehr.
+- Je ein Teil liegt hinter den Murmeln (in den festen Kacheln), einer davor. Der vordere Teil verdeckt eine fallende
+  Murmel ganz, bevor die Simulation sie herausnimmt.
+- Zwei neue Angaben an einer Grube, nur für die Zeichnung: `look: 'out'` (Schleuse) und `mouth` (Bahn-Enden an der
+  Öffnung eines Schachts). Die Simulation liest sie nicht; die Rechnung bleibt gleich.
+
+**Nachweise:**
+
+- Vorher-/Nachher-Bilder lokal unter `output/knockout-lab/`: `gruben-vorher-long.jpg`, `gruben-nachher-long.jpg`,
+  `gruben-schacht-long.jpg` (Nahaufnahme Hammergasse), `gruben-vorher-short.jpg`, `gruben-nachher-short.jpg`.
+- Gelaufen: `knockout-level` 12 grün, `knockout` 8 grün (altes Rennen unverändert), Browser-Tests „Seek-Regel“, „Gesamtlevel (G2)“ (Seek mit Kamera, beide Formate) und „Beide Formate“ grün, Referenz-Hashes identisch.
+- Nicht gelaufen: voller `npm test`, ganzer Export.
+
+**Grenzen:**
+
+- Das Rennen Bahn für Bahn (Teil 1) zeichnet weiter den weichen Abgrund von M5.
+- Der Schacht ist innen zu gut zwei Dritteln dunkel: Eine Murmel muss im Dunkel verschwunden sein, bevor sie in
+  1,1 Murmelbreiten Tiefe herausgenommen wird.

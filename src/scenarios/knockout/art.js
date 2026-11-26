@@ -206,6 +206,210 @@
     q.globalCompositeOperation = 'destination-in'; q.fillStyle = s; q.fillRect(0, 0, w, h);
     g.drawImage(c, p.x0 - pad, p.y0);
   }
+
+  // ---------------------------------------------------------------- Gruben im Gesamtlevel (R43 Teil 2, Paket G8)
+  // Statt schwarzer Flecken: an den Schleusen eine offene Holzkiste (OUT), an den Fallstellen ein Schacht mit
+  // Holzrahmen und Warnband, unter der Einsturz-Brücke ein Abgrund. Je ein Teil liegt hinter den Murmeln (in den festen
+  // Kacheln) und eines davor (jedes Bild neu, hängt nur an der Grube). Das Rennen Bahn für Bahn zeichnet weiter mit
+  // killPit. Maß u ist eine Murmelbreite, abgeleitet aus der Tötungstiefe (Kiste 1,2, Schacht 1,1, Abgrund 1,0).
+  const DEEP = '7,5,4';
+
+  /** Zwischen-Leinwand w × h (lokale Einheiten, Auflösung res): draw(q) zeichnet hinein, danach unten ab fadeY (Anteil
+   *  der Höhe) weich ausblenden und seitlich auf soft Einheiten weich auslaufen lassen. */
+  function layerImg(w, h, res, draw, fadeY, soft) {
+    const cw = Math.max(1, Math.ceil(w * res)), ch = Math.max(1, Math.ceil(h * res));
+    const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+    const q = c.getContext('2d'); q.scale(res, res); draw(q);
+    q.setTransform(1, 0, 0, 1, 0, 0); q.globalCompositeOperation = 'destination-in';
+    if (fadeY < 1) {
+      const m = q.createLinearGradient(0, 0, 0, ch);
+      m.addColorStop(0, '#000'); m.addColorStop(fadeY, '#000'); m.addColorStop(1, 'rgba(0,0,0,0)');
+      q.fillStyle = m; q.fillRect(0, 0, cw, ch);
+    }
+    if (soft) {
+      const f = Math.min(0.45, soft / w), m = q.createLinearGradient(0, 0, cw, 0);
+      m.addColorStop(0, 'rgba(0,0,0,0)'); m.addColorStop(f, '#000'); m.addColorStop(1 - f, '#000'); m.addColorStop(1, 'rgba(0,0,0,0)');
+      q.fillStyle = m; q.fillRect(0, 0, cw, ch);
+    }
+    return c;
+  }
+  const resOf = (g) => { const m = g.getTransform(); return Math.max(0.5, Math.min(4, Math.hypot(m.a, m.b) || 1)); };
+  /** Holzbrett als Rechteck, Licht von oben links (Maserung über die Hash-Funktion, nie Zufall). */
+  function plank(g, x, y, w, h, seed, vertical) {
+    const W = S.wall, gr = vertical ? g.createLinearGradient(x, 0, x + w, 0) : g.createLinearGradient(0, y, 0, y + h);
+    gr.addColorStop(0, S.track.top); gr.addColorStop(0.2, W.top); gr.addColorStop(0.55, W.base); gr.addColorStop(1, W.bottom);
+    g.fillStyle = gr; g.fillRect(x, y, w, h);
+    g.fillStyle = S.track.grain;
+    for (let j = 0; j < 3; j++) {
+      const a = hash(seed * 7 + j, 31), b = hash(seed + 17, j * 13 + 5), c = hash(seed * 3 + j, 77);
+      if (vertical) g.fillRect(x + w * (0.25 + 0.5 * a), y + h * 0.5 * b, 1.2, h * (0.25 + 0.35 * c));
+      else g.fillRect(x + w * 0.5 * b, y + h * (0.25 + 0.5 * a), w * (0.25 + 0.35 * c), 1.2);
+    }
+  }
+  function nail(g, x, y, r) {
+    g.fillStyle = '#3a2c20'; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
+    g.fillStyle = 'rgba(255,240,215,0.55)'; g.beginPath(); g.arc(x - r * 0.3, y - r * 0.3, r * 0.4, 0, TAU); g.fill();
+  }
+
+  /** OUT-Kiste, hinterer Teil: Schatten darunter, Rückwand aus waagerechten Brettern in warmem Dunkel, hinterer Rand. */
+  function crateBack(g, p) {
+    const u = p.depth / 1.2, x0 = p.x0, x1 = p.x1, w = x1 - x0, yr = p.y0 + 0.02 * u, yb = p.y1 + 0.14 * u;
+    g.save(); g.translate((x0 + x1) / 2, yb + 0.08 * u); g.scale(1, 0.2);
+    const sh = g.createRadialGradient(0, 0, 0, 0, 0, w * 0.62);
+    sh.addColorStop(0, 'rgba(0,0,0,0.42)'); sh.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = sh; g.beginPath(); g.arc(0, 0, w * 0.62, 0, TAU); g.fill(); g.restore();
+    const v = g.createLinearGradient(0, yr, 0, yb);
+    v.addColorStop(0, '#6a3f1d'); v.addColorStop(0.35, '#432612'); v.addColorStop(1, '#24140a');
+    g.fillStyle = v; g.fillRect(x0, yr, w, yb - yr);
+    for (let y = yr + 0.5 * u; y < yb - 4; y += 0.5 * u) {
+      g.fillStyle = 'rgba(0,0,0,0.38)'; g.fillRect(x0, y, w, 2);
+      g.fillStyle = 'rgba(255,205,150,0.07)'; g.fillRect(x0, y + 2, w, 1.5);
+    }
+    const s = g.createLinearGradient(x0, 0, x1, 0);
+    s.addColorStop(0, 'rgba(0,0,0,0.5)'); s.addColorStop(0.2, 'rgba(0,0,0,0)'); s.addColorStop(0.8, 'rgba(0,0,0,0)'); s.addColorStop(1, 'rgba(0,0,0,0.5)');
+    g.fillStyle = s; g.fillRect(x0, yr, w, yb - yr);
+    g.fillStyle = S.wall.top; g.fillRect(x0, yr - 3, w, 4);
+    g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(x0, yr + 1, w, 3);
+  }
+  /** OUT-Kiste, vorderer Teil vor den Murmeln: Latten, schräge Strebe, Eckpfosten, Nägel. Die Oberkante liegt so
+   *  hoch, dass eine Murmel ganz dahinter ist, bevor die Simulation sie herausnimmt (Tiefe 1,2 u, Radius 0,5 u). */
+  function crateFront(g, p) {
+    const u = p.depth / 1.2, x0 = p.x0, x1 = p.x1, w = x1 - x0, yt = p.y0 + 0.42 * u, yb = p.y1 + 0.14 * u, pw = 0.3 * u;
+    const n = Math.max(2, Math.round((yb - yt) / (0.62 * u))), gap = 0.05 * u, bh = (yb - yt - (n - 1) * gap) / n, s0 = Math.round(x0);
+    g.save();
+    g.shadowColor = 'rgba(0,0,0,0.45)'; g.shadowBlur = 0.3 * u; g.shadowOffsetY = 0.1 * u;
+    g.fillStyle = '#2b170b'; g.fillRect(x0 + pw - 1, yt, w - 2 * pw + 2, yb - yt);
+    g.restore();
+    for (let i = 0; i < n; i++) plank(g, x0 + pw, yt + i * (bh + gap), w - 2 * pw, bh, s0 + i, false);
+    // Schräge Strebe von unten links nach oben rechts, nur zwischen den Pfosten
+    g.save(); g.beginPath(); g.rect(x0 + pw, yt, w - 2 * pw, yb - yt); g.clip();
+    const sa = [x0 + pw, yb - 0.12 * u], sb = [x1 - pw, yt + 0.12 * u];
+    stroke(g, [sa, sb], 0.34 * u, S.wall.base, 0, 0, 'butt');
+    stroke(g, [sa, sb], 0.07 * u, S.wall.top, 0, -0.12 * u, 'butt');
+    stroke(g, [sa, sb], 0.08 * u, S.wall.bottom, 0, 0.12 * u, 'butt');
+    g.restore();
+    for (const px of [x0, x1 - pw]) {
+      plank(g, px, yt - 0.08 * u, pw, yb - yt + 0.08 * u, s0 + px, true);
+      g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(px === x0 ? px + pw - 1.5 : px, yt, 1.5, yb - yt);
+      for (let i = 0; i < n; i++) nail(g, px + pw / 2, yt + i * (bh + gap) + bh / 2, 0.055 * u);
+    }
+    g.fillStyle = 'rgba(255,232,190,0.4)'; g.fillRect(x0, yt - 0.08 * u, w, 1.5);
+  }
+
+  /** Oberkante (Linie durch die Bahn-Enden an der Öffnung p.mouth) eines Schachts. */
+  const shaftTop = (p) => {
+    const m = p.mouth;
+    if (!m) return () => p.y0 - 6;
+    const k = (m.yb - m.ya) / (m.xb - m.xa);
+    return (x) => m.ya + (x - m.xa) * k;
+  };
+  /** Schacht, hinterer Teil: Rückwand aus senkrechten Brettern (oben warm-dunkel, nach unten schwarz) und unter den
+   *  Bahn-Enden ein Balken mit schmalem Warnband. Läuft unten weich aus (eine Öffnung in die Tiefe). */
+  function shaftBack(g, p) {
+    const u = p.depth / 1.1, x0 = p.x0, x1 = p.x1, w = x1 - x0, bw = 0.28 * u, top = shaftTop(p);
+    const yT = Math.min(top(x0), top(x1)) - 4, h = p.y1 - yT, m = p.mouth;
+    const img = layerImg(w + 2, h, resOf(g), (q) => {
+      q.translate(1 - x0, -yT);
+      q.save(); q.beginPath(); q.moveTo(x0, top(x0)); q.lineTo(x1, top(x1)); q.lineTo(x1, p.y1); q.lineTo(x0, p.y1); q.closePath(); q.clip();
+      const v = q.createLinearGradient(0, p.y0, 0, p.y1);
+      v.addColorStop(0, 'rgba(74,43,20,0.97)'); v.addColorStop(0.42, 'rgba(26,15,8,0.98)'); v.addColorStop(1, `rgba(${DEEP},0.98)`);
+      q.fillStyle = v; q.fillRect(x0, yT, w, h);
+      const n = Math.max(3, Math.round((w - 2 * bw) / (0.5 * u)));
+      for (let i = 1; i < n; i++) {
+        const x = x0 + bw + i * (w - 2 * bw) / n;
+        q.fillStyle = 'rgba(0,0,0,0.34)'; q.fillRect(x - 1, yT, 2, h);
+        q.fillStyle = 'rgba(255,200,140,0.06)'; q.fillRect(x + 1, yT, 1.5, h);
+      }
+      const s = q.createLinearGradient(x0, 0, x1, 0);
+      s.addColorStop(0, 'rgba(0,0,0,0.55)'); s.addColorStop(0.24, 'rgba(0,0,0,0)'); s.addColorStop(0.76, 'rgba(0,0,0,0)'); s.addColorStop(1, 'rgba(0,0,0,0.55)');
+      q.fillStyle = s; q.fillRect(x0, yT, w, h);
+      q.restore();
+      // Balken unter den Bahn-Enden links und rechts der Öffnung, mit Warnband (die Bahn liegt darüber)
+      if (m) {
+        const ang = Math.atan2(m.yb - m.ya, m.xb - m.xa), bh = 0.36 * u;
+        for (const [xa, xe] of [[x0, m.xa], [m.xb, x1]]) {
+          if (xe - xa < 4) continue;
+          const L = (xe - xa) / Math.cos(ang);
+          q.save(); q.translate(xa, top(xa)); q.rotate(ang);
+          q.shadowColor = 'rgba(0,0,0,0.5)'; q.shadowBlur = 0.2 * u; q.shadowOffsetY = 0.08 * u;
+          q.fillStyle = S.wall.bottom; q.fillRect(0, 0, L, bh);
+          q.shadowColor = 'rgba(0,0,0,0)';
+          plank(q, 0, 0, L, bh, Math.round(xa) + 3, false);
+          hazard(q, 0, bh * 0.42, L, bh * 0.36);
+          q.restore();
+        }
+      }
+    }, 0.62, 0);
+    g.drawImage(img, x0 - 1, yT, w + 2, h);
+  }
+  /** Schacht, vorderer Teil: Dunkel vor den Murmeln, damit eine fallende Murmel in der Tiefe verschwindet, bevor die
+   *  Simulation sie herausnimmt, und davor die Seitenbretter (zur Tiefe hin dunkler). Gleicher Ausklang unten wie die
+   *  Rückwand. Die Bretter liegen als kleines Bild im Zwischenspeicher c (hängt nur an der Grube). */
+  function shaftFront(g, p, c) {
+    const u = p.depth / 1.1, h = p.y1 - p.y0, f = (y) => Math.max(0, Math.min(1, (y - p.y0) / h));
+    const v = g.createLinearGradient(0, p.y0, 0, p.y1), a = f(p.y0 + 0.16 * u), b = f(p.y0 + 0.6 * u), e = Math.max(b + 0.01, f(p.y0 + 0.8 * u));
+    v.addColorStop(0, `rgba(${DEEP},0)`); v.addColorStop(a, `rgba(${DEEP},0)`); v.addColorStop(b, `rgba(${DEEP},0.88)`);
+    v.addColorStop(e, `rgba(${DEEP},0.97)`); v.addColorStop(Math.max(e, 0.62), `rgba(${DEEP},0.97)`); v.addColorStop(1, `rgba(${DEEP},0)`);
+    g.fillStyle = v; g.fillRect(p.x0, p.y0, p.x1 - p.x0, h);
+    const top = shaftTop(p), bw = 0.28 * u, yT = Math.min(top(p.x0), top(p.x1)) - 4, H = p.y1 - yT, w = p.x1 - p.x0;
+    const img = c.walls || (c.walls = layerImg(w + 2, H, 2, (q) => {
+      q.translate(1 - p.x0, -yT);
+      for (const bx of [p.x0, p.x1 - bw]) {
+        const y = top(bx + bw / 2) + 2;
+        q.save(); q.shadowColor = 'rgba(0,0,0,0.5)'; q.shadowBlur = 0.25 * u; q.shadowOffsetX = bx === p.x0 ? 0.08 * u : -0.08 * u;
+        q.fillStyle = S.wall.bottom; q.fillRect(bx, y, bw, p.y1 - y); q.restore();
+        plank(q, bx, y, bw, p.y1 - y, Math.round(bx), true);
+        nail(q, bx + bw / 2, y + 0.3 * u, 0.05 * u);
+      }
+      q.globalCompositeOperation = 'source-atop';
+      const d = q.createLinearGradient(0, yT, 0, p.y1);
+      d.addColorStop(0, `rgba(${DEEP},0)`); d.addColorStop(0.3, `rgba(${DEEP},0.15)`); d.addColorStop(0.75, `rgba(${DEEP},0.7)`); d.addColorStop(1, `rgba(${DEEP},0.85)`);
+      q.fillStyle = d; q.fillRect(p.x0 - 1, yT, w + 2, H);
+    }, 0.62, 0));
+    g.drawImage(img, p.x0 - 1, yT, w + 2, H);
+  }
+
+  /** Abgrund unter der Einsturz-Brücke (mehrere Gruben zu einer zusammengefasst, p.k: Neigung der Oberkante).
+   *  Gezeichnet in einem gescherten Rahmen, damit die Verläufe der schrägen Brücke folgen. */
+  // Seitlich läuft er weich aus; der Rand reicht 0,6 u über die Grube hinaus, damit eine Murmel auch am Rand im
+  // vollen Dunkel verschwindet.
+  const chasmBox = (p) => {
+    const pad = 0.6 * p.depth, w = p.x1 - p.x0 + 2 * pad;
+    return { x: p.x0 - pad, y: p.y0 - p.k * pad, w, h: p.y1 - p.y0 - p.k * (p.x1 - p.x0) / 2, soft: 1.2 * p.depth };
+  };
+  function chasmFrame(g, c, k) { g.translate(c.x, c.y); g.transform(1, k, 0, 1, 0, 0); }
+  function chasmBack(g, p) {
+    const u = p.depth, c = chasmBox(p), w = c.w, h = c.h;
+    // Unter der Brücke warm-dunkel, nach unten lichter: Die untere Bahn bleibt sichtbar, es bleibt kein schwarzer Block.
+    const img = layerImg(w, h, resOf(g), (q) => {
+      const f = (y) => Math.max(0, Math.min(1, y / h)), v = q.createLinearGradient(0, 0, 0, h);
+      v.addColorStop(0, 'rgba(74,43,20,0.92)'); v.addColorStop(f(1.2 * u), 'rgba(22,13,7,0.9)'); v.addColorStop(Math.max(f(1.2 * u) + 0.01, f(3.4 * u)), `rgba(${DEEP},0.4)`);
+      v.addColorStop(1, `rgba(${DEEP},0.15)`);
+      q.fillStyle = v; q.fillRect(0, 0, w, h);
+    }, 0.7, c.soft);
+    g.save(); chasmFrame(g, c, p.k); g.drawImage(img, 0, 0, w, h); g.restore();
+  }
+  function chasmFront(g, p, cache) {
+    const u = p.depth, c = chasmBox(p), w = c.w, h = c.h;
+    const img = cache.front || (cache.front = layerImg(w, h, 1, (q) => {
+      // Nur so tief dunkel, wie eine Murmel bis zum Herausnehmen fällt (1 u), dann weich aus
+      const f = (y) => Math.max(0, Math.min(1, y / h)), b = f(0.6 * u), e = Math.max(b + 0.01, f(0.85 * u)), z = Math.max(e + 0.01, f(1.4 * u));
+      const v = q.createLinearGradient(0, 0, 0, h);
+      v.addColorStop(0, `rgba(${DEEP},0)`); v.addColorStop(f(0.14 * u), `rgba(${DEEP},0)`); v.addColorStop(b, `rgba(${DEEP},0.88)`);
+      v.addColorStop(e, `rgba(${DEEP},0.97)`); v.addColorStop(z, `rgba(${DEEP},0.97)`); v.addColorStop(Math.max(z + 0.01, f(3 * u)), `rgba(${DEEP},0)`);
+      v.addColorStop(1, `rgba(${DEEP},0)`);
+      q.fillStyle = v; q.fillRect(0, 0, w, h);
+    }, 1, c.soft));
+    g.save(); chasmFrame(g, c, p.k); g.drawImage(img, 0, 0, w, h); g.restore();
+  }
+  /** Grube im Gesamtlevel, h = { type, p, cache } vom Painter: type 'crate' (OUT-Kiste), 'shaft' (Schacht), 'chasm'
+   *  (Abgrund); front: der Teil vor den Murmeln. cache nimmt feste Zwischenbilder auf (hängen nur an der Grube). */
+  function hole(g, h, front) {
+    const p = h.p, c = h.cache || (h.cache = {});
+    if (h.type === 'crate') (front ? crateFront : crateBack)(g, p);
+    else if (h.type === 'shaft') (front ? shaftFront : shaftBack)(g, p, c);
+    else (front ? chasmFront : chasmBack)(g, p, c);
+  }
   /** Teile vor den Murmeln (Gruben, Zulaufrinnen vorn) in eine durchsichtige Leinwand. */
   function paintFront(g, sim, st) {
     for (const p of st.pits) if (p.kill) killPit(g, p);
@@ -600,5 +804,5 @@
   }
 
   EBS.KnockoutArt = { S, WORLDS, hash, text, background, hazard, killPit, lamp, stroke, metalBar, paintStatic, paintFront, drawTrack, drawElement, marble, crown, hatch, trail, shake, glitter, finishLine, outTube, woodShapes, metalShapes, hubDot, alpha, mixA,
-    levelBackground, levelDepth, levelFar, dotPattern, scaffold, pit, peg, sign };
+    levelBackground, levelDepth, levelFar, dotPattern, scaffold, pit, peg, sign, hole };
 })(typeof window !== 'undefined' ? window : globalThis);

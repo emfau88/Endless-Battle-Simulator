@@ -162,6 +162,29 @@
     return { x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad };
   };
   const hit = (a, v) => a.x1 >= v.x0 && a.x0 <= v.x1 && a.y1 >= v.y0 && a.y0 <= v.y1;
+  /** Gruben mit Tötungstiefe fürs Gesamtlevel (Paket G8): OUT-Kiste an den Schleusen (look 'out'), Schacht mit Rahmen
+   *  an Fallstellen (mit Warnstreifen), sonst Abgrund. Überlappende Abgrund-Stücke (unter der schrägen Einsturz-Brücke)
+   *  werden zu einem zusammengefasst; k ist die Neigung ihrer Oberkante (durch die linken oberen Ecken). */
+  function holesOf(pits) {
+    const out = [];
+    let run = null;
+    for (const p of pits) {
+      if (!p.kill) continue;
+      if (p.look === 'out' || p.stripes) { out.push({ type: p.look === 'out' ? 'crate' : 'shaft', p }); run = null; continue; }
+      if (run && p.x0 <= run[run.length - 1].x1 && p.x1 >= run[run.length - 1].x0) run.push(p);
+      else { run = [p]; out.push({ type: 'chasm', parts: run }); }
+    }
+    for (const h of out) {
+      if (h.parts) {
+        const ps = h.parts.slice().sort((a, b) => a.x0 - b.x0), a = ps[0], z = ps[ps.length - 1];
+        const k = ps.length > 1 && z.x0 > a.x0 ? (z.y0 - a.y0) / (z.x0 - a.x0) : 0;
+        h.p = { x0: a.x0, x1: Math.max(...ps.map((q) => q.x1)), y0: a.y0, k, y1: Math.max(...ps.map((q) => q.y1)), depth: Math.min(...ps.map((q) => q.depth)) };
+      }
+      const p = h.p, top = h.type === 'chasm' ? Math.min(p.y0, p.y0 + p.k * (p.x1 - p.x0)) : p.y0;
+      h.b = { x0: p.x0 - 2 * p.depth, y0: top - 2 * p.depth, x1: p.x1 + 2 * p.depth, y1: p.y1 + 2 * p.depth };
+    }
+    return out;
+  }
   const seen = (el, v) => el.bodies.some((b) => b.x + b.reach + 60 > v.x0 && b.x - b.reach - 60 < v.x1 && b.y + b.reach + 60 > v.y0 && b.y - b.reach - 60 < v.y1);
 
   class LevelPainter extends Painter {
@@ -178,6 +201,7 @@
       this.pegBox = st.pegs.map((p) => ({ p, b: { x0: p.x - p.rad - 12, y0: p.y - p.rad - 12, x1: p.x + p.rad + 12, y1: p.y + p.rad + 12 } }));
       this.signBox = st.signs.map((s) => ({ s, b: { x0: s.x - 260, y0: s.y - s.h - s.size * 2.4, x1: s.x + 260, y1: s.y + 12 } }));
       this.pitBox = st.pits.map((p) => ({ p, b: { x0: p.x0 - 80, y0: p.y0 - 30, x1: p.x1 + 80, y1: p.y1 + 30 } }));
+      this.holes = holesOf(st.pits);
     }
     dispose() { for (const c of this.tiles.values()) c.width = c.height = 1; this.tiles.clear(); }
 
@@ -196,6 +220,7 @@
         A.pit(g, p, sim.bounds.y1 + 400);
         if (p.stripes) A.hazard(g, p.x0 + 8, p.y1 - 22, p.x1 - p.x0 - 16, 14);
       }
+      for (const h of this.holes) if (hit(h.b, v)) A.hole(g, h, false);
       for (const { tr, b } of this.tracks) if (!tr.front && tr.kind !== 'belt' && hit(b, v)) A.drawTrack(g, tr);
       for (const { p, b } of this.pegBox) if (hit(b, v)) A.peg(g, p);
       for (const { s, b } of this.signBox) if (hit(b, v)) A.sign(g, s);
@@ -245,7 +270,7 @@
       }
       // Glitzern an der Ziellinie für jede, die gerade durch ist (nur im Finale; in den Schleusen heißt „finished“ drin)
       if (st.finish && sim.sec.fin) for (const u of runners) if (u.finished && !u.out) A.glitter(g, st.finish, rt - u.finishT, u.rid);
-      for (const { p, b } of this.pitBox) if (p.kill && hit(b, v)) A.killPit(g, p);
+      for (const h of this.holes) if (hit(h.b, v)) A.hole(g, h, true);
       for (const { tr, b } of this.tracks) if (tr.front && hit(b, v)) A.drawTrack(g, tr);
       g.restore();
       // Bildrand: weiche Vignette (fest, bewegt sich nicht mit)

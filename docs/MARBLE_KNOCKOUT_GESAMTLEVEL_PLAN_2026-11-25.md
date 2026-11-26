@@ -396,6 +396,7 @@ nachgezogen.
 | G5 | Abschnitte 6 bis 10 mit Weiche und Finale, Einstiegsflug, Podest | 100 ganze Läufe ohne Hänger, Länge rund 6 min. **Stand 26.11.: erledigt**, mit Abweichungen nach Messung (Finale mit Starttor und Nagelfeld für knappe Zieleinläufe; Hammergasse als eine Spur; Ringausbruch mit zwei Ringen; Länge rund 3:15 min) ([Bericht](MARBLE_KNOCKOUT_2026-11-25.md#g5--the-gauntlet-komplett-abschnitte-6-bis-10-einstiegsflug-podest-26112026)) |
 | G6 | Drehbuch-Casting fürs Gesamtlevel, Kapitel, Vorlage „Langvideo · Gesamtlevel“ | 20-s-Proben: Einstieg mit Flug, eine Schleuse, Finale. **Stand 26.11.: erledigt** (Geschichte: Außenseiterin im Fotofinish statt nur aufs Podest, weil im Finale nur drei fahren; Proben mit zwei Schleusen) ([Bericht](MARBLE_KNOCKOUT_2026-11-25.md#g6--drehbuch-casting-fürs-gesamtlevel-vorlage-langvideo-26112026)) |
 | G7 | Bericht, gesammelte Geschmacksfragen, README | — **Stand 26.11.: erledigt** ([Bericht](MARBLE_KNOCKOUT_2026-11-25.md#g7--abschluss-teil-2-und-gesammelte-geschmacksfragen-26112026)) |
+| G8 | Nachtrag auf Wunsch des Nutzers: Gruben als OUT-Kiste, Schacht mit Rahmen, Abgrund | Vorher-/Nachher-Bilder. **Stand 26.11.: erledigt** ([Bericht](MARBLE_KNOCKOUT_2026-11-25.md#g8--gruben-out-kiste-schacht-mit-rahmen-abgrund-26112026)) |
 
 **Stopps:** Nur nach G1 ist ein harter Stopp. Danach wird mit den Empfehlungen durchgebaut. Am Ende liegen dem Nutzer
 die 20-s-Proben und die gesammelten Fragen vor. Der ganze Export kommt nur auf Auftrag.

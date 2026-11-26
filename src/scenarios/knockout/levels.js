@@ -95,7 +95,7 @@
     const Ly = ys[2] + 260, kL = tand(10), at = (x) => Ly + (1050 - x) * kL, h = 560, hw = 1.45 * d, ex = 430;
     b.track([[1050, at(1050)], [h + hw / 2 + 0.6 * d, at(h + hw / 2 + 0.6 * d)], [h + hw / 2, at(h + hw / 2) - 0.05 * d]]);
     b.track([[h - hw / 2, at(h - hw / 2)], [ex, at(ex)]]);
-    b.pit(h - 2.2 * d, h + 2.2 * d, at(h) + 6, at(h) + 2.4 * d, { kill: true, depth: 1.1 * d });
+    b.pit(h - 2.2 * d, h + 2.2 * d, at(h) + 6, at(h) + 2.4 * d, { kill: true, depth: 1.1 * d, mouth: { xa: h - hw / 2, ya: at(h - hw / 2), xb: h + hw / 2, yb: at(h + hw / 2) } });
     b.lid({ x0: h - hw / 2 + b.rad, y0: at(h - hw / 2), x1: h + hw / 2 - b.rad, y1: at(h + hw / 2) });
     const sch = LV.schleuse(b, c, { ex, ey: at(ex), dir: -1, slope: 6, keep: c.keep, outLen: 1.4 * d, pitW: 2.4, sign: 'out' });
     const o = 0.8 * d, pl = xl + 60, pr = xr - 60;
@@ -340,7 +340,7 @@
       b.track([[xs, at(xs)], [xe + 0.6 * d, at(xe + 0.6 * d)], [xe, at(xe) - 0.12 * d]]);
       xs = h - hw / 2;
       // Grube breiter als das Loch: Wer schräg hindurchfällt (Hammertreffer), fällt sonst an ihr vorbei
-      b.pit(h - 2.2 * d, h + 2.2 * d, at(h) + 6, at(h) + 2.4 * d, { kill: true, depth: 1.1 * d });
+      b.pit(h - 2.2 * d, h + 2.2 * d, at(h) + 6, at(h) + 2.4 * d, { kill: true, depth: 1.1 * d, mouth: { xa: h - hw / 2, ya: at(h - hw / 2), xb: h + hw / 2, yb: at(h + hw / 2) } });
       b.lid({ x0: h - hw / 2 + b.rad, y0: at(h - hw / 2), x1: h + hw / 2 - b.rad, y1: at(h + hw / 2) });
     });
     b.track([[xs, at(xs)], [ex, at(ex)]]);

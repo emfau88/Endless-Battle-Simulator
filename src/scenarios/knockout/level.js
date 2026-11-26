@@ -43,7 +43,7 @@
     const ol = outLen || 2 * d, ox = fx + dir * ol, oy = fy + ol * tand(10);
     b.track([[fx, fy], [ox, oy]]);
     const px0 = fx + dir * 0.4 * d, px1 = ox + dir * pitW * d, py0 = oy + 0.4 * d, py1 = py0 + 3.2 * d;
-    b.pit(Math.min(px0, px1), Math.max(px0, px1), py0, py1, { kill: true, depth: 1.2 * d });
+    b.pit(Math.min(px0, px1), Math.max(px0, px1), py0, py1, { kill: true, depth: 1.2 * d, look: 'out' });
     b.wall([[px1, oy - 2.2 * d], [px1, py1]]);
     b.track([[px0, py1], [px1, py1]], { hidden: true });
     // sign: true = beide Schilder, 'out' = nur OUT, false = keins
