@@ -474,5 +474,5 @@
     },
   };
 
-  EBS.KnockoutLevels = { LEVELS, COLORS, BANDS, FIELD16, FIELD20 };
+  EBS.KnockoutLevels = { LEVELS, COLORS, BANDS, FIELD16, FIELD20, helpers: { turnstileOn, wallNoses } };
 })(typeof window !== 'undefined' ? window : globalThis);

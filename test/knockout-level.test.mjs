@@ -106,7 +106,8 @@ function run(seed, params, world) {
   return { s, closedAt, releasedAt, alive0, maxV };
 }
 
-for (const [name, world, params, seeds] of [['Turm (9:16)', PORT, {}, [1, 2]], ['Gauntlet Fahrt (16:9)', LAND, {}, [1]], ['Gauntlet Abschnitte (16:9)', LAND, { cam: 'sections' }, [1]]]) {
+for (const [name, world, params, seeds] of [['Turm (9:16)', PORT, {}, [1, 2]], ['Gauntlet Fahrt (16:9)', LAND, {}, [1]], ['Gauntlet Abschnitte (16:9)', LAND, { cam: 'sections' }, [1]],
+  ['Trap Tower (9:16, Rush)', PORT, { level: 'rush' }, [1, 2]]]) {
   test(`Ablauf ${name}: Schleuse schließt bei voller Quote, gibt frei, Kamera zeigt jedes Aus`, () => {
     for (const seed of seeds) {
       const { s, closedAt, releasedAt, alive0 } = run(seed, params, world);
@@ -302,4 +303,75 @@ test('Zeichnen verändert den Zustand nicht (LevelPainter mit leerem Zeichenkont
     }
     if (painter.dispose) painter.dispose();
   }
+});
+
+// ---------------------------------------------------------------- Rush (R44)
+test('Rush (R44): Schalter „level“ nur im Gesamtlevel; ohne ihn und mit „standard“ bitgleich, quer bis R3 THE GAUNTLET', () => {
+  assert.equal(sc.normalizeParams({ mode: 'level' }).level, 'standard');
+  assert.equal(sc.normalizeParams({ mode: 'level', level: 'rush' }).level, 'rush');
+  assert.equal(sc.normalizeParams({ mode: 'level', level: 'x' }).level, 'standard');
+  assert.equal(sc.normalizeParams({ mode: 'race', level: 'rush' }).level, undefined, 'nur im Gesamtlevel');
+  const go = (params, world) => { const s = new EBS.KnockoutLevelSim.KnockoutLevelSimulation({ seed: 7, params: { mode: 'level', ...params }, world }); for (let i = 0; i < 60 * 8; i++) s.stepOnce(); return [s.level.id, s.stateHash()]; };
+  assert.deepEqual(go({ level: 'standard' }, PORT), go({}, PORT));
+  assert.deepEqual(go({ level: 'standard' }, LAND), go({}, LAND));
+  assert.deepEqual(go({ level: 'rush' }, LAND), go({}, LAND), 'THE AVALANCHE fehlt noch: Rush quer zeigt THE GAUNTLET');
+  assert.equal(go({ level: 'rush' }, PORT)[0], 'trap');
+});
+
+test('TRAP TOWER (R44): 24 Farben, Käfig mit zwei Reihen ohne Überlappung, Falltür-Boden und Schleuse TOP 14', () => {
+  const s = create(1, { level: 'rush' }, PORT), L = EBS.KnockoutLevels;
+  assert.deepEqual([s.level.id, s.level.title, s.roster.length], ['trap', 'TRAP TOWER', 24]);
+  assert.equal(new Set(s.roster.map((m) => m.name)).size, 24);
+  assert.equal(new Set(s.roster.map((m) => m.color)).size, 24, 'jede Farbe einmal');
+  assert.ok(s.roster.every((m) => /^#[0-9a-f]{6}$/.test(m.color)));
+  assert.equal(L.FIELD28.length, 28); assert.equal(new Set(L.FIELD28).size, 28);
+  assert.ok(L.FIELD28.every((n) => L.COLORS[n]), 'alle 28 Farben bekannt');
+  // Startplätze: zwei Reihen im Käfig (78 bis 1002), keine zwei Murmeln überlappen
+  const slots = s.stage.start.slots, r = s.r;
+  assert.equal(slots.length, 24);
+  assert.equal(new Set(slots.map((p) => p[1].toFixed(1))).size, 2, 'zwei Reihen');
+  for (const [x] of slots) assert.ok(x - r >= 78 && x + r <= 1002, `Platz ${x} im Käfig`);
+  for (let i = 0; i < slots.length; i++) for (let j = i + 1; j < slots.length; j++) {
+    assert.ok(Math.hypot(slots[i][0] - slots[j][0], slots[i][1] - slots[j][1]) >= 2 * r, `Plätze ${i} und ${j} überlappen`);
+  }
+  // Abschnitt 1: Gefahr mit Falltür-Boden aus sieben Platten, Schleuse TOP 14; danach der Platzhalter
+  const [a, b] = s.sections, els = s.stage.elements.slice(a.els[0], a.els[1]);
+  assert.deepEqual([a.id, a.hazard, a.keep, a.sch.lamps.length, b.placeholder], ['trapdoors', true, 14, 14, true]);
+  assert.equal(els.filter((e) => e.type === 'trapdoors').map((e) => e.n).join(), '7');
+  // Ohne Rush bleibt das Startregal der alten Level wie vorher: eine Reihe
+  assert.equal(new Set(create(1, {}, PORT).stage.start.slots.map((p) => p[1])).size, 1);
+});
+
+test('TRAP TOWER (R44): Stürze auf dem Falltür-Boden, nach fünf schließen die Fallen, kein Anstoß', () => {
+  for (const seed of [1, 2, 3]) {
+    const s = create(seed, { level: 'rush' }, PORT);
+    while (s.phase !== 'end' && s.t < 40) s.stepOnce();
+    const falls = s.roster.filter((m) => m.how === 'fell').length;
+    assert.equal(s.phase, 'end');
+    assert.ok(falls >= 5 && falls <= 10, `Seed ${seed}: ${falls} Stürze`);
+    assert.ok(s.notes.some((n) => n.kind === 'traps'), 'TRAPS CLOSED');
+    // Gefängnis: Jede Gestürzte liegt am Ende sichtbar darin (aktiv, zwischen Boden und Grund), sonst niemand
+    const j = s.stage.decor.find((q) => q.kind === 'jail');
+    for (const u of s.runners) {
+      const fell = s.roster[u.rid].how === 'fell', m = u.pm;
+      assert.equal(!!u.jailed, fell, `Seed ${seed}: ${s.roster[u.rid].name} gefangen = gestürzt`);
+      if (!fell) continue;
+      assert.ok(m.active && m.x > j.x0 && m.x < j.x1 && m.y > Math.min(j.ya, j.yb) && m.y < Math.max(j.ja, j.jb), `Seed ${seed}: ${s.roster[u.rid].name} im Gefängnis (${m.x.toFixed(0)}, ${m.y.toFixed(0)})`);
+    }
+    assert.equal(s.runners.reduce((a, u) => a + u.nudges, 0) + s.stats.stuck + s.stats.timeUp, 0, 'kein Anstoß, niemand sitzt fest');
+    assert.ok(s.sections[1].p0 > 0 && s.t < 16, `Länge ${s.t.toFixed(1)} s`);
+    assert.ok(s.checkInvariants().ok);
+  }
+});
+
+test('TRAP TOWER (R44): Zeichnen verändert den Zustand nicht', () => {
+  const sim = create(2, { level: 'rush' }, PORT), painter = new EBS.KnockoutRender.LevelPainter(sim, 1), g = stub();
+  for (const t of [0.2, 3.5, 5.5, 8, 11]) {
+    while (sim.t < t && sim.phase !== 'end') sim.stepOnce();
+    const before = sim.stateHash(), seq = sim.eventSeq;
+    painter.paint(g); painter.paint(g);
+    assert.equal(sim.stateHash(), before, `bei ${t} s`);
+    assert.equal(sim.eventSeq, seq);
+  }
+  if (painter.dispose) painter.dispose();
 });

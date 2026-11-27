@@ -9,7 +9,7 @@ import vm from 'node:vm';
 
 export const FILES = ['src/core.js', 'src/scenarios/knockout/detmath.js', 'src/scenarios/knockout/physics.js', 'src/scenarios/knockout/elements.js',
   'src/scenarios/knockout/gallery.js', 'src/scenarios/knockout/stages.js', 'src/scenarios/knockout/simulation.js',
-  'src/scenarios/knockout/camera.js', 'src/scenarios/knockout/level.js', 'src/scenarios/knockout/levels.js', 'src/scenarios/knockout/levelsim.js',
+  'src/scenarios/knockout/camera.js', 'src/scenarios/knockout/level.js', 'src/scenarios/knockout/levels.js', 'src/scenarios/knockout/levels-rush.js', 'src/scenarios/knockout/levelsim.js',
   'src/scenarios/knockout/series.js'];
 
 /** Lädt die Knockout-Module in einen eigenen Kontext und gibt EBS zurück. */

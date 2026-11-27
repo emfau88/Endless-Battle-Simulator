@@ -27,7 +27,10 @@
       this.seed = seed >>> 0; this.cfg = params; this.view = world;
       this.W = world.w; this.H = world.h; this.portrait = world.h > world.w;
       this.format = this.portrait ? 'short' : 'long';
-      const spec = this.portrait ? LEVELS.tower : LEVELS.gauntlet;
+      // Level-Wahl (R44): params.level 'rush' nimmt TRAP TOWER bzw. THE AVALANCHE (levels-rush.js); solange ein Rush-Level
+      // fehlt, gilt das bisherige. Ohne Angabe wie vorher THE TOWER und THE GAUNTLET.
+      const rush = params.level === 'rush';
+      const spec = this.portrait ? (rush && LEVELS.trap ? LEVELS.trap : LEVELS.tower) : (rush && LEVELS.avalanche ? LEVELS.avalanche : LEVELS.gauntlet);
       this.level = spec; this.R = spec.rules; this.r = spec.r; this.T = spec.T;
       this.dt = EBS.DT; this.step = 0; this.t = 0;
       this.events = new Array(512); this.eventSeq = 0;
@@ -73,7 +76,8 @@
       // Kamera: steht zu Beginn schon richtig (kein Anfahren im ersten Bild)
       const mode = this.format === 'long' && params.cam === 'sections' ? 'sections' : 'ride';
       // „Abschnitte“ zeigt einen ganzen Abschnitt auf einmal und darf dafür weiter herauszoomen (bis 0,62)
-      const co = mode === 'sections' ? { ...CAM.PRESETS.long, zmin: 0.62 } : CAM.PRESETS[this.format];
+      // spec.cam (R44): eigene Kamera-Werte je Level; ohne Angabe die bisherigen
+      const co = mode === 'sections' ? { ...CAM.PRESETS.long, zmin: 0.62 } : spec.cam ? { ...CAM.PRESETS[this.format], ...spec.cam } : CAM.PRESETS[this.format];
       this.cam = CAM.create({ W: this.W, H: this.H, bounds: bo, o: co, x: bo.x0, y: bo.y0, z: 1 });
       this.cam.mode = mode;
       const f = this.focus();
@@ -141,8 +145,9 @@
         const m = u.pm;
         if (!m.active) continue;
         if (u.out) {
-          // Ausgeschiedene: verschwinden in der Grube OUT, am Rand der Welt oder unter ihrer Klappe
-          if (u.hatchT >= 0 ? m.y > u.hy + 3 * R : this.inKill(m) || this.outside(m)) m.active = false;
+          // Ausgeschiedene: verschwinden in der Grube OUT, am Rand der Welt oder unter ihrer Klappe; Gefangene (jailed)
+          // bleiben im Gefängnis liegen
+          if (!u.jailed && (u.hatchT >= 0 ? m.y > u.hy + 3 * R : this.inKill(m) || this.outside(m))) m.active = false;
           continue;
         }
         // Ankunft: Kreuzung der Lichtschranke im Becken
@@ -289,12 +294,18 @@
       this.ranking();
     }
     fell(u) {
-      const m = u.pm;
-      m.active = false;
+      // Gefängnis (R44, Grube mit jail): Wer dort hineinfällt, ist raus, bleibt aber im Spiel und liegt sichtbar auf
+      // dessen Grund. Sie wechselt auf Ebene 4 (nur Gefängnis-Wände und andere Murmeln): Sonst schlug eine Klappe beim
+      // Schließen sie zurück auf den Boden, und sie rollte als Ausgeschiedene weiter. Sonst verschwindet die Murmel wie bisher.
+      const m = u.pm, jail = this.killPits.some((p) => p.jail && m.x > p.x0 && m.x < p.x1 && m.y > p.y0 + p.depth && m.y < p.y1);
+      if (jail) { u.jailed = true; m.mask = 4; } else m.active = false;
       if (u.out) return;
       u.fell = true; u.out = true; this.markOut(u, 'fell');
       this.emit('knockout', m.x, m.y, 1, u.rid);
-      if (this.outHere >= this.needOut && !this.trapsClosed) {
+      // trapsAt (R44, je Abschnitt in der Level-Beschreibung): Die Fallen schließen schon nach so vielen Stürzen, der
+      // Rest wird an der Schleuse entschieden. Ohne Angabe wie bisher erst, wenn genug raus sind.
+      const cap = this.level.sections[this.secNo].trapsAt || this.needOut;
+      if (this.outHere >= Math.min(cap, this.needOut) && !this.trapsClosed) {
         this.trapsClosed = true;
         if (this.closeTrapsOf(this.sec)) { this.emit('traps', this.camX(), this.camY(), 0, -1); this.notes.push({ kind: 'traps', t: this.t }); }
       }
@@ -341,7 +352,10 @@
         if (!u.finished && gain >= (this.format === 'short' ? 4 : 5) && (!jump || gain > jump.gain)) jump = { rid: u.rid, gain };
       }
       const last = this.notes.reduce((m, x) => (x.kind === 'leader' || x.kind === 'jump' ? Math.max(m, x.t) : m), -99);
-      if (this.t - last < 4 || this.t - this.secT < 1.5) return;
+      // quietStart (R44, Regel im Level): im ersten Abschnitt so lange keine Einblendung (mit 24 Murmeln im Nagelfeld
+      // springen die Ränge zufällig, und der Spruch zum Start steht noch); sonst wie bisher 1,5 s
+      const calm = this.secNo === 0 && this.R.quietStart ? this.R.quietStart : 1.5;
+      if (this.t - last < 4 || this.t - this.secT < calm) return;
       if (this.leader >= 0 && this.leader !== this.noteLeader && this.t - this.leaderSince >= 1) {
         if (this.noteLeader !== -2) this.notes.push({ kind: 'leader', t: this.t, rid: this.leader });
         this.noteLeader = this.leader;
