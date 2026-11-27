@@ -40,6 +40,47 @@ export function makeSim(EBS, { seed = 1, aspect = '16:9', params = {} } = {}) {
   return new EBS.KnockoutSim.KnockoutSimulation({ seed, params: p, world: WORLD[aspect] });
 }
 
+/** Aktionswerte eines Gesamtlevel-Laufs (R44, Rush-Plan Abschnitt 2); rechnet den Lauf bis zum Ende. Gezählt wird nur
+ *  in der Phase „race“ bis zum Sieg, Platzhalter-Abschnitte nicht. onStep(sim) läuft nach jedem Schritt (Casting).
+ *    live   im Spiel: noch nicht ausgeschieden (Durchschnitt)
+ *    mIn    davon im Bildausschnitt der Kamera, schneller als 120 E/s und nicht im Becken
+ *    quiet  Summe der halben Sekunden mit weniger als zwei bewegten Murmeln im Bild
+ *    secs   je Abschnitt Dauer, bewegt im Bild und Stürze */
+export function measureAction(EBS, sim, onStep) {
+  const CAM = EBS.KnockoutCamera;
+  let n = 0, live = 0, mIn = 0, quiet = 0, qN = 0, qSum = 0, sec = sim.secNo;
+  const per = sim.sections.map((s) => ({ id: s.id, title: s.title, placeholder: s.placeholder, t0: -1, t1: -1, n: 0, mIn: 0, falls: 0 }));
+  per[0].t0 = sim.t;
+  while (sim.phase !== 'end' && sim.t < 420) {
+    sim.stepOnce();
+    if (onStep) onStep(sim);
+    if (sim.secNo !== sec) { per[sec].t1 = sim.t; sec = sim.secNo; per[sec].t0 = sim.t; }
+    if (per[sec].t0 < 0) per[sec].t0 = sim.t;
+    if (sim.phase !== 'race' || sim.winnerT >= 0 || sim.sec.placeholder) continue;
+    const vw = CAM.view(sim.cam);
+    let l = 0, mi = 0;
+    for (const u of sim.runners) {
+      if (u.out || !u.pm.active) continue;
+      l++;
+      if (u.finished) continue;
+      const m = u.pm;
+      if (m.vx * m.vx + m.vy * m.vy > 120 * 120 && m.x > vw.x0 && m.x < vw.x1 && m.y > vw.y0 && m.y < vw.y1) mi++;
+    }
+    n++; live += l; mIn += mi; per[sec].n++; per[sec].mIn += mi;
+    qSum += mi; qN++;
+    if (qN === 30) { if (qSum / qN < 2) quiet += 0.5; qSum = 0; qN = 0; }
+  }
+  const end = sim.winnerT >= 0 ? sim.winnerT : sim.t;
+  if (per[sec].t1 < 0) per[sec].t1 = end;
+  for (const m of sim.roster) if (m.how === 'fell' && m.outStage >= 0) per[m.outStage].falls++;
+  return {
+    len: sim.phase === 'end' ? sim.t : Infinity, live: live / n, mIn: mIn / n, quiet,
+    nudges: sim.runners.reduce((a, u) => a + u.nudges, 0), stuck: sim.stats.stuck, timeUp: sim.stats.timeUp,
+    falls: sim.roster.filter((m) => m.how === 'fell').length, gap: sim.finalGap, ok: sim.checkInvariants().ok,
+    secs: per.map((p) => ({ ...p, dur: p.t1 - p.t0, mIn: p.n ? p.mIn / p.n : NaN })),
+  };
+}
+
 const isMain = process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop());
 if (isMain) {
   const argv = process.argv.slice(2), cmd = argv[0] || 'race';

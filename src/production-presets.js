@@ -4,9 +4,11 @@
   'use strict';
   const labels = { naval: 'Seeschlacht', marble: 'Kugelfabrik', scrap: 'Scrap Wars', mycelium: 'Myzel', pyramid: 'Pyramide', territory: 'Territory Wars / Hex Dominion', marbleworks: 'Marble Works', waterpark: 'Wasserpark', cloudwars: 'Cloud Wars', knockout: 'Marble Knockout' };
   EBS.productionPreset = (scenario, kind, seed = 42) => {
-    if (!Object.hasOwn(labels, scenario) || !['short', 'long'].includes(kind)) throw new Error('Unbekannte Produktionsvorlage.');
+    // Marble Knockout hat dazu die Vorlage 'short-rush' (R44: TRAP TOWER)
+    const kinds = scenario === 'knockout' ? ['short', 'long', 'short-rush'] : ['short', 'long'];
+    if (!Object.hasOwn(labels, scenario) || !kinds.includes(kind)) throw new Error('Unbekannte Produktionsvorlage.');
     if (scenario === 'marbleworks') return EBS.MarbleProduction.preset(kind, seed);
-    const short = kind === 'short';
+    const short = kind === 'short' || kind === 'short-rush';
     if (scenario === 'waterpark') return {
       version: 1, name: `Wasserpark – ${short ? 'Vier Tiere (30 Sekunden)' : 'Ein Parktag (10 Minuten)'}`,
       scenario, seed,
@@ -34,6 +36,15 @@
     // Paarung mit Drehbüchern); ein einzelnes Rennen bleibt über „Rennen im Querformat“ wählbar. Beide enden mit dem
     // Rennende (40 s und 420 s sind nur Startwerte). Das Langvideo exportiert in 1440p mit 60 fps und CRF 16: Ab 1440p
     // vergibt YouTube den besseren Codec, und die Murmeln laufen mit 60 fps flüssiger (seit G9, wie Myzel).
+    // Rush (R44): Short als TRAP TOWER (24 Murmeln, Falltüren, Kehrarme, Drehbühne) auf einem geprüften Casting-Seed,
+    // sonst wie das Short mit THE TOWER.
+    if (scenario === 'knockout' && kind === 'short-rush') return {
+      version: 1, name: `${labels[scenario]} – Short (Trap Tower, Rush)`, scenario, seed: EBS.Knockout.castTrapSeed(seed),
+      params: { mode: 'level', level: 'rush', slowmo: 'on', marks: 'on', display: 'on', videoEnd: 'finish' },
+      video: { aspect: '9:16', resolution: 1080, fps: 30, durationSec: 40, tempo: 1, audio: true, volume: { master: 100 },
+        quality: { crf: 20, preset: 'medium', bitrate: null } },
+      view: { hud: true, camera: false },
+    };
     if (scenario === 'knockout') {
       const cast = short ? null : EBS.Knockout.castSeries(seed);
       return {

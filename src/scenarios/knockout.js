@@ -251,6 +251,13 @@ const TOWER_CAST = [4, 9, 59, 109, 125, 137, 149, 182];
 /** Nächster geprüfter Turm-Seed ab seed (sonst der erste der Liste). */
 const castTowerSeed = (seed) => TOWER_CAST.find((s) => s >= seed) ?? TOWER_CAST[0];
 
+// Gesamtlevel TRAP TOWER (Rush R2, scripts/knockout-casting.mjs --level trap, Seeds 1–200): 41 vollständig (höchstens
+// 40 s, Sturz auf dem Falltür-Boden, knappes Finale, Führungswechsel im Finale, kein Anstoß, Aktionswerte erreicht).
+// Von den besten 24 hier die neun mit echtem Fotofinish (Platz 1 und 2 unter 0,3 s).
+const TRAP_CAST = [67, 70, 86, 104, 110, 134, 137, 150, 197];
+/** Nächster geprüfter Trap-Tower-Seed ab seed (sonst der erste der Liste). */
+const castTrapSeed = (seed) => TRAP_CAST.find((s) => s >= seed) ?? TRAP_CAST[0];
+
 // Langvideo-Drehbücher (M8, scripts/knockout-casting.mjs --long): je Grund-Seed ein Seed pro Bahn. Geschichte: Die
 // Außenseiterin entkommt dreimal knapp und kommt ins Finale, der frühe Spitzenreiter stürzt auf Bahn 7 am Hammer,
 // das Finale entscheidet ein Fotofinish (unter 0,3 s). Das Drehbuch gilt nur zusammen mit seinem Grund-Seed
@@ -300,5 +307,5 @@ const castSeries = (seed) => {
   return { seed: c.seed, script: castGauntlet(c.seed).script.slice(), seed2: c.seed2, script2: castGauntlet(c.seed2).script.slice() };
 };
 
-EBS.Knockout = { normalizeParams, simWorld, SHORT_CAST, castShortSeed, TOWER_CAST, castTowerSeed, LONG_CAST, castLong, GAUNTLET_CAST, castGauntlet, SERIES_CAST, castSeries };
+EBS.Knockout = { normalizeParams, simWorld, SHORT_CAST, castShortSeed, TOWER_CAST, castTowerSeed, TRAP_CAST, castTrapSeed, LONG_CAST, castLong, GAUNTLET_CAST, castGauntlet, SERIES_CAST, castSeries };
 })();

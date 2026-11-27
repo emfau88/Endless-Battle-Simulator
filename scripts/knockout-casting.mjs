@@ -22,7 +22,7 @@
 // Zwei Rennen (G9): jede Paarung (Rennen 1, Rennen 2) aus GAUNTLET_CAST mit Gesamtwertung; gut ist eine Paarung, in der
 // das Fotofinish von Rennen 2 die Gesamtwertung entscheidet. Gegenprobe der ersten Paarung aus SERIES_CAST am Stück:
 //   node scripts/knockout-casting.mjs --series
-import { loadKnockout, loadKnockoutScenario, makeSim } from './knockout-lab.mjs';
+import { loadKnockout, loadKnockoutScenario, makeSim, measureAction } from './knockout-lab.mjs';
 
 const argv = process.argv.slice(2);
 const arg = (n, d) => { const i = argv.indexOf('--' + n); return i >= 0 && argv[i + 1] !== undefined ? argv[i + 1] : d; };
@@ -245,34 +245,39 @@ function castLongMain() {
 //   5. niemand einen Anstoß braucht oder festsitzt     6. mit --gold: GOLD erreicht das Finale
 //   node scripts/knockout-casting.mjs --level tower [--from 1 --to 200 --top 12 --cut 1.5 --gold --list --best 24]
 // Langvideo (gauntlet): Länge bis 600 s, Finale knapp mit --photo (Standard 0,8 s). Ein Lauf rechnet rund eine Minute.
+// Rush (R44, trap): Level-Schalter „rush“, Finale knapp unter 0,3 s (oder Zeitlupe), dazu 7. die Aktionswerte aus dem
+// Rush-Plan, Abschnitt 2 (im Spiel, bewegt im Bild, ruhige Zeit, längster Abschnitt):
+//   node scripts/knockout-casting.mjs --level trap [--from 1 --to 200 --list]
+const RUSH_ACTION = { trap: { live: 13, mIn: 9, quiet: 2, sec: 13 } };
 function castLevelMain() {
   const id = arg('level', 'tower'), spec = EBS.KnockoutLevels.LEVELS[id], aspect = spec.format === 'short' ? '9:16' : '16:9';
-  const MAX_LEN = spec.format === 'short' ? 40 : 600, GAP = Number(arg('photo', 0.8)), CUT = Number(arg('cut', 1.5)), gold = argv.includes('--gold'), rows = [];
-  const T_MAX = spec.format === 'short' ? 120 : 400;
+  const act0 = RUSH_ACTION[id], level = act0 ? 'rush' : 'standard';
+  const MAX_LEN = spec.format === 'short' ? 40 : 600, GAP = Number(arg('photo', act0 ? 0.3 : 0.8)), CUT = Number(arg('cut', 1.5)), gold = argv.includes('--gold'), rows = [];
   for (let seed = from; seed <= to; seed++) {
-    const sim = makeSim(EBS, { seed, aspect, params: { mode: 'level' } });
+    const sim = makeSim(EBS, { seed, aspect, params: { mode: 'level', level } });
     const last = sim.sections.length - 1;
     let leads = 0, lastLead = -1, cand = -1, held = 0, sample = 0, f0 = -1;
-    while (sim.phase !== 'end' && sim.t < T_MAX) {
-      sim.stepOnce();
-      if (sim.secNo !== last || sim.winnerT >= 0) continue;
+    const act = measureAction(EBS, sim, () => {
+      if (sim.secNo !== last || sim.winnerT >= 0) return;
       if (f0 < 0) f0 = sim.t;
       // Führung alle 0,25 s ab 1,5 s im Finale; ein Wechsel zählt, wenn die neue Spitze 1 s vorn bleibt (wie M7)
       if (sim.t - f0 >= 1.5 && ++sample % 15 === 0) {
         if (sim.leader === cand) held++; else { cand = sim.leader; held = 1; }
         if (held === 4 && cand !== lastLead) { if (lastLead >= 0) leads++; lastLead = cand; }
       }
-    }
+    });
     const len = sim.phase === 'end' ? sim.t : Infinity, gap = sim.finalGap >= 0 ? sim.finalGap : Infinity;
     const falls = sim.roster.filter((m) => m.how === 'fell').length, cut = Math.min(...sim.cuts.map((c) => c.gap), Infinity);
     const nudges = sim.runners.reduce((a, u) => a + u.nudges, 0) + 10 * (sim.stats.stuck + sim.stats.timeUp);
     const goldIn = sim.roster.some((m) => m.name === 'GOLD' && m.alive);
-    const checks = [len <= MAX_LEN, cut < CUT || falls >= 1, gap < GAP || sim.slow.finalDone, leads >= 1, nudges === 0, !gold || goldIn];
+    const longest = Math.max(...act.secs.filter((s) => !s.placeholder).map((s) => s.dur));
+    const action = !act0 || (act.live >= act0.live && act.mIn >= act0.mIn && act.quiet <= act0.quiet && longest <= act0.sec);
+    const checks = [len <= MAX_LEN, cut < CUT || falls >= 1, gap < GAP || sim.slow.finalDone, leads >= 1, nudges === 0, !gold || goldIn, action];
     rows.push({ seed, len, gap, cut, leads, falls, goldIn, slow: sim.slow.finalDone, winner: sim.winner >= 0 ? sim.roster[sim.winner].name : '-', checks, complete: checks.every(Boolean), ok: sim.checkInvariants().ok });
   }
   const good = rows.filter((r) => r.complete), pct = (n) => `${n} von ${rows.length} (${Math.round(n / rows.length * 100)} %)`;
   console.log(`Gesamtlevel ${spec.title}, Seeds ${from}–${to}: vollständig bei ${pct(good.length)}.`);
-  [`Länge bis ${MAX_LEN} s`, `knapper Schnitt (< ${CUT} d) oder Sturz`, `Finale knapp (< ${GAP} s oder Zeitlupe)`, 'Führungswechsel im Finale', 'ohne Anstoß und Festsitzen', 'GOLD im Finale (nur --gold)']
+  [`Länge bis ${MAX_LEN} s`, `knapper Schnitt (< ${CUT} d) oder Sturz`, `Finale knapp (< ${GAP} s oder Zeitlupe)`, 'Führungswechsel im Finale', 'ohne Anstoß und Festsitzen', 'GOLD im Finale (nur --gold)', 'Aktionswerte (nur Rush)']
     .forEach((l, i) => console.log(`  ${l.padEnd(36)} ${pct(rows.filter((r) => r.checks[i]).length)}`));
   const lens = rows.map((r) => r.len).filter(Number.isFinite).sort((a, b) => a - b);
   console.log(`  Länge Median ${lens[lens.length >> 1]?.toFixed(1)} s (kürzeste ${lens[0]?.toFixed(1)} s) · Invarianten verletzt: ${rows.filter((r) => !r.ok).length}`);

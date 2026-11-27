@@ -253,14 +253,15 @@ test('Gleicher Seed ergibt denselben Lauf samt Kamera, anderer Seed einen andere
 });
 
 test('Sichern und Laden: Weiterrechnen ergibt denselben Hash wie am Stück, auch nach einem Sprung zurück', () => {
-  for (const world of [PORT, LAND]) {
-    const a = create(9, {}, world);
+  // TRAP TOWER (R44): Sprung mitten in die Falltüren (Gefangene im Gefängnis, Ebene 4), weiter bis in SWEEPERS
+  for (const [world, params] of [[PORT, {}], [LAND, {}], [PORT, { level: 'rush' }]]) {
+    const a = create(9, params, world);
     while (a.t < 6) a.stepOnce();
     const snap = a.saveState(), mid = a.stateHash();
     while (a.t < 13) a.stepOnce();
     const end = [a.stateHash(), a.outList.join(), a.notes.length, a.secNo];
     // in eine neue Simulation laden
-    const b = create(9, {}, world);
+    const b = create(9, params, world);
     b.loadState(snap);
     assert.equal(b.stateHash(), mid, 'gleicher Zustand nach dem Laden');
     while (b.t < 13) b.stepOnce();
@@ -334,10 +335,17 @@ test('TRAP TOWER (R44): 24 Farben, Käfig mit zwei Reihen ohne Überlappung, Fal
   for (let i = 0; i < slots.length; i++) for (let j = i + 1; j < slots.length; j++) {
     assert.ok(Math.hypot(slots[i][0] - slots[j][0], slots[i][1] - slots[j][1]) >= 2 * r, `Plätze ${i} und ${j} überlappen`);
   }
-  // Abschnitt 1: Gefahr mit Falltür-Boden aus sieben Platten, Schleuse TOP 14; danach der Platzhalter
-  const [a, b] = s.sections, els = s.stage.elements.slice(a.els[0], a.els[1]);
-  assert.deepEqual([a.id, a.hazard, a.keep, a.sch.lamps.length, b.placeholder], ['trapdoors', true, 14, 14, true]);
-  assert.equal(els.filter((e) => e.type === 'trapdoors').map((e) => e.n).join(), '7');
+  // Drei Abschnitte (R2): Falltür-Boden aus sieben Platten (Gefahr, TOP 14), zwei Kehrarme (TOP 7), Drehbühne mit drei
+  // Ausgängen und Ziel; kein Platzhalter mehr
+  const [a, b, f] = s.sections, els = (q) => s.stage.elements.slice(q.els[0], q.els[1]);
+  assert.deepEqual(Array.from(s.sections, (q) => [q.id, !!q.hazard, q.keep, !!q.placeholder]),
+    [['trapdoors', true, 14, false], ['sweepers', false, 7, false], ['final', false, 1, false]]);
+  assert.deepEqual([a.sch.lamps.length, b.sch.lamps.length, !!f.fin], [14, 7, true]);
+  assert.equal(els(a).filter((e) => e.type === 'trapdoors').map((e) => e.n).join(), '7');
+  assert.deepEqual(Array.from(els(b).filter((e) => e.type === 'turnstile'), (e) => [e.arms, e.arm / s.r / 2]), [[2, 3.6], [2, 3.6]]);
+  assert.equal(els(f).filter((e) => e.type === 'maze').length, 1);
+  // Alles innerhalb der Welt: Ziel und Bahnen über dem unteren Rand
+  assert.ok(s.stage.finish.by < s.bounds.y1 - 400 && s.stage.tracks.every((t) => t.pts.every(([x, y]) => x >= 0 && x <= 1080 && y <= s.bounds.y1)));
   // Ohne Rush bleibt das Startregal der alten Level wie vorher: eine Reihe
   assert.equal(new Set(create(1, {}, PORT).stage.start.slots.map((p) => p[1])).size, 1);
 });
@@ -359,14 +367,28 @@ test('TRAP TOWER (R44): Stürze auf dem Falltür-Boden, nach fünf schließen di
       assert.ok(m.active && m.x > j.x0 && m.x < j.x1 && m.y > Math.min(j.ya, j.yb) && m.y < Math.max(j.ja, j.jb), `Seed ${seed}: ${s.roster[u.rid].name} im Gefängnis (${m.x.toFixed(0)}, ${m.y.toFixed(0)})`);
     }
     assert.equal(s.runners.reduce((a, u) => a + u.nudges, 0) + s.stats.stuck + s.stats.timeUp, 0, 'kein Anstoß, niemand sitzt fest');
-    assert.ok(s.sections[1].p0 > 0 && s.t < 16, `Länge ${s.t.toFixed(1)} s`);
+    assert.ok(s.winner >= 0 && s.t <= 40, `Seed ${seed}: Sieger nach ${s.t.toFixed(1)} s`);
     assert.ok(s.checkInvariants().ok);
   }
 });
 
+test('Vorlage „Short · Trap Tower“ (R44): geprüfter Seed, Datei gleich Oberfläche, Rennen bis zum Sieg unter 40 s', () => {
+  const p = JSON.parse(JSON.stringify(EBS.productionPreset('knockout', 'short-rush')));
+  assert.deepEqual(p, JSON.parse(readFileSync(new URL('../presets/production/knockout-short-rush.json', import.meta.url), 'utf8')));
+  assert.deepEqual([p.params.mode, p.params.level, p.video.aspect], ['level', 'rush', '9:16']);
+  assert.ok(EBS.Knockout.TRAP_CAST.includes(p.seed));
+  assert.equal(EBS.productionPreset('knockout', 'short-rush', EBS.Knockout.TRAP_CAST[1]).seed, EBS.Knockout.TRAP_CAST[1]);
+  assert.throws(() => EBS.productionPreset('scrap', 'short-rush'));
+  const s = create(p.seed, p.params, PORT);
+  assert.equal(s.level.id, 'trap');
+  while (s.phase !== 'end' && s.t < 60) s.stepOnce();
+  assert.ok(s.winner >= 0 && s.t <= 40, `Länge ${s.t.toFixed(1)} s`);
+  assert.equal(s.runners.reduce((a, u) => a + u.nudges, 0) + s.stats.stuck + s.stats.timeUp, 0, 'kein Anstoß');
+});
+
 test('TRAP TOWER (R44): Zeichnen verändert den Zustand nicht', () => {
   const sim = create(2, { level: 'rush' }, PORT), painter = new EBS.KnockoutRender.LevelPainter(sim, 1), g = stub();
-  for (const t of [0.2, 3.5, 5.5, 8, 11]) {
+  for (const t of [0.2, 3.5, 5.5, 8, 11, 15, 20, 26, 31]) {
     while (sim.t < t && sim.phase !== 'end') sim.stepOnce();
     const before = sim.stateHash(), seq = sim.eventSeq;
     painter.paint(g); painter.paint(g);
