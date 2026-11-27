@@ -2,6 +2,12 @@
 
 Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen in der [ROADMAP](ROADMAP.md).
 
+## 27.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| R44, Marble Knockout Rush: Plan für zwei neue Level mit mehr Murmeln und weniger Pausen, ohne die bestehenden Level zu ändern. Messung vorab (nur Simulation, je 8 Läufe): THE GAUNTLET hat im Schnitt 9,6 Murmeln im Spiel, 5,4 davon in Bewegung im Bild und 29 s ruhige Zeit je Rennen; der Turm mit 24 Murmeln hat 14,6 im Spiel und 10,1 in Bewegung bei gleicher Länge; THE GAUNTLET verstopft mit 24 und 28 Murmeln. Plan: Short „TRAP TOWER“ (24 Murmeln, 24 → 14 → 7 → Sieger) und Langvideo „THE AVALANCHE“ (28 Murmeln, zehn breite Abschnitte übereinander, Finale zu sechst), Rush-Regeln (kürzerer Einstieg, Freigabe und Starttor), Aktionswerte als Abnahme, Pakete R1 bis R5 mit einem Stopp nach R1. Kein Szenario-Code geändert. | Branch `murmelrennen/rush-plan` | [Plan](MARBLE_KNOCKOUT_RUSH_PLAN_2026-11-27.md) |
+
 ## 26.11.2026
 
 | Was | Commit | Bericht |
