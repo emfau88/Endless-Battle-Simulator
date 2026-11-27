@@ -147,9 +147,12 @@
     /** flaps: Zahl der Klappen. Offen hängen sie fast senkrecht; kurze Klappen lassen darunter Platz für Murmeln. */
     /** pad: Abstand der äußeren Startplätze von den Seitenwänden (Standard 0). Ohne Rand lag die äußerste Murmel links
      *  genau über dem Scharnier der ersten Klappe an der Wand und klemmte dort beim Öffnen fest. */
-    dropShelf({ x0, x1, y, n, flaps, pad = 0 }) {
+    /** rows: 2 legt die Murmeln in zwei Reihen (R44): Plätze im halben Abstand, jede zweite liegt unten auf den Klappen,
+     *  die anderen versetzt darüber in den Mulden; die Käfigwände sind dann 2 d höher. Mit 1 (Standard) wie bisher. */
+    dropShelf({ x0, x1, y, n, flaps, pad = 0, rows = 1 }) {
       const r = this.r, rad = this.rad, k = flaps || Math.max(2, Math.round((x1 - x0) / (2.6 * this.d))), fw = (x1 - x0) / k;
-      this.wall([[x0 - rad, y + rad], [x0 - rad, y - 2.4 * r]]); this.wall([[x1 + rad, y + rad], [x1 + rad, y - 2.4 * r]]);
+      const top = rows === 2 ? y - 2.4 * r - 2 * this.d : y - 2.4 * r;
+      this.wall([[x0 - rad, y + rad], [x0 - rad, top]]); this.wall([[x1 + rad, y + rad], [x1 + rad, top]]);
       const el = { type: 'gate', kind: 'shelf', x: (x0 + x1) / 2, y, s0: 0, s1: 0, at: -1, bodies: [], mode: 'manual' };
       el.frac = (t) => (el.at < 0 ? el.s1 : lerp(el.s0, el.s1, ease((t - el.at) / 0.22)));
       el.setOpen = (t, on) => { const f = el.frac(t); el.s0 = f; el.s1 = on ? 1 : 0; el.at = t; };
@@ -160,6 +163,16 @@
         el.bodies.push(this._body([{ ax: 0, ay: 0, bx: fw - 2, by: 0, rad }], (t) => ({ x: hx, y, a: 1.5 * el.frac(t) }), { look: 'trap', tag: 'gate' }));
       }
       this._add(el);
+      if (rows === 2) {
+        // Untere Reihe (gerade Plätze) von der Mitte nach außen, danach die obere; oben 0,8 d höher (berührt nicht)
+        const half = (x1 - x0 - 2 * pad) / n, mid = (n - 1) / 2, y0 = y - rad - r - 0.5, y1 = y0 - 0.8 * this.d, lo = [], hi = [];
+        for (let i = 0; i < n; i++) (i % 2 ? hi : lo).push(i);
+        const byMid = (a, b) => Math.abs(a - mid) - Math.abs(b - mid) || a - b;
+        lo.sort(byMid); hi.sort(byMid);
+        const at = (i, yy) => [x0 + pad + half * (i + 0.5), yy];
+        this.start = { x: el.x, y, dir: 0, slots: [...lo.map((i) => at(i, y0)), ...hi.map((i) => at(i, y1))], gate: el };
+        return el;
+      }
       // Plätze: der Erste der Vorrunde in die Mitte, dann nach außen
       const step = (x1 - x0 - 2 * pad) / n, mid = (n - 1) / 2, idx = [];
       for (let i = 0; i < n; i++) idx.push(i);

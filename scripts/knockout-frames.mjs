@@ -3,6 +3,7 @@
 // gerendert in Chromium mit dem echten Painter. Zum Abstimmen der Bahnen; Ausgabe nur nach output/.
 //   node scripts/knockout-frames.mjs --mode gallery --element drum --times 1,3,6,10 --out output/knockout-lab/drum.jpg
 //   node scripts/knockout-frames.mjs --mode stage --stage 3 --seed 2 --times 2,8,14,20 --aspect 16:9
+//   node scripts/knockout-frames.mjs --mode level --level rush --aspect 9:16 --seed 1 --times 0.2,3,6,9   (R44: TRAP TOWER)
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { launchBrowser, ROOT } from '../lib/browser.mjs';
@@ -13,7 +14,7 @@ const arg = (n, d) => { const i = argv.indexOf('--' + n); return i >= 0 && argv[
 const aspect = arg('aspect', '16:9'), mode = arg('mode', 'gallery');
 const times = arg('times', '1,3,6,10').split(',').map(Number);
 const out = resolve(arg('out', `output/knockout-lab/${mode}-${arg('element', arg('stage', 'x'))}-${aspect.replace(':', 'x')}.jpg`));
-const params = { mode, element: arg('element', 'all'), stage: Number(arg('stage', 0)), short: arg('short', 'A'), slowmo: 'on', field: Number(arg('field', 0)) || undefined, cam: arg('cam', 'ride') };
+const params = { mode, element: arg('element', 'all'), stage: Number(arg('stage', 0)), short: arg('short', 'A'), slowmo: 'on', field: Number(arg('field', 0)) || undefined, cam: arg('cam', 'ride'), level: arg('level', 'standard') };
 const scale = Number(arg('scale', 0.5)), cols = Number(arg('cols', aspect === '9:16' ? 4 : 2));
 
 const browser = await launchBrowser({ gpu: false });

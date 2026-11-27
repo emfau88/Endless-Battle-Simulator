@@ -84,6 +84,8 @@ function normalizeParams(input) {
   // Gesamtlevel (Teil 2): Kamera im Querformat als Fahrt oder in festen Abschnitten (nur in diesem Ablauf gesetzt)
   // Einstiegsflug übers ganze Level (nur THE GAUNTLET, seit G5), abschaltbar
   if (out.mode === 'level') { out.cam = p.cam === 'sections' ? 'sections' : 'ride'; out.intro = p.intro === 'off' ? 'off' : 'on'; }
+  // Level (R44): Standard (THE TOWER / THE GAUNTLET) oder Rush (TRAP TOWER / THE AVALANCHE, mehr Murmeln, mehr Aktion)
+  if (out.mode === 'level') out.level = p.level === 'rush' ? 'rush' : 'standard';
   // Zwei Rennen mit Gesamtwertung (G9, nur THE GAUNTLET im Querformat): Rennen 2 mit eigenem Seed und Drehbuch
   if (out.mode === 'level') {
     out.series = p.series === 'two' ? 'two' : 'one';
@@ -186,6 +188,8 @@ EBS.registerScenario({
   controls: [
     { key: 'mode', label: 'Ablauf', type: 'select', restart: true, rebuildUi: true,
       options: [['race', 'Ganzes Rennen (Bahn für Bahn)'], ['level', 'Gesamtlevel mit Kamerafahrt'], ['stage', 'Eine Bahn'], ['gallery', 'Galerie der Bausteine']] },
+    { key: 'level', label: 'Level (Gesamtlevel)', type: 'select', restart: true, affectsDuration: true, visible: (p) => p.mode === 'level',
+      options: [['standard', 'Standard: The Tower / The Gauntlet'], ['rush', 'Rush: Trap Tower / The Avalanche (in Arbeit)']] },
     { key: 'cam', label: 'Kamera im Querformat (Gesamtlevel)', type: 'select', restart: true, visible: (p) => p.mode === 'level',
       options: [['ride', 'Fahrt: folgt dem Feld'], ['sections', 'Abschnitte: fest, gleitet zum nächsten']] },
     { key: 'intro', label: 'Einstiegsflug übers Level (Querformat)', type: 'select', restart: true, affectsDuration: true, visible: (p) => p.mode === 'level',
