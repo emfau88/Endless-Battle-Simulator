@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "name": "Marble Knockout – Short (Trap Tower, Rush)",
+  "scenario": "knockout",
+  "seed": 67,
+  "params": {
+    "mode": "level",
+    "level": "rush",
+    "slowmo": "on",
+    "marks": "on",
+    "display": "on",
+    "videoEnd": "finish"
+  },
+  "video": {
+    "aspect": "9:16",
+    "resolution": 1080,
+    "fps": 30,
+    "durationSec": 40,
+    "tempo": 1,
+    "audio": true,
+    "volume": {
+      "master": 100
+    },
+    "quality": {
+      "crf": 20,
+      "preset": "medium",
+      "bitrate": null
+    }
+  },
+  "view": {
+    "hud": true,
+    "camera": false
+  }
+}

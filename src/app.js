@@ -124,7 +124,8 @@ async function bootLive() {
     session.start({ scenario: scSel.value, seed: c.seed, video, view: c.view }); // neue Standardwerte des Szenarios
     acc = 0; fit(); save(); buildScenarioUi(); syncUi();
   });
-  for (const [id, kind] of [['btnShortPreset', 'short'], ['btnLongPreset', 'long']]) {
+  // Marble Knockout hat dazu eine eigene Vorlage für das Rush-Level (R44); der Knopf erscheint nur dort
+  for (const [id, kind] of [['btnShortPreset', 'short'], ['btnLongPreset', 'long'], ['btnShortRushPreset', 'short-rush']]) {
     $(id).addEventListener('click', () => {
       const preset = EBS.productionPreset(session.cfg.scenario, kind, session.cfg.seed);
       session.start(normalizeConfig(preset));
@@ -402,6 +403,8 @@ async function bootLive() {
       : c.scenario === 'scrap' ? 'Short · eine Runde (rund 30 Sekunden)' : c.scenario === 'knockout' ? 'Short · Turm (rund 38 Sekunden)' : 'Short · 1 Minute';
     $('btnLongPreset').textContent = production ? 'Langvideo · Vollständiger Auftrag'
       : c.scenario === 'scrap' ? 'Langvideo · Turnier (8 Runden)' : c.scenario === 'knockout' ? 'Langvideo · The Gauntlet (rund 3½ Minuten)' : 'Langvideo · 10 Minuten';
+    $('rushPresetRow').hidden = c.scenario !== 'knockout';
+    $('btnShortRushPreset').textContent = 'Short · Trap Tower (Rush, rund 33 Sekunden)';
     for (const ctl of session.scenario.controls) {
       const el = $('p-' + ctl.key), v = c.params[ctl.key];
       if (!el) continue;

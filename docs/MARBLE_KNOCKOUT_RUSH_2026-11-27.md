@@ -6,7 +6,7 @@ Paket fortgeschrieben.
 | Paket | Stand | Branch |
 |---|---|---|
 | R1 · Grundlage und TRAP TOWER Abschnitt 1 | erledigt; nach der Rückmeldung Gefängnis statt Abgrund | `murmelrennen/rush-r1` |
-| R2 · TRAP TOWER komplett, Casting, Vorlage | offen | – |
+| R2 · TRAP TOWER komplett, Casting, Vorlage | erledigt | `murmelrennen/rush-r2` |
 | R3 · THE AVALANCHE Abschnitte 1 bis 5 | offen | – |
 | R4 · THE AVALANCHE Abschnitte 6 bis 10, Vorlage | offen | – |
 | R5 · Abschluss, Geschmacksfragen, README | offen | – |
@@ -179,3 +179,130 @@ nur sie; höchstens sechs auf einmal.
 - `npm run golden`: identisch mit der Referenz.
 - Nicht gelaufen: `knockout` und `knockout-elements` (nur ein Schalter an der Grube dazu), voller `npm test`, keine neue
   Probe als Video.
+
+## R2 · TRAP TOWER komplett, Casting, Vorlage (27.11.2026)
+
+### Kurzfassung
+
+- TRAP TOWER ist komplett: **TRAPDOORS** (24 → TOP 14), **SWEEPERS** (14 → TOP 7), **FINAL** (7 → Sieger). Der
+  Platzhalter ist weg.
+- In 100 Läufen sind alle Aktionswerte des Plans erreicht, keine Murmel braucht einen Anstoß, ein Video dauert im
+  Median 32 s (höchstens 36,5 s).
+- Casting über 200 Seeds: 41 vollständig (Ziel: mindestens 8). Die Vorlage nutzt die neun mit echtem Fotofinish.
+- Neue Vorlage **„Short · Trap Tower“**: eigener Knopf (nur bei Marble Knockout sichtbar), Datei
+  `presets/production/knockout-short-rush.json`. Die Vorlagen „Short“ und „Langvideo“ bleiben unverändert.
+
+### Was gebaut ist
+
+| Datei | Änderung |
+|---|---|
+| `src/scenarios/knockout/levels-rush.js` | Abschnitte SWEEPERS und FINAL, Welt 6140 E hoch, goldener Schimmer ums Ziel; Platzhalter entfernt |
+| `src/scenarios/knockout.js` | Casting-Liste `TRAP_CAST` und `castTrapSeed` |
+| `src/production-presets.js` | Vorlage `short-rush` (nur Marble Knockout) |
+| `presets/production/knockout-short-rush.json` (neu) | dieselben Werte für die Kommandozeile |
+| `index.html`, `src/app.js` | Knopf „Short · Trap Tower (Rush, rund 33 Sekunden)“, nur bei Marble Knockout |
+| `scripts/knockout-lab.mjs` | Messung der Aktionswerte als gemeinsame Funktion `measureAction` (vorher nur im Messskript) |
+| `scripts/knockout-action.mjs` | nutzt `measureAction`; Ausgabe unverändert (THE TOWER: 9,0 / 6,6 / 2,5 s wie vorher) |
+| `scripts/knockout-casting.mjs` | `--level trap`: Rush-Schalter, Finale knapp unter 0,3 s, dazu Prüfpunkt Aktionswerte |
+
+### Die Abschnitte
+
+- **SWEEPERS** (Welt `plum`): zwei Simse über die ganze Breite mit 8°, der obere nach rechts, der untere nach links.
+  Jeder hat zwei Lücken zu 1,5 d (Abkürzung auf die Ebene darunter, kein Abgrund) und einen Kehrarm (zwei Arme zu
+  3,6 d, 0,25 U/s). Darunter ein Trichter (12°) direkt in einen breiten Mischkasten (innen 320 E) mit fünf Stiften
+  (2-1-2, 1,4 d bis zur Wand), dann eine Rampe (10°) nach links in die Schleuse TOP 7.
+- **FINAL** (Welt `gold`): Trichter (20°) über die ganze Breite in einen Kanal, innen 2,2 Murmeln breit, von vorn in
+  die Drehbühne (R 7 d, ein innerer Ring, drei Speichen, drei Ausgänge, 0,2 U/s). Darunter wie im Turm: Fangbahn,
+  Steilabfahrt mit zwei Mulden, offene Zielgerade (5°), Schiene hinter dem Ziel.
+
+### Abweichungen vom Plan
+
+| Plan | Jetzt | Grund (Messung) |
+|---|---|---|
+| Drehbühne mit Ringen 0,66 und 0,36, zwei Speichen, 0,12 U/s | ein Ring 0,5, drei Speichen, 0,2 U/s | Die Bühne hielt die Erste im Median 2,8 s und bis 16 s fest, das Finale dauerte bis 21 s. Jetzt (24 Läufe): Erste nach 2,2 s heraus, längstens 3,3 s; Finale 10 s, längstens 12,5 s. Der Ersatz (Nagelfeld) war nicht nötig. |
+| beide Kehrarme gegenläufig zum Strom | oben mit dem Strom, unten dagegen | Gegen den Strom stand oben eine Schlange aus sieben Murmeln 2 bis 3 s vor dem Arm. Die Zahlen sind in allen vier Richtungs-Paaren fast gleich (16 Läufe je Paar); so ist der Abschnitt am kürzesten (Median 9,4 s, längster 10,1 s), und unten wirft der Arm weiter Führende zurück. |
+| Mischkasten vor der Schleuse | Trichter direkt in den breiten Kasten, ohne engen Hals | Regel „Engstellen“ aus Abschnitt 2 des Plans: keine einzelne Spur. |
+| Schleuse 1 nach 12 s, Schleuse 2 nach 24 s, Sieg nach 35 s | nach rund 10, 20 und 29,5 s; Video 32 s | Alle Abschnitte sind schneller als geplant; das passt zu Shorts um 30 s. |
+
+### Messwerte (100 Läufe, nur Simulation, `scripts/knockout-action.mjs --level trap --seeds 1-100`)
+
+| Wert (Median) | THE TOWER (8 Läufe) | TRAP TOWER | Ziel des Plans |
+|---|---|---|---|
+| Im Spiel | 9,0 | 13,7 | mindestens 13 |
+| In Bewegung im Bild | 6,6 | 9,5 | mindestens 9 |
+| Ruhige Zeit | 2,5 s | 1,0 s | höchstens 2 s |
+| Längster Abschnitt je Lauf | 12,7 s | 10,4 s | höchstens 13 s |
+| Läufe mit Anstoß | 0 / 8 | 0 / 100 | höchstens 10 / 100 |
+| Videolänge | 37,2 s | 32,1 s (höchstens 36,5 s) | höchstens 40 s |
+
+| Abschnitt | Dauer (Median) | längster Lauf | in Bewegung im Bild | Stürze (Median) |
+|---|---|---|---|---|
+| 1 TRAPDOORS | 9,9 s | 10,9 s | 14,2 | 5 |
+| 2 SWEEPERS | 9,5 s | 11,5 s | 8,9 | 0 |
+| 3 FINAL | 10,0 s | 12,7 s | 5,6 | 0 |
+
+Platz 1 und 2 trennen im Ziel weniger als 0,3 s in 11 von 100 Läufen.
+
+### Casting
+
+`node scripts/knockout-casting.mjs --level trap --from 1 --to 200 --list --top 24`, nur Simulation. Vollständig
+ist ein Seed, wenn alle Punkte aus dem Plan stimmen:
+
+| Prüfpunkt | erfüllt |
+|---|---|
+| Video höchstens 40 s | 199 von 200 |
+| Sturz auf dem Falltür-Boden (oder knappe Schleuse) | 200 von 200 |
+| Finale knapp (unter 0,3 s oder Zeitlupe) | 80 von 200 |
+| Führungswechsel im Finale | 113 von 200 |
+| kein Anstoß, niemand sitzt fest | 199 von 200 |
+| Aktionswerte erreicht (im Spiel 13, in Bewegung 9, ruhig 2 s, Abschnitt 13 s) | 193 von 200 |
+| **alles zusammen** | **41 von 200 (21 %)** |
+
+Länge im Median 32,2 s, kürzeste 28,4 s; keine verletzte Invariante. Von den besten 24 (kurz und knapp) haben neun
+ein echtes Fotofinish mit unter 0,3 s zwischen Platz 1 und 2. Nur diese stehen in `TRAP_CAST`, wie beim Turm:
+
+| Seed | Länge | Abstand 1–2 | Führungswechsel | Stürze | GOLD im Finale | Sieger |
+|---|---|---|---|---|---|---|
+| 67 (Vorlage) | 33,2 s | 0,16 s | 1 | 5 | ja | BLUE |
+| 70 | 33,2 s | 0,19 s | 1 | 5 | – | MAROON |
+| 86 | 33,8 s | 0,17 s | 2 | 5 | – | YELLOW |
+| 104 | 33,3 s | 0,29 s | 2 | 6 | – | BROWN |
+| 110 | 33,3 s | 0,20 s | 2 | 6 | – | MAGENTA |
+| 134 | 35,2 s | 0,17 s | 1 | 5 | ja | OLIVE |
+| 137 | 33,2 s | 0,19 s | 1 | 5 | ja | GOLD |
+| 150 | 32,8 s | 0,17 s | 1 | 5 | – | PURPLE |
+| 197 | 31,4 s | 0,23 s | 1 | 5 | ja | PEACH |
+
+Die Vorlage nimmt wie die anderen den nächsten geprüften Seed ab dem eingestellten (Standard 42 → 67).
+
+### Nachweise (lokal in `output/knockout-lab/`, nicht im Repository)
+
+- `trap-r2-anfang-20s.mp4` und `trap-r2-finale-20s.mp4`: Vorlage „Short · Trap Tower“ (Seed 67), Sekunde 0 bis 20 und
+  13,2 bis 33,2, je 1080 × 1920, 30 fps, mit Ton; Prüfung des Exports OK. Am Ende `BLUE WINS!` mit `PHOTO FINISH`.
+- `trap-r2-proben-bilder.jpg`: je drei Bilder aus beiden Proben (Falltür-Boden mit Gefängnis, Schleuse TOP 7,
+  Kehrarme, Mischkasten, Drehbühne, Ziel).
+- `trap-r2-seed7.jpg`, `trap-r2-sweepers-seed2.jpg`, `trap-r2-final-seed96.jpg`: Bildblätter beim Bauen.
+
+```bash
+node export.mjs --config presets/production/knockout-short-rush.json --clip-start 0 --clip-duration 20 --out output/knockout-lab/trap-r2-anfang-20s.mp4
+node export.mjs --config presets/production/knockout-short-rush.json --clip-start 13.2 --clip-duration 20 --out output/knockout-lab/trap-r2-finale-20s.mp4
+```
+
+### Gelaufen
+
+- `node --test test/knockout-level.test.mjs`: 20 grün (neu: Vorlage „Short · Trap Tower“; Bau, Sturz- und
+  Zeichentest auf das ganze Level erweitert).
+- `node --test test/knockout-level-browser.test.mjs`: grün; Chromium rechnet wie Node und die Seek-Regel hält jetzt
+  auch für TRAP TOWER (Seed 3, sechs Zeitpunkte bis ins Finale).
+- `npm run golden`: identisch mit der Referenz.
+- Oberfläche im Browser: Der Knopf erscheint nur bei Marble Knockout und lädt Seed 67 hochkant mit Rush (33,7 s).
+- `scripts/knockout-action.mjs` nach dem Umbau auf `measureAction`: THE TOWER unverändert (9,0 / 6,6 / 2,5 s).
+- Nicht gelaufen: `knockout` und `knockout-elements` (nicht berührt), Exporttest der Vorlagen, voller `npm test`.
+
+### Grenzen
+
+- Im Finale sind nur noch sieben Murmeln unterwegs; dort bewegen sich im Schnitt 5,6 im Bild. Der Wert für das ganze
+  Rennen liegt trotzdem über dem Ziel.
+- Rush im Querformat zeigt bis R3 weiter THE GAUNTLET; die Auswahl sagt weiter „(in Arbeit)“.
+- Nur 21 % der Seeds sind vollständig (THE TOWER: 23 von 200). Die meisten scheitern an einem nicht knappen Finale
+  oder daran, dass die Führung im Finale nicht wechselt; für eine Vorlage reichen 41 gut.
