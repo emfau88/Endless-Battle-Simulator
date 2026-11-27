@@ -145,8 +145,9 @@
         const m = u.pm;
         if (!m.active) continue;
         if (u.out) {
-          // Ausgeschiedene: verschwinden in der Grube OUT, am Rand der Welt oder unter ihrer Klappe
-          if (u.hatchT >= 0 ? m.y > u.hy + 3 * R : this.inKill(m) || this.outside(m)) m.active = false;
+          // Ausgeschiedene: verschwinden in der Grube OUT, am Rand der Welt oder unter ihrer Klappe; Gefangene (jailed)
+          // bleiben im Gefängnis liegen
+          if (!u.jailed && (u.hatchT >= 0 ? m.y > u.hy + 3 * R : this.inKill(m) || this.outside(m))) m.active = false;
           continue;
         }
         // Ankunft: Kreuzung der Lichtschranke im Becken
@@ -293,8 +294,11 @@
       this.ranking();
     }
     fell(u) {
-      const m = u.pm;
-      m.active = false;
+      // Gefängnis (R44, Grube mit jail): Wer dort hineinfällt, ist raus, bleibt aber im Spiel und liegt sichtbar auf
+      // dessen Grund. Sie wechselt auf Ebene 4 (nur Gefängnis-Wände und andere Murmeln): Sonst schlug eine Klappe beim
+      // Schließen sie zurück auf den Boden, und sie rollte als Ausgeschiedene weiter. Sonst verschwindet die Murmel wie bisher.
+      const m = u.pm, jail = this.killPits.some((p) => p.jail && m.x > p.x0 && m.x < p.x1 && m.y > p.y0 + p.depth && m.y < p.y1);
+      if (jail) { u.jailed = true; m.mask = 4; } else m.active = false;
       if (u.out) return;
       u.fell = true; u.out = true; this.markOut(u, 'fell');
       this.emit('knockout', m.x, m.y, 1, u.rid);

@@ -402,6 +402,60 @@
     }, 1, c.soft));
     g.save(); chasmFrame(g, c, p.k); g.drawImage(img, 0, 0, w, h); g.restore();
   }
+  /** Gefängnis unter einem Falltür-Boden (R44), j = { x0, x1, ya, yb (Boden oben links/rechts), ja, jb (Grund
+   *  links/rechts) } aus decor 'jail'. Hinten (in den Kacheln): dunkle Steinwand mit Fugen, Grund aus Metall. Vorn (vor
+   *  den Murmeln): Gitterstäbe, zwei Querbänder mit Nieten und das Schild JAIL; einmal gezeichnet, dann aus cache. */
+  function jailShape(g, j) {
+    g.beginPath(); g.moveTo(j.x0, j.ya + 10); g.lineTo(j.x1, j.yb + 10); g.lineTo(j.x1, j.jb); g.lineTo(j.x0, j.ja); g.closePath();
+  }
+  function jailBack(g, j) {
+    const top = Math.min(j.ya, j.yb), bot = Math.max(j.ja, j.jb), u = 56;
+    g.save(); jailShape(g, j); g.clip();
+    const v = g.createLinearGradient(0, top, 0, bot);
+    v.addColorStop(0, '#15131a'); v.addColorStop(0.5, '#262230'); v.addColorStop(1, '#1b1822');
+    g.fillStyle = v; g.fillRect(j.x0, top, j.x1 - j.x0, bot - top + 20);
+    // Steinfugen: Reihen 0,55 u hoch, Stoßfugen versetzt
+    for (let r = 0, y = bot; y > top; r++, y -= 0.55 * u) {
+      g.fillStyle = 'rgba(0,0,0,0.45)'; g.fillRect(j.x0, y - 2, j.x1 - j.x0, 2.5);
+      g.fillStyle = 'rgba(255,240,220,0.05)'; g.fillRect(j.x0, y + 0.5, j.x1 - j.x0, 1.5);
+      g.fillStyle = 'rgba(0,0,0,0.4)';
+      for (let x = j.x0 + (r % 2) * 0.6 * u; x < j.x1; x += 1.2 * u) g.fillRect(x, y - 0.55 * u, 2.5, 0.55 * u);
+    }
+    // Schatten unter dem Boden
+    const s = g.createLinearGradient(0, top, 0, top + 1.6 * u);
+    s.addColorStop(0, 'rgba(0,0,0,0.75)'); s.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = s; g.fillRect(j.x0, top, j.x1 - j.x0, 1.6 * u + Math.abs(j.yb - j.ya));
+    g.restore();
+    metalBar(g, j.x0, j.ja + 4, j.x1, j.jb + 4, 14);                    // Grund: Metallschiene
+  }
+  function jailFront(g, j, cache) {
+    const top = Math.min(j.ya, j.yb) + 10, bot = Math.max(j.ja, j.jb) + 8, w = j.x1 - j.x0 + 24, h = bot - top + 4;
+    const img = cache.front || (cache.front = layerImg(w, h, 2, (q) => {
+      q.translate(12 - j.x0, -top);
+      const L = j.x1 - j.x0, at = (x) => j.ya + 10 + (x - j.x0) * (j.yb - j.ya) / L, gr = (x) => j.ja + (x - j.x0) * (j.jb - j.ja) / L;
+      const n = Math.round(L / 52), barX = (i) => j.x0 + 10 + i * (L - 20) / n;
+      for (let i = 0; i <= n; i++) {
+        const x = barX(i);
+        q.save(); q.shadowColor = 'rgba(0,0,0,0.5)'; q.shadowBlur = 6; q.shadowOffsetX = 3; metalBar(q, x, at(x) - 2, x, gr(x) + 4, 7); q.restore();
+      }
+      // Querbänder: oben unter dem Boden und auf halber Höhe, Nieten an jedem Stab
+      for (const f of [0.08, 0.55]) {
+        const ya = at(j.x0) + (gr(j.x0) - at(j.x0)) * f, yb = at(j.x1) + (gr(j.x1) - at(j.x1)) * f;
+        q.save(); q.shadowColor = 'rgba(0,0,0,0.5)'; q.shadowBlur = 6; q.shadowOffsetY = 3; metalBar(q, j.x0, ya, j.x1, yb, 10); q.restore();
+        q.fillStyle = S.metal.dark;
+        for (let i = 0; i <= n; i++) { const x = barX(i); q.beginPath(); q.arc(x, ya + (x - j.x0) * (yb - ya) / L, 3.2, 0, TAU); q.fill(); }
+      }
+      // Schild JAIL in der Mitte, eine Murmelbreite unter dem Boden
+      const cx = (j.x0 + j.x1) / 2, cy = at(cx) + 56, sw = 150, sh = 54;
+      q.save(); q.shadowColor = 'rgba(0,0,0,0.45)'; q.shadowBlur = 10; q.shadowOffsetY = 4;
+      q.beginPath(); q.roundRect(cx - sw / 2, cy - sh / 2, sw, sh, 8); q.fillStyle = '#2a2f37'; q.fill(); q.restore();
+      q.lineWidth = 3; q.strokeStyle = '#f2c230'; q.beginPath(); q.roundRect(cx - sw / 2 + 4, cy - sh / 2 + 4, sw - 8, sh - 8, 6); q.stroke();
+      q.fillStyle = '#f4efe6'; q.font = `900 34px ${S.font}`; q.textAlign = 'center'; q.textBaseline = 'middle';
+      if ('letterSpacing' in q) q.letterSpacing = '4px';
+      q.fillText('JAIL', cx + 2, cy + 2);
+    }, 1, 0));
+    g.drawImage(img, j.x0 - 12, top, w, h);
+  }
   /** Grube im Gesamtlevel, h = { type, p, cache } vom Painter: type 'crate' (OUT-Kiste), 'shaft' (Schacht), 'chasm'
    *  (Abgrund); front: der Teil vor den Murmeln. cache nimmt feste Zwischenbilder auf (hängen nur an der Grube). */
   function hole(g, h, front) {
@@ -803,6 +857,6 @@
     text(g, 'OUT', x, yTop - 24, 30, { align: 'center', weight: 900, spacing: 2 });
   }
 
-  EBS.KnockoutArt = { S, WORLDS, hash, text, background, hazard, killPit, lamp, stroke, metalBar, paintStatic, paintFront, drawTrack, drawElement, marble, crown, hatch, trail, shake, glitter, finishLine, outTube, woodShapes, metalShapes, hubDot, alpha, mixA,
+  EBS.KnockoutArt = { S, WORLDS, hash, text, background, hazard, killPit, jailBack, jailFront, lamp, stroke, metalBar, paintStatic, paintFront, drawTrack, drawElement, marble, crown, hatch, trail, shake, glitter, finishLine, outTube, woodShapes, metalShapes, hubDot, alpha, mixA,
     levelBackground, levelDepth, levelFar, dotPattern, scaffold, pit, peg, sign, hole };
 })(typeof window !== 'undefined' ? window : globalThis);

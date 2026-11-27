@@ -350,6 +350,14 @@ test('TRAP TOWER (R44): Stürze auf dem Falltür-Boden, nach fünf schließen di
     assert.equal(s.phase, 'end');
     assert.ok(falls >= 5 && falls <= 10, `Seed ${seed}: ${falls} Stürze`);
     assert.ok(s.notes.some((n) => n.kind === 'traps'), 'TRAPS CLOSED');
+    // Gefängnis: Jede Gestürzte liegt am Ende sichtbar darin (aktiv, zwischen Boden und Grund), sonst niemand
+    const j = s.stage.decor.find((q) => q.kind === 'jail');
+    for (const u of s.runners) {
+      const fell = s.roster[u.rid].how === 'fell', m = u.pm;
+      assert.equal(!!u.jailed, fell, `Seed ${seed}: ${s.roster[u.rid].name} gefangen = gestürzt`);
+      if (!fell) continue;
+      assert.ok(m.active && m.x > j.x0 && m.x < j.x1 && m.y > Math.min(j.ya, j.yb) && m.y < Math.max(j.ja, j.jb), `Seed ${seed}: ${s.roster[u.rid].name} im Gefängnis (${m.x.toFixed(0)}, ${m.y.toFixed(0)})`);
+    }
     assert.equal(s.runners.reduce((a, u) => a + u.nudges, 0) + s.stats.stuck + s.stats.timeUp, 0, 'kein Anstoß, niemand sitzt fest');
     assert.ok(s.sections[1].p0 > 0 && s.t < 16, `Länge ${s.t.toFixed(1)} s`);
     assert.ok(s.checkInvariants().ok);

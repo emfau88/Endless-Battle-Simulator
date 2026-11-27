@@ -100,11 +100,13 @@
     /** Grube: weicher dunkler Bereich, optional mit Warnstreifen. kill: Wer tiefer als depth hineinfällt, ist raus
      *  (Gefahr mitten im Bild, ohne dass der Weg bis zum unteren Rand frei sein muss).
      *  Nur für die Zeichnung im Gesamtlevel (G8): o.look 'out' = OUT-Kiste; o.mouth { xa, ya, xb, yb } = Bahn-Enden an
-     *  der Öffnung eines Schachts. Die Simulation liest beides nicht. */
+     *  der Öffnung eines Schachts. Die Simulation liest beides nicht.
+     *  o.jail (R44): Grube über einem Gefängnis; wer hineinfällt, ist raus, bleibt aber liegen und sichtbar (levelsim). */
     pit(x0, x1, y0, y1, o = {}) {
       const p = { x0, x1, y0, y1, stripes: o.stripes !== false, kill: !!o.kill, depth: o.depth || this.d * 1.3 };
       if (o.look) p.look = o.look;
       if (o.mouth) p.mouth = o.mouth;
+      if (o.jail) p.jail = true;
       this.pits.push(p);
     }
     sign(x, y, text, o = {}) { this.signs.push({ x, y, text, size: o.size || 24, h: o.h || 50 }); }

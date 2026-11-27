@@ -173,7 +173,7 @@
     const out = [];
     let run = null;
     for (const p of pits) {
-      if (!p.kill) continue;
+      if (!p.kill || p.jail) continue;                                // Gefängnis: eigene Zeichnung (decor 'jail')
       if (p.look === 'out' || p.stripes) { out.push({ type: p.look === 'out' ? 'crate' : 'shaft', p }); run = null; continue; }
       if (run && p.x0 <= run[run.length - 1].x1 && p.x1 >= run[run.length - 1].x0) run.push(p);
       else { run = [p]; out.push({ type: 'chasm', parts: run }); }
@@ -206,6 +206,9 @@
       this.signBox = st.signs.map((s) => ({ s, b: { x0: s.x - 260, y0: s.y - s.h - s.size * 2.4, x1: s.x + 260, y1: s.y + 12 } }));
       this.pitBox = st.pits.map((p) => ({ p, b: { x0: p.x0 - 80, y0: p.y0 - 30, x1: p.x1 + 80, y1: p.y1 + 30 } }));
       this.holes = holesOf(st.pits);
+      // Gefängnisse (R44): Rückwand in den Kacheln, Gitter vor den Murmeln; cache nimmt das feste Gitterbild auf
+      this.jails = (st.decor || []).filter((j) => j.kind === 'jail').map((j) => ({ j, cache: {},
+        b: { x0: j.x0 - 60, y0: Math.min(j.ya, j.yb) - 160, x1: j.x1 + 60, y1: Math.max(j.ja, j.jb) + 60 } }));
     }
     dispose() { for (const c of this.tiles.values()) c.width = c.height = 1; this.tiles.clear(); }
 
@@ -225,6 +228,7 @@
         if (p.stripes) A.hazard(g, p.x0 + 8, p.y1 - 22, p.x1 - p.x0 - 16, 14);
       }
       for (const h of this.holes) if (hit(h.b, v)) A.hole(g, h, false);
+      for (const { j, b } of this.jails) if (hit(b, v)) A.jailBack(g, j);
       for (const { tr, b } of this.tracks) if (!tr.front && tr.kind !== 'belt' && hit(b, v)) A.drawTrack(g, tr);
       for (const { p, b } of this.pegBox) if (hit(b, v)) A.peg(g, p);
       for (const { s, b } of this.signBox) if (hit(b, v)) A.sign(g, s);
@@ -275,6 +279,7 @@
       // Glitzern an der Ziellinie für jede, die gerade durch ist (nur im Finale; in den Schleusen heißt „finished“ drin)
       if (st.finish && sim.sec.fin) for (const u of runners) if (u.finished && !u.out) A.glitter(g, st.finish, rt - u.finishT, u.rid);
       for (const h of this.holes) if (hit(h.b, v)) A.hole(g, h, true);
+      for (const { j, b, cache } of this.jails) if (hit(b, v)) A.jailFront(g, j, cache);
       for (const { tr, b } of this.tracks) if (tr.front && hit(b, v)) A.drawTrack(g, tr);
       g.restore();
       // Bildrand: weiche Vignette (fest, bewegt sich nicht mit)

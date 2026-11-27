@@ -33,7 +33,7 @@
   // Maße wie THE TOWER: Turm so breit wie das Bild (1080), Wände bei 20 und 1060 (innen 30 bis 1050), r 28 (d 56).
 
   // 1 · TRAPDOORS (24 → TOP 14, Sturz zählt): Käfig mit zwei Reihen, kurzes Nagelfeld mit zwei Bumpern, darunter ein
-  // Falltür-Boden aus sieben Platten (8° nach rechts) über dem Abgrund. Am Ende des Bodens fällt man rechts in einen
+  // Falltür-Boden aus sieben Platten (8° nach rechts) über einem Gefängnis. Am Ende des Bodens fällt man rechts in einen
   // Schacht auf die Rampe (10°) nach links in die Schleuse. Nach fünf Stürzen schließen die Falltüren (trapsAt), den
   // Rest entscheidet die Schleuse.
   // Abweichungen vom Plan nach Messung (je 8 Läufe): Mit 5°, Takt 0,7 s, offen 0,8 s und Schließen erst nach zehn
@@ -54,13 +54,23 @@
     const xs = 32, Fy = 1000, kF = tand(8), w = 2.3 * d, np = 7, xe = xs + np * w * cos(8 * PI / 180);
     const fl = (x) => Fy + (x - xs) * kF;
     b.trapdoors({ x0: xs, y: Fy, n: np, w, interval: 1.0, blink: 0.5, open: 0.6, start: 1.0, slope: 8 });
-    // Abgrund in zwei Stücken unter dem geneigten Boden (Tötungstiefe 1 d unter der Oberkante jedes Stücks); sie
-    // überlappen, damit die weichen Ränder keine helle Fuge zeichnen. Das letzte Stück endet kurz vor dem Bodenende.
-    const yb = 1250, xm = (xs + xe) / 2;
-    b.pit(xs, xm + 40, fl(xs) + 14, yb, { kill: true, depth: 1.0 * d, stripes: false });
-    b.pit(xm - 40, xe - 0.3 * d, fl(xm - 40) + 14, yb, { kill: true, depth: 1.0 * d, stripes: false });
-    // Rampe unter dem Abgrund von der rechten Wand nach links (10°) in die Schleuse
-    const kR = tand(10), ramp = (x) => 1300 + (1050 - x) * kR, ex = 680;
+    // Gefängnis unter dem Boden (nach der Rückmeldung zu R1 statt eines schwarzen Abgrunds): Wer durch eine Klappe
+    // fällt, ist raus (Tötungstiefe 1 d unter der Oberkante), bleibt aber hinter Gittern sichtbar liegen. Unsichtbarer
+    // Grund mit 3° nach links und rechte Wand bis unter das Bodenende; die Gruben in zwei überlappenden Stücken unter dem
+    // geneigten Boden, das letzte endet kurz vor dem Bodenende. Gezeichnet über decor 'jail' (art.js).
+    // Gefangene liegen auf Ebene 4 (levelsim, fell): Grund und Wand unten gelten für beide Ebenen (Maske 5); die linke
+    // Wand und der Teil der rechten über dem Bodenende nur für Gefangene, damit die anderen weiter über das Ende rollen.
+    const xm = (xs + xe) / 2, xw = xe + 4, kJ = tand(3), jail = (x) => 1300 + (xw - x) * kJ;
+    b.track([[30, jail(30)], [xw, jail(xw)]], { hidden: true, rest: 0.1, fric: 0.5, mask: 5 });
+    b.track([[xw, fl(xe) + 8], [xw, jail(xw)]], { hidden: true, mask: 5 });
+    b.track([[xw, fl(xe) - 80], [xw, fl(xe) + 8]], { hidden: true, mask: 4 });
+    b.track([[30, fl(30) - 20], [30, jail(30)]], { hidden: true, mask: 4 });
+    b.pit(xs, xm + 40, fl(xs) + 14, jail(xm + 40) - 4, { kill: true, depth: 1.0 * d, stripes: false, jail: true });
+    b.pit(xm - 40, xe - 0.3 * d, fl(xm - 40) + 14, jail(xe) - 4, { kill: true, depth: 1.0 * d, stripes: false, jail: true });
+    b.decor.push({ kind: 'jail', x0: 30, x1: xw, ya: fl(30), yb: fl(xw), ja: jail(30), jb: jail(xw) });
+    // Rampe unter dem Gefängnis von der rechten Wand nach links (10°) in die Schleuse. Sie liegt 140 E tiefer als mit
+    // dem Abgrund: Sonst stauten sich die Murmeln im Schacht zwischen Gefängnis und Turmwand.
+    const kR = tand(10), ramp = (x) => 1440 + (1050 - x) * kR, ex = 680;
     b.track([[1050, ramp(1050)], [ex, ramp(ex)]]);
     const sch = LV.schleuse(b, c, { ex, ey: ramp(ex), dir: -1, slope: 10, keep: c.keep, outLen: 1.4 * d, pitW: 2.4, sign: 'out' });
     const o = 0.7 * d, xl = xe - 0.3 * d;

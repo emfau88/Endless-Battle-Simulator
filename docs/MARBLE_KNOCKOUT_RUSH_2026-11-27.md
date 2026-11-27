@@ -5,7 +5,7 @@ Paket fortgeschrieben.
 
 | Paket | Stand | Branch |
 |---|---|---|
-| R1 · Grundlage und TRAP TOWER Abschnitt 1 | erledigt, **Stopp** für die Rückmeldung des Nutzers | `murmelrennen/rush-r1` |
+| R1 · Grundlage und TRAP TOWER Abschnitt 1 | erledigt; nach der Rückmeldung Gefängnis statt Abgrund | `murmelrennen/rush-r1` |
 | R2 · TRAP TOWER komplett, Casting, Vorlage | offen | – |
 | R3 · THE AVALANCHE Abschnitte 1 bis 5 | offen | – |
 | R4 · THE AVALANCHE Abschnitte 6 bis 10, Vorlage | offen | – |
@@ -119,3 +119,63 @@ siebt); das Ziel gilt dann für das ganze Rennen.
    ohne Band. Einverstanden?
 3. **Falltüren:** fünf bis sieben Stürze, dann `TRAPS CLOSED`, danach drei bis fünf zu spät an der Schleuse. Mehr,
    weniger oder so lassen?
+
+**Antwort (27.11.):** „ok soweit gut“; nur die schwarze Leere unter den Falltüren sah komisch aus und sollte
+verständlicher werden, „evtl gefängniskäfig“. Zwei Vorschau-Bilder aus einer Kopie (A: Gefangene bleiben sichtbar,
+B: Gitter vor dem Dunkel), der Nutzer wählte **A**. Umsetzung im nächsten Abschnitt.
+
+## R1 · Nachtrag: Gefängnis statt Abgrund (27.11.2026)
+
+### Was sich ändert
+
+- Unter dem Falltür-Boden liegt jetzt ein **Gefängnis**: dunkle Steinwand mit Fugen, Gitterstäbe vor den Murmeln, zwei
+  Querbänder mit Nieten, Schild `JAIL` in der Mitte. Wer durch eine Klappe fällt, ist raus wie bisher, verschwindet
+  aber nicht, sondern liegt bis zum Schluss sichtbar hinter Gittern. Die Zahl im Käfig passt zur Einblendung
+  (`5 ARE OUT` = fünf im Käfig).
+- Neuer Schalter an der Grube: `pit(…, { jail: true })`. `fell()` erkennt den Sturz in eine solche Grube, setzt
+  `u.jailed` und lässt die Murmel aktiv; ihre Ebene wechselt auf 4. Ohne `jail` bleibt alles wie vorher (die alten
+  Level haben keine solche Grube, Referenz-Hashes identisch).
+- **Ebene 4:** Gefangene stoßen nur noch mit den Wänden des Gefängnisses und mit anderen Murmeln zusammen. Ohne das
+  schlug in Seed 3 eine schließende Klappe RUST zurück auf den Boden, und sie rollte als Ausgeschiedene über die Rampe
+  bis in die Schleuse.
+- Unsichtbare Bahnen: Grund mit 3° nach links (Maske 5, für beide Ebenen), rechte Wand bis unter das Bodenende
+  (Maske 5), darüber bis 80 E über das Bodenende und links an der Turmwand nur für Gefangene (Maske 4).
+- **Rampe 140 E tiefer** (Grund rechts 1440 statt 1300): Mit dem Gefängnis an der alten Stelle stauten sich die Murmeln
+  im Schacht zwischen Gefängnis und Turmwand.
+- Zeichnung: `jailBack` in den festen Kacheln, `jailFront` vor den Murmeln aus einem einmal gezeichneten Bild
+  (`art.js`, `renderer.js` über `decor` `jail`). Kein Zustand, der von der Bildzahl abhängt.
+
+### Nebenwirkung: Stürze zählen jetzt nur noch durch die Klappen
+
+In R1 waren 51 von 249 Stürzen (Seeds 1 bis 40) gar keine Stürze durch eine Klappe: Die Murmel rollte am Ende des
+Bodens in den Schacht, prallte von der Rampe zurück nach links unter den Boden und war im Abgrund „raus“. Die rechte
+Wand des Gefängnisses verhindert das. Darum gibt es jetzt im Median **fünf Stürze** statt sechs (fünf in 76 Läufen,
+sechs in 24), mehr als sechs nicht mehr.
+
+### Messwerte (100 Läufe, nur Simulation)
+
+| Wert (Median) | R1 mit Abgrund | mit Gefängnis |
+|---|---|---|
+| Im Spiel | 20,6 | 21,0 |
+| In Bewegung im Bild | 13,9 | 14,3 |
+| Ruhige Zeit | 0 s | 0,3 s |
+| Abschnittsdauer | 10,2 s (längster 11,8 s) | 9,9 s (längster 11,0 s) |
+| Läufe mit Anstoß | 0 / 100 | 0 / 100 |
+| Stürze | 6 (5 bis 10) | 5 (5 bis 6) |
+
+Zusätzlich geprüft (Seeds 1 bis 100): Am Ende liegt jede Gestürzte aktiv im Gefängnis, zwischen Boden und Grund, und
+nur sie; höchstens sechs auf einmal.
+
+### Nachweise (lokal, nicht im Repository)
+
+- Vorschau aus der Kopie: `kaefig-keep.jpg` (A) und `kaefig-dark.jpg` (B) im Notizordner der Sitzung.
+- `output/knockout-lab/trap-r1-jail-seed3.jpg`: Bildblatt aus der Arbeitskopie, Seed 3 (der Lauf, in dem RUST vorher
+  zurück auf den Boden geschlagen wurde), sechs Zeitpunkte.
+
+### Gelaufen
+
+- `node --test test/knockout-level.test.mjs`: 19 grün; der Sturz-Test prüft jetzt zusätzlich, dass jede Gestürzte am
+  Ende im Gefängnis liegt (Seeds 1 bis 3).
+- `npm run golden`: identisch mit der Referenz.
+- Nicht gelaufen: `knockout` und `knockout-elements` (nur ein Schalter an der Grube dazu), voller `npm test`, keine neue
+  Probe als Video.
