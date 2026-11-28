@@ -9,7 +9,7 @@ class Simulation {
   constructor({seed=42,params={},world={w:1920,h:1080},timeScale=1,video={durationSec:600}}={}) {
     this.seed=seed>>>0; this.cfg={mode:'day',animals:16,size:24,speed:1,beltSpeed:1,rollSpeed:1,current:1,
       route0:true,route1:true,route2:true,route3:true,dayCycle:true,ending:'quiet',decoDensity:1,ufo:true,balloon:true,birds:true,shootingStars:true,fish:true,emotes:true,...params};
-    this.world=world; this.video=video; this.timeScale=timeScale||1; this.L=WP.createLayout(world,this.cfg.size);
+    this.world=world; this.video=video; this.timeScale=timeScale||1; this.L=WP.createLayout(world,this.cfg.size,this.cfg.jumpV2);
     this.step=0; this.t=0; this.videoTime=0; this.events=new Array(1024); this.eventSeq=0; this.recent=[]; this.decorations=[];
     this.rides=0; this.routeRides=[0,0,0,0]; this.animals=[]; this.lastDispatch=-99; this.lastLift=-99;this.gatherCount=0;
     this.beltTravel=0;   // distance the lift belt has run; display only, not part of the state hash
@@ -80,6 +80,16 @@ class Simulation {
     // The next panorama rider already past the gate inherits the landing; otherwise the bay is free again.
     const next=b.route===0&&this.landingReservations[0]===b.id?this._list('route',0).find(o=>o!==b&&o.s>this._gateS(0)):null;
     this.landingReservations[b.route]=next?next.id:null;
+    if (b.route === 3 && b.jump) {
+      const landing = b.jump.s, spot = WP.samplePath(this.L.pool.path, landing);
+      this._emit('splash', spot.x, spot.y, b.kind, Math.max(.25, b.v / 230) * 1.25);
+      if (this.cfg.emotes !== false && random('jump-react', this.seed, b.id, b.laps) < .6)
+        this._addDecoration('emote', 2, { id: b.id, x: spot.x, y: spot.y });
+      b.jump = null;
+      if (this.cfg.mode === 'short') this._gather(b, spot);
+      else { b.state = 'pool'; b.s = landing; b.v = 150; }
+      return;
+    }
     this._emit('splash',r.end[0],r.end[1],b.kind,Math.max(.25,b.v/230));
     if(this.cfg.mode==='short')this._gather(b,{x:r.end[0],y:r.end[1]});
     else {b.state='pool';b.s=this.L.pool.joinS[b.route];b.v=150;}
@@ -156,7 +166,13 @@ class Simulation {
         // A convoy holds at most three riders, then the bay is handed back to the lagoon traffic
         if(id===0&&cfg.mode!=='short'&&old<=this._gateS(0)&&b.s>this._gateS(0)&&this.landingReservations[0]!==b.id)this.panoramaBatch--;
         const f=r.feature;
-        if(f&&id!==2&&old<f.entryS&&b.s>=f.entryS)this._emit(id===1?'funnel':id===2?'seesaw':'spring',f.x,f.y,b.kind);
+        if(cfg.jumpV2&&id===3&&old<f.entryS&&b.s>=f.entryS){
+          // Every jump is its own: landing spot along the bay, height (the spring fires 20 % harder than before, plus up to 30 %) and one to three turns.
+          const k=[this.seed,b.id,b.laps],lane=L.pool.joinS[3],tx=WP.samplePath(L.pool.path,lane+1).tx<0?-1:1,range=L.land?[-55,0]:[-40,40];
+          const dx=range[0]+(range[1]-range[0])*random('jump-x',...k);
+          b.jump={s:Math.max(0,lane+dx*tx),power:1.2*(1+.3*random('jump-h',...k)),spins:(1+Math.floor(random('jump-n',...k)*3))*(random('jump-d',...k)<.5?-1:1)};
+        }
+        if(f&&id!==2&&old<f.entryS&&b.s>=f.entryS)this._emit(id===1?'funnel':id===2?'seesaw':'spring',f.x,f.y,b.kind,cfg.jumpV2&&id===3?1.2:1);
         if(id===2&&old<f.entryS&&b.s>=f.entryS){b.s=f.entryS;b.v=0;}   // plop: the rider lands on the board and sits
         if(id===2&&b.s>=f.entryS&&b.s<=f.exitS){const u=(b.s-f.entryS)/(f.exitS-f.entryS);seesawU=u;seesawKind=b.kind;this.seesawState=u<.2?'loaded':u<.8?'tipping':'returning';}
         if(id===2&&old<f.exitS&&b.s>=f.exitS)this.seesawResetUntil=this.t+.9;
@@ -188,6 +204,8 @@ class Simulation {
       const r=L.routes[b.route];q=WP.samplePath(r.path,b.s);mode=q.kind==='flight'?'fall':'roll';
       angle=q.kind==='funnel'?.22*Math.sin(b.s/L.R):b.s/L.R;
       if(q.kind==='seesaw'){const f=r.feature,d=f.dir||1,offset=f.land+(b.s-f.entryS)/(f.exitS-f.entryS)*(f.front-f.land),phi=this.seesawAngle*d;q.x=f.x+Math.cos(phi)*offset*d;q.y=f.y+Math.sin(phi)*offset*d;angle=phi;}
+      if(q.kind==='flight'&&b.jump){const f=r.feature,u=clamp((b.s-f.entryS)/(f.exitS-f.entryS),0,1),t=WP.samplePath(L.pool.path,b.jump.s);
+        q.x=f.x+(t.x-f.x)*u;q.y=f.y+(t.y-f.y)*u-Math.sin(Math.PI*u)*L.H*(L.land?.09:.07)*b.jump.power;angle=b.jump.spins*2*Math.PI*u*u*(3-2*u);}
       if(b.s>=r.path.length-1e-7){mode='pool';angle=0;}
     } else if(b.state==='gather')q=WP.samplePath(b.gatherPath,b.s);
     else q=WP.samplePath(L.pool.path,b.s);
