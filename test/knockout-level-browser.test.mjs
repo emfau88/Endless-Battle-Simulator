@@ -20,13 +20,15 @@ const sha = (b64) => createHash('sha256').update(b64).digest('hex');
 // Turm (ab G3): zwei Zeitpunkte im Finale, der letzte kurz nach dem Sieg (Seed 3 gewinnt bei 31,1 s: Ziel, Glitzern,
 // Siegerzeile). Gauntlet: Einstiegsflug (0,4 s und 4,1 s, ab G5), Titelkarte, Start, Hebe-Rad (49 s) und
 // einbrechende Brücke (61 s); seit G5 liegt alles um die 7 s des Flugs später. TRAP TOWER (Rush, R44): Start, offene
-// Falltüren, Gefängnis mit Gefangenen, Kehrarme, Drehbühne, Ziel (Seed 3 gewinnt bei rund 30 s).
+// Falltüren, Gefängnis mit Gefangenen, Kehrarme, Drehbühne, Ziel (Seed 3 gewinnt bei rund 30 s). THE AVALANCHE (Rush,
+// R3): Start, Trichter, Falltüren mit Gefängnis, Treppe, Fallschacht, geparkter Kehrarm.
 test('Gesamtlevel (G2): Chromium rechnet wie Node; Seek-Regel mit Kamera an sechs Zeitpunkten je Format', async () => {
   const EBS = loadKnockout();
   for (const [aspect, seed, marks, extra = {}] of [
     ['9:16', 3, [0.4, 5.2, 10.2, 12.6, 26.0, 31.4]],
     ['16:9', 3, [0.4, 4.1, 10.3, 16.6, 49.0, 61.0]],
     ['9:16', 3, [0.4, 4.6, 8.0, 14.5, 23.0, 30.5], { level: 'rush' }],
+    ['16:9', 2, [0.4, 6.0, 20.0, 34.0, 46.0, 58.0], { level: 'rush' }],
   ]) {
     const params = { mode: 'level', ...extra }, name = extra.level ? `${aspect} Rush` : aspect;
     const sim = makeSim(EBS, { seed, aspect, params }), node = [];

@@ -2,6 +2,12 @@
 
 Erledigte Arbeit, neueste zuerst, mit Commit und Bericht. Offene Punkte stehen in der [ROADMAP](ROADMAP.md).
 
+## 28.11.2026
+
+| Was | Commit | Bericht |
+|---|---|---|
+| R44, Marble Knockout Rush, R3: Rush im Querformat zeigt jetzt THE AVALANCHE (28 Murmeln, Kamera mit fester Breite, Zoom 0,85) mit fünf Abschnitten: `THE AVALANCHE` (Nagelwand mit 5 Reihen, drei Trichter, Spur im V, Mischkasten), `TRAPDOORS` (zwei Falltür-Böden über Gefängnissen), `THE STAIRS` (fünf Reihen versetzter Stufen), `BIG DROP` (Fallschacht über zwei Bildhöhen), `SWEEPERS` (zwei Simse mit Löchern, Deckeln und drei Kehrarmen); danach ein Platzhalter. Neuer Schalter `turnstile({ park: true })`: Der Kehrarm gegen den Strom parkt schräg, wenn die Fallen schließen (vorher warf er eine Murmel endlos im eigenen Takt zurück). Bahnen unter den Schleusen tiefer, weil offene Klappen Murmeln festhielten. Serie aus zwei Rennen mit Rush erst ab R4. Messung (100 Läufe bis zur fünften Schleuse): 20,6 im Spiel, 11,9 in Bewegung im Bild, 5,0 s ruhig, 11 von 100 Läufen mit Anstoß, kein Zeitlimit; knapp verfehlt und vermerkt: längster Abschnitt im Median 17,1 s (SWEEPERS, Ziel 15 s) und 11 statt höchstens 10 Läufe mit Anstoß. Bildblatt und zwei 20-s-Proben lokal. Gelaufen: `knockout-level` 23 grün, Browser-Prüfung Gesamtlevel grün (Seek-Regel auch für THE AVALANCHE), `knockout-elements` 3 grün, Referenz-Hashes identisch. | Branch `murmelrennen/rush-r3` | [Bericht](MARBLE_KNOCKOUT_RUSH_2026-11-27.md#r3--the-avalanche-abschnitte-1-bis-5-28112026) |
+
 ## 27.11.2026
 
 | Was | Commit | Bericht |
