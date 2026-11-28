@@ -200,14 +200,36 @@
     }
 
     // ---------------------------------------------------------------- B · Drehen
-    /** B1 Drehkreuz: arms Arme der Länge arm um (x, y); rps < 0 schiebt unten nach rechts. */
-    turnstile({ x, y, arm, arms = 4, rps = -0.5, phase = 0, rad }) {
+    /** B1 Drehkreuz: arms Arme der Länge arm um (x, y); rps < 0 schiebt unten nach rechts. park (R44): beim Schließen
+     *  der Fallen dreht es bis zur nächsten flach geneigten Lage weiter und bleibt dort stehen. */
+    turnstile({ x, y, arm, arms = 4, rps = -0.5, phase = 0, rad, park = false }) {
       rad = rad || this.rad * 0.75;
       const shapes = [];
       for (let i = 0; i < arms; i++) { const a = i * TAU / arms; shapes.push({ ax: 0, ay: 0, bx: arm * cos(a), by: arm * sin(a), rad }); }
       const ph = phase + this.phase(1 / Math.abs(rps)) * TAU * Math.abs(rps), w = TAU * rps;
-      const body = this._body(shapes, (t) => ({ x, y, a: ph + w * t }), { look: 'arm', hub: rad * 1.9, tag: 'turnstile' });
-      return this._add({ type: 'turnstile', x, y, arm, arms, rps, bodies: [body] });
+      const el = { type: 'turnstile', x, y, arm, arms, rps, bodies: [] };
+      let pose = (t) => ({ x, y, a: ph + w * t });
+      if (park) {
+        // Ein Kehrarm gegen den Strom kann eine einzelne Murmel im eigenen Takt immer wieder zurückwerfen (Messung
+        // THE AVALANCHE, Abschnitt 5); geparkt ist der Weg frei. Schräg (0,5 rad, der untere Arm zeigt gegen die
+        // Laufrichtung, weg von der Wand), damit keine Murmel oben auf dem Arm liegen bleibt.
+        const step = TAU / arms, off = -Math.sign(w) * 0.5;
+        el.closedAt = -1;
+        const stopA = () => {
+          const a = ph + w * el.closedAt - off;
+          return (w > 0 ? Math.ceil(a / step) : Math.floor(a / step)) * step + off;
+        };
+        pose = (t) => {
+          const a = ph + w * t;
+          if (el.closedAt < 0 || t < el.closedAt) return { x, y, a };
+          const s = stopA();
+          return { x, y, a: w > 0 ? Math.min(a, s) : Math.max(a, s) };
+        };
+        el.closeTraps = (t) => { if (el.closedAt < 0) el.closedAt = t; };
+        el.state = () => [el.closedAt];
+      }
+      el.bodies.push(this._body(shapes, pose, { look: 'arm', hub: rad * 1.9, tag: 'turnstile' }));
+      return this._add(el);
     }
     /** B2 Schaufelrad mit Nabe und Schaufeln; casing: [a0, a1] fester Mantel außen (Bogen in Drehrichtung). */
     wheel({ x, y, R, hubR, paddles = 8, rps = -0.15, casing, casingGap }) {

@@ -7,7 +7,7 @@ Paket fortgeschrieben.
 |---|---|---|
 | R1 · Grundlage und TRAP TOWER Abschnitt 1 | erledigt; nach der Rückmeldung Gefängnis statt Abgrund | `murmelrennen/rush-r1` |
 | R2 · TRAP TOWER komplett, Casting, Vorlage | erledigt | `murmelrennen/rush-r2` |
-| R3 · THE AVALANCHE Abschnitte 1 bis 5 | offen | – |
+| R3 · THE AVALANCHE Abschnitte 1 bis 5 | erledigt; SWEEPERS und Anstöße knapp über dem Ziel (vermerkt) | `murmelrennen/rush-r3` |
 | R4 · THE AVALANCHE Abschnitte 6 bis 10, Vorlage | offen | – |
 | R5 · Abschluss, Geschmacksfragen, README | offen | – |
 
@@ -306,3 +306,120 @@ node export.mjs --config presets/production/knockout-short-rush.json --clip-star
 - Rush im Querformat zeigt bis R3 weiter THE GAUNTLET; die Auswahl sagt weiter „(in Arbeit)“.
 - Nur 21 % der Seeds sind vollständig (THE TOWER: 23 von 200). Die meisten scheitern an einem nicht knappen Finale
   oder daran, dass die Führung im Finale nicht wechselt; für eine Vorlage reichen 41 gut.
+
+---
+
+## R3 · THE AVALANCHE Abschnitte 1 bis 5 (28.11.2026)
+
+### Kurzfassung
+
+- Rush im Querformat zeigt jetzt **THE AVALANCHE** statt THE GAUNTLET: 28 Murmeln, Kamera mit fester Breite, die
+  Abschnitte 1 bis 5 mit echter Physik (28 → 25 → 22 → 19 → 16 → 14), danach ein Platzhalter („TO BE CONTINUED“).
+  Die Auswahl sagt weiter „(in Arbeit)“.
+- In 100 Läufen bis zur fünften Schleuse: kein Zeitlimit, niemand sitzt fest. Im Spiel, in Bewegung im Bild und
+  ruhige Zeit liegen klar im Ziel. Knapp verfehlt: **SWEEPERS dauert im Median 17,1 s** (Ziel höchstens 15 s,
+  längster Lauf 22,8 s statt 18 s), und **11 von 100 Läufen** brauchen einen Anstoß (Ziel höchstens 10),
+  fast alle in SWEEPERS. Auf Wunsch des Nutzers bleibt SWEEPERS so und ist hier vermerkt (Ideen dazu unter
+  „Grenzen“).
+- Neu im Baukasten: Ein Kehrarm kann beim Schließen der Fallen parken (`turnstile({ …, park: true })`). Alle bisherigen
+  Level bleiben bitgleich (Referenz-Hashes identisch).
+
+### Was gebaut ist
+
+| Datei | Änderung |
+|---|---|
+| `src/scenarios/knockout/levels-rush.js` | THE AVALANCHE: fünf Abschnitte, Platzhalter, Level-Beschreibung (`LEVELS.avalanche`, Welt 2256 × 8700 E, eigene Kamera-Werte `cam`) |
+| `src/scenarios/knockout/elements.js` | Kehrarm mit `park`: dreht nach dem Schließen der Fallen bis zur nächsten schrägen Lage (0,5 rad, unterer Arm gegen die Laufrichtung) und bleibt dort |
+| `src/scenarios/knockout/levelsim.js` | Ein Level mit eigener Kamera fährt immer mit (die Einstellung „Abschnitte“ wirkt dort nicht); Sichern und Laden kennt den Zustand des Kehrarms |
+| `src/scenarios/knockout.js` | Die Serie aus zwei Rennen gibt es für Rush erst ab R4 (THE AVALANCHE hat noch kein Ziel); bis dahin ein einzelnes Rennen |
+| `test/knockout-level.test.mjs` | THE AVALANCHE: Aufbau, Ablauf bis zur fünften Schleuse, Stürze, geparkter Kehrarm mit Sichern, Laden und Zeichnen; Level-Bau auch für Rush |
+| `test/knockout-level-browser.test.mjs` | Seek-Regel und Chromium gleich Node auch für THE AVALANCHE (Seed 2, sechs Zeitpunkte) |
+
+### Die Abschnitte
+
+- **Kamera:** Zoom fest 0,85, die ganze Breite (2256 E) ist immer im Bild, waagerecht steht die Kamera still und
+  gleitet nur senkrecht mit.
+- **1 · THE AVALANCHE** (Welt `night`, 28 → TOP 25): Käfig mit zwei Reihen zu je 14, Nagelwand mit 5 Reihen und vier
+  Bumpern, Abweiser an den Wänden. Drei Trichter (Hälse innen 2,6 d); die äußeren fallen auf eine Spur im V (9°) zur
+  Mitte, der mittlere direkt in den Mischkasten (Stifte 2-1, Boden 18°). Aus dem Kasten über zwei kurze Rampen (11°,
+  hin und zurück) in die Schleuse.
+- **2 · TRAPDOORS** (Welt `petrol`, Sturz zählt, → TOP 22): Fangbahn unter der Schleuse, dann zwei Falltür-Böden im
+  Zickzack (je 8 Platten, 7°), unter jedem ein Gefängnis wie in TRAP TOWER. `TRAPS CLOSED` nach drei Stürzen.
+- **3 · THE STAIRS** (Welt `sand`, → TOP 19): fünf Reihen kurzer, versetzter Stufen über die ganze Breite (Stufe 3 d,
+  Lücke 1,4 d); wer durch eine Lücke fällt, landet eine Reihe tiefer. Darunter die Sammelbahn in die Schleuse.
+- **4 · BIG DROP** (Welt `forest`, → TOP 16): Fallschacht 14 d breit und rund zwei Bildhöhen tief, Stifte alle 3 d,
+  sechs Bumper, Abweiser. Boden 12° in die Schleuse neben dem Schacht.
+- **5 · SWEEPERS** (Welt `slate`, Sturz zählt, → TOP 14): zwei Simse (7°, gegenläufig) mit drei Löchern und Deckeln.
+  Oben ein Kehrarm mit dem Strom, das Loch, kurz vor dem Ende ein Kehrarm gegen den Strom, der Murmeln zurück ins Loch
+  wirft; unten zwei Löcher und ein Kehrarm mit dem Strom. Nach zwei Stürzen schließen die Deckel, der Arm gegen den
+  Strom parkt schräg.
+
+### Abweichungen vom Plan (nach Messung)
+
+| Plan | Jetzt | Grund (Messung) |
+|---|---|---|
+| Nagelwand 8 Reihen, Hälse 2,3 d, eine breite Fangbahn, Mischkasten, Rampe | 5 Reihen, Hälse 2,6 d, Spur im V zur Mitte, Kasten unter dem mittleren Trichter, zwei kurze Rampen (11°) | Mit dem Plan dauerte der Abschnitt im Median 20,6 s. Die Murmeln aus dem linken Trichter brauchten allein 6,5 s über die Spur; danach bremste der Kasten, weil alle 25 einzeln durch die Öffnung mussten. Jetzt im Median 14,4 s. |
+| Wartezeit vor dem Start 3,2 s (wie THE GAUNTLET) | 1,5 s | So steht es im Plan („Start nach 1,5 s“). Die Dauer von Abschnitt 1 zählt ab Sekunde 0, die Wartezeit ist darin enthalten. |
+| TRAPDOORS: 5°, Platten 2,6 d, Takt 0,6 s | 7°, Platten 2,4 d, Takt 0,8 s | Bei 2,6 d bliebe an der Wand kein Spalt für den Weg nach unten. |
+| SWEEPERS: drei Kehrarme gegen den Strom | einer gegen den Strom (parkt), zwei mit dem Strom | Gegen den Strom ließen die Arme 16 Murmeln kaum durch: Vor dem unteren stand eine Schlange aus acht, und eine einzelne Murmel wurde im Takt des Arms immer wieder zurückgeworfen. Ergebnis war das Zeitlimit von 90 s in 7 bis 8 von 8 Läufen. Ein Arm gegen den Strom, der nach den zwei Stürzen parkt, löst das. Waagerecht geparkt blieben Murmeln oben auf dem Arm liegen, mit dem unteren Arm zur Wand klemmten sie dort; darum schräg und weg von der Wand. |
+| Bahnen direkt unter den Schleusen | Fangbahnen und Simse 200 bis 230 E tiefer | Die offenen Klappen einer Schleuse hängen gut 100 E unter den Boden und hielten Murmeln auf der Bahn darunter fest (bis zu acht auf einmal). |
+| Serie aus zwei Rennen auch mit Rush | erst ab R4 | THE AVALANCHE hat noch kein Ziel. |
+
+### Messwerte (100 Läufe bis zur fünften Schleuse, nur Simulation, `scripts/knockout-action.mjs --level avalanche --seeds 1-100`)
+
+Gezählt wird nur bis zum Platzhalter, also die Abschnitte 1 bis 5.
+
+| Wert (Median) | THE GAUNTLET (Messung im Plan) | THE AVALANCHE bis Abschnitt 5 | Ziel des Plans |
+|---|---|---|---|
+| Im Spiel | 9,6 | 20,6 | mindestens 15 |
+| In Bewegung im Bild | 5,4 | 11,9 | mindestens 8 |
+| Ruhige Zeit | 29 s | 5,0 s | höchstens 12 s |
+| Längster Abschnitt je Lauf | 28 s | 17,1 s | höchstens 15 s |
+| Läufe mit Anstoß | 7 / 100 | 11 / 100 | höchstens 10 / 100 |
+| Zeitlimit oder festgesessen | – | keine | keine |
+
+| Abschnitt | Dauer (Median) | längster Lauf | in Bewegung im Bild | Stürze (Median) |
+|---|---|---|---|---|
+| 1 THE AVALANCHE | 14,4 s | 15,4 s | 16,2 | 0 |
+| 2 TRAPDOORS | 14,4 s | 16,1 s | 13,7 | 4 |
+| 3 THE STAIRS | 13,5 s | 15,3 s | 9,5 | 0 |
+| 4 BIG DROP | 10,0 s | 11,7 s | 12,5 | 0 |
+| 5 SWEEPERS | 17,1 s | 22,8 s | 8,9 | 2 |
+
+Die ruhige Zeit ist für fünf Abschnitte gezählt; für das ganze Rennen kommt in R4 der Rest dazu.
+
+### Nachweise (lokal in `output/knockout-lab/`, nicht im Repository)
+
+- `av-r3-bilder.jpg`: sechs Bilder aus Seed 2 (Start, Trichter, Falltüren mit Gefängnis, Treppe, Fallschacht,
+  Kehrarme).
+- `av-r3-anfang-20s.mp4` und `av-r3-sweepers-20s.mp4`: Seed 2, Sekunde 0 bis 20 und 51 bis 71, 1920 × 1080, 30 fps,
+  mit Ton.
+- `av-r3-ganz-73s.mp4`: versehentlich ganz gerendert (72,8 s bis zum Platzhalter), weil die Einstellung
+  `videoEnd=finish` die Dauer von 20 s überstimmt. Die beiden 20-s-Proben sind daraus geschnitten. Prüfung des
+  Exports OK.
+- `av-r3-100.txt`: die 100 Läufe der Messung.
+- `av-r3-overview.jpg`, `av-r3-s1v2.jpg`, `av-s2-seed6.jpg`: Übersichten beim Bauen.
+
+### Gelaufen
+
+- `node --test test/knockout-level.test.mjs`: 23 grün. Neu sind Aufbau und Ablauf von THE AVALANCHE mit geparktem
+  Kehrarm, Sichern, Laden und Zeichnen; dazu der Level-Bau für Rush in beiden Formaten und der Schalter-Test. Der
+  Ablauf-Test von THE AVALANCHE erwartete zuerst genau 14 Murmeln am Ende; in Seed 2 stürzen beim Schließen zwei fast
+  gleichzeitig, dann sind es 13. Die Erwartung ist jetzt 12 bis 14, der Test einzeln wiederholt.
+- `node --test test/knockout-level-browser.test.mjs`: grün. Chromium rechnet wie Node, und die Seek-Regel hält auch
+  für THE AVALANCHE (bis zum geparkten Kehrarm bei 58 s).
+- `node --test test/knockout-elements.test.mjs`: 3 grün (Kehrarm umgebaut).
+- `npm run golden`: identisch mit der Referenz.
+- Nicht gelaufen: voller `npm test`, `knockout` und `knockout-physics`, Exporttest der Vorlagen.
+
+### Grenzen
+
+- **SWEEPERS dauert im Median 17,1 s** statt höchstens 15 s. Die Simse sind lang (gut 1100 und 1400 E bei 7°),
+  und vor jedem geschlossenen Loch bildet die kleine Kante eine flache Mulde, in der eine langsame Murmel kurz liegen
+  bleibt. Nicht mehr ausprobiert: flachere Kante, Simse mit 8° wie in TRAP TOWER, unterer Sims 200 E kürzer.
+- **11 von 100 Läufen mit Anstoß** statt höchstens 10. In diesen Läufen gab es 11 Anstöße: neun in SWEEPERS
+  (Murmeln, die vor einer Kante oder am Arm kurz liegen bleiben), zwei auf THE STAIRS. Kein Lauf braucht das
+  Zeitlimit, keine Murmel sitzt fest.
+- Nach dem Platzhalter endet das Video; Einstiegsflug, Titel, Abschnitte 6 bis 10, Ziel, Podest und die Serie aus zwei
+  Rennen folgen in R4.
+- Im Querformat wirkt die Kamera-Einstellung „Abschnitte“ für THE AVALANCHE nicht (feste Breite).

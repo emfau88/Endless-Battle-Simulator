@@ -135,9 +135,10 @@ class KnockoutSeriesScenarioSim extends EBS.KnockoutSeries.KnockoutSeriesSimulat
 const createSim = (ctx) => {
   const p = normalizeParams(ctx.params);
   if (p.mode !== 'level') return new KnockoutScenarioSim(ctx);
-  // Die Serie gibt es nur im Querformat (das Short bleibt ein Rennen durch THE TOWER)
+  // Die Serie gibt es nur im Querformat (das Short bleibt ein Rennen durch THE TOWER); mit Rush erst ab R4, solange
+  // THE AVALANCHE noch kein Ziel hat
   const w = simWorld(ctx.world);
-  return p.series === 'two' && w.w > w.h ? new KnockoutSeriesScenarioSim(ctx) : new KnockoutLevelScenarioSim(ctx);
+  return p.series === 'two' && w.w > w.h && p.level !== 'rush' ? new KnockoutSeriesScenarioSim(ctx) : new KnockoutLevelScenarioSim(ctx);
 };
 
 class KnockoutRenderer extends EBS.CanvasScene {

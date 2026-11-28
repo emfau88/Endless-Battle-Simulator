@@ -74,7 +74,8 @@
       if (this.introT) this.chapterLog.push({ t: 0, title: 'Intro' });
       this.enterSection(0);
       // Kamera: steht zu Beginn schon richtig (kein Anfahren im ersten Bild)
-      const mode = this.format === 'long' && params.cam === 'sections' ? 'sections' : 'ride';
+      // Ein Level mit eigener Kamera (spec.cam, R44: THE AVALANCHE mit fester Breite) fährt immer mit
+      const mode = this.format === 'long' && params.cam === 'sections' && !spec.cam ? 'sections' : 'ride';
       // „Abschnitte“ zeigt einen ganzen Abschnitt auf einmal und darf dafür weiter herauszoomen (bis 0,62)
       // spec.cam (R44): eigene Kamera-Werte je Level; ohne Angabe die bisherigen
       const co = mode === 'sections' ? { ...CAM.PRESETS.long, zmin: 0.62 } : spec.cam ? { ...CAM.PRESETS[this.format], ...spec.cam } : CAM.PRESETS[this.format];
@@ -552,12 +553,12 @@
   const STATE_KEYS = {
     gate: ['s0', 's1', 'at'], lid: ['closedAt'], flipflop: ['side', 'from', 'at', 'cool'], hammer: ['closedAt', 'park'],
     conveyor: ['pos', 'speed'], trapdoors: ['closedAt'], bridge: ['startT', 'closedAt', 'passed', 'npassed'],
-    schleuse: ['closedAt', 'openAt'],
+    schleuse: ['closedAt', 'openAt'], turnstile: ['closedAt'],
   };
   const stateOf = (el) => {
     const keys = STATE_KEYS[el.type];
     if (!keys) { if (el.state || el.update) throw new Error(`Sichern: Baustein „${el.type}“ hat Zustand, aber keine Liste`); return {}; }
-    const r = {}; for (const k of keys) r[k] = el[k]; return r;
+    const r = {}; for (const k of keys) if (k in el) r[k] = el[k]; return r;   // Drehkreuz: closedAt nur beim Parken
   };
 
   EBS.KnockoutLevelSim = { KnockoutLevelSimulation };

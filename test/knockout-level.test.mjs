@@ -40,8 +40,8 @@ test('Einstellungen: Gesamtlevel mit Kamera-Fassung, Format wählt das Level', (
 });
 
 test('Level-Bau: Abschnitte schließen an, Ideallinie steigt, jede Schleuse hat Platz für ihre Quote', () => {
-  for (const world of [PORT, LAND]) {
-    const s = create(3, {}, world), secs = s.sections;
+  for (const [world, params] of [[PORT, {}], [LAND, {}], [PORT, { level: 'rush' }], [LAND, { level: 'rush' }]]) {
+    const s = create(3, params, world), secs = s.sections;
     assert.ok(secs.length >= 2);
     for (let i = 0; i < secs.length; i++) {
       const sec = secs[i];
@@ -107,7 +107,7 @@ function run(seed, params, world) {
 }
 
 for (const [name, world, params, seeds] of [['Turm (9:16)', PORT, {}, [1, 2]], ['Gauntlet Fahrt (16:9)', LAND, {}, [1]], ['Gauntlet Abschnitte (16:9)', LAND, { cam: 'sections' }, [1]],
-  ['Trap Tower (9:16, Rush)', PORT, { level: 'rush' }, [1, 2]]]) {
+  ['Trap Tower (9:16, Rush)', PORT, { level: 'rush' }, [1, 2]], ['Avalanche bis Abschnitt 5 (16:9, Rush)', LAND, { level: 'rush' }, [1]]]) {
   test(`Ablauf ${name}: Schleuse schließt bei voller Quote, gibt frei, Kamera zeigt jedes Aus`, () => {
     for (const seed of seeds) {
       const { s, closedAt, releasedAt, alive0 } = run(seed, params, world);
@@ -307,7 +307,7 @@ test('Zeichnen verändert den Zustand nicht (LevelPainter mit leerem Zeichenkont
 });
 
 // ---------------------------------------------------------------- Rush (R44)
-test('Rush (R44): Schalter „level“ nur im Gesamtlevel; ohne ihn und mit „standard“ bitgleich, quer bis R3 THE GAUNTLET', () => {
+test('Rush (R44): Schalter „level“ nur im Gesamtlevel; ohne ihn und mit „standard“ bitgleich, quer ab R3 THE AVALANCHE', () => {
   assert.equal(sc.normalizeParams({ mode: 'level' }).level, 'standard');
   assert.equal(sc.normalizeParams({ mode: 'level', level: 'rush' }).level, 'rush');
   assert.equal(sc.normalizeParams({ mode: 'level', level: 'x' }).level, 'standard');
@@ -315,8 +315,74 @@ test('Rush (R44): Schalter „level“ nur im Gesamtlevel; ohne ihn und mit „s
   const go = (params, world) => { const s = new EBS.KnockoutLevelSim.KnockoutLevelSimulation({ seed: 7, params: { mode: 'level', ...params }, world }); for (let i = 0; i < 60 * 8; i++) s.stepOnce(); return [s.level.id, s.stateHash()]; };
   assert.deepEqual(go({ level: 'standard' }, PORT), go({}, PORT));
   assert.deepEqual(go({ level: 'standard' }, LAND), go({}, LAND));
-  assert.deepEqual(go({ level: 'rush' }, LAND), go({}, LAND), 'THE AVALANCHE fehlt noch: Rush quer zeigt THE GAUNTLET');
+  assert.equal(go({ level: 'rush' }, LAND)[0], 'avalanche');
   assert.equal(go({ level: 'rush' }, PORT)[0], 'trap');
+  // Die Serie aus zwei Rennen kommt für Rush erst in R4 (THE AVALANCHE hat noch kein Ziel): ein einzelnes Rennen
+  const two = (level) => create(1, { level, series: 'two' }, LAND).constructor.name;
+  assert.deepEqual([two('rush'), two('standard')], ['KnockoutLevelScenarioSim', 'KnockoutSeriesScenarioSim']);
+});
+
+test('THE AVALANCHE (R44, R3): 28 Farben, Käfig mit zwei Reihen, fünf Abschnitte und Platzhalter, feste Breite', () => {
+  const s = create(1, { level: 'rush' }, LAND);
+  assert.deepEqual([s.level.id, s.level.title, s.roster.length], ['avalanche', 'THE AVALANCHE', 28]);
+  assert.equal(new Set(s.roster.map((m) => m.color)).size, 28, 'jede Farbe einmal');
+  // Käfig: zwei Reihen zu je 14 (528 bis 1728), keine zwei Murmeln überlappen
+  const slots = s.stage.start.slots, r = s.r;
+  assert.equal(slots.length, 28);
+  assert.equal(new Set(slots.map((p) => p[1].toFixed(1))).size, 2, 'zwei Reihen');
+  for (const [x] of slots) assert.ok(x - r >= 528 && x + r <= 1728, `Platz ${x} im Käfig`);
+  for (let i = 0; i < slots.length; i++) for (let j = i + 1; j < slots.length; j++) {
+    assert.ok(Math.hypot(slots[i][0] - slots[j][0], slots[i][1] - slots[j][1]) >= 2 * r, `Plätze ${i} und ${j} überlappen`);
+  }
+  assert.deepEqual(Array.from(s.sections, (q) => [q.id, !!q.hazard, q.keep, !!q.placeholder]), [
+    ['avalanche', false, 25, false], ['trapdoors', true, 22, false], ['stairs', false, 19, false],
+    ['bigdrop', false, 16, false], ['sweepers', true, 14, false], ['soon', false, 14, true]]);
+  const els = (q) => s.stage.elements.slice(q.els[0], q.els[1]);
+  assert.equal(els(s.sections[1]).filter((e) => e.type === 'trapdoors').map((e) => e.n).join(), '8,8');
+  // Drei Kehrarme, einer gegen den Strom mit Parken
+  const arms = els(s.sections[4]).filter((e) => e.type === 'turnstile');
+  assert.deepEqual(Array.from(arms, (e) => [e.arms, e.arm / s.r / 2, 'closedAt' in e]), [[2, 3.6, false], [2, 3.6, true], [2, 3.6, false]]);
+  // Feste Breite: Zoom 0,85 zeigt die ganze Welt (2256 E), die Kamera steht waagerecht in der Mitte
+  const v = CAM.view(s.cam);
+  assert.ok(Math.abs(s.cam.z - 0.85) < 1e-9 && Math.abs(s.cam.x - 1128) < 1e-6, `Kamera ${s.cam.x} ${s.cam.z}`);
+  assert.ok(v.x0 <= 1 && v.x1 >= 2255, 'ganze Breite im Bild');
+  assert.ok(s.stage.tracks.every((t) => t.pts.every(([x, y]) => x >= 0 && x <= 2256 && y <= s.bounds.y1)));
+  // Die Kamera-Einstellung „Abschnitte“ ändert hier nichts: das Level hat eigene Kamera-Werte
+  assert.equal(create(1, { level: 'rush', cam: 'sections' }, LAND).cam.mode, 'ride');
+});
+
+test('THE AVALANCHE (R44, R3): bis zur fünften Schleuse ohne Anstoß, Stürze in den Gefahren, Kehrarm parkt; Sichern, Laden, Zeichnen', () => {
+  const s = create(2, { level: 'rush' }, LAND), painter = new EBS.KnockoutRender.LevelPainter(s, 1), g = stub();
+  const arm = s.stage.elements.find((e) => e.type === 'turnstile' && 'closedAt' in e);
+  let snap = null, at = -1, ref = null;
+  const marks = [0.2, 6, 18, 30, 45], paint = () => {
+    const before = s.stateHash(), seq = s.eventSeq;
+    painter.paint(g); painter.paint(g);
+    assert.equal(s.stateHash(), before, `Zeichnen bei ${s.t.toFixed(1)} s`);
+    assert.equal(s.eventSeq, seq);
+  };
+  while (s.phase !== 'end' && s.t < 120) {
+    s.stepOnce();
+    if (marks.length && s.t >= marks[0]) { marks.shift(); paint(); }
+    assert.ok(Math.abs(s.cam.z - 0.85) < 1e-9 && Math.abs(s.cam.x - 1128) < 1e-6, 'feste Breite');
+    // Kurz nach dem Parken sichern, 4 s später den Hash merken
+    if (!snap && arm.closedAt >= 0 && s.t >= arm.closedAt + 0.5) { snap = s.saveState(); at = s.t + 4; paint(); }
+    if (snap && !ref && s.t >= at) ref = s.stateHash();
+  }
+  assert.equal(s.runners.reduce((a, u) => a + u.nudges, 0) + s.stats.stuck + s.stats.timeUp, 0, 'kein Anstoß, niemand sitzt fest');
+  const falls = (i) => s.roster.filter((m) => m.how === 'fell' && m.outStage === i).length;
+  assert.ok(falls(1) >= 3 && falls(4) >= 2, `Stürze ${falls(1)} und ${falls(4)}`);
+  assert.equal(s.notes.filter((n) => n.kind === 'traps').length, 2, 'TRAPS CLOSED zweimal');
+  // Stürzen zwei fast gleichzeitig, als die Deckel schließen, kommen weniger als 14 an (Seed 2: 13)
+  const alive = s.roster.filter((m) => m.alive).length;
+  assert.ok(alive >= 12 && alive <= 14, `${alive} weiter`);
+  assert.ok(snap && ref, 'Kehrarm hat geparkt');
+  const b = create(2, { level: 'rush' }, LAND);
+  b.loadState(snap);
+  while (b.t < at) b.stepOnce();
+  assert.equal(b.stateHash(), ref, 'nach dem Laden gleich weiter');
+  assert.ok(s.checkInvariants().ok);
+  if (painter.dispose) painter.dispose();
 });
 
 test('TRAP TOWER (R44): 24 Farben, Käfig mit zwei Reihen ohne Überlappung, Falltür-Boden und Schleuse TOP 14', () => {
